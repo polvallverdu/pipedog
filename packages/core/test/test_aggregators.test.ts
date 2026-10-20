@@ -56,9 +56,17 @@ describe("TestGatedAggregator", () => {
       new LLMFullResponseStartFrame(),
       new TextFrame({ text: "Hello, " }),
       new TextFrame({ text: "world." }),
-      new OutputAudioRawFrame({ audio: encoder.encode("hello"), sampleRate: 16000, numChannels: 1 }),
+      new OutputAudioRawFrame({
+        audio: encoder.encode("hello"),
+        sampleRate: 16000,
+        numChannels: 1,
+      }),
       new OutputImageRawFrame({ image: encoder.encode("image"), size: [0, 0], format: "RGB" }),
-      new OutputAudioRawFrame({ audio: encoder.encode("world"), sampleRate: 16000, numChannels: 1 }),
+      new OutputAudioRawFrame({
+        audio: encoder.encode("world"),
+        sampleRate: 16000,
+        numChannels: 1,
+      }),
       new LLMFullResponseEndFrame(),
     ];
 
