@@ -149,7 +149,9 @@ Python's `asyncio` semantics are kept by `@pipedog/asyncio`. Read its
 1. `except Exception:` does **not** catch `CancelledError` in Python, but
    `catch (e)` catches everything in JS. Every ported broad `catch` must start
    with `rethrowIfCancelled(e);`. Catching `CancelledError` deliberately
-   (`except asyncio.CancelledError:`) → `if (e instanceof CancelledError) { ...; throw e; }`.
+   (`except asyncio.CancelledError:`) → `if (e instanceof CancelledError) { ... }`, doing
+   exactly what upstream does there: re-raise if it re-raises, and swallow it if upstream
+   swallows it (`except asyncio.CancelledError: pass` ends the task normally, as in Python).
 2. Cancellation is delivered at **cancellation points**: awaits on the
    primitives above, and on Tasks. A foreign await (fetch, an SDK, a
    WebSocket) is not one. Pass `currentSignal()` (or `task.signal`) to APIs
@@ -238,6 +240,18 @@ See the top of `frames/frames.ts`.
   runtime (`onnxruntime-node` on Bun/Node, `onnxruntime-web` WASM on Workers).
   Pure-algorithm fallbacks (e.g. a linear resampler) may live in core.
 - `numpy` on PCM → typed arrays (`Int16Array`, `Float32Array`).
+- `num2words` → [`num2words-ts`](https://www.npmjs.com/package/num2words-ts) (our exact port of it,
+  LGPL as a dependency, like upstream's). `num2words(n, lang="en")` → `num2words(n, { lang: "en" })`.
+  Python ints → `bigint` (or integer `number`); Python floats with an integral value (`1.0`) →
+  `asFloat(1)` from `num2words-ts`, because num2words treats ints and floats differently.
+- `sentencex` → `@pipedog/sentencex-wasm` (already wired into `utils/string.ts`).
+- `soxr` → `@pipedog/resampler-wasm` (rubato, behind `audio/resamplers/soxr_*.ts`). Its presets
+  carry libsoxr's names but are not bit-identical to libsoxr.
+- `PyYAML` → [`yaml`](https://www.npmjs.com/package/yaml), only through `utils/yaml.ts`, which
+  rebuilds PyYAML's `SafeLoader` (YAML 1.1 resolvers, per-class constructors) on its parser.
+- `Pillow` JPEG encoding → `utils/jpeg_encoder.ts` (baseline, no dependencies).
+- Filesystem access (`aiofiles`, `pathlib`) → an injected reader or `fs` object
+  (`node:fs/promises` satisfies `LocalFileSystem`); core never imports `node:fs`.
 
 ## WASM and Cloudflare Workers
 

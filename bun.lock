@@ -50,7 +50,10 @@
       "version": "0.1.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
+        "@pipedog/resampler-wasm": "workspace:*",
         "@pipedog/sentencex-wasm": "workspace:*",
+        "num2words-ts": "1.0.2",
+        "yaml": "2.9.1",
       },
     },
     "packages/resampler-wasm": {
@@ -833,6 +836,8 @@
     "next-themes": ["next-themes@0.4.6", "", { "peerDependencies": { "react": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc", "react-dom": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc" } }, "sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA=="],
 
     "npm-to-yarn": ["npm-to-yarn@3.2.0", "", {}, "sha512-K1HmQeZT2HrjpsR6KgqbN2FAXL2NrJJmNUSD9ck7HGTVu1JKXox8n9SB+tjbU8m8JGLF4OscrroPepew/L7/Xw=="],
+
+    "num2words-ts": ["num2words-ts@1.0.2", "", { "bin": { "num2words-ts": "dist/cli.js" } }, "sha512-+x0lL1RD3NGeTk3uAQM13uk1b31vJeZNMds478NN5cIQi9pWSMQ9kTXfcaBuIMTwfIazvxfERd1biIsh61rjqA=="],
 
     "oniguruma-parser": ["oniguruma-parser@0.12.2", "", {}, "sha512-6HVa5oIrgMC6aA6WF6XyyqbhRPJrKR02L20+2+zpDtO5QAzGHAUGw5TKQvwi5vctNnRHkJYmjAhRVQF2EKdTQw=="],
 

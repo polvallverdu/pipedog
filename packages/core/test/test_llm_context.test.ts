@@ -14,6 +14,7 @@ import {
   type LLMContextMessage,
   LLMSpecificMessage,
 } from "../src/processors/aggregators/llm_context.ts";
+import { jpegInfo } from "./jpeg_info.ts";
 
 // Messages are loosely-typed dicts upstream; index them the same way here.
 type Any = any;
@@ -480,11 +481,23 @@ describe("TestCreateImageMessage", () => {
     expect(url).toEqual(`data:image/png;base64,${bytesToBase64(png)}`);
   });
 
-  // Needs a JPEG encoder for raw pixels in utils/image.ts (encodeJpeg is a stub)
-  // and a JPEG decoder to check the result (upstream uses Pillow for both).
-  test.todo(
-    "test_pixels_with_alpha_are_encoded_as_a_jpeg (unported: JPEG encoding of raw pixels in utils/image.ts)",
-  );
+  test("test_pixels_with_alpha_are_encoded_as_a_jpeg", async () => {
+    // Image.new("RGBA", (4, 4), (255, 0, 0, 128)).tobytes()
+    const pixels = new Uint8Array(4 * 4 * 4);
+    for (let i = 0; i < pixels.length; i += 4) pixels.set([255, 0, 0, 128], i);
+    const msg: Any = await LLMContext.createImageMessage({
+      format: "RGBA",
+      size: [4, 4],
+      image: pixels,
+    });
+    const url: string = msg.content[0].image_url.url;
+    const prefix = "data:image/jpeg;base64,";
+    expect(url.startsWith(prefix)).toBe(true);
+    const decoded = jpegInfo(
+      Uint8Array.from(atob(url.slice(prefix.length)), (c) => c.charCodeAt(0)),
+    );
+    expect([decoded.format, decoded.mode, decoded.size]).toEqual(["JPEG", "RGB", [4, 4]]);
+  });
 });
 
 describe("TestRemoveInvalidFileMessage", () => {

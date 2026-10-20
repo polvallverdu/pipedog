@@ -50,8 +50,34 @@ async function readUrl(url: URL): Promise<BufferSource> {
   return await res.arrayBuffer();
 }
 
+function decodeBase64(b64: string): Uint8Array<ArrayBuffer> {
+  const fromBase64 = (Uint8Array as unknown as { fromBase64?(s: string): Uint8Array<ArrayBuffer> })
+    .fromBase64;
+  if (typeof fromBase64 === "function") return fromBase64(b64);
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/**
+ * The bundled module: the .wasm file next to this package, or, when that
+ * cannot be read (a bundle that did not copy the asset), the same bytes
+ * embedded in `wasm_bytes.ts`.
+ */
+async function loadBundled(): Promise<RubatoEngine> {
+  let bytes: BufferSource;
+  try {
+    bytes = await readUrl(defaultWasmUrl());
+  } catch {
+    const { WASM_BASE64 } = await import("./wasm_bytes.ts");
+    bytes = decodeBase64(WASM_BASE64);
+  }
+  return engineFromSource(bytes);
+}
+
 async function load(source: ResamplerSource | undefined): Promise<RubatoEngine> {
-  if (source === undefined) return engineFromSource(await readUrl(defaultWasmUrl()));
+  if (source === undefined) return loadBundled();
   if (source instanceof URL) return engineFromSource(await readUrl(source));
   if (typeof Response !== "undefined" && source instanceof Response) {
     return engineFromSource(await source.arrayBuffer());
@@ -61,7 +87,8 @@ async function load(source: ResamplerSource | undefined): Promise<RubatoEngine> 
 
 /**
  * Load and instantiate the WASM resampler (idempotent). With no argument the
- * bundled `wasm/resampler.wasm` is loaded next to this file. Passing a source
+ * bundled `wasm/resampler.wasm` is loaded next to this file (or, if it cannot
+ * be read, from the copy embedded in `wasm_bytes.ts`). Passing a source
  * replaces the shared engine.
  */
 export async function initResampler(source?: ResamplerSource): Promise<RubatoEngine> {

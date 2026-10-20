@@ -7,8 +7,10 @@ import {
   getResampler,
   initResampler,
   QUALITIES,
+  type Quality,
   type RubatoEngine,
 } from "../src/index.ts";
+import { WASM_BASE64, WASM_SIZE } from "../src/wasm_bytes.ts";
 
 let engine: RubatoEngine;
 
@@ -96,6 +98,14 @@ describe("init", () => {
     expect(e.resample(new Uint8Array(sine(160, 16000).buffer), 16000, 8000).length).toBe(160);
     const fromModule = await initResampler(new WebAssembly.Module(bytes));
     expect(getResampler()).toBe(fromModule);
+  });
+
+  test("embedded bytes match the committed wasm/resampler.wasm", async () => {
+    const file = new Uint8Array(
+      await Bun.file(new URL("../wasm/resampler.wasm", import.meta.url)).arrayBuffer(),
+    );
+    expect(WASM_SIZE).toBe(file.length);
+    expect(WASM_BASE64).toBe(Buffer.from(file).toString("base64"));
   });
 });
 
@@ -330,20 +340,64 @@ describe("quality presets", () => {
       expect(delays[i] as number).toBeGreaterThan(delays[i - 1] as number);
   });
 
-  test("higher quality has a higher cutoff and less aliasing", () => {
-    const cutoffs = QUALITIES.map((q) => engine.createStream(48000, 16000, { quality: q }).cutoff);
-    for (let i = 1; i < cutoffs.length; i++)
-      expect(cutoffs[i] as number).toBeGreaterThan(cutoffs[i - 1] as number);
-    // 9 kHz at 48 kHz -> 16 kHz aliases to 7 kHz unless filtered.
-    const leak = QUALITIES.map((q) =>
-      rms(
-        engine
-          .resampleSamples(sine(48000, 48000, 9000), 48000, 16000, { quality: q })
-          .subarray(1600, 14400),
-      ),
-    );
-    expect(leak[4] as number).toBeLessThan(leak[0] as number);
-    expect(leak[4] as number).toBeLessThan(5);
+  /** Level in dB (re the input tone) of a float tone after a one-shot resample. */
+  const toneDb = (freq: number, inRate: number, outRate: number, quality: Quality): number => {
+    const n = Math.round(inRate * 0.3);
+    const input = new Float32Array(n);
+    for (let i = 0; i < n; i++) input[i] = 0.5 * Math.sin((2 * Math.PI * freq * i) / inRate + 0.37);
+    const out = engine.resampleFloat32(input, inRate, outRate, { quality });
+    const middle = out.subarray(Math.floor(out.length * 0.2), Math.floor(out.length * 0.8));
+    return 20 * Math.log10(rms(middle) / (0.5 / Math.SQRT2) + 1e-30);
+  };
+
+  // Stopband attenuation (from just above the output Nyquist frequency) and
+  // passband flatness per preset; the README's table has the measured values.
+  const SPEC: Record<Quality, { stopband: number; flatTo: number; flatDb: number }> = {
+    QQ: { stopband: 70, flatTo: 0.65, flatDb: 0.1 },
+    LQ: { stopband: 105, flatTo: 0.7, flatDb: 0.01 },
+    MQ: { stopband: 105, flatTo: 0.9, flatDb: 0.01 },
+    HQ: { stopband: 118, flatTo: 0.9, flatDb: 0.01 },
+    VHQ: { stopband: 150, flatTo: 0.9, flatDb: 0.01 },
+  };
+
+  for (const quality of QUALITIES) {
+    test(`${quality} rejects tones above the new Nyquist frequency when downsampling`, () => {
+      const { stopband } = SPEC[quality];
+      for (const [inRate, outRate] of [
+        [48000, 8000],
+        [48000, 16000],
+        [44100, 16000],
+      ] as const) {
+        const nyquist = outRate / 2;
+        for (const r of [1.01, 1.05, 1.25, 1.6, 2.0, 2.7]) {
+          const freq = r * nyquist;
+          if (freq >= inRate / 2) continue;
+          expect(toneDb(freq, inRate, outRate, quality)).toBeLessThan(-stopband);
+        }
+      }
+    });
+
+    test(`${quality} keeps the passband flat`, () => {
+      const { flatTo, flatDb } = SPEC[quality];
+      for (const [inRate, outRate] of [
+        [48000, 8000],
+        [8000, 48000],
+        [16000, 24000],
+      ] as const) {
+        const nyquist = Math.min(inRate, outRate) / 2;
+        for (const r of [0.1, 0.3, 0.5, flatTo]) {
+          expect(Math.abs(toneDb(r * nyquist, inRate, outRate, quality))).toBeLessThan(flatDb);
+        }
+      }
+    });
+  }
+
+  test("attenuation at 1.25 x the new Nyquist frequency does not drop from QQ to VHQ", () => {
+    const levels = QUALITIES.map((q) => toneDb(5000, 48000, 8000, q));
+    for (let i = 1; i < levels.length; i++) {
+      expect(levels[i] as number).toBeLessThanOrEqual((levels[i - 1] as number) + 1);
+    }
+    expect(levels[0] as number).toBeLessThan(-70);
   });
 
   test("every preset keeps a 440 Hz sine", () => {

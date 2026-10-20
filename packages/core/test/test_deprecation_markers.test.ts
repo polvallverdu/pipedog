@@ -29,7 +29,7 @@ import { expect, test } from "bun:test";
 
 // --- Directive enforcement (the registry source of truth) --------------------
 
-// Python build tooling (scripts/deprecations/scan.py) over the Python source
+// DIVERGENCE: Python build tooling (scripts/deprecations/scan.py) over the Python source
 // tree; not ported.
 test.skip("test_directives_parse", () => {});
 test.skip("test_directives_state_removal_version", () => {});
@@ -39,7 +39,7 @@ test.skip("test_top_level_directive_deprecates_the_symbol", () => {});
 
 // --- @deprecated decorator message consistency -------------------------------
 
-// Python build tooling (scripts/deprecations/scan.py) auditing Python
+// DIVERGENCE: Python build tooling (scripts/deprecations/scan.py) auditing Python
 // `@deprecated` / `warnings.warn` call sites; not ported.
 test.skip("test_deprecated_messages_follow_template", () => {});
 test.skip("test_warn_messages_follow_template", () => {});
@@ -50,7 +50,7 @@ test.skip("test_deprecated_replacement_targets_exist", () => {});
 
 // --- Generated registry ------------------------------------------------------
 
-// Python build tooling (scripts/deprecations/generate.py and the committed
+// DIVERGENCE: Python build tooling (scripts/deprecations/generate.py and the committed
 // deprecations.json); not ported.
 test.skip("test_deprecations_registry_is_up_to_date", () => {});
 
@@ -115,7 +115,7 @@ test.skip("test_renamed_field_reaches_a_constructor_that_passes_it_to_super", ()
 
 // --- Removal history (removals.json) ------------------------------------------
 
-// Python build tooling (scripts/deprecations/generate_removals.py and the
+// DIVERGENCE: Python build tooling (scripts/deprecations/generate_removals.py and the
 // committed removals.json); not ported.
 test.skip("test_removals_registry_schema_is_valid", () => {});
 test.skip("test_compute_removals_detects_disappeared_symbol", () => {});

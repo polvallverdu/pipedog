@@ -26,7 +26,9 @@ export interface ResampleOptions {
 /** What a quality preset maps to in rubato (see the README for the table). */
 export interface QualityInfo {
   quality: Quality;
+  /** Filter length in samples of the lower rate (stretched by the factor when downsampling). */
   sincLen: number;
+  /** Sinc table points per sample of the lower rate. */
   oversampling: number;
 }
 
@@ -315,7 +317,10 @@ export async function engineFromSource(
   source: WebAssembly.Module | BufferSource,
 ): Promise<RubatoEngine> {
   if (source instanceof WebAssembly.Module) return engineFromModule(source);
-  const { instance } = await WebAssembly.instantiate(source, {});
+  // Compile, then instantiate, both async (browsers restrict synchronous
+  // instantiation of large modules); unambiguous across lib.dom typings.
+  const module = await WebAssembly.compile(source as BufferSource);
+  const instance: WebAssembly.Instance = await WebAssembly.instantiate(module, {});
   return new RubatoEngine(instance);
 }
 

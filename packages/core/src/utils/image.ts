@@ -6,6 +6,8 @@
 
 /** Image encoding helpers. */
 
+import { encodeJpegRgb } from "./jpeg_encoder.ts";
+
 /**
  * Encode an image for a model to look at.
  *
@@ -29,14 +31,45 @@ export async function encodeImage(
   return [await encodeJpeg(image, size, format || "RGB"), "image/jpeg"];
 }
 
-// STUB: upstream encodes raw pixels with Pillow (`Image.frombytes(...).save(format="JPEG")`)
-// in a thread. Core has no runtime-agnostic JPEG encoder yet.
+/** Bytes per pixel of the raw pixel formats (Pillow modes) that can be encoded. */
+const PIXEL_FORMATS: Record<string, number> = { L: 1, LA: 2, RGB: 3, RGBA: 4, RGBX: 4 };
+
+/**
+ * `Image.frombytes(format, size, image).convert("RGB")`: the pixels as
+ * interleaved RGB, dropping alpha and widening grayscale.
+ */
+function toRgb(image: Uint8Array, [width, height]: [number, number], format: string): Uint8Array {
+  const channels = PIXEL_FORMATS[format];
+  if (channels === undefined) {
+    throw new Error(`unrecognized image mode: ${format}`);
+  }
+  const pixels = width * height;
+  if (image.length < pixels * channels) {
+    throw new Error("not enough image data");
+  }
+  if (channels === 3) {
+    return image;
+  }
+  const rgb = new Uint8Array(pixels * 3);
+  for (let i = 0; i < pixels; i++) {
+    const src = i * channels;
+    if (channels <= 2) {
+      rgb[i * 3] = rgb[i * 3 + 1] = rgb[i * 3 + 2] = image[src]!;
+    } else {
+      rgb[i * 3] = image[src]!;
+      rgb[i * 3 + 1] = image[src + 1]!;
+      rgb[i * 3 + 2] = image[src + 2]!;
+    }
+  }
+  return rgb;
+}
+
+// Upstream encodes with Pillow in a thread; there are no threads here, so the
+// (pure TypeScript) encoder runs inline.
 async function encodeJpeg(
-  _image: Uint8Array,
-  _size: [number, number],
-  _format: string,
+  image: Uint8Array,
+  size: [number, number],
+  format: string,
 ): Promise<Uint8Array> {
-  throw new Error(
-    "not ported yet: encodeImage() cannot JPEG-encode raw pixels; pass an already encoded image (format 'image/...')",
-  );
+  return encodeJpegRgb(toRgb(image, size, format), size[0], size[1]);
 }

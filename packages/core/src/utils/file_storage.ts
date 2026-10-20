@@ -23,6 +23,9 @@
  * itself, without `FileStorage.load` being involved at all).
  */
 
+import { rethrowIfCancelled } from "@pipedog/asyncio";
+import { logger } from "./logger.ts";
+
 /**
  * Thrown by `FileStorage.load` when a URL is invalid or no longer stored
  * (Python's built-in `FileNotFoundError`).
@@ -72,6 +75,24 @@ export abstract class FileStorage {
   abstract delete(fileUrl: string): Promise<void>;
 }
 
+/**
+ * The file operations `LocalFileStorage` needs: a subset of
+ * `node:fs/promises`, which satisfies it as is
+ * (`import * as fs from "node:fs/promises"`; Deno and Bun provide it too).
+ * Core has no filesystem access of its own, so the storage takes one.
+ */
+export interface LocalFileSystem {
+  mkdir(path: string, options: { recursive: true }): Promise<unknown>;
+  writeFile(path: string, data: Uint8Array): Promise<void>;
+  readFile(path: string): Promise<Uint8Array>;
+  unlink(path: string): Promise<void>;
+  readdir(
+    path: string,
+    options: { withFileTypes: true },
+  ): Promise<Array<{ name: string; isFile(): boolean }>>;
+  stat(path: string): Promise<{ mtimeMs: number }>;
+}
+
 export interface LocalFileStorageOptions {
   /** Directory to store files in. Created on first save if missing. */
   folder: string;
@@ -80,10 +101,22 @@ export interface LocalFileStorageOptions {
    * once this is exceeded. Set to 0 to disable trimming.
    */
   maxFiles?: number;
+  /**
+   * The filesystem to store files on, e.g. `node:fs/promises`. Required for
+   * `save`, `load` and `delete`; URL validation works without it.
+   */
+  fs?: LocalFileSystem;
 }
 
-const NOT_PORTED =
-  "not ported yet: LocalFileStorage needs filesystem access, which @pipedog/core (runtime-agnostic) does not have";
+/** Whether `e` is a filesystem "no such file" error (`ENOENT`). */
+function isNotFound(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: unknown }).code === "ENOENT";
+}
+
+/** `uuid.uuid4().hex`. */
+function uuid4Hex(): string {
+  return crypto.randomUUID().replaceAll("-", "");
+}
 
 /**
  * Default storage backend: files on local disk, addressed as `pipecat:<hex>`.
@@ -93,8 +126,9 @@ const NOT_PORTED =
  * the random hex suffix can't be used for path traversal and doesn't leak the
  * original filename.
  *
- * STUB: disk I/O (`save`, `load`, `delete`, trimming) is not ported, since core
- * cannot import `node:fs`. URL validation is.
+ * Porting note: upstream writes with `aiofiles` and `pathlib`. Core cannot
+ * import `node:fs`, so the disk is reached through the `fs` option (see
+ * `LocalFileSystem`).
  */
 export class LocalFileStorage extends FileStorage {
   // Every pipecat: URL is an upload this backend owns, so the file is
@@ -106,33 +140,55 @@ export class LocalFileStorage extends FileStorage {
 
   protected _folder: string;
   protected _maxFiles: number;
+  protected _fsImpl: LocalFileSystem | null;
 
   constructor(options: LocalFileStorageOptions) {
     super();
     this._folder = options.folder;
     this._maxFiles = options.maxFiles ?? 10;
+    this._fsImpl = options.fs ?? null;
   }
 
   /** Write `contents` to a new randomly-named file and return its `pipecat:` URL. */
-  async save(_filename: string, _contents: Uint8Array): Promise<string> {
-    throw new Error(NOT_PORTED);
+  async save(_filename: string, contents: Uint8Array): Promise<string> {
+    const fs = this._fs();
+    await fs.mkdir(this._folder, { recursive: true });
+    const suffix = uuid4Hex();
+    await fs.writeFile(this._path(suffix), contents);
+    await this._trim();
+    return `${LocalFileStorage._URL_PREFIX}${suffix}`;
   }
 
   /** Read and return the contents stored under `fileUrl`. */
   async load(fileUrl: string): Promise<Uint8Array> {
-    this._resolveSuffix(fileUrl);
-    throw new Error(NOT_PORTED);
+    const suffix = this._resolveSuffix(fileUrl);
+    try {
+      return await this._fs().readFile(this._path(suffix));
+    } catch (e) {
+      rethrowIfCancelled(e);
+      if (isNotFound(e)) throw new FileNotFoundError(fileUrl);
+      throw e;
+    }
   }
 
   /** Delete the file stored under `fileUrl`, if it exists. */
   async delete(fileUrl: string): Promise<void> {
+    let suffix: string;
     try {
-      this._resolveSuffix(fileUrl);
+      suffix = this._resolveSuffix(fileUrl);
     } catch (e) {
       if (e instanceof FileNotFoundError) return;
       throw e;
     }
-    throw new Error(NOT_PORTED);
+    try {
+      // Missing is fine: a consumed upload (deleteAfterLoad) may be deleted
+      // again by session-end cleanup.
+      await this._fs().unlink(this._path(suffix));
+    } catch (e) {
+      rethrowIfCancelled(e);
+      if (isNotFound(e)) return;
+      logger.warning(`Failed to remove uploaded file ${fileUrl}: ${e}`);
+    }
   }
 
   /** Validate `fileUrl` and return the on-disk filename it maps to. */
@@ -143,5 +199,50 @@ export class LocalFileStorage extends FileStorage {
       throw new FileNotFoundError(fileUrl);
     }
     return suffix;
+  }
+
+  /** Keep only the most recent `maxFiles` files; delete oldest by mtime. */
+  protected async _trim(): Promise<void> {
+    if (this._maxFiles <= 0) {
+      return;
+    }
+    const fs = this._fs();
+    try {
+      const entries = await fs.readdir(this._folder, { withFileTypes: true });
+      const files = entries.filter((e) => e.isFile()).map((e) => e.name);
+      if (files.length <= this._maxFiles) {
+        return;
+      }
+      const mtimes = new Map<string, number>();
+      for (const name of files) {
+        mtimes.set(name, (await fs.stat(this._path(name))).mtimeMs);
+      }
+      const byMtime = [...files].sort((a, b) => mtimes.get(a)! - mtimes.get(b)!);
+      for (const name of byMtime.slice(0, files.length - this._maxFiles)) {
+        try {
+          await fs.unlink(this._path(name));
+          logger.debug(`Trimmed upload ${name} from ${this._folder}`);
+        } catch (e) {
+          rethrowIfCancelled(e);
+          logger.warning(`Failed to trim upload ${this._path(name)}: ${e}`);
+        }
+      }
+    } catch (e) {
+      rethrowIfCancelled(e);
+      logger.warning(`Failed to list uploads folder ${this._folder}: ${e}`);
+    }
+  }
+
+  protected _path(name: string): string {
+    return /[\\/]$/.test(this._folder) ? `${this._folder}${name}` : `${this._folder}/${name}`;
+  }
+
+  protected _fs(): LocalFileSystem {
+    if (this._fsImpl === null) {
+      throw new Error(
+        'LocalFileStorage needs a filesystem: pass `fs` (e.g. `import * as fs from "node:fs/promises"`)',
+      );
+    }
+    return this._fsImpl;
   }
 }

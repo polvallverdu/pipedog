@@ -4,44 +4,116 @@
 //
 // Ported from pipecat: tests/test_utils_yaml.py
 
-/**
- * Tests for the `!include` YAML loader helpers in utils/yaml.
- *
- * Every upstream test loads YAML with PyYAML loader classes and reads included
- * files from disk. `packages/core/src/utils/yaml.ts` (pipecat.utils.yaml) is an
- * interface-only stub: `addIncludeConstructor` / `includeLoader` always throw
- * because core has no YAML parser or file reader wired in (see the UNRESOLVED
- * note in porting/manifest.json). So each test is a `test.todo` naming that
- * module until it is implemented.
- */
+import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { describe, test } from "bun:test";
+import {
+  addImplicitResolver,
+  addIncludeConstructor,
+  ConstructorError,
+  includeLoader,
+  load,
+  SafeLoader,
+} from "../src/utils/yaml.ts";
 
-const TODO =
-  "needs pipecat.utils.yaml (packages/core/src/utils/yaml.ts) implemented: YAML parser + file reader not ported";
+// Core has no filesystem access: included files are read with an injected reader.
+const readFile = (path: string) => readFileSync(path, "utf8");
+
+function _tmpdir(): string {
+  return mkdtempSync(join(tmpdir(), "pipecat-test-"));
+}
 
 describe("TestIncludeLoader", () => {
-  // Upstream: `top: !include fragment.yaml` -> {top: {a: 1, b: "two"}}.
-  test.todo(`test_include_resolves_relative_to_base_dir (${TODO})`);
+  test("test_include_resolves_relative_to_base_dir", () => {
+    const d = _tmpdir();
+    writeFileSync(join(d, "fragment.yaml"), "a: 1\nb: two\n", "utf8");
 
-  // Upstream: nested includes resolve against the top-level base_dir.
-  test.todo(`test_nested_include_uses_same_loader (${TODO})`);
+    const data = load("top: !include fragment.yaml\n", includeLoader(d, { readFile }));
+    expect(data).toEqual({ top: { a: 1, b: "two" } });
+  });
 
-  // Upstream: an included scalar document becomes a string value.
-  test.todo(`test_include_scalar_document (${TODO})`);
+  test("test_nested_include_uses_same_loader", () => {
+    const d = _tmpdir();
+    mkdirSync(join(d, "sub"));
+    writeFileSync(join(d, "leaf.yaml"), "leaf: true\n", "utf8");
+    writeFileSync(join(d, "sub", "middle.yaml"), "inner: !include leaf.yaml\n", "utf8");
 
-  // Upstream: a missing include file raises FileNotFoundError.
-  test.todo(`test_missing_file_raises (${TODO})`);
+    // Nested includes resolve against the same base_dir as the top-level
+    // document, not against the including file.
+    const data = load("outer: !include sub/middle.yaml\n", includeLoader(d, { readFile }));
+    expect(data).toEqual({ outer: { inner: { leaf: true } } });
+  });
 
-  // Upstream: `!include [a, b]` raises ConstructorError "expects a file path".
-  test.todo(`test_non_scalar_node_raises (${TODO})`);
+  test("test_include_scalar_document", () => {
+    const d = _tmpdir();
+    writeFileSync(join(d, "prompt.yaml"), "Say hello, then ask for the order.\n", "utf8");
 
-  // Upstream: include_loader() leaves yaml.SafeLoader without `!include`.
-  test.todo(`test_base_loader_is_not_mutated (${TODO})`);
+    const data = load("content: !include prompt.yaml\n", includeLoader(d, { readFile }));
+    expect(data).toEqual({ content: "Say hello, then ask for the order." });
+  });
 
-  // Upstream: a custom base loader's implicit resolvers apply in included files.
-  test.todo(`test_custom_base_loader_keeps_its_resolvers (${TODO})`);
+  test("test_missing_file_raises", () => {
+    const d = _tmpdir();
+    // Python's FileNotFoundError is the reader's ENOENT error here.
+    let error: unknown;
+    try {
+      load("x: !include nope.yaml\n", includeLoader(d, { readFile }));
+    } catch (e) {
+      error = e;
+    }
+    expect((error as { code?: string } | undefined)?.code).toEqual("ENOENT");
+  });
 
-  // Upstream: add_include_constructor on an explicit SafeLoader subclass.
-  test.todo(`test_add_include_constructor_on_explicit_subclass (${TODO})`);
+  test("test_non_scalar_node_raises", () => {
+    const d = _tmpdir();
+    expect(() => load("x: !include [a, b]\n", includeLoader(d, { readFile }))).toThrow(
+      ConstructorError,
+    );
+    expect(() => load("x: !include [a, b]\n", includeLoader(d, { readFile }))).toThrow(
+      "expects a file path",
+    );
+  });
+
+  test("test_base_loader_is_not_mutated", () => {
+    const d = _tmpdir();
+    includeLoader(d, { readFile });
+    expect(() => load("x: !include fragment.yaml\n", SafeLoader)).toThrow(ConstructorError);
+  });
+
+  test("test_custom_base_loader_keeps_its_resolvers", () => {
+    // A subclass that keeps leading-zero tokens as strings, like the evals
+    // scenario loader does for DTMF digits.
+    class _DecimalOnly extends SafeLoader {}
+
+    _DecimalOnly.yamlImplicitResolvers = new Map(
+      [...SafeLoader.yamlImplicitResolvers].map(([ch, resolvers]) => [
+        ch,
+        resolvers.filter(([tag]) => tag !== "tag:yaml.org,2002:int"),
+      ]),
+    );
+    addImplicitResolver("tag:yaml.org,2002:int", /^[-+]?(?:0|[1-9][0-9_]*)$/, [..."-+0123456789"], {
+      Loader: _DecimalOnly,
+    });
+
+    const d = _tmpdir();
+    writeFileSync(join(d, "digits.yaml"), "dtmf: 012\n", "utf8");
+
+    const data = load(
+      "t: !include digits.yaml\n",
+      includeLoader(d, { base: _DecimalOnly, readFile }),
+    );
+    expect(data).toEqual({ t: { dtmf: "012" } });
+  });
+
+  test("test_add_include_constructor_on_explicit_subclass", () => {
+    const d = _tmpdir();
+    writeFileSync(join(d, "fragment.yaml"), "k: v\n", "utf8");
+
+    class _Loader extends SafeLoader {}
+
+    addIncludeConstructor(_Loader, d, { readFile });
+    expect(load("x: !include fragment.yaml\n", _Loader)).toEqual({ x: { k: "v" } });
+  });
 });
