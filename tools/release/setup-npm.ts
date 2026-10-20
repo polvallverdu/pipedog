@@ -4,7 +4,7 @@
 // One-time npm setup for every publishable @pipedog/* package, run by a
 // maintainer on their own machine (it uses your npm login):
 //
-//   1. publish a placeholder (0.0.0-stage, dist-tag "stage") for each package
+//   1. publish a placeholder (0.0.0) for each package
 //      that doesn't exist on npm yet: npm only lets you configure trusted
 //      publishing on a package that exists;
 //   2. add the GitHub Actions trusted publisher (repo, release.yml, environment
@@ -25,7 +25,9 @@ import { publishablePackages } from "./manifest.ts";
 const REPO = "polvallverdu/pipedog";
 const WORKFLOW = "release.yml";
 const ENVIRONMENT = "npm";
-const PLACEHOLDER = "0.0.0-stage";
+// Plain 0.0.0: npm reserves the "-stage" suffix, and it must sort below the
+// first real release. It is `latest` until that release replaces it.
+const PLACEHOLDER = "0.0.0";
 // `npm trust` needs npm >= 12.
 const NPM_TRUST = ["npx", "-y", "npm@12.2.0"];
 const dryRun = process.argv.includes("--dry-run");
@@ -83,7 +85,7 @@ for (const [name, { manifest }] of pkgs) {
       join(dir, "README.md"),
       `# ${name}\n\nPlaceholder version. Install a released version instead: \`npm install ${name}@latest\`.\n\nPart of [pipedog](https://github.com/${REPO}).\n`,
     );
-    const code = run(["npm", "publish", "--access", "public", "--tag", "stage"], dir);
+    const code = run(["npm", "publish", "--access", "public"], dir);
     rmSync(dir, { recursive: true, force: true });
     if (code !== 0) {
       failures++;
