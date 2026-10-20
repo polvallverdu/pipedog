@@ -26,7 +26,9 @@ export interface ResampleOptions {
 /** What a quality preset maps to in rubato (see the README for the table). */
 export interface QualityInfo {
   quality: Quality;
+  /** Filter length in samples of the lower rate (stretched by the factor when downsampling). */
   sincLen: number;
+  /** Sinc table points per sample of the lower rate. */
   oversampling: number;
 }
 

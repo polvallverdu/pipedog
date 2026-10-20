@@ -17,14 +17,16 @@
  *   "not ported yet".
  * - The model is not bundled; `smartTurnModelPath` defaults to the upstream
  *   file name and is handed to `createSession` as is.
- * - Resampling to 16 kHz uses the soxr stub, so pipelines must run at 16 kHz
- *   until a resampler is available.
+ * - Resampling to 16 kHz uses the resampler engine (`audio/resamplers/engine`)
+ *   instead of soxr. `_predictEndpoint` makes sure it is loaded before the
+ *   (synchronous) `_resampleToModelRate` runs.
  * - `PIPECAT_SMART_TURN_LOG_DATA` WAV dumps need a filesystem, which core
  *   doesn't use; the dump is a stub that logs a warning.
  */
 
 import { envTruthy } from "../../../utils/env.ts";
 import { logger } from "../../../utils/logger.ts";
+import { getResamplerEngine } from "../../resamplers/engine.ts";
 import { soxrResample } from "../../resamplers/soxr_resampler.ts";
 import {
   computeWhisperLogMelFeatures,
@@ -191,6 +193,10 @@ export class LocalSmartTurnAnalyzerV3 extends BaseSmartTurn {
     const actualRate = this._sampleRate || MODEL_SAMPLE_RATE;
 
     // Resample to 16 kHz if the pipeline uses a different sample rate
+    if (actualRate !== MODEL_SAMPLE_RATE) {
+      // soxr is synchronous; our engine may still need loading.
+      await getResamplerEngine();
+    }
     audioArray = this._resampleToModelRate(audioArray);
 
     // Truncate to 8 seconds (keeping the end) or pad to 8 seconds

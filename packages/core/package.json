@@ -24,6 +24,7 @@
   ],
   "dependencies": {
     "@pipedog/asyncio": "workspace:*",
+    "@pipedog/resampler-wasm": "workspace:*",
     "@pipedog/sentencex-wasm": "workspace:*",
     "num2words-ts": "1.0.2"
   },

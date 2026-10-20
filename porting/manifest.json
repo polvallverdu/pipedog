@@ -17076,8 +17076,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 113,
-      "status": "ported",
-      "notes": "18 pass, 0 fail, 0 skip, 5 todo"
+      "status": "tested",
+      "notes": "23 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_base_smart_turn_buffer.py",
@@ -17585,8 +17585,8 @@
         "pipecat.audio.dtmf.utils"
       ],
       "needsModules": 7,
-      "status": "ported",
-      "notes": "0 pass, 0 fail, 0 skip, 2 todo"
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_eager_end_of_turn_mixin.py",
@@ -19010,7 +19010,7 @@
       ],
       "needsModules": 7,
       "status": "ported",
-      "notes": "1 pass, 0 fail, 0 skip, 2 todo"
+      "notes": "3 pass, 0 fail, 0 skip, 1 todo | test_predict_endpoint_on_48k_input_runs needs an ONNX runtime (none in core)."
     },
     {
       "file": "tests/test_log_config.py",

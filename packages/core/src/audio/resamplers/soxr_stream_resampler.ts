@@ -17,40 +17,62 @@
  * 4. When you need to reuse the same resampler configuration multiple times,
  *    as it saves initialization overhead
  *
- * PORTING NOTE: libsoxr has no edge-compatible JavaScript equivalent yet. The
- * stream management (rate checks, idle clearing, flush/reset) is ported, but
- * `SoxrResampleStream` is a stub whose constructor throws "not ported yet".
+ * PORTING NOTE: libsoxr is not used. `soxr.ResampleStream` is replaced by a
+ * stream from the resampler engine (`engine.ts`): `@pipedog/resampler-wasm`
+ * by default, a pure-TypeScript windowed-sinc fallback if that cannot load,
+ * or whatever `setResamplerEngine()` installed. `resample()` loads the engine
+ * on first use.
  */
 
 import { time } from "@pipedog/asyncio";
 import { BaseAudioResampler, type SoxrQuality } from "./base_audio_resampler.ts";
+import {
+  getLoadedResamplerEngine,
+  getResamplerEngine,
+  type ResamplerEngine,
+  type ResamplerStream,
+} from "./engine.ts";
 import { bytesToInt16 } from "./soxr_resampler.ts";
 
 const EMPTY_AUDIO = new Int16Array(0);
 
 /**
- * Stand-in for `soxr.ResampleStream` (mono, int16).
- *
- * STUB: libsoxr is not available in JavaScript yet; constructing one throws.
+ * Stand-in for `soxr.ResampleStream` (mono, int16): a stream of the resampler
+ * engine (the loaded/injected one unless `engine` is given).
  *
  * @internal
  */
 export class SoxrResampleStream {
-  constructor(_options: {
-    inRate: number;
-    outRate: number;
-    numChannels: number;
-    quality: SoxrQuality;
-  }) {
-    throw new Error("soxr stream resampling is not ported yet");
+  protected _stream: ResamplerStream;
+
+  constructor(
+    options: {
+      inRate: number;
+      outRate: number;
+      numChannels: number;
+      quality: SoxrQuality;
+    },
+    engine: ResamplerEngine | null = getLoadedResamplerEngine(),
+  ) {
+    if (!engine) {
+      throw new Error(
+        "no resampler engine loaded yet: `await getResamplerEngine()` (audio/resamplers/engine) first",
+      );
+    }
+    this._stream = engine.createStream(options);
   }
 
-  resampleChunk(_chunk: Int16Array, _last = false): Int16Array {
-    throw new Error("soxr stream resampling is not ported yet");
+  resampleChunk(chunk: Int16Array, last = false): Int16Array {
+    return this._stream.resampleChunk(chunk, last);
   }
 
   clear(): void {
-    throw new Error("soxr stream resampling is not ported yet");
+    this._stream.clear();
+  }
+
+  /** Free the engine's state (WASM memory). */
+  destroy(): void {
+    this._stream.destroy?.();
   }
 }
 
@@ -153,6 +175,9 @@ export class SOXRStreamAudioResampler extends BaseAudioResampler {
       return audio;
     }
 
+    if (this._soxrStream === null) {
+      await getResamplerEngine();
+    }
     const stream = this._maybeInitializeSoxStream(inRate, outRate);
     const audioData = bytesToInt16(audio);
     const resampledAudio = stream.resampleChunk(audioData);
