@@ -4,7 +4,8 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "apps/*"
   ],
   "scripts": {
     "upstream": "bun tools/upstream.ts",
@@ -13,11 +14,15 @@
     "lint": "biome check . && bun tools/port/check-headers.ts",
     "format": "biome format --write .",
     "port:plan": "python3 -I tools/port/graph.py",
-    "port:status": "bun tools/port/status.ts"
+    "port:status": "bun tools/port/status.ts",
+    "docs:dev": "bun run --cwd apps/docs dev",
+    "docs:build": "bun run --cwd apps/docs build",
+    "compat": "bun tools/compat/run.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@types/bun": "1.4.3",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "workerd": "1.20261005.1"
   }
 }

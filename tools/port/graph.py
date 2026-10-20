@@ -48,10 +48,9 @@ PACKAGE_RULES = [
     ("pipecat.extensions", "@pipecat-ts/extensions", None),
     ("pipecat.bus.network.pgmq", "@pipecat-ts/bus-pgmq", None),
     ("pipecat.bus.network.redis", "@pipecat-ts/bus-redis", None),
-    ("pipecat.utils.text.transforms", "@pipecat-ts/text-transforms", None),
     ("pipecat.services.mcp_service", "@pipecat-ts/mcp", None),
     ("pipecat.processors.metrics.sentry", "@pipecat-ts/sentry", None),
-    ("pipecat.workers.proxy", "@pipecat-ts/worker-proxy", None),
+    ("pipecat.workers.proxy.websocket.server", "@pipecat-ts/worker-proxy", None),
     ("pipecat.processors.gstreamer", "@pipecat-ts/gstreamer", None),
     ("pipecat.processors.frameworks.langchain", "@pipecat-ts/langchain", None),
     ("pipecat.processors.frameworks.strands_agents", "@pipecat-ts/strands-agents", None),
@@ -146,7 +145,7 @@ def package_for(mod, core, third):
         provider = {"open": "openai", "gemini": "google", "bedrock": "aws"}.get(provider, provider)
         return f"@pipecat-ts/{provider}"
     heavy = [t for t in third if t not in CORE_OK_THIRD_PARTY]
-    if heavy and not mod.startswith("pipecat.tests"):
+    if heavy and not mod.startswith(("pipecat.tests", "pipecat.utils.text.transforms")):
         return f"@pipecat-ts/{parts[-1]}".replace("_", "-")
     return "@pipecat-ts/core"
 
@@ -263,7 +262,8 @@ def main():
             "upstream": os.path.relpath(module_path(src, mod), up),
             "lines": lines,
             "package": pkg,
-            "ts": prev.get("ts") or ts_path(mod, src, pkg),
+            # Keep a hand-adjusted path, but never one left over from a different package.
+            "ts": prev["ts"] if prev.get("ts", "").startswith(package_dir(pkg) + "/") else ts_path(mod, src, pkg),
             "layer": layer[mod],
             # Part of the first milestone: the closure of PipelineWorker/WorkerRunner/run_test.
             "mvp": mod in core,
@@ -291,7 +291,7 @@ def main():
             "file": f"tests/{f}",
             "lines": sum(1 for _ in open(os.path.join(tests_dir, f))),
             "package": pkg,
-            "ts": prev.get("ts") or f"{package_dir(pkg)}/test/{f[:-3]}.test.ts",
+            "ts": prev["ts"] if prev.get("ts", "").startswith(package_dir(pkg) + "/") else f"{package_dir(pkg)}/test/{f[:-3]}.test.ts",
             "imports": imported,
             "needsModules": len(needs),
             "status": prev.get("status", "todo"),

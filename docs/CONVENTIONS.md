@@ -239,6 +239,27 @@ See the top of `frames/frames.ts`.
   Pure-algorithm fallbacks (e.g. a linear resampler) may live in core.
 - `numpy` on PCM → typed arrays (`Int16Array`, `Float32Array`).
 
+## WASM and Cloudflare Workers
+
+- workerd refuses to compile WebAssembly from bytes at runtime (`WebAssembly.compile(buffer)`); a
+  `.wasm` file must be imported as a module. So every package with WASM ships two entries selected
+  by `package.json` export conditions:
+  ```json
+  "exports": { ".": { "workerd": "./src/entry.workerd.ts", "default": "./src/entry.ts" } }
+  ```
+  `entry.workerd.ts` does `import wasm from "../wasm/x.wasm"` and instantiates that Module;
+  `entry.ts` loads the bytes (fetch of `new URL(..., import.meta.url)`, or `node:fs` as a fallback
+  in that entry only). Both also accept an explicit `WebAssembly.Module | BufferSource` so apps can
+  supply their own.
+- Models (Silero, Smart Turn) are never bundled: they are loaded from a path/URL given by the
+  user, with the upstream file name as the default. On Workers they come from R2, KV, static
+  assets, or a `fetch`.
+- No threads: upstream `ThreadPoolExecutor` / `run_in_executor` work runs inline (async) or in an
+  injected runner. Keep per-call CPU low; Workers have CPU-time limits.
+- WebRTC is unavailable on Workers; WebSocket-based transports must work there.
+- `runtimes` in package.json is written by `bun run compat --write` from real runs on
+  bun, node, deno and workerd. Never edit it by hand.
+
 ## Docstrings
 
 Keep upstream docstrings as JSDoc (`/** ... */`), trimmed of Sphinx markup:
