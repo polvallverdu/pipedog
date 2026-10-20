@@ -9,6 +9,7 @@ pipedog is split into packages, like Pipecat's optional extras:
 |---|---|
 | `@pipedog/asyncio` | asyncio semantics for JavaScript: tasks, cooperative cancellation, queues, events |
 | `@pipedog/core` | frames, processors, pipelines, workers, bus, observers, RTVI, base services and transports |
+| `@pipedog/tracing` | OpenTelemetry setup (`setupTracing()`, OTLP and console exporters), like `pipecat-ai[tracing]` |
 | `@pipedog/<provider>` | one package per service provider, transport, serializer or audio model (being ported) |
 
 Where Python installs `pipecat-ai[deepgram,openai]`, you will add `@pipedog/core` plus

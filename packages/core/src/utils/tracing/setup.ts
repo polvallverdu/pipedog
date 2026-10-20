@@ -11,24 +11,32 @@
  * OpenTelemetry tracing for Pipecat applications. It handles the optional
  * nature of OpenTelemetry dependencies and provides a safe setup process.
  *
- * Porting notes: upstream detects OpenTelemetry by trying to import it. Core
- * takes no third-party dependencies, so the OpenTelemetry JS modules are
- * handed in instead, once, at startup:
+ * Porting notes: upstream detects OpenTelemetry by trying to import it, and
+ * treats it as an optional extra (`pipecat-ai[tracing]`). Here
+ * `@opentelemetry/api` is an optional peer dependency of `@pipedog/core`:
+ *
+ * - When this module loads it starts a dynamic `import("@opentelemetry/api")`
+ *   (no top-level await, so importing core never waits or throws). If the
+ *   package is not installed the import fails quietly and tracing stays
+ *   unavailable, exactly like upstream's `OPENTELEMETRY_AVAILABLE = False`.
+ *   Because the import is asynchronous, `isTracingAvailable()` turns true a
+ *   moment after core loads; `await loadOpenTelemetry()` waits for it.
+ *   Nothing latches the early "unavailable": `PipelineWorker` awaits it in
+ *   its async setup before creating the tracing observers.
+ * - `registerOpenTelemetry()` hands the modules in explicitly and
+ *   synchronously (it wins over the automatic import). `@pipedog/tracing`'s
+ *   `setupTracing()` does this, also registering `@opentelemetry/sdk-trace-base`
+ *   and `@opentelemetry/resources`, which this module's `setupTracing()` needs.
+ *
+ * Without OpenTelemetry every tracing helper is a no-op, as upstream behaves.
  *
  * @example
  * import * as api from "@opentelemetry/api";
  * import * as sdk from "@opentelemetry/sdk-trace-base";
  * import * as resources from "@opentelemetry/resources";
- * import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
  *
  * registerOpenTelemetry({ api, sdk, resources });
- * setupTracing({
- *   serviceName: "my-service",
- *   exporter: new OTLPTraceExporter({ url: "http://localhost:4318/v1/traces" }),
- * });
- *
- * Until `registerOpenTelemetry()` is called, `isTracingAvailable()` is false and
- * every tracing helper is a no-op, as upstream behaves without OpenTelemetry.
+ * setupTracing({ serviceName: "my-service", exporter: new sdk.ConsoleSpanExporter() });
  */
 
 import { rethrowIfCancelled } from "@pipedog/asyncio";
@@ -43,9 +51,9 @@ export type OtelAttributeValue =
   | string
   | number
   | boolean
-  | readonly string[]
-  | readonly number[]
-  | readonly boolean[];
+  | ReadonlyArray<string | null | undefined>
+  | ReadonlyArray<number | null | undefined>
+  | ReadonlyArray<boolean | null | undefined>;
 
 /** `SpanContext` from `@opentelemetry/api`. */
 export interface OtelSpanContext {
@@ -87,8 +95,13 @@ export interface OtelApi {
 
 /** The `@opentelemetry/sdk-trace-base` module (v2). */
 export interface OtelSdkTraceBase {
-  BasicTracerProvider: new (config?: { resource?: unknown; spanProcessors?: unknown[] }) => unknown;
-  BatchSpanProcessor: new (exporter: unknown) => unknown;
+  // `any`: construct signatures are checked contravariantly, and the SDK's
+  // parameter types (TracerConfig, SpanExporter) are not known here.
+  BasicTracerProvider: new (config?: {
+    resource?: any;
+    spanProcessors?: any[];
+  }) => unknown;
+  BatchSpanProcessor: new (exporter: any) => unknown;
   ConsoleSpanExporter: new () => unknown;
 }
 
@@ -108,12 +121,58 @@ export interface OpenTelemetryModules {
 }
 
 let openTelemetry: OpenTelemetryModules | null = null;
+/** Set once `registerOpenTelemetry()` is called; the automatic import then leaves things alone. */
+let registeredExplicitly = false;
 
 /**
- * Make OpenTelemetry available to Pipecat (upstream's optional import).
- * Pass `null` to disable tracing again.
+ * Import `@opentelemetry/api` if it is installed (upstream's optional import).
+ *
+ * The specifier is a string literal so bundlers (esbuild/wrangler, Bun.build)
+ * bundle the package when it is installed; when it is not, they leave the
+ * `import()` in place and it rejects at runtime, which is caught here.
+ */
+async function importOpenTelemetryApi(): Promise<OtelApi | null> {
+  try {
+    const mod = (await import("@opentelemetry/api")) as unknown as OtelApi & {
+      default?: OtelApi;
+    };
+    // CommonJS interop (some bundlers) puts the exports on `default`.
+    const api = mod?.trace ? mod : mod?.default;
+    return api?.trace && api.context ? api : null;
+  } catch (e) {
+    rethrowIfCancelled(e);
+    return null;
+  }
+}
+
+const autoLoad: Promise<void> = importOpenTelemetryApi().then((api) => {
+  if (api && !registeredExplicitly) {
+    openTelemetry = { api };
+  }
+});
+
+/**
+ * Wait for the automatic `import("@opentelemetry/api")` started when core
+ * loaded, and report whether tracing is available.
+ *
+ * `PipelineWorker` awaits this in its async setup, so a worker built before
+ * the import finished (e.g. at module top level) still traces; the turn trace
+ * observer and the service decorators check availability when they run.
+ *
+ * @returns True if tracing is available, False otherwise.
+ */
+export async function loadOpenTelemetry(): Promise<boolean> {
+  await autoLoad;
+  return isTracingAvailable();
+}
+
+/**
+ * Make OpenTelemetry available to Pipecat explicitly, instead of (or before)
+ * the automatic import of `@opentelemetry/api`. Pass `null` to disable
+ * tracing again.
  */
 export function registerOpenTelemetry(modules: OpenTelemetryModules | null): void {
+  registeredExplicitly = true;
   openTelemetry = modules;
 }
 
