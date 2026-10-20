@@ -1,0 +1,23 @@
+{
+  "name": "@pipecat-ts/asyncio",
+  "version": "0.0.0",
+  "description": "asyncio-style tasks, cancellation, queues and events for JavaScript runtimes (Bun, Node, Workers).",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ]
+  }
+}

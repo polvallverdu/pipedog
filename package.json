@@ -1,0 +1,20 @@
+{
+  "name": "pipecat-ts",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*", "examples/*"],
+  "scripts": {
+    "upstream": "bun tools/upstream.ts",
+    "typecheck": "tsc -b packages/*/tsconfig.json",
+    "test": "bun test",
+    "lint": "biome check . && bun tools/port/check-headers.ts",
+    "format": "biome format --write .",
+    "port:plan": "python3 -I tools/port/graph.py",
+    "port:status": "bun tools/port/status.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/bun": "1.4.3",
+    "typescript": "7.0.2"
+  }
+}

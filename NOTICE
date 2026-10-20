@@ -1,0 +1,9 @@
+pipecat-ts is an unofficial TypeScript port of Pipecat (https://github.com/pipecat-ai/pipecat),
+a framework for voice and multimodal conversational AI created by Daily.
+
+It is not affiliated with or endorsed by Daily. Pipecat is distributed under
+the BSD 2-Clause License, Copyright (c) 2024–2026, Daily; that copyright notice
+and license are retained in LICENSE, and every ported source file carries a
+header naming the upstream file it was derived from.
+
+The upstream commit each file was ported from is recorded in porting/manifest.json.

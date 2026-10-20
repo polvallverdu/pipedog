@@ -1,0 +1,36 @@
+{
+  "name": "@pipecat-ts/core",
+  "version": "0.0.0",
+  "description": "Unofficial TypeScript port of the Pipecat core: frames, processors, pipelines, workers, observers, RTVI.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "dependencies": {
+    "@pipecat-ts/asyncio": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/frames",
+      "src/pipecat/processors/frame_processor.py",
+      "src/pipecat/pipeline",
+      "src/pipecat/workers",
+      "src/pipecat/observers",
+      "src/pipecat/clocks",
+      "src/pipecat/utils"
+    ]
+  }
+}
