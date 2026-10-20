@@ -317,9 +317,11 @@ export async function engineFromSource(
   source: WebAssembly.Module | BufferSource,
 ): Promise<RubatoEngine> {
   if (source instanceof WebAssembly.Module) return engineFromModule(source);
-  // Compile, then instantiate: unambiguous across lib.dom typings (instantiate's
-  // overloads return either an Instance or {module, instance}).
-  return engineFromModule(await WebAssembly.compile(source as BufferSource));
+  // Compile, then instantiate, both async (browsers restrict synchronous
+  // instantiation of large modules); unambiguous across lib.dom typings.
+  const module = await WebAssembly.compile(source as BufferSource);
+  const instance: WebAssembly.Instance = await WebAssembly.instantiate(module, {});
+  return new RubatoEngine(instance);
 }
 
 // ---------------------------------------------------------------------------
