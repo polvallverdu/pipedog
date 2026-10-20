@@ -310,7 +310,6 @@ export class UIWorker extends LLMContextWorker {
   protected _injectEvents: boolean;
   protected _autoInjectUiState: boolean;
   protected _keepHistory: boolean;
-  // biome-ignore lint/suspicious/noExplicitAny: handlers take handler-specific arguments.
   protected _uiEventHandlers: Map<string, (...args: any[]) => any>;
   // Latest accessibility snapshot received from the client. Updated in
   // `onBusMessage` when a `__ui_snapshot` event arrives. Rendered into LLM
@@ -399,7 +398,7 @@ export class UIWorker extends LLMContextWorker {
 
   /** The text the user has selected on the page, or null when nothing is. */
   get selection(): UISelection | null {
-    const selection = (this._latestSnapshot ?? {}).selection;
+    const selection = this._latestSnapshot?.selection;
     if (!isPlainObject(selection)) {
       return null;
     }
@@ -1163,7 +1162,7 @@ export class UIWorker extends LLMContextWorker {
   /** The snapshot's named elements, breadth first. */
   protected _namedElements(): _Element[] {
     const elements: _Element[] = [];
-    const root = (this._latestSnapshot ?? {}).root;
+    const root = this._latestSnapshot?.root;
     if (!isPlainObject(root)) {
       return elements;
     }
@@ -1192,7 +1191,7 @@ export class UIWorker extends LLMContextWorker {
 
   /** The string a job's payload carries under `key`, empty when missing. */
   protected _text(message: BusJobRequestMessage, key: string): string {
-    const value = (message.payload ?? {})[key];
+    const value = message.payload?.[key];
     return typeof value === "string" ? value : "";
   }
 

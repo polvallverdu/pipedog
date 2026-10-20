@@ -138,6 +138,10 @@ export class WebsocketClientConnection {
   readonly #messages: WebsocketData[] = [];
   readonly #waiters = new Set<Waiter>();
   #closed: ConnectionClosed | null = null;
+  // The raw close code, as `websockets`' `close_code`: 1006 when no close
+  // frame was received, 1005 when one carried no code. The exception's
+  // `code` is null in both cases.
+  #closeCode: number | null = null;
   readonly #closedWaiters = new Set<() => void>();
 
   /** Maximum time, in seconds, to wait for the peer to acknowledge a close. */
@@ -166,7 +170,7 @@ export class WebsocketClientConnection {
 
   /** The close code, once the connection is closed. */
   get closeCode(): number | null {
-    return this.#closed?.code ?? null;
+    return this.#closeCode;
   }
 
   /** The close reason, once the connection is closed. */
@@ -307,6 +311,7 @@ export class WebsocketClientConnection {
 
   #onClose(code: number, reason: string): void {
     if (this.#closed) return;
+    this.#closeCode = code;
     this.#closed =
       code === 1000 || code === 1001
         ? new ConnectionClosedOK(code, reason)
@@ -494,7 +499,6 @@ export const WebsocketService = defineMixin<
     _quickFailureTracker = new QuickFailureTracker();
     _lastConnectTime = 0.0;
 
-    // biome-ignore lint/suspicious/noExplicitAny: mixin constructor.
     constructor(...args: any[]) {
       super(...args);
       const options = (args[0] ?? {}) as WebsocketServiceOptions;

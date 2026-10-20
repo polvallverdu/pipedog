@@ -1480,6 +1480,12 @@ export class PipelineWorker extends BaseWorker {
       // the audio the EndFrame exists to play out. A processor that could
       // hold it up watches for that itself.
       await this._pipelineEndEvent.wait();
+      // In asyncio the processor that pushed the EndFrame keeps running until
+      // it next suspends, so work it does right after pushing it (e.g. the
+      // user aggregator flushing its turn at session end) completes before
+      // teardown. Promise continuations interleave instead, so yield one
+      // macrotask to let that processor finish before cleaning up.
+      await sleep(0);
       logger.debug(`${this}: ${frame} reached the end of the pipeline, pipeline is closing.`);
     }
 

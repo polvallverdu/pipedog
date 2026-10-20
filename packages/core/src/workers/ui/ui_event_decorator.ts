@@ -6,7 +6,6 @@
 
 /** Decorator for marking worker methods as UI event handlers. */
 
-// biome-ignore lint/suspicious/noExplicitAny: handlers take handler-specific arguments.
 type AnyFn = (...args: any[]) => any;
 
 /** A function marked by `uiEvent()`. */

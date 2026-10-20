@@ -806,7 +806,7 @@ export class BackendLLMWorker extends LLMContextWorker {
       await this._refuse(message.jobId, "no frontend is attached; open an attach job first");
       return;
     }
-    const request = String((message.payload ?? {}).request || "").trim();
+    const request = String(message.payload?.request || "").trim();
     if (!request) {
       await this._refuse(message.jobId, "the message has no request");
       return;
@@ -1279,6 +1279,6 @@ export class _BackendSession implements AsyncIterableIterator<BackendEvent> {
 
 /** The job error with the backend's own reason for it, when its response gave one. */
 export function _withReason(error: string, response: Dict | null | undefined): string {
-  const reason = (response ?? {}).error;
+  const reason = response?.error;
   return reason ? `${error}: ${reason}` : error;
 }

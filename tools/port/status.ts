@@ -108,8 +108,8 @@ const lines: string[] = [
       mvp.reduce((a, m) => a + m.lines, 0),
     )} of lines).`,
   "",
-  "| Package | Modules | Lines ported | Tests | " + RUNTIMES.join(" | ") + " |",
-  "|---|---|---|---|" + RUNTIMES.map(() => "---").join("|") + "|",
+  `| Package | Modules | Lines ported | Tests | ${RUNTIMES.join(" | ")} |`,
+  `|---|---|---|---|${RUNTIMES.map(() => "---").join("|")}|`,
 ];
 const sorted = [...packages.entries()].sort((a, b) =>
   a[0] === "@pipecat-ts/core" ? -1 : b[0] === "@pipecat-ts/core" ? 1 : a[0].localeCompare(b[0]),

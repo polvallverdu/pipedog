@@ -23,7 +23,6 @@ import type { BaseTaskManager } from "./asyncio/task_manager.ts";
 import { logger } from "./logger.ts";
 import { objCount, objId } from "./utils.ts";
 
-// biome-ignore lint/suspicious/noExplicitAny: handlers receive event-specific arguments.
 export type EventHandlerFn<Self = any> = (self: Self, ...args: any[]) => unknown;
 
 /** Stores an event name, its handlers, and whether they run inline (sync). */
@@ -159,7 +158,6 @@ export abstract class BaseObject {
   }
 
   /** Call all registered handlers for the specified event. */
-  // biome-ignore lint/suspicious/noExplicitAny: event-specific arguments.
   protected async _callEventHandler(eventName: string, ...args: any[]): Promise<void> {
     const eventHandler = this._eventHandlers.get(eventName);
     if (!eventHandler) return;
@@ -178,7 +176,6 @@ export abstract class BaseObject {
     }
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: event-specific arguments.
   protected async _runHandler(eventName: string, handler: EventHandlerFn, ...args: any[]) {
     try {
       await handler(this, ...args);

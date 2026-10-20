@@ -16,7 +16,6 @@
 // Constructors take one options object (Python's **kwargs), so a mixin reads
 // its own keys from `args[0]` and forwards everything to `super(...args)`.
 
-// biome-ignore lint/suspicious/noExplicitAny: mixin constructors must accept any arguments.
 export type Ctor<T = object> = abstract new (...args: any[]) => T;
 
 export type Mixin<F extends (base: Ctor) => Ctor, I> = F & {

@@ -29,8 +29,8 @@
  * - Gemini Live messages are read with the camelCase field names of the
  *   Gemini Live JSON protocol (`toolCall.functionCalls`, `usageMetadata.promptTokenCount`);
  *   OpenAI Realtime events keep their snake_case wire names.
- * - JSON serialization uses `JSON.stringify`, so serialized attribute values
- *   use compact separators instead of Python's `", "`/`": "`.
+ * - JSON serialization (`jsonDumps`) matches Python's `json.dumps` defaults:
+ *   `", "`/`": "` separators and ASCII-escaped output.
  */
 
 import { CancelledError, rethrowIfCancelled } from "@pipecat-ts/asyncio";
@@ -97,6 +97,35 @@ function isDict(value: unknown): value is Dict {
 
 function isObject(value: unknown): value is Dict {
   return typeof value === "object" && value !== null;
+}
+
+/**
+ * Python `json.dumps(value)` with default arguments: `JSON.stringify` output with
+ * `", "` and `": "` separators and non-ASCII characters escaped (`ensure_ascii`).
+ */
+function jsonDumps(value: unknown): string {
+  return jsonDumpsRaw(value).replace(
+    /[\u0080-\uffff]/g,
+    (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
+function jsonDumpsRaw(value: unknown): string {
+  if (value === undefined) return "null";
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value) ?? "null";
+  }
+  const withToJson = value as { toJSON?: () => unknown };
+  if (typeof withToJson.toJSON === "function") {
+    return jsonDumpsRaw(withToJson.toJSON());
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => jsonDumpsRaw(v)).join(", ")}]`;
+  }
+  const entries = Object.entries(value as Dict)
+    .filter(([, v]) => v !== undefined && typeof v !== "function")
+    .map(([k, v]) => `${JSON.stringify(k)}: ${jsonDumpsRaw(v)}`);
+  return `{${entries.join(", ")}}`;
 }
 
 /** Python truthiness for values that may be `NOT_GIVEN` (falsy upstream). */
@@ -1216,7 +1245,7 @@ function makeLlmWrapper(f: AnyFn): AnyFn {
 
             // Serialize messages if available
             if (Array.isArray(messages) ? messages.length > 0 : messages) {
-              serializedMessages = JSON.stringify(messages);
+              serializedMessages = jsonDumps(messages);
             }
 
             // Get tools
@@ -1238,7 +1267,7 @@ function makeLlmWrapper(f: AnyFn): AnyFn {
             // Serialize and count tools if available
             // Check if tools is not null and not NOT_GIVEN
             if (tools !== null && tools !== undefined && tools !== NOT_GIVEN) {
-              serializedTools = JSON.stringify(tools);
+              serializedTools = jsonDumps(tools);
               toolCount = Array.isArray(tools) ? tools.length : 1;
             }
 
@@ -1399,7 +1428,7 @@ function toolField(tool: Service, field: string, fallback: unknown): unknown {
 }
 
 function serializeToolList(tools: readonly Service[]): string {
-  return JSON.stringify(
+  return jsonDumps(
     tools.map((tool) => ({
       name: toolField(tool, "name", "unknown"),
       description: toolField(tool, "description", ""),
@@ -1471,7 +1500,7 @@ function geminiOperationAttributes(self: Service, operation: string, args: unkno
 
       // Add arguments for the first call (truncated if too long)
       try {
-        let argsStr = call.args ? JSON.stringify(call.args) : "{}";
+        let argsStr = call.args ? jsonDumps(call.args) : "{}";
         if (argsStr.length > 1000) {
           argsStr = `${argsStr.slice(0, 1000)}...`;
         }
@@ -1494,7 +1523,7 @@ function geminiOperationAttributes(self: Service, operation: string, args: unkno
         operationAttrs["tool.function_name"] = toolCallName;
       }
       if (isDict(result)) {
-        let resultStr = JSON.stringify(result);
+        let resultStr = jsonDumps(result);
         if (resultStr.length > 2000) {
           // larger limit for results
           resultStr = `${resultStr.slice(0, 2000)}...`;
@@ -1692,7 +1721,7 @@ function openaiRealtimeOperationAttributes(
         if (Array.isArray(tools) ? tools.length > 0 : tools) {
           operationAttrs.tools = tools;
           try {
-            operationAttrs.toolsSerialized = JSON.stringify(tools);
+            operationAttrs.toolsSerialized = jsonDumps(tools);
           } catch (e) {
             rethrowIfCancelled(e);
             logger.warning(`Error serializing OpenAI tools: ${errorMessage(e)}`);
@@ -1724,7 +1753,7 @@ function openaiRealtimeOperationAttributes(
           if (tools !== null && tools !== undefined && tools !== NOT_GIVEN) {
             operationAttrs.tools = tools;
             try {
-              operationAttrs.toolsSerialized = JSON.stringify(tools);
+              operationAttrs.toolsSerialized = jsonDumps(tools);
             } catch (e) {
               rethrowIfCancelled(e);
               logger.warning(`Error serializing OpenAI Realtime tools: ${errorMessage(e)}`);
@@ -1742,7 +1771,7 @@ function openaiRealtimeOperationAttributes(
       try {
         const messages = self.getLlmAdapter().getMessagesForLogging(self._context);
         if (messages && messages.length > 0) {
-          operationAttrs.contextMessages = JSON.stringify(messages);
+          operationAttrs.contextMessages = jsonDumps(messages);
         }
       } catch (e) {
         rethrowIfCancelled(e);

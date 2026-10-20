@@ -125,8 +125,18 @@ export class ClassifierImage {
   contentType: ClassifierImageType;
 
   constructor(options: ClassifierImageOptions) {
+    const contentType = options.contentType;
+    // Upstream's pydantic Literal rejects any other given type.
+    if (
+      contentType != null &&
+      contentType !== "image/png" &&
+      contentType !== "image/jpeg" &&
+      contentType !== "image/webp"
+    ) {
+      throw new Error(`ClassifierImage takes PNG, JPEG or WebP, got ${contentType}`);
+    }
     this.data = options.data;
-    this.contentType = options.contentType ?? ClassifierImage._contentType(options.data);
+    this.contentType = contentType ?? ClassifierImage._contentType(options.data);
   }
 
   /**

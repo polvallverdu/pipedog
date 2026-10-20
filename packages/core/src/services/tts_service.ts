@@ -606,9 +606,12 @@ export abstract class TTSService extends AIService {
   static pronunciationTransformIpa(
     pronunciations: Readonly<Record<string, string>>,
   ): PronunciationTransform {
+    // `this` is the subclass the method is called on, like Python's `cls`.
     return pronunciationTransform(
       pronunciations,
+      // biome-ignore lint/complexity/noThisInStatic: polymorphic classmethod.
       (word: string, ipa: string) => this.formatPronunciation(word, ipa),
+      // biome-ignore lint/complexity/noThisInStatic: polymorphic classmethod.
       { serviceName: this.name },
     );
   }

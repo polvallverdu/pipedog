@@ -9,7 +9,6 @@
 import { heapPop, heapPush, pythonCompare, Queue } from "@pipecat-ts/asyncio";
 import type { Frame } from "../frames/frames.ts";
 
-// biome-ignore lint/suspicious/noExplicitAny: frame classes have varied constructors.
 export type FrameClass<T extends Frame = Frame> = abstract new (...args: any[]) => T;
 
 /**

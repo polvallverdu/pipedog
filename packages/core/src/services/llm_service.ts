@@ -127,7 +127,6 @@ export interface FunctionCallParamsOptions {
   functionName: string;
   toolCallId: string;
   arguments: Record<string, unknown>;
-  // biome-ignore lint/suspicious/noExplicitAny: any concrete LLM service, whatever its adapter.
   llm: LLMService<any>;
   pipelineWorker: PipelineWorker;
   context: LLMContext;
@@ -167,7 +166,6 @@ export class FunctionCallParams {
   functionName: string;
   toolCallId: string;
   arguments: Record<string, unknown>;
-  // biome-ignore lint/suspicious/noExplicitAny: any concrete LLM service, whatever its adapter.
   llm: LLMService<any>;
   pipelineWorker: PipelineWorker;
   context: LLMContext;
@@ -1358,7 +1356,6 @@ export class LLMService<
    *   handler's value (then the false default).
    */
   protected _registerDirectFunction(
-    // biome-ignore lint/suspicious/noExplicitAny: direct functions take tool-specific arguments.
     handler: (...args: any[]) => Promise<unknown>,
     options: {
       cancelOnInterruption?: boolean | null;
@@ -1542,7 +1539,6 @@ export class LLMService<
     if (tools === null || tools === undefined) {
       return;
     }
-    // biome-ignore lint/suspicious/noExplicitAny: the normalizer accepts every tools shape.
     const normalized = LLMContext._normalizeAndValidateTools(tools as any);
     if (!isGiven(normalized)) {
       return;
@@ -1700,8 +1696,7 @@ export class LLMService<
     // auto-registered handler is pruned.
     let normalized: unknown =
       tools !== null && tools !== undefined
-        ? // biome-ignore lint/suspicious/noExplicitAny: the normalizer accepts every tools shape.
-          LLMContext._normalizeAndValidateTools(tools as any)
+        ? LLMContext._normalizeAndValidateTools(tools as any)
         : NOT_GIVEN;
     // No context tools? Fall back to the service's own configured tools.
     // Those may be provider-native (already formatted, carrying no handlers);
@@ -1709,11 +1704,9 @@ export class LLMService<
     if (!isGiven(normalized)) {
       const serviceTools = this._serviceTools();
       if (serviceTools !== null) {
-        const normalizedServiceTools = LLMContext._normalizeAndValidateTools(
-          // biome-ignore lint/suspicious/noExplicitAny: the normalizer accepts every tools shape.
-          serviceTools as any,
-          { allowProviderTools: true },
-        );
+        const normalizedServiceTools = LLMContext._normalizeAndValidateTools(serviceTools as any, {
+          allowProviderTools: true,
+        });
         if (normalizedServiceTools instanceof ToolsSchema) {
           normalized = normalizedServiceTools;
         }
@@ -1781,6 +1774,23 @@ export class LLMService<
     // handler back on the next context frame while the tool is still
     // advertised.
     this._explicitlyUnregisteredFunctionNames.add(functionName);
+  }
+
+  /**
+   * Remove a registered direct function handler (internal; no warning).
+   *
+   * @param handler The direct function handler to remove.
+   * @throws Error if no handler is registered under its name.
+   */
+  protected _unregisterDirectFunction(handler: (...args: any[]) => Promise<unknown>): void {
+    const wrapper = new DirectFunctionWrapper(handler);
+    if (!this._functions.delete(wrapper.name)) {
+      throw new Error(`KeyError: ${repr(wrapper.name)}`);
+    }
+    // Remember the explicit removal so auto-registration doesn't bring the
+    // handler back on the next context frame while the tool is still advertised.
+    this._explicitlyUnregisteredFunctionNames.add(wrapper.name);
+    // Note: no need to remove start callback here, as direct functions don't support start callbacks.
   }
 
   /**
@@ -2641,7 +2651,6 @@ export abstract class WebsocketLLMService<
    *
    * @returns The parsed JSON message as a dict.
    */
-  // biome-ignore lint/suspicious/noExplicitAny: provider events are untyped JSON.
   protected async _wsRecv(): Promise<any> {
     // Should never happen — `_ensureConnected` (which callers must invoke
     // first) raises if it can't establish a websocket. Match that contract

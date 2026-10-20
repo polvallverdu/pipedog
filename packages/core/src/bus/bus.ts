@@ -78,7 +78,6 @@ export abstract class WorkerBus extends BaseObject {
    *
    * @param options Additional arguments passed to `BaseObject`.
    */
-  // biome-ignore lint/complexity/noUselessConstructor: mirrors upstream; documents the options type.
   constructor(options: WorkerBusOptions = {}) {
     super(options);
   }

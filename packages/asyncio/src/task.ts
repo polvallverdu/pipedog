@@ -76,7 +76,6 @@ export class Task<T> implements PromiseLike<T> {
   readonly #controller = new AbortController();
   readonly #promise: Promise<T>;
   readonly #waiters = new Set<Waiter>();
-  // biome-ignore lint/suspicious/noExplicitAny: keeps Task<T> assignable to Task<unknown>.
   readonly #doneCallbacks: ((task: any) => void)[] = [];
   #name: string;
   #state: "pending" | "fulfilled" | "rejected" | "cancelled" = "pending";

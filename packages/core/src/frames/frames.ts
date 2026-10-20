@@ -152,7 +152,6 @@ export const AudioRawFrame = defineMixin<
     numChannels: number;
     numFrames = 0;
 
-    // biome-ignore lint/suspicious/noExplicitAny: mixin constructor.
     constructor(...args: any[]) {
       super(...args);
       const options = args[0] as AudioRawFrameOptions;
@@ -187,7 +186,6 @@ export const ImageRawFrame = defineMixin<
     size: [number, number];
     format: string | null;
 
-    // biome-ignore lint/suspicious/noExplicitAny: mixin constructor.
     constructor(...args: any[]) {
       super(...args);
       const options = args[0] as ImageRawFrameOptions;
@@ -305,7 +303,6 @@ export const FileRawFrame = defineMixin<
     filename: string | null;
     format: string;
 
-    // biome-ignore lint/suspicious/noExplicitAny: mixin constructor.
     constructor(...args: any[]) {
       super(...args);
       const options = args[0] as FileRawFrameOptions;

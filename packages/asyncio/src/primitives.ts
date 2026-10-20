@@ -24,9 +24,17 @@ export function monotonicNs(): number {
   return Math.round(performance.now() * 1_000_000);
 }
 
-/** Wall-clock time in seconds (time.time()). */
+/**
+ * Wall-clock time in seconds (time.time()).
+ *
+ * Sub-millisecond, like Python's: `Date.now()` alone would give successive
+ * readings the same value, so intervals between frames pushed back to back
+ * would measure as zero. Falls back to `Date.now()` where the runtime has no
+ * time origin.
+ */
 export function time(): number {
-  return Date.now() / 1000;
+  const origin = performance.timeOrigin;
+  return origin ? (origin + performance.now()) / 1000 : Date.now() / 1000;
 }
 
 /** asyncio.sleep(seconds). `sleep(0)` yields to other tasks. */

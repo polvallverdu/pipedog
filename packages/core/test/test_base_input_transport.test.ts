@@ -21,7 +21,6 @@ import { TransportParams } from "../src/transports/base_transport.ts";
 
 // Lets tests replace methods (including protected ones) with mocks, as
 // upstream does by assigning AsyncMock attributes.
-// biome-ignore lint/suspicious/noExplicitAny: test-only monkeypatching
 type Patchable = any;
 
 const asyncMock = () => mock(async (..._args: unknown[]) => {});

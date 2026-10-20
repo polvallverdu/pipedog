@@ -60,6 +60,42 @@ const STUB_KRISP_AUDIO: KrispAudioSdk = {
 
 let krispAudio: KrispAudioSdk = STUB_KRISP_AUDIO;
 
+// Krisp SDK SamplingRate enum member for each sample rate (Hz)
+const SAMPLE_RATE_MEMBERS: ReadonlyArray<[number, string]> = [
+  [8000, "Sr8000Hz"],
+  [16000, "Sr16000Hz"],
+  [24000, "Sr24000Hz"],
+  [32000, "Sr32000Hz"],
+  [44100, "Sr44100Hz"],
+  [48000, "Sr48000Hz"],
+];
+
+// Krisp SDK FrameDuration enum member for each frame duration (ms)
+const FRAME_DURATION_MEMBERS: ReadonlyArray<[number, string]> = [
+  [10, "Fd10ms"],
+  [15, "Fd15ms"],
+  [20, "Fd20ms"],
+  [30, "Fd30ms"],
+  [32, "Fd32ms"],
+];
+
+const sampleRates = new Map<number, unknown>();
+const frameDurations = new Map<number, unknown>();
+
+// Upstream builds these maps from the krisp_audio enums at import time; here
+// they are rebuilt whenever an SDK binding is installed.
+function buildKrispMaps(): void {
+  sampleRates.clear();
+  for (const [rate, member] of SAMPLE_RATE_MEMBERS) {
+    sampleRates.set(rate, krispAudio.SamplingRate[member]);
+  }
+  frameDurations.clear();
+  for (const [duration, member] of FRAME_DURATION_MEMBERS) {
+    frameDurations.set(duration, krispAudio.FrameDuration[member]);
+  }
+}
+buildKrispMaps();
+
 /**
  * Install the Krisp SDK binding used by this module.
  *
@@ -68,26 +104,14 @@ let krispAudio: KrispAudioSdk = STUB_KRISP_AUDIO;
  */
 export function setKrispAudioSdk(sdk: KrispAudioSdk): void {
   krispAudio = sdk;
+  buildKrispMaps();
 }
 
-// Mapping of sample rates (Hz) to Krisp SDK SamplingRate enum member names
-export const KRISP_SAMPLE_RATES: ReadonlyMap<number, string> = new Map([
-  [8000, "Sr8000Hz"],
-  [16000, "Sr16000Hz"],
-  [24000, "Sr24000Hz"],
-  [32000, "Sr32000Hz"],
-  [44100, "Sr44100Hz"],
-  [48000, "Sr48000Hz"],
-]);
+// Mapping of sample rates (Hz) to Krisp SDK SamplingRate enums
+export const KRISP_SAMPLE_RATES: ReadonlyMap<number, unknown> = sampleRates;
 
-// Mapping of frame durations (ms) to Krisp SDK FrameDuration enum member names
-export const KRISP_FRAME_DURATIONS: ReadonlyMap<number, string> = new Map([
-  [10, "Fd10ms"],
-  [15, "Fd15ms"],
-  [20, "Fd20ms"],
-  [30, "Fd30ms"],
-  [32, "Fd32ms"],
-]);
+// Mapping of frame durations (ms) to Krisp SDK FrameDuration enums
+export const KRISP_FRAME_DURATIONS: ReadonlyMap<number, unknown> = frameDurations;
 
 /**
  * Convert integer sample rate to Krisp SDK enum value.
@@ -97,14 +121,13 @@ export const KRISP_FRAME_DURATIONS: ReadonlyMap<number, string> = new Map([
  * @throws Error if the sample rate is not supported by Krisp SDK.
  */
 export function intToKrispSampleRate(sampleRate: number): unknown {
-  const member = KRISP_SAMPLE_RATES.get(sampleRate);
-  if (member === undefined) {
+  if (!KRISP_SAMPLE_RATES.has(sampleRate)) {
     const supportedRates = [...KRISP_SAMPLE_RATES.keys()].sort((a, b) => a - b).join(", ");
     throw new Error(
       `Unsupported sample rate: ${sampleRate} Hz. Supported rates: ${supportedRates} Hz`,
     );
   }
-  return krispAudio.SamplingRate[member];
+  return KRISP_SAMPLE_RATES.get(sampleRate);
 }
 
 /**
@@ -115,15 +138,14 @@ export function intToKrispSampleRate(sampleRate: number): unknown {
  * @throws Error if the frame duration is not supported by Krisp SDK.
  */
 export function intToKrispFrameDuration(frameDurationMs: number): unknown {
-  const member = KRISP_FRAME_DURATIONS.get(frameDurationMs);
-  if (member === undefined) {
+  if (!KRISP_FRAME_DURATIONS.has(frameDurationMs)) {
     const supportedDurations = [...KRISP_FRAME_DURATIONS.keys()].sort((a, b) => a - b).join(", ");
     throw new Error(
       `Unsupported frame duration: ${frameDurationMs} ms. ` +
         `Supported durations: ${supportedDurations} ms`,
     );
   }
-  return krispAudio.FrameDuration[member];
+  return KRISP_FRAME_DURATIONS.get(frameDurationMs);
 }
 
 // Krisp SDK switched its Python bindings from pybind11 to nanobind starting in

@@ -69,6 +69,23 @@ class WeakFrameMap {
     this.#refs.set(id, new WeakRef(frame));
     this.#registry.register(frame, id);
   }
+
+  /** Number of frames still alive, like `len()` of a `WeakValueDictionary`. */
+  get size(): number {
+    let n = 0;
+    for (const ref of this.#refs.values()) {
+      if (ref.deref() !== undefined) n++;
+    }
+    return n;
+  }
+
+  /** The frames still alive, like `WeakValueDictionary.values()`. */
+  *values(): IterableIterator<Frame> {
+    for (const ref of this.#refs.values()) {
+      const frame = ref.deref();
+      if (frame !== undefined) yield frame;
+    }
+  }
 }
 
 export interface WorkerObserverOptions extends BaseObserverOptions {

@@ -2491,11 +2491,7 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
     let imageAppended = false;
 
     // Check if this image is a result of a function call.
-    if (
-      frame.request &&
-      frame.request.toolCallId &&
-      this._functionCallsInProgress.has(frame.request.toolCallId)
-    ) {
+    if (frame.request?.toolCallId && this._functionCallsInProgress.has(frame.request.toolCallId)) {
       this._functionCallsImageResults.set(frame.request.toolCallId, frame);
 
       // Call the resultCallback if provided. This signals that the image has

@@ -17,7 +17,6 @@
 
 import { type ToolOptionsMetadata, toolOptions } from "../../adapters/schemas/direct_function.ts";
 
-// biome-ignore lint/suspicious/noExplicitAny: tool methods take tool-specific arguments.
 type AnyFn = (...args: any[]) => any;
 
 /** Options accepted by `tool()`. */

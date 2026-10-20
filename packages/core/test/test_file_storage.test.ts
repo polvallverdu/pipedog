@@ -5,7 +5,6 @@
 // Ported from pipecat: tests/test_file_storage.py
 
 import { describe, expect, test } from "bun:test";
-// biome-ignore lint/style/noRestrictedImports: test-only temp-dir fixtures; tests run on Bun.
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

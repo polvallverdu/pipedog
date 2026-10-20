@@ -16578,8 +16578,8 @@
         "pipecat.utils.text.word_timestamp_utils"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "160 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_aggregators.py",
@@ -16693,8 +16693,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "9 pass, 0 fail, 6 skip, 0 todo"
     },
     {
       "file": "tests/test_assemblyai_stt.py",
@@ -16739,8 +16739,8 @@
         "pipecat.processors.aggregators.async_tool_messages"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "25 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_asyncai_tts.py",
@@ -16770,8 +16770,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "43 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_audio_context_manager.py",
@@ -16783,8 +16783,8 @@
         "pipecat.utils.context.audio_context_manager"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_audio_silence.py",
@@ -16819,8 +16819,8 @@
         "pipecat.audio.volume"
       ],
       "needsModules": 5,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "11 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_auto_register_tools.py",
@@ -16839,8 +16839,8 @@
         "pipecat.workers.llm.tool_decorator"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "51 pass, 0 fail, 3 skip, 0 todo"
     },
     {
       "file": "tests/test_aws_bedrock_llm_context_conversion.py",
@@ -17028,8 +17028,8 @@
         "pipecat.workers.runner"
       ],
       "needsModules": 132,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "28 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_base_classifier.py",
@@ -17041,8 +17041,8 @@
         "pipecat.frames.frames"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "12 pass, 0 fail, 0 skip, 2 todo"
     },
     {
       "file": "tests/test_base_input_transport.py",
@@ -17076,8 +17076,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "18 pass, 0 fail, 0 skip, 5 todo"
     },
     {
       "file": "tests/test_base_smart_turn_buffer.py",
@@ -17089,8 +17089,8 @@
         "pipecat.audio.turn.smart_turn.base_smart_turn"
       ],
       "needsModules": 4,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "7 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_base_worker.py",
@@ -17114,8 +17114,8 @@
         "pipecat.workers.runner"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "78 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_bland_tts.py",
@@ -17168,8 +17168,8 @@
         "pipecat.workers.runner"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "7 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_bus.py",
@@ -17181,8 +17181,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "14 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_bus_json_serializer.py",
@@ -17199,8 +17199,8 @@
         "pipecat.processors.frame_processor"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_bus_network.py",
@@ -17286,8 +17286,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "34 pass, 0 fail, 5 skip, 0 todo"
     },
     {
       "file": "tests/test_classifiers_jev.py",
@@ -17302,8 +17302,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "40 pass, 0 fail, 3 skip, 0 todo"
     },
     {
       "file": "tests/test_classifiers_openai_decisions.py",
@@ -17318,8 +17318,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "40 pass, 0 fail, 3 skip, 0 todo"
     },
     {
       "file": "tests/test_context_aggregators_universal.py",
@@ -17345,8 +17345,8 @@
         "pipecat.utils.text.base_text_aggregator"
       ],
       "needsModules": 128,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "111 pass, 0 fail, 4 skip, 2 todo"
     },
     {
       "file": "tests/test_context_summarization.py",
@@ -17362,8 +17362,8 @@
         "pipecat.utils.context.llm_context_summarization"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "46 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_daily_transport.py",
@@ -17543,8 +17543,8 @@
         "pipecat.utils.deprecation"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "1 pass, 0 fail, 32 skip, 0 todo"
     },
     {
       "file": "tests/test_direct_functions.py",
@@ -17556,8 +17556,8 @@
         "pipecat.services.llm_service"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_dtmf_aggregator.py",
@@ -17571,8 +17571,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_dtmf_utils.py",
@@ -17601,8 +17601,8 @@
         "pipecat.turns.user_turn_strategies"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_eager_user_turn_strategies.py",
@@ -17622,8 +17622,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 128,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "23 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_elevenlabs_dialogue_tts.py",
@@ -17687,8 +17687,8 @@
         "pipecat.utils.text.base_text_aggregator"
       ],
       "needsModules": 128,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "17 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_english_sentence_aggregation.py",
@@ -17700,7 +17700,7 @@
       ],
       "needsModules": 4,
       "status": "tested",
-      "notes": "52 pass via @pipecat-ts/sentencex-wasm"
+      "notes": "52 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_error_observer.py",
@@ -17719,8 +17719,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_evals_client_transport.py",
@@ -18048,8 +18048,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "8 pass, 0 fail, 3 skip, 0 todo"
     },
     {
       "file": "tests/test_fish_tts.py",
@@ -18180,8 +18180,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_frame_processor.py",
@@ -18198,8 +18198,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "18 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_frame_queue.py",
@@ -18236,8 +18236,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "0 pass, 0 fail, 0 skip, 9 todo"
     },
     {
       "file": "tests/test_function_call_observer.py",
@@ -18253,8 +18253,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "15 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_function_calling_adapters.py",
@@ -18318,8 +18318,8 @@
         "pipecat.utils.tracing.service_decorators"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "skipped",
+      "notes": "0 pass, 0 fail, 7 skip, 0 todo"
     },
     {
       "file": "tests/test_gemini_live_user_audio.py",
@@ -18570,8 +18570,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_inworld_realtime_context.py",
@@ -18631,8 +18631,8 @@
         "pipecat.workers.runner"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "32 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_keenable_web_search.py",
@@ -18682,8 +18682,8 @@
         "pipecat.turns.user_start.krisp_viva_ip_user_turn_start_strategy"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "16 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_krisp_sdk_manager.py",
@@ -18694,8 +18694,8 @@
         "pipecat.audio.krisp_instance"
       ],
       "needsModules": 1,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_krisp_viva_filter.py",
@@ -18788,8 +18788,8 @@
         "pipecat.processors.aggregators.llm_context"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "36 pass, 0 fail, 0 skip, 1 todo"
     },
     {
       "file": "tests/test_llm_context_logging.py",
@@ -18804,8 +18804,8 @@
         "pipecat.utils.log_config"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_llm_context_summarizer.py",
@@ -18820,8 +18820,8 @@
         "pipecat.utils.context.llm_context_summarization"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "22 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_llm_reasoning_token_usage.py",
@@ -18850,8 +18850,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_llm_service.py",
@@ -18875,8 +18875,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "64 pass, 0 fail, 5 skip, 0 todo"
     },
     {
       "file": "tests/test_llm_switcher.py",
@@ -18895,8 +18895,8 @@
         "pipecat.turns.user_turn_completion_mixin"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "5 pass, 0 fail, 3 skip, 0 todo"
     },
     {
       "file": "tests/test_llm_token_usage_live.py",
@@ -18970,8 +18970,8 @@
         "pipecat.workers.llm.backend_llm_worker"
       ],
       "needsModules": 134,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "25 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_llm_worker.py",
@@ -18985,8 +18985,8 @@
         "pipecat.workers.llm"
       ],
       "needsModules": 132,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "11 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_local_smart_turn_v3_features.py",
@@ -19035,8 +19035,8 @@
         "pipecat.utils.text.markdown_text_filter"
       ],
       "needsModules": 2,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "19 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_markup_utils.py",
@@ -19048,8 +19048,8 @@
         "pipecat.utils.text.markup_utils"
       ],
       "needsModules": 2,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "20 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_mcp_service.py",
@@ -19144,8 +19144,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "0 pass, 0 fail, 0 skip, 14 todo"
     },
     {
       "file": "tests/test_moq_transport.py",
@@ -19542,8 +19542,8 @@
         "pipecat.utils.text.pattern_pair_aggregator"
       ],
       "needsModules": 5,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "26 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_pgmq_backends.py",
@@ -19621,8 +19621,8 @@
         "pipecat.processors.frameworks.rtvi.models"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "18 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_piper_tts.py",
@@ -19666,8 +19666,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "9 pass, 0 fail, 5 skip, 0 todo"
     },
     {
       "file": "tests/test_processor_usable.py",
@@ -19683,8 +19683,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "31 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_processor_usable_gating.py",
@@ -19716,8 +19716,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 117,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_protobuf_serializer.py",
@@ -19739,8 +19739,8 @@
       "ts": "packages/core/test/test_provider_watch_scripts.test.ts",
       "imports": [],
       "needsModules": 0,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "0 pass, 0 fail, 0 skip, 40 todo"
     },
     {
       "file": "tests/test_realtime_intermediate_results.py",
@@ -19777,8 +19777,8 @@
         "pipecat.services.llm_service"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "0 pass, 0 fail, 0 skip, 48 todo"
     },
     {
       "file": "tests/test_realtime_tool_result_encoding.py",
@@ -19820,8 +19820,8 @@
         "pipecat.utils.security.redaction"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "17 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_redis_bus.py",
@@ -19851,8 +19851,8 @@
         "pipecat.registry.types"
       ],
       "needsModules": 3,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "15 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_resampy_resampler.py",
@@ -20045,8 +20045,8 @@
         "pipecat.utils.text.base_text_aggregator"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "30 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_rtvi_observer_raw_text.py",
@@ -20063,8 +20063,8 @@
         "pipecat.utils.text.base_text_aggregator"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "8 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_rtvi_observer_report_level.py",
@@ -20078,8 +20078,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "1 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_rtvi_processor.py",
@@ -20093,8 +20093,8 @@
         "pipecat.processors.frameworks.rtvi.processor"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "32 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_rtvi_ui.py",
@@ -20106,8 +20106,8 @@
         "pipecat.processors.frameworks.rtvi.models"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "21 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_run_inference.py",
@@ -20144,8 +20144,8 @@
         "pipecat.workers.runner"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "9 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_runner_downloads.py",
@@ -20295,8 +20295,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_sentence_tokenizer_language.py",
@@ -20329,8 +20329,8 @@
         "pipecat.utils.text.simple_text_aggregator"
       ],
       "needsModules": 5,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "94 pass, 0 fail, 0 skip, 10 todo"
     },
     {
       "file": "tests/test_serializers.py",
@@ -20345,8 +20345,8 @@
         "pipecat.processors.frame_processor"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "16 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_service_init.py",
@@ -20359,8 +20359,8 @@
         "pipecat.utils.types"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "5 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_service_language.py",
@@ -20393,8 +20393,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_service_switcher.py",
@@ -20411,8 +20411,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 117,
-      "status": "todo",
-      "notes": ""
+      "status": "in_progress",
+      "notes": "46 pass, 1 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_settings.py",
@@ -20449,8 +20449,8 @@
         "pipecat.utils.shared"
       ],
       "needsModules": 1,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "12 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_silero_vad.py",
@@ -20475,8 +20475,8 @@
         "pipecat.utils.text.simple_text_aggregator"
       ],
       "needsModules": 4,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "17 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_skip_tags_aggregator.py",
@@ -20488,8 +20488,8 @@
         "pipecat.utils.text.skip_tags_aggregator"
       ],
       "needsModules": 5,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "16 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_smallest_stt.py",
@@ -20627,8 +20627,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_speculation_gate.py",
@@ -20651,8 +20651,8 @@
         "pipecat.turns.user_turn_strategies"
       ],
       "needsModules": 128,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "25 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_speechify_tts.py",
@@ -20691,8 +20691,8 @@
         "pipecat.utils.security.ssrf"
       ],
       "needsModules": 1,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "13 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_startup_timing_observer.py",
@@ -20710,8 +20710,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "13 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_stt_keepalive.py",
@@ -20788,8 +20788,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_task_manager.py",
@@ -20800,8 +20800,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 2,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_tavus_transport.py",
@@ -20840,8 +20840,8 @@
         "pipecat.utils.text.alnum_utils"
       ],
       "needsModules": 3,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "54 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_text_type_deprecations.py",
@@ -20908,8 +20908,8 @@
         "pipecat.processors.metrics.frame_processor_metrics"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "14 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_ttfat_metrics.py",
@@ -20941,8 +20941,8 @@
         "pipecat.services.stt_service"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_tts_audio_context_hooks.py",
@@ -21100,8 +21100,8 @@
         "pipecat.utils.time"
       ],
       "needsModules": 128,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_turn_trace_observer.py",
@@ -21118,8 +21118,8 @@
         "pipecat.utils.tracing.turn_trace_observer"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "skipped",
+      "notes": "0 pass, 0 fail, 12 skip, 0 todo"
     },
     {
       "file": "tests/test_turn_tracking_observer.py",
@@ -21135,8 +21135,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_twilio_serializer.py",
@@ -21173,8 +21173,8 @@
         "pipecat.workers.ui"
       ],
       "needsModules": 138,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "17 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_ui_job_lifecycle.py",
@@ -21193,8 +21193,8 @@
         "pipecat.workers.ui.ui_job_context"
       ],
       "needsModules": 139,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "14 pass, 0 fail, 14 skip, 0 todo"
     },
     {
       "file": "tests/test_ui_tools.py",
@@ -21207,8 +21207,8 @@
         "pipecat.workers.ui"
       ],
       "needsModules": 138,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "9 pass, 0 fail, 15 skip, 0 todo"
     },
     {
       "file": "tests/test_ui_worker.py",
@@ -21246,8 +21246,8 @@
         "pipecat.processors.aggregators.llm_context"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "0 pass, 0 fail, 0 skip, 4 todo"
     },
     {
       "file": "tests/test_user_bot_latency_observer.py",
@@ -21266,8 +21266,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "47 pass, 0 fail, 4 skip, 0 todo"
     },
     {
       "file": "tests/test_user_idle_controller.py",
@@ -21280,8 +21280,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "23 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_user_mute_strategy.py",
@@ -21293,8 +21293,8 @@
         "pipecat.turns.user_mute"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_user_turn_completion_mixin.py",
@@ -21309,8 +21309,8 @@
         "pipecat.turns.user_turn_completion_mixin"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "34 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_user_turn_controller.py",
@@ -21328,8 +21328,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "25 pass, 0 fail, 6 skip, 0 todo"
     },
     {
       "file": "tests/test_user_turn_processor.py",
@@ -21347,8 +21347,8 @@
         "pipecat.turns.user_turn_strategies"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_user_turn_start_strategy.py",
@@ -21360,8 +21360,8 @@
         "pipecat.turns.user_start"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "13 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_user_turn_stop_strategy.py",
@@ -21374,8 +21374,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "32 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_utils_network.py",
@@ -21411,8 +21411,8 @@
         "pipecat.utils.string"
       ],
       "needsModules": 1,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "13 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_utils_types.py",
@@ -21435,8 +21435,8 @@
         "pipecat.utils.yaml"
       ],
       "needsModules": 1,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "0 pass, 0 fail, 0 skip, 8 todo"
     },
     {
       "file": "tests/test_vad_controller.py",
@@ -21451,8 +21451,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_vad_processor.py",
@@ -21466,8 +21466,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_version_banner.py",
@@ -21572,8 +21572,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "17 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_websocket_client_transport.py",
@@ -21636,8 +21636,8 @@
         "pipecat.services.websocket_service"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "in_progress",
+      "notes": "18 pass, 1 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_websocket_service_usable.py",
@@ -21651,8 +21651,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 113,
-      "status": "todo",
-      "notes": ""
+      "status": "in_progress",
+      "notes": "11 pass, 1 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_websocket_stt_connect_failure.py",
@@ -21668,8 +21668,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "in_progress",
+      "notes": "5 pass, 1 fail, 0 skip, 8 todo"
     },
     {
       "file": "tests/test_websocket_stt_reconnect.py",
@@ -21747,8 +21747,8 @@
         "pipecat.utils.text.alnum_utils"
       ],
       "needsModules": 4,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "248 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_word_timestamp_tracker.py",
@@ -21771,8 +21771,8 @@
         "pipecat.utils.text.word_timestamp_utils"
       ],
       "needsModules": 1,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "12 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_worker_observer.py",
@@ -21790,8 +21790,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_xai_realtime_events.py",

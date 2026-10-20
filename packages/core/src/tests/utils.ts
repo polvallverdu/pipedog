@@ -139,7 +139,6 @@ export class QueuedFrameProcessor extends FrameProcessor {
 }
 
 /** A frame class, as `expectedDownFrames` / `expectedUpFrames` list them. */
-// biome-ignore lint/suspicious/noExplicitAny: frame classes take frame-specific options.
 export type FrameType = abstract new (...args: any[]) => Frame;
 
 export interface RunTestOptions {
