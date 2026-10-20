@@ -15,13 +15,6 @@ import { SimpleTextAggregator } from "../src/utils/text/simple_text_aggregator.t
 
 const STRING_MODULE = "../src/utils/string.ts";
 
-// Upstream segments with sentencex. Core still uses the Intl.Segmenter
-// fallback in utils/string.ts, which splits after single-letter initials such
-// as "I." where sentencex keeps "Albert I. Jones" together and only splits
-// "you and I. Did" once the following word is complete.
-// SENTENCEX_TODO: these cases need sentencex (@pipedog/sentencex-wasm)
-// wired into core utils/string.ts; until then they are test.todo.
-
 async function texts(iter: AsyncIterable<Aggregation>): Promise<string[]> {
   const results: string[] = [];
   for await (const a of iter) {
@@ -135,19 +128,13 @@ const LOOKAHEAD_CASES: string[][] = [
 
 for (const sentences of LOOKAHEAD_CASES) {
   for (const chunkSize of CHUNK_SIZES) {
-    // "Albert I. ..." needs sentencex's handling of initials (SENTENCEX_TODO).
-    const define = sentences[0]!.startsWith("Albert I.") ? test.todo : test;
-    define(
-      `test_lookahead_retry_preserves_sentences[${JSON.stringify(sentences)}-${chunkSize}]`,
-      async () => {
-        await testChunkBoundariesDoNotChangeSentences(chunkSize, "en", sentences);
-      },
-    );
+    test(`test_lookahead_retry_preserves_sentences[${JSON.stringify(sentences)}-${chunkSize}]`, async () => {
+      await testChunkBoundariesDoNotChangeSentences(chunkSize, "en", sentences);
+    });
   }
 }
 
-// TODO: SENTENCEX_TODO. The Intl.Segmenter fallback emits at "you and I. D".
-test.todo("test_retry_emits_on_word_delimiter_without_splitting_partial_starters", async () => {
+test("test_retry_emits_on_word_delimiter_without_splitting_partial_starters", async () => {
   const aggregator = new SimpleTextAggregator();
   expect(await texts(aggregator.aggregate("We make a good team, you and I. D"))).toEqual([]);
   expect(await texts(aggregator.aggregate("id"))).toEqual([]);
@@ -168,8 +155,7 @@ test("test_first_character_fast_path_still_emits_immediately", async () => {
 });
 
 for (const ending of ["reset", "handle_interruption", "flush"] as const) {
-  // TODO: SENTENCEX_TODO. The Intl.Segmenter fallback emits at "you and I. D".
-  test.todo(`test_pending_retry_is_cleared_between_generations[${ending}]`, async () => {
+  test(`test_pending_retry_is_cleared_between_generations[${ending}]`, async () => {
     const aggregator = new SimpleTextAggregator();
     const text = "We make a good team, you and I. Did";
     expect(await texts(aggregator.aggregate(text))).toEqual([]);

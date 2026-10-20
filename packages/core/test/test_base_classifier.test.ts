@@ -19,6 +19,7 @@ import {
 } from "../src/classifiers/base_classifier.ts";
 import type { ImageRawFrame } from "../src/frames/frames.ts";
 import type { LLMTokenUsage } from "../src/metrics/metrics.ts";
+import { jpegInfo } from "./jpeg_info.ts";
 
 const QUESTION = { answer: new YesNoQuestion({ instructions: "is this red?" }) };
 
@@ -203,13 +204,29 @@ describe("TestImageType", () => {
 });
 
 describe("TestImageFromFrame", () => {
-  test.todo(
-    "test_raw_pixels_are_encoded_as_a_jpeg (needs the JPEG encoder in utils/image.ts, not ported yet)",
-  );
+  test("test_raw_pixels_are_encoded_as_a_jpeg", async () => {
+    // Image.new("RGB", (16, 9), "red").tobytes()
+    const pixels = new Uint8Array(16 * 9 * 3);
+    for (let i = 0; i < pixels.length; i += 3) pixels[i] = 255;
+    const frame = imageFrame(pixels, [16, 9], "RGB");
 
-  test.todo(
-    "test_pixels_with_alpha_are_encoded_without_it (needs the JPEG encoder in utils/image.ts, not ported yet)",
-  );
+    const image = await ClassifierImage.fromFrame(frame);
+
+    expect(image.contentType).toEqual("image/jpeg");
+    const decoded = jpegInfo(image.data);
+    expect([decoded.format, decoded.size]).toEqual(["JPEG", [16, 9]]);
+  });
+
+  test("test_pixels_with_alpha_are_encoded_without_it", async () => {
+    // Image.new("RGBA", (4, 4), (255, 0, 0, 128)).tobytes()
+    const pixels = new Uint8Array(4 * 4 * 4);
+    for (let i = 0; i < pixels.length; i += 4) pixels.set([255, 0, 0, 128], i);
+    const frame = imageFrame(pixels, [4, 4], "RGBA");
+
+    const image = await ClassifierImage.fromFrame(frame);
+
+    expect(jpegInfo(image.data).mode).toEqual("RGB");
+  });
 
   test("test_an_encoded_frame_keeps_its_bytes", async () => {
     const encoded = png(4, 4, [0, 0, 255]);

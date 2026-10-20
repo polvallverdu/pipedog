@@ -217,12 +217,13 @@ describe("test_service_settings_complete", () => {
       svc = _tryInstantiate(serviceCls);
     } catch (e) {
       rethrowIfCancelled(e);
-      // Cannot instantiate with dummy args (needs real args or credentials).
+      // Cannot instantiate with dummy args (needs real args or credentials);
+      // upstream pytest.skip()s the same way.
       test.skip(name, () => {});
       continue;
     }
     if (typeof svc !== "object" || svc === null || !("_settings" in svc)) {
-      // Service has no _settings.
+      // Service has no _settings (upstream pytest.skip()s too).
       test.skip(name, () => {});
       continue;
     }

@@ -245,6 +245,13 @@ See the top of `frames/frames.ts`.
   Python ints → `bigint` (or integer `number`); Python floats with an integral value (`1.0`) →
   `asFloat(1)` from `num2words-ts`, because num2words treats ints and floats differently.
 - `sentencex` → `@pipedog/sentencex-wasm` (already wired into `utils/string.ts`).
+- `soxr` → `@pipedog/resampler-wasm` (rubato, behind `audio/resamplers/soxr_*.ts`). Its presets
+  carry libsoxr's names but are not bit-identical to libsoxr.
+- `PyYAML` → [`yaml`](https://www.npmjs.com/package/yaml), only through `utils/yaml.ts`, which
+  rebuilds PyYAML's `SafeLoader` (YAML 1.1 resolvers, per-class constructors) on its parser.
+- `Pillow` JPEG encoding → `utils/jpeg_encoder.ts` (baseline, no dependencies).
+- Filesystem access (`aiofiles`, `pathlib`) → an injected reader or `fs` object
+  (`node:fs/promises` satisfies `LocalFileSystem`); core never imports `node:fs`.
 
 ## WASM and Cloudflare Workers
 

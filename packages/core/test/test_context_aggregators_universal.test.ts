@@ -2352,9 +2352,7 @@ describe("TestLLMAssistantAggregator", () => {
     ).toBe(false);
   });
 
-  // TODO: needs the JPEG encoder in utils/image.ts (encodeImage of raw "RGB"
-  // pixels), not ported yet.
-  test.todo("test_user_image_frame_run_llm_false_does_not_run", async () => {
+  test("test_user_image_frame_run_llm_false_does_not_run", async () => {
     const context = new LLMContext();
     const aggregator = new LLMAssistantAggregator(context);
 
@@ -2374,9 +2372,7 @@ describe("TestLLMAssistantAggregator", () => {
     expect(context.messages.length).toEqual(1);
   });
 
-  // TODO: needs the JPEG encoder in utils/image.ts (encodeImage of raw "RGB"
-  // pixels), not ported yet.
-  test.todo("test_user_image_frame_run_llm_default_runs", async () => {
+  test("test_user_image_frame_run_llm_default_runs", async () => {
     const context = new LLMContext();
     const aggregator = new LLMAssistantAggregator(context);
 
