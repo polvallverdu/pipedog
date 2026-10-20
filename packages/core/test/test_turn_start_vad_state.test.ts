@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_turn_start_vad_state.py
@@ -19,7 +19,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { monotonic } from "@pipecat-ts/asyncio";
+import { monotonic } from "@pipedog/asyncio";
 
 import { BaseAudioFilter } from "../src/audio/filters/base_audio_filter.ts";
 import {

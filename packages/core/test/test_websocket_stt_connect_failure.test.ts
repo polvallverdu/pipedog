@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_websocket_stt_connect_failure.py
@@ -8,7 +8,7 @@
 
 import { expect, test } from "bun:test";
 
-import { monotonic, sleep, type Task } from "@pipecat-ts/asyncio";
+import { monotonic, sleep, type Task } from "@pipedog/asyncio";
 
 import { ErrorFrame, type Frame, InputAudioRawFrame } from "../src/frames/frames.ts";
 import { PipelineParams } from "../src/pipeline/worker.ts";
@@ -206,11 +206,11 @@ const SERVICES: [string, string, Record<string, unknown>][] = [
 ];
 
 // The receive loop is what retries, so it starts even without a websocket.
-// Each provider lives in its own package (`@pipecat-ts/<provider>`), none of
+// Each provider lives in its own package (`@pipedog/<provider>`), none of
 // which is ported yet.
 for (const [module, name] of SERVICES) {
   const provider = module.split(".")[0];
   test.todo(
-    `test_failed_connect_starts_the_receive_loop[${module}-${name}] (needs unported services/${module.replace(".", "/")} in @pipecat-ts/${provider})`,
+    `test_failed_connect_starts_the_receive_loop[${module}-${name}] (needs unported services/${module.replace(".", "/")} in @pipedog/${provider})`,
   );
 }

@@ -1,4 +1,4 @@
-# Copyright (c) 2026, pipecat-ts contributors
+# Copyright (c) 2026, pipedog contributors
 # SPDX-License-Identifier: BSD-2-Clause
 """Build porting/manifest.json from the pinned upstream checkout.
 
@@ -37,23 +37,23 @@ CORE_ROOTS = [
 
 # Path prefix -> package rule. First match wins. "{1}" is the next path segment.
 PACKAGE_RULES = [
-    ("pipecat.services.", "@pipecat-ts/{1}", lambda parts: len(parts) > 3),
-    ("pipecat.transports.", "@pipecat-ts/transport-{1}", lambda parts: len(parts) > 3),
-    ("pipecat.serializers.", "@pipecat-ts/serializer-{1}",
+    ("pipecat.services.", "@pipedog/{1}", lambda parts: len(parts) > 3),
+    ("pipecat.transports.", "@pipedog/transport-{1}", lambda parts: len(parts) > 3),
+    ("pipecat.serializers.", "@pipedog/serializer-{1}",
         lambda parts: parts[2] not in ("base_serializer", "__init__")),
-    ("pipecat.flows", "@pipecat-ts/flows", None),
-    ("pipecat.evals", "@pipecat-ts/evals", None),
-    ("pipecat.cli", "@pipecat-ts/cli", None),
-    ("pipecat.runner", "@pipecat-ts/runner", None),
-    ("pipecat.extensions", "@pipecat-ts/extensions", None),
-    ("pipecat.bus.network.pgmq", "@pipecat-ts/bus-pgmq", None),
-    ("pipecat.bus.network.redis", "@pipecat-ts/bus-redis", None),
-    ("pipecat.services.mcp_service", "@pipecat-ts/mcp", None),
-    ("pipecat.processors.metrics.sentry", "@pipecat-ts/sentry", None),
-    ("pipecat.workers.proxy.websocket.server", "@pipecat-ts/worker-proxy", None),
-    ("pipecat.processors.gstreamer", "@pipecat-ts/gstreamer", None),
-    ("pipecat.processors.frameworks.langchain", "@pipecat-ts/langchain", None),
-    ("pipecat.processors.frameworks.strands_agents", "@pipecat-ts/strands-agents", None),
+    ("pipecat.flows", "@pipedog/flows", None),
+    ("pipecat.evals", "@pipedog/evals", None),
+    ("pipecat.cli", "@pipedog/cli", None),
+    ("pipecat.runner", "@pipedog/runner", None),
+    ("pipecat.extensions", "@pipedog/extensions", None),
+    ("pipecat.bus.network.pgmq", "@pipedog/bus-pgmq", None),
+    ("pipecat.bus.network.redis", "@pipedog/bus-redis", None),
+    ("pipecat.services.mcp_service", "@pipedog/mcp", None),
+    ("pipecat.processors.metrics.sentry", "@pipedog/sentry", None),
+    ("pipecat.workers.proxy.websocket.server", "@pipedog/worker-proxy", None),
+    ("pipecat.processors.gstreamer", "@pipedog/gstreamer", None),
+    ("pipecat.processors.frameworks.langchain", "@pipedog/langchain", None),
+    ("pipecat.processors.frameworks.strands_agents", "@pipedog/strands-agents", None),
 ]
 
 AUDIO_IMPL_PREFIXES = ("pipecat.audio.filters.", "pipecat.audio.vad.", "pipecat.audio.turn.",
@@ -129,7 +129,7 @@ def closure(graph, roots):
 def package_for(mod, core, third):
     parts = mod.split(".")
     if mod in core:
-        return "@pipecat-ts/core"
+        return "@pipedog/core"
     for prefix, pattern, cond in PACKAGE_RULES:
         if mod.startswith(prefix) and (cond is None or cond(parts)):
             name = pattern.replace("{1}", parts[2] if len(parts) > 2 else parts[-1])
@@ -139,15 +139,15 @@ def package_for(mod, core, third):
             and parts[-1] not in ("__init__", "vad_analyzer", "vad_controller"):
         heavy = [t for t in third if t not in CORE_OK_THIRD_PARTY]
         if heavy or parts[2] in ("filters", "turn"):
-            return f"@pipecat-ts/audio-{parts[3]}".replace("_", "-")
+            return f"@pipedog/audio-{parts[3]}".replace("_", "-")
     if mod.startswith("pipecat.adapters.services.") and parts[-1].endswith("_adapter"):
         provider = parts[-1][: -len("_adapter")].split("_")[0]
         provider = {"open": "openai", "gemini": "google", "bedrock": "aws"}.get(provider, provider)
-        return f"@pipecat-ts/{provider}"
+        return f"@pipedog/{provider}"
     heavy = [t for t in third if t not in CORE_OK_THIRD_PARTY]
     if heavy and not mod.startswith(("pipecat.tests", "pipecat.utils.text.transforms")):
-        return f"@pipecat-ts/{parts[-1]}".replace("_", "-")
-    return "@pipecat-ts/core"
+        return f"@pipedog/{parts[-1]}".replace("_", "-")
+    return "@pipedog/core"
 
 
 def package_dir(pkg):
@@ -160,7 +160,7 @@ def ts_path(mod, src, pkg):
     if rel.endswith("__init__.py"):
         rel = rel[: -len("__init__.py")] + "index.py"
     rel = rel[:-3] + ".ts"
-    if pkg != "@pipecat-ts/core":
+    if pkg != "@pipedog/core":
         # Strip the directory that names the package (services/deepgram/stt.py -> stt.ts).
         parts = rel.split("/")
         for depth in (2, 1):
@@ -283,8 +283,8 @@ def main():
         old_tests = {t["file"]: t for t in json.load(open(manifest_path)).get("tests", [])}
     for f, imported in test_entries:
         pkgs = {by_mod[m]["package"] for m in imported if m in by_mod}
-        non_core = sorted(p for p in pkgs if p != "@pipecat-ts/core")
-        pkg = non_core[0] if non_core else "@pipecat-ts/core"
+        non_core = sorted(p for p in pkgs if p != "@pipedog/core")
+        pkg = non_core[0] if non_core else "@pipedog/core"
         needs = sorted(closure(graph, imported))
         prev = old_tests.get(f"tests/{f}", {})
         tests.append({

@@ -1,9 +1,9 @@
 ---
 title: Coming from Pipecat (Python)
-description: How Pipecat's Python API maps to pipecat-ts - naming, options objects, enums, async and cancellation, frames, and what is not ported.
+description: How Pipecat's Python API maps to pipedog - naming, options objects, enums, async and cancellation, frames, and what is not ported.
 ---
 
-pipecat-ts is designed so that someone who knows Pipecat can read pipecat-ts code without a
+pipedog is designed so that someone who knows Pipecat can read pipedog code without a
 dictionary. Class names, frame names, event names, module paths and wire formats are the same;
 what changes is what TypeScript forces to change. This page is the short version of the porting
 rulebook, `docs/CONVENTIONS.md` in the repository.
@@ -36,12 +36,12 @@ async def on_error(processor, error):
 ```
 
 ```ts twoslash
-import { type ErrorFrame, type Frame, TextFrame } from "@pipecat-ts/core/frames/frames";
+import { type ErrorFrame, type Frame, TextFrame } from "@pipedog/core/frames/frames";
 import {
   type FrameDirection,
   FrameProcessor,
   type FrameProcessorOptions,
-} from "@pipecat-ts/core/processors/frame_processor";
+} from "@pipedog/core/processors/frame_processor";
 
 export interface ShoutOptions extends FrameProcessorOptions {
   suffix?: string;
@@ -77,14 +77,14 @@ One Python module is one TypeScript file at the same path, with the same snake_c
 
 | Python | TypeScript |
 |---|---|
-| `from pipecat.processors.frame_processor import FrameProcessor` | `import { FrameProcessor } from "@pipecat-ts/core/processors/frame_processor"` |
-| `from pipecat.services.deepgram.stt import DeepgramSTTService` | `import { DeepgramSTTService } from "@pipecat-ts/deepgram/stt"` (once ported) |
-| `pipecat.transports.websocket` | `@pipecat-ts/transport-websocket` |
-| `pipecat.serializers.twilio` | `@pipecat-ts/serializer-twilio` (base serializers stay in core) |
+| `from pipecat.processors.frame_processor import FrameProcessor` | `import { FrameProcessor } from "@pipedog/core/processors/frame_processor"` |
+| `from pipecat.services.deepgram.stt import DeepgramSTTService` | `import { DeepgramSTTService } from "@pipedog/deepgram/stt"` (once ported) |
+| `pipecat.transports.websocket` | `@pipedog/transport-websocket` |
+| `pipecat.serializers.twilio` | `@pipedog/serializer-twilio` (base serializers stay in core) |
 | `__init__.py` that re-exports | `index.ts` |
 
 The core import closure (frames, processors base, pipeline, workers, bus, observers, RTVI, base
-transports and services, turns, utils) is one package, `@pipecat-ts/core`. Each provider,
+transports and services, turns, utils) is one package, `@pipedog/core`. Each provider,
 transport, serializer and audio model is its own package, like Pipecat's extras.
 
 ## Naming
@@ -137,7 +137,7 @@ const worker = new PipelineWorker(pipeline, {
 - **`bytes` is `Uint8Array`**, never `Buffer`. PCM is 16-bit little-endian; read samples with
   `new Int16Array(u8.buffer, u8.byteOffset, u8.length / 2)` (copy first if `byteOffset` is odd).
 - `time.time()`, `time.monotonic()`, `time.monotonic_ns()` are `time()`, `monotonic()` and
-  `monotonicNs()` from `@pipecat-ts/asyncio`.
+  `monotonicNs()` from `@pipedog/asyncio`.
 
 ## Enums
 
@@ -156,7 +156,7 @@ TypeScript `enum` or `namespace` anywhere: the code is erasable so Node can run 
 
 ## Async and cancellation
 
-Python's asyncio semantics come from `@pipecat-ts/asyncio`. The rules that matter most are in
+Python's asyncio semantics come from `@pipedog/asyncio`. The rules that matter most are in
 [Interruptions & cancellation](/docs/concepts/interruptions-and-cancellation).
 
 | Python | TypeScript |
@@ -164,10 +164,10 @@ Python's asyncio semantics come from `@pipecat-ts/asyncio`. The rules that matte
 | `asyncio.create_task(coro())` | `createTask(() => coro())`; in a processor, `this.createTask(() => this.x(), "name")` |
 | `await self.cancel_task(task)` | `await this.cancelTask(task)` |
 | `asyncio.sleep(s)` | `sleep(s)` |
-| `asyncio.Event / Queue / PriorityQueue / Lock / Semaphore` | same names from `@pipecat-ts/asyncio` |
+| `asyncio.Event / Queue / PriorityQueue / Lock / Semaphore` | same names from `@pipedog/asyncio` |
 | `asyncio.wait_for(coro(), timeout=t)` | `waitFor(() => coro(), t)` (pass a function, so it can be cancelled) |
 | `asyncio.gather(a(), b())` | `gather(() => a(), () => b())` |
-| `asyncio.TimeoutError` / `TimeoutError` | `TimeoutError` from `@pipecat-ts/asyncio` |
+| `asyncio.TimeoutError` / `TimeoutError` | `TimeoutError` from `@pipedog/asyncio` |
 | `asyncio.CancelledError` | `CancelledError` |
 | `asyncio.current_task()` | `currentTask()` |
 | `async with lock:` | `await lock.run(async () => { ... })` |
@@ -212,14 +212,14 @@ and register the second as a virtual base, so `instanceof` works for both.
 
 ## Logging
 
-`from loguru import logger` becomes `import { logger } from "@pipecat-ts/core/utils/logger"`, with
+`from loguru import logger` becomes `import { logger } from "@pipedog/core/utils/logger"`, with
 the same level methods (`trace`, `debug`, `info`, `warning`, `error`, `critical`).
 `logger.exception(msg)` is `logger.error(msg, e)`.
 
 ## Deprecated APIs are not ported
 
 Anything upstream marks deprecated (with `@deprecated`, `warn_deprecated`, or "will be removed in
-2.0.0") is left out of pipecat-ts, including:
+2.0.0") is left out of pipedog, including:
 
 - the `PipelineTask` / `PipelineTaskParams` / `PipelineRunner` aliases (use `PipelineWorker`,
   `PipelineParams` and `WorkerRunner`);
@@ -236,4 +236,4 @@ What was dropped from each module is recorded in its `notes` in `porting/manifes
 Upstream tests are ported 1:1 with `bun:test`, keeping their names so the two suites can be diffed:
 `class TestX(unittest.IsolatedAsyncioTestCase)` is `describe("TestX", ...)`, `async def test_y`
 is `test("test_y", ...)`, and `run_test(...)` is `runTest(...)` from
-`@pipecat-ts/core/tests/utils`.
+`@pipedog/core/tests/utils`.

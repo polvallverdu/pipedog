@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/string.py
@@ -12,7 +12,7 @@
  * tag parsing for structured text content.
  *
  * Sentence boundaries use sentencex's embedded language rules without external
- * data, like upstream: `@pipecat-ts/sentencex-wasm` is the same sentencex
+ * data, like upstream: `@pipedog/sentencex-wasm` is the same sentencex
  * release upstream pins, compiled to WebAssembly so it runs on every runtime.
  * The segmenter is pluggable with `setSentenceSegmenter()`;
  * `intlSentenceSegmenter` is a lighter `Intl.Segmenter`-based alternative.
@@ -21,7 +21,7 @@
  * units), so `text.slice(0, matchEndofsentence(text))` is the first sentence.
  */
 
-import { segment } from "@pipecat-ts/sentencex-wasm";
+import { segment } from "@pipedog/sentencex-wasm";
 
 /**
  * Split `text` into spans, like sentencex's `segment(language, text)`.

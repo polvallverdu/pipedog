@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // The Quickstart from the docs (content/docs/quickstart.mdx). It is
@@ -6,11 +6,11 @@
 // with `bun snippets/quickstart.ts`.
 
 // #region bot
-import { EndFrame, type Frame, TextFrame } from "@pipecat-ts/core/frames/frames";
-import { Pipeline } from "@pipecat-ts/core/pipeline/pipeline";
-import { PipelineWorker } from "@pipecat-ts/core/pipeline/worker";
-import { type FrameDirection, FrameProcessor } from "@pipecat-ts/core/processors/frame_processor";
-import { WorkerRunner } from "@pipecat-ts/core/workers/runner";
+import { EndFrame, type Frame, TextFrame } from "@pipedog/core/frames/frames";
+import { Pipeline } from "@pipedog/core/pipeline/pipeline";
+import { PipelineWorker } from "@pipedog/core/pipeline/worker";
+import { type FrameDirection, FrameProcessor } from "@pipedog/core/processors/frame_processor";
+import { WorkerRunner } from "@pipedog/core/workers/runner";
 
 /** Upper-cases every TextFrame and passes every other frame through. */
 class UpperCaseProcessor extends FrameProcessor {
@@ -43,7 +43,7 @@ const worker = new PipelineWorker(pipeline, { enableRtvi: false });
 worker.eventHandler("on_pipeline_started", async () => {
   await worker.queueFrames([
     new TextFrame({ text: "hello" }),
-    new TextFrame({ text: "from pipecat-ts" }),
+    new TextFrame({ text: "from pipedog" }),
     new EndFrame(),
   ]);
 });

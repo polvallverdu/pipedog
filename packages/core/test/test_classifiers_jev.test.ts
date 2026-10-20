@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_classifiers_jev.py
@@ -7,7 +7,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { deflateSync } from "node:zlib";
 
-import * as asyncio from "@pipecat-ts/asyncio";
+import * as asyncio from "@pipedog/asyncio";
 
 import {
   ChoiceQuestion,
@@ -157,20 +157,20 @@ function bytes(text: string): Uint8Array {
 /** Replaces the client's `sleep` (upstream monkeypatches `asyncio.sleep`). */
 // Like upstream's monkeypatch of `asyncio.sleep` in the client module. Replace
 // the module rather than spying on a namespace object: other test files swap
-// @pipecat-ts/asyncio with mock.module, and a spy on a stale namespace would
+// @pipedog/asyncio with mock.module, and a spy on a stale namespace would
 // then miss the binding the client actually calls.
 const originalAsyncio = { ...asyncio };
 let sleepPatched = false;
 
 function patchSleep(fn: (seconds: number) => Promise<void>) {
   sleepPatched = true;
-  mock.module("@pipecat-ts/asyncio", () => ({ ...originalAsyncio, sleep: fn }));
+  mock.module("@pipedog/asyncio", () => ({ ...originalAsyncio, sleep: fn }));
 }
 
 afterEach(() => {
   // Restore any sleep patched by a test.
   if (sleepPatched) {
-    mock.module("@pipecat-ts/asyncio", () => originalAsyncio);
+    mock.module("@pipedog/asyncio", () => originalAsyncio);
     sleepPatched = false;
   }
 });

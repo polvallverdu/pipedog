@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_shared.py
@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { gather, gatherSettled, sleep } from "@pipecat-ts/asyncio";
+import { gather, gatherSettled, sleep } from "@pipedog/asyncio";
 
 import { acquires, releases } from "../src/utils/shared.ts";
 

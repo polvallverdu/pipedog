@@ -7,7 +7,7 @@ export function AttributionNotice({ className }: { className?: string }) {
       className={`text-xs text-fd-muted-foreground border-t pt-4 mt-8 space-y-1 ${className ?? ""}`}
     >
       <p>
-        pipecat-ts is an <strong>unofficial</strong> community TypeScript port of{" "}
+        pipedog is an <strong>unofficial</strong> community TypeScript port of{" "}
         <a href={upstreamUrl} className="underline">
           Pipecat
         </a>

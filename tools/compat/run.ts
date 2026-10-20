@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Runtime compatibility harness. Runs each package's smoke test (its
@@ -57,7 +57,7 @@ const all = await discoverPackages();
 const wantedPackages = split(values.package);
 const packages: PackageInfo[] = wantedPackages.length
   ? wantedPackages.map((name) => {
-      const p = all.find((x) => x.name === name || x.name === `@pipecat-ts/${name}`);
+      const p = all.find((x) => x.name === name || x.name === `@pipedog/${name}`);
       if (!p) {
         console.error(`unknown package ${name}`);
         process.exit(2);

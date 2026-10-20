@@ -3,16 +3,16 @@ title: Frames
 description: Frame categories, processing order, interruption behavior and custom frames.
 ---
 
-Frames are the fundamental units of data in pipecat-ts. Every piece of information that moves
+Frames are the fundamental units of data in pipedog. Every piece of information that moves
 through a pipeline (audio, text, images, control signals) is wrapped in a frame. Frame
 processors receive frames, act on them, and push new or modified frames to the next processor.
 
-All frames extend the base `Frame` class from `@pipecat-ts/core/frames/frames`, the port of
-Pipecat's `pipecat.frames.frames`. Where Pipecat frames are Python dataclasses, pipecat-ts frames
+All frames extend the base `Frame` class from `@pipedog/core/frames/frames`, the port of
+Pipecat's `pipecat.frames.frames`. Where Pipecat frames are Python dataclasses, pipedog frames
 are classes whose constructor takes **one options object**:
 
 ```ts twoslash
-import { TextFrame, TranscriptionFrame } from "@pipecat-ts/core/frames/frames";
+import { TextFrame, TranscriptionFrame } from "@pipedog/core/frames/frames";
 
 const text = new TextFrame({ text: "hello" });
 const transcription = new TranscriptionFrame({
@@ -109,7 +109,7 @@ down properly. The deprecated `UninterruptibleFrame` mixin is not ported; use th
 
 ## Media mixins
 
-Pipecat shares audio, image and file fields between frames through dataclass mixins. pipecat-ts
+Pipecat shares audio, image and file fields between frames through dataclass mixins. pipedog
 ports them as class-factory mixins (`defineMixin`), so `instanceof` keeps working:
 
 - `AudioRawFrame`: `audio` (`Uint8Array`, 16-bit little-endian PCM, never `Buffer`),
@@ -118,7 +118,7 @@ ports them as class-factory mixins (`defineMixin`), so `instanceof` keeps workin
 - `FileRawFrame`: `file`, `type` (`"bytes"` or `"url"`), `filename`, `format`.
 
 ```ts twoslash
-import { AudioRawFrame, InputAudioRawFrame } from "@pipecat-ts/core/frames/frames";
+import { AudioRawFrame, InputAudioRawFrame } from "@pipedog/core/frames/frames";
 
 const frame = new InputAudioRawFrame({
   audio: new Uint8Array(320),
@@ -144,7 +144,7 @@ every built-in frame does.
 
 ## Common patterns
 
-pipecat-ts, like Pipecat, prefers pushing frames over calling methods between processors.
+pipedog, like Pipecat, prefers pushing frames over calling methods between processors.
 Routing data through the pipeline as frames keeps processing in order, which real-time use cases
 depend on.
 
@@ -159,5 +159,5 @@ depend on.
 <Callout title="Coming soon">
   Patterns that need services (injecting prompts with `LLMMessagesAppendFrame`, updating tools
   with `LLMSetToolsFrame`, changing settings at runtime) will be documented with the provider
-  packages. The frames themselves already exist in `@pipecat-ts/core/frames/frames`.
+  packages. The frames themselves already exist in `@pipedog/core/frames/frames`.
 </Callout>

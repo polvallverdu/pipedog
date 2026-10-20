@@ -1,6 +1,6 @@
-# @pipecat-ts/resampler-wasm
+# @pipedog/resampler-wasm
 
-High-quality PCM sample-rate conversion for pipecat-ts, compiled to WebAssembly.
+High-quality PCM sample-rate conversion for pipedog, compiled to WebAssembly.
 It is the engine behind core's `SOXRAudioResampler` and `SOXRStreamAudioResampler`.
 
 - [rubato](https://github.com/HEnquist/rubato) 5.0.1 (MIT OR Apache-2.0) windowed-sinc resampler, written in Rust,
@@ -17,7 +17,7 @@ It is the engine behind core's `SOXRAudioResampler` and `SOXRStreamAudioResample
 ## Usage
 
 ```ts
-import { initResampler } from "@pipecat-ts/resampler-wasm";
+import { initResampler } from "@pipedog/resampler-wasm";
 
 const engine = await initResampler(); // once; everything after this is synchronous
 
@@ -134,8 +134,8 @@ next to the stubs, and the stubs throw a clear "call setSoxrEngine()" error whil
 The application then does:
 
 ```ts
-import { createSoxrCompatibleEngine, initResampler } from "@pipecat-ts/resampler-wasm";
-import { setSoxrEngine } from "@pipecat-ts/core/audio/resamplers/soxr_resampler";
+import { createSoxrCompatibleEngine, initResampler } from "@pipedog/resampler-wasm";
+import { setSoxrEngine } from "@pipedog/core/audio/resamplers/soxr_resampler";
 
 setSoxrEngine(createSoxrCompatibleEngine(await initResampler()));
 ```

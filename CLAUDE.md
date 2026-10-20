@@ -1,4 +1,4 @@
-# pipecat-ts
+# pipedog
 
 Unofficial TypeScript port of Pipecat (Python, BSD-2-Clause, by Daily). Bun monorepo.
 
@@ -7,7 +7,7 @@ Unofficial TypeScript port of Pipecat (Python, BSD-2-Clause, by Daily). Bun mono
 - Porting state: `porting/manifest.json` (machine) and `porting/STATUS.md` (generated). Change status
   with `bun tools/port/status.ts --set <module|test> <status> [notes]`, never by hand-editing.
 - Next work: `bun tools/port/next.ts modules|tests ...`. Batch porting: the `port` workflow
-  (`.claude/workflows/port.js`), e.g. args `{ "select": "--package @pipecat-ts/deepgram" }`.
+  (`.claude/workflows/port.js`), e.g. args `{ "select": "--package @pipedog/deepgram" }`.
 - Checks: `bun test`, `bun run typecheck`, `bun run lint` (biome + license headers).
 - Core must stay runtime-agnostic (Bun, Node, Deno, Cloudflare Workers): no `node:*` imports, no
   `Buffer`, no Bun APIs in `packages/core` or `packages/asyncio`.

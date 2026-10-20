@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_base_output_transport.py
@@ -9,7 +9,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createHash } from "node:crypto";
 
-import { Event, sleep, waitFor } from "@pipecat-ts/asyncio";
+import { Event, sleep, waitFor } from "@pipedog/asyncio";
 
 import { BaseAudioFilter } from "../src/audio/filters/base_audio_filter.ts";
 import { BaseAudioMixer } from "../src/audio/mixers/base_audio_mixer.ts";

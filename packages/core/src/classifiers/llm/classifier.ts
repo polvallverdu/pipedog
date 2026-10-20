@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/classifiers/llm/classifier.py
@@ -12,7 +12,7 @@
  * object with an answer per question, and the object is parsed into results.
  */
 
-import { rethrowIfCancelled, TimeoutError, waitFor } from "@pipecat-ts/asyncio";
+import { rethrowIfCancelled, TimeoutError, waitFor } from "@pipedog/asyncio";
 import { LLMContext, type LLMContextMessage } from "../../processors/aggregators/llm_context.ts";
 import { type LLMService, NotImplementedError } from "../../services/llm_service.ts";
 import {

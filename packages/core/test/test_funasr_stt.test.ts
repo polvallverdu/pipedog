@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_funasr_stt.py
@@ -11,7 +11,7 @@
  * in `sys.modules` and re-imports `pipecat.services.funasr.stt`. Here the fake
  * modules are installed with `mock.module` and the service is loaded with a
  * dynamic import, so this file still loads while `packages/funasr/src/stt.ts`
- * (`@pipecat-ts/funasr`) is unported; the tests are `test.todo` until it lands.
+ * (`@pipedog/funasr`) is unported; the tests are `test.todo` until it lands.
  *
  * The keyword arguments the service passes to the third-party `AutoModel`
  * constructor and `generate()` are the funasr library's own names, so they keep

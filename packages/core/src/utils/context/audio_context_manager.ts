@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/context/audio_context_manager.py
 
 /** Audio contexts a TTS service plays one after another. */
 
-import { Queue, waitFor } from "@pipecat-ts/asyncio";
+import { Queue, waitFor } from "@pipedog/asyncio";
 import { Frame, TTSAudioRawFrame, TTSStoppedFrame } from "../../frames/frames.ts";
 import { FrameQueue } from "../frame_queue.ts";
 

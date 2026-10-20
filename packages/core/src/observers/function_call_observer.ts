@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/observers/function_call_observer.py
@@ -14,7 +14,7 @@
  * waiting rather than one that quietly stopped mattering.
  */
 
-import { time } from "@pipecat-ts/asyncio";
+import { time } from "@pipedog/asyncio";
 import {
   type Frame,
   FunctionCallCancelFrame,

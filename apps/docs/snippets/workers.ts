@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Samples for content/docs/concepts/pipelines-and-workers.mdx. Type-checked on every docs build.
@@ -12,16 +12,16 @@ import {
   InterruptionWorkerFrame,
   TextFrame,
   TTSSpeakFrame,
-} from "@pipecat-ts/core/frames/frames";
-import { ParallelPipeline } from "@pipecat-ts/core/pipeline/parallel_pipeline";
-import { Pipeline } from "@pipecat-ts/core/pipeline/pipeline";
+} from "@pipedog/core/frames/frames";
+import { ParallelPipeline } from "@pipedog/core/pipeline/parallel_pipeline";
+import { Pipeline } from "@pipedog/core/pipeline/pipeline";
 import {
   PipelineParams,
   PipelineWorker,
   ProcessorUnusablePolicy,
-} from "@pipecat-ts/core/pipeline/worker";
-import { FrameDirection, FrameProcessor } from "@pipecat-ts/core/processors/frame_processor";
-import { WorkerRunner } from "@pipecat-ts/core/workers/runner";
+} from "@pipedog/core/pipeline/worker";
+import { FrameDirection, FrameProcessor } from "@pipedog/core/processors/frame_processor";
+import { WorkerRunner } from "@pipedog/core/workers/runner";
 
 class Passthrough extends FrameProcessor {
   override async processFrame(frame: Frame, direction: FrameDirection): Promise<void> {

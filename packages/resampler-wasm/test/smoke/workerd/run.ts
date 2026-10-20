@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 
 // Bundles worker.ts with the "workerd" condition and serves it with workerd

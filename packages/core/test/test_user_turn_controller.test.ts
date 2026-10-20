@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_user_turn_controller.py
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-import { createTask, Event, monotonic, sleep, waitFor } from "@pipecat-ts/asyncio";
+import { createTask, Event, monotonic, sleep, waitFor } from "@pipedog/asyncio";
 
 import { type BaseTurnAnalyzer, EndOfTurnState } from "../src/audio/turn/base_turn_analyzer.ts";
 import { SystemClock } from "../src/clocks/system_clock.ts";

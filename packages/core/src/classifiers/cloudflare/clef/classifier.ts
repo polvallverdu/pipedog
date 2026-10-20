@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/classifiers/cloudflare/clef/classifier.py
@@ -11,7 +11,7 @@
  * result, through a `ClefClient`.
  */
 
-import { rethrowIfCancelled } from "@pipecat-ts/asyncio";
+import { rethrowIfCancelled } from "@pipedog/asyncio";
 import { LLMTokenUsage } from "../../../metrics/metrics.ts";
 import type { BaseTaskManager } from "../../../utils/asyncio/task_manager.ts";
 import { logger } from "../../../utils/logger.ts";

@@ -1,9 +1,9 @@
 ---
 title: Porting workflow
-description: How pipecat-ts tracks upstream Pipecat, picks the next work, ports modules and tests, and moves to a new upstream commit.
+description: How pipedog tracks upstream Pipecat, picks the next work, ports modules and tests, and moves to a new upstream commit.
 ---
 
-pipecat-ts is ported from a **pinned upstream commit** of Pipecat, module by module and test by
+pipedog is ported from a **pinned upstream commit** of Pipecat, module by module and test by
 test. Everything about that process is tracked in the repository so humans and porting agents can
 share the work.
 
@@ -56,11 +56,11 @@ bun run port:status   # regenerate porting/STATUS.md
 ```bash
 # Modules, packed into units of related files (same directory first) up to --max-lines of Python
 bun tools/port/next.ts modules --mvp
-bun tools/port/next.ts modules --package @pipecat-ts/deepgram --max-lines 3500
+bun tools/port/next.ts modules --package @pipedog/deepgram --max-lines 3500
 bun tools/port/next.ts modules --modules pipecat.services.deepgram.stt
 
 # Upstream test files whose imported modules (and their dependencies) are all ported
-bun tools/port/next.ts tests --package @pipecat-ts/core --limit 40
+bun tools/port/next.ts tests --package @pipedog/core --limit 40
 ```
 
 ## The `port` workflow
@@ -76,7 +76,7 @@ bun tools/port/next.ts tests --package @pipecat-ts/core --limit 40
 5. **Tests**: port the upstream tests that are now ready, 1:1, and make them pass.
 6. **Record**: update `porting/manifest.json` and `STATUS.md`.
 
-Arguments select the work, for example `{ "select": "--package @pipecat-ts/deepgram" }`, or
+Arguments select the work, for example `{ "select": "--package @pipedog/deepgram" }`, or
 `{ "select": "--mvp" }` (the default). Other options are `maxLines`, `review`, `tests`,
 `testLimit` and `testsOnly`.
 
@@ -87,7 +87,7 @@ Arguments select the work, for example `{ "select": "--package @pipecat-ts/deepg
 
    ```ts
    // Copyright (c) 2024-2026, Daily
-   // Copyright (c) 2026, pipecat-ts contributors
+   // Copyright (c) 2026, pipedog contributors
    // SPDX-License-Identifier: BSD-2-Clause
    //
    // Ported from pipecat: src/pipecat/<path>.py

@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Generate porting/STATUS.md (progress per package + runtime compatibility)
@@ -112,7 +112,7 @@ const lines: string[] = [
   `|---|---|---|---|${RUNTIMES.map(() => "---").join("|")}|`,
 ];
 const sorted = [...packages.entries()].sort((a, b) =>
-  a[0] === "@pipecat-ts/core" ? -1 : b[0] === "@pipecat-ts/core" ? 1 : a[0].localeCompare(b[0]),
+  a[0] === "@pipedog/core" ? -1 : b[0] === "@pipedog/core" ? 1 : a[0].localeCompare(b[0]),
 );
 for (const [pkg, { mods, tests }] of sorted) {
   const total = mods.reduce((a, m) => a + m.lines, 0);
@@ -127,12 +127,11 @@ for (const [pkg, { mods, tests }] of sorted) {
 }
 
 // Packages we wrote that have no upstream counterpart.
-const extra = readdirSync("packages").filter((d) => !packages.has(`@pipecat-ts/${d}`));
+const extra = readdirSync("packages").filter((d) => !packages.has(`@pipedog/${d}`));
 if (extra.length) {
   lines.push(
     "",
-    "Packages without an upstream counterpart: " +
-      extra.map((d) => `\`@pipecat-ts/${d}\``).join(", "),
+    "Packages without an upstream counterpart: " + extra.map((d) => `\`@pipedog/${d}\``).join(", "),
   );
 }
 const notes = manifest.modules.filter((m) => m.notes);

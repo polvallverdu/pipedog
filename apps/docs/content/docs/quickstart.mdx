@@ -1,14 +1,14 @@
 ---
 title: Quickstart
-description: Build and run your first pipecat-ts pipeline with a custom frame processor.
+description: Build and run your first pipedog pipeline with a custom frame processor.
 ---
 
-This quickstart builds the smallest useful pipecat-ts program: a pipeline of two custom frame
+This quickstart builds the smallest useful pipedog program: a pipeline of two custom frame
 processors, run by a `PipelineWorker` inside a `WorkerRunner`. No API keys, no network.
 
 <Callout title="Voice bot quickstart: coming soon">
   Pipecat's quickstart builds a voice bot from a transport plus STT, LLM and TTS services. Those
-  provider packages (`@pipecat-ts/deepgram`, `@pipecat-ts/openai`, `@pipecat-ts/cartesia`, ...)
+  provider packages (`@pipedog/deepgram`, `@pipedog/openai`, `@pipedog/cartesia`, ...)
   are not ported yet; see the [porting status](/docs/contributing/status). This page will grow a
   voice bot quickstart as soon as they land.
 </Callout>
@@ -18,7 +18,7 @@ processors, run by a `PipelineWorker` inside a `WorkerRunner`. No API keys, no n
 
 ### Set up a project
 
-Follow [Installation](/docs/installation) to get `@pipecat-ts/core` and `@pipecat-ts/asyncio`
+Follow [Installation](/docs/installation) to get `@pipedog/core` and `@pipedog/asyncio`
 into a project. Any of Bun, Node, Deno or Cloudflare Workers works; this page uses Bun.
 
 </Step>
@@ -32,7 +32,7 @@ prints the text frames that reach it. Both pass every other frame through untouc
 <include cwd meta='twoslash title="quickstart.ts"'>snippets/quickstart.ts#bot</include>
 
 Hover over the code to see the types: this sample is type-checked against the real
-`@pipecat-ts/core` sources when the docs are built.
+`@pipedog/core` sources when the docs are built.
 
 </Step>
 <Step>
@@ -47,7 +47,7 @@ Among the debug logs you will see:
 
 ```text
 PrintProcessor#0: HELLO
-PrintProcessor#0: FROM PIPECAT-TS
+PrintProcessor#0: FROM PIPEDOG
 pipeline finished with EndFrame#0
 ```
 
@@ -82,6 +82,6 @@ default (`true`) in a real bot.
     `PipelineParams`, worker events, ending and cancelling.
   </Card>
   <Card title="Interruptions & cancellation" href="/docs/concepts/interruptions-and-cancellation">
-    How `@pipecat-ts/asyncio` gives JavaScript asyncio's cancellation.
+    How `@pipedog/asyncio` gives JavaScript asyncio's cancellation.
   </Card>
 </Cards>

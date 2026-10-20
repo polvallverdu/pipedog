@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_audio_context_manager.py
@@ -7,7 +7,7 @@
 /** Tests for AudioContextManager. */
 
 import { expect, test } from "bun:test";
-import { createTask, sleep, TimeoutError } from "@pipecat-ts/asyncio";
+import { createTask, sleep, TimeoutError } from "@pipedog/asyncio";
 import { TextFrame, TTSAudioRawFrame, TTSStoppedFrame } from "../src/frames/frames.ts";
 import {
   AudioContextFrame,

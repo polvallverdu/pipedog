@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_frame_processor.py
 
 import { describe, expect, mock, spyOn, test } from "bun:test";
 
-import { createTask, Event, sleep, type Task, type TaskFn, waitFor } from "@pipecat-ts/asyncio";
+import { createTask, Event, sleep, type Task, type TaskFn, waitFor } from "@pipedog/asyncio";
 
 import { SystemClock } from "../src/clocks/system_clock.ts";
 import {

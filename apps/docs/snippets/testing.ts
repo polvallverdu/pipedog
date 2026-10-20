@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Sample for content/docs/concepts/frame-processors.mdx ("Testing a processor").
@@ -6,9 +6,9 @@
 
 // #region run-test
 import { expect, test } from "bun:test";
-import { type Frame, TextFrame } from "@pipecat-ts/core/frames/frames";
-import { type FrameDirection, FrameProcessor } from "@pipecat-ts/core/processors/frame_processor";
-import { runTest } from "@pipecat-ts/core/tests/utils";
+import { type Frame, TextFrame } from "@pipedog/core/frames/frames";
+import { type FrameDirection, FrameProcessor } from "@pipedog/core/processors/frame_processor";
+import { runTest } from "@pipedog/core/tests/utils";
 
 class UpperCaseProcessor extends FrameProcessor {
   override async processFrame(frame: Frame, direction: FrameDirection): Promise<void> {

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/observers/error_observer.py
@@ -15,7 +15,7 @@
  * well as the ones that surfaced.
  */
 
-import { time } from "@pipecat-ts/asyncio";
+import { time } from "@pipedog/asyncio";
 import { ErrorFrame } from "../frames/frames.ts";
 import { ErrorCategory } from "../utils/errors.ts";
 import { BaseObserver, type BaseObserverOptions, type FramePushed } from "./base_observer.ts";

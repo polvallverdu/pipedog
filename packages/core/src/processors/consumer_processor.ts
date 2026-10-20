@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/processors/consumer_processor.py
 
 /** Consumer processor for consuming frames from ProducerProcessor queues. */
 
-import type { Queue, Task } from "@pipecat-ts/asyncio";
+import type { Queue, Task } from "@pipedog/asyncio";
 import { CancelFrame, EndFrame, type Frame, StartFrame } from "../frames/frames.ts";
 import { FrameDirection, FrameProcessor, type FrameProcessorOptions } from "./frame_processor.ts";
 import {

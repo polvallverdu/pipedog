@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_processor_unusable_policy.py
 
 import { describe, expect, test } from "bun:test";
-import { waitFor } from "@pipecat-ts/asyncio";
+import { waitFor } from "@pipedog/asyncio";
 import { CancelFrame, EndFrame, ErrorFrame, type Frame, TextFrame } from "../src/frames/frames.ts";
 import { Pipeline } from "../src/pipeline/pipeline.ts";
 import { PipelineWorker, ProcessorUnusablePolicy } from "../src/pipeline/worker.ts";

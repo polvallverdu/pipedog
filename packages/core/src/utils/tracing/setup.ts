@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/tracing/setup.py
@@ -31,7 +31,7 @@
  * every tracing helper is a no-op, as upstream behaves without OpenTelemetry.
  */
 
-import { rethrowIfCancelled } from "@pipecat-ts/asyncio";
+import { rethrowIfCancelled } from "@pipedog/asyncio";
 import { logger } from "../logger.ts";
 
 //

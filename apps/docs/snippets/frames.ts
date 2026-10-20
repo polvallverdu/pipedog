@@ -1,10 +1,10 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Samples for content/docs/concepts/frames.mdx. Type-checked on every docs build.
 
 // #region custom-frame
-import { DataFrame, type Frame, SystemFrame, TextFrame } from "@pipecat-ts/core/frames/frames";
+import { DataFrame, type Frame, SystemFrame, TextFrame } from "@pipedog/core/frames/frames";
 
 export interface AsteriskCommandFrameOptions {
   /** The command to send to the telephony transport. */

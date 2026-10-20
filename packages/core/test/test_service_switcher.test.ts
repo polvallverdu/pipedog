@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_service_switcher.py
@@ -8,7 +8,7 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import { Event, sleep, waitFor } from "@pipecat-ts/asyncio";
+import { Event, sleep, waitFor } from "@pipedog/asyncio";
 
 import {
   ErrorFrame,
@@ -440,7 +440,7 @@ describe("TestServiceSwitcher", () => {
   // starts traversing the pipeline before the next frame is queued and the
   // frames arrive in send order. Same cause as test_filters'
   // test_upstream_direction_passes_downstream; fixing it needs asyncio-style
-  // "call_soon" scheduling in @pipecat-ts/asyncio, not a ServiceSwitcher change.
+  // "call_soon" scheduling in @pipedog/asyncio, not a ServiceSwitcher change.
   test.skip("test_default_active_service", async () => {
     const switcher = new ServiceSwitcher(services);
 

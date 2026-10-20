@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 
 /**
@@ -43,7 +43,7 @@ const decoder = new TextDecoder();
 function instantiate(module: WebAssembly.Module): Exports {
   const x = new WebAssembly.Instance(module, {}).exports as unknown as Exports;
   if (typeof x.sx_segment !== "function") {
-    throw new Error("not the @pipecat-ts/sentencex-wasm module");
+    throw new Error("not the @pipedog/sentencex-wasm module");
   }
   return x;
 }

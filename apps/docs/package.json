@@ -1,5 +1,5 @@
 {
-  "name": "@pipecat-ts/docs",
+  "name": "@pipedog/docs",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,8 +11,8 @@
     "snippets:run": "bun snippets/quickstart.ts"
   },
   "dependencies": {
-    "@pipecat-ts/asyncio": "workspace:*",
-    "@pipecat-ts/core": "workspace:*",
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
     "cn": "0.4.0",
     "fumadocs-core": "16.16.2",
     "fumadocs-mdx": "15.4.6",

@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Python multiple inheritance (`class C(A, B)`) maps to a class-factory mixin:
@@ -26,7 +26,7 @@ export function defineMixin<I, F extends <B extends Ctor>(base: B) => Ctor>(
   name: string,
   factory: F,
 ): Mixin<F, I> {
-  const brand = Symbol.for(`pipecat.mixin.${name}`);
+  const brand = Symbol.for(`pipedog.mixin.${name}`);
   const apply = ((base: Ctor) => {
     const cls = factory(base);
     Object.defineProperty(cls.prototype, brand, { value: true });

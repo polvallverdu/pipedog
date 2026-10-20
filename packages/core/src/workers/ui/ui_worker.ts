@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/workers/ui/ui_worker.py
@@ -19,7 +19,7 @@
  *   injected `<ui_event>` text is identical across ports.
  */
 
-import { Event, rethrowIfCancelled, time } from "@pipecat-ts/asyncio";
+import { Event, rethrowIfCancelled, time } from "@pipedog/asyncio";
 import type {
   BusJobRequestMessage,
   BusJobResponseMessage,

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/startup.py
@@ -30,7 +30,7 @@
  * `setup_pipeline_task` fallback name is not ported.
  */
 
-import { rethrowIfCancelled } from "@pipecat-ts/asyncio";
+import { rethrowIfCancelled } from "@pipedog/asyncio";
 import { logger } from "./logger.ts";
 
 type SetupModule = Record<string, unknown>;

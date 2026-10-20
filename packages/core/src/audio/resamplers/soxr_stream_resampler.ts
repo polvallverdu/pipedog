@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/audio/resamplers/soxr_stream_resampler.py
@@ -22,7 +22,7 @@
  * `SoxrResampleStream` is a stub whose constructor throws "not ported yet".
  */
 
-import { time } from "@pipecat-ts/asyncio";
+import { time } from "@pipedog/asyncio";
 import { BaseAudioResampler, type SoxrQuality } from "./base_audio_resampler.ts";
 import { bytesToInt16 } from "./soxr_resampler.ts";
 

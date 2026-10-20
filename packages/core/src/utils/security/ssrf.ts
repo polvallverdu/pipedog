@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/security/ssrf.py
@@ -16,7 +16,7 @@
  * resolved is `BLOCKED`.
  */
 
-import { abortable, rethrowIfCancelled } from "@pipecat-ts/asyncio";
+import { abortable, rethrowIfCancelled } from "@pipedog/asyncio";
 
 /** Who can safely reach a URL's host. */
 export const UrlReachability = {

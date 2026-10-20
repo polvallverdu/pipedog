@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_context_aggregators_universal.py
@@ -1783,7 +1783,7 @@ describe("TestLLMAssistantAggregator", () => {
   // `await queue.get()` on a non-empty queue do not suspend, so the three
   // appends travel the pipeline as one batch and the aggregator sees the later
   // ones queued (`hasQueuedFrame(LLMMessagesAppendFrame)`) when it handles the
-  // first. Under the JS microtask emulation (@pipecat-ts/asyncio) every await is
+  // first. Under the JS microtask emulation (@pipedog/asyncio) every await is
   // at least one microtick, so the frames arrive as a pipelined stream and each
   // append is handled with nothing queued behind it: the first two each push a
   // context frame. Same code path as upstream (`_maybePushContext`); only the
@@ -2946,7 +2946,7 @@ describe("TestRealtimeServiceModeAggregator", () => {
   // asyncio the assistant's interruption handling (cancelling and re-creating
   // its process task) takes event-loop iterations, during which the user half
   // processes EndFrame, so "Hi!" lands first. Under the JS microtask emulation
-  // (@pipecat-ts/asyncio) the assistant handles the interruption first and
+  // (@pipedog/asyncio) the assistant handles the interruption first and
   // writes "Hello" before the user half reaches EndFrame. Same code paths as
   // upstream; only the interleaving differs.
   test.skip("test_interruption_writes_assistant_immediately", async () => {

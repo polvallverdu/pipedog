@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_llm_with_backend.py
@@ -16,7 +16,7 @@
 
 import { afterEach, expect, type Mock, mock, spyOn, test } from "bun:test";
 
-import { sleep } from "@pipecat-ts/asyncio";
+import { sleep } from "@pipedog/asyncio";
 
 import {
   ExternalFunctionCallInProgressFrame,
@@ -734,7 +734,7 @@ test("test_client_tracing_sends_each_exchange_as_a_server_message", async () => 
 // Upstream, the scripted backend LLM queues LLMFullResponseEndFrame into the
 // assistant aggregator before the function-call task it just created runs, and
 // the on_assistant_turn_stopped handler task emits the note before the
-// aggregator reaches FunctionCallInProgressFrame. With @pipecat-ts/asyncio a
+// aggregator reaches FunctionCallInProgressFrame. With @pipedog/asyncio a
 // created task starts after one microtask, so the function call's
 // FunctionCallInProgressFrame reaches the aggregator first and the order of the
 // first two appended messages is swapped. Every other assertion passes.

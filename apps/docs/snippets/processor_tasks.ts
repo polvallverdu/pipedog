@@ -1,18 +1,13 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Samples for content/docs/concepts/interruptions-and-cancellation.mdx.
 // Type-checked on every docs build.
 
 // #region processor-task
-import { rethrowIfCancelled, sleep, type Task } from "@pipecat-ts/asyncio";
-import {
-  type Frame,
-  InterruptionFrame,
-  StartFrame,
-  TextFrame,
-} from "@pipecat-ts/core/frames/frames";
-import { type FrameDirection, FrameProcessor } from "@pipecat-ts/core/processors/frame_processor";
+import { rethrowIfCancelled, sleep, type Task } from "@pipedog/asyncio";
+import { type Frame, InterruptionFrame, StartFrame, TextFrame } from "@pipedog/core/frames/frames";
+import { type FrameDirection, FrameProcessor } from "@pipedog/core/processors/frame_processor";
 
 /** Says "tick" every second until the pipeline ends. */
 export class Ticker extends FrameProcessor {

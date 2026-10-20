@@ -1,10 +1,10 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 
 // Cloudflare Workers smoke test. Imports the package by name so the "workerd"
 // export condition is what selects the entry (bundled by run.ts).
 
-import { getResampler, initResampler } from "@pipecat-ts/resampler-wasm";
+import { getResampler, initResampler } from "@pipedog/resampler-wasm";
 import { runChecks } from "../checks.ts";
 
 export default {

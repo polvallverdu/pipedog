@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Stand-in for loguru, which upstream logs through. Same level names, so
@@ -40,7 +40,7 @@ const consoleSink: LogSink = (record) => {
 function initialLevel(): LogLevel {
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
     ?.env;
-  const value = env?.PIPECAT_LOG_LEVEL?.toUpperCase();
+  const value = env?.PIPEDOG_LOG_LEVEL?.toUpperCase();
   return value && value in LOG_LEVELS ? (value as LogLevel) : "DEBUG";
 }
 

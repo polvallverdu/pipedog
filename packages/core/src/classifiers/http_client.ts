@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // A small fetch-based HTTP client for the hosted classifier clients, standing
@@ -9,7 +9,7 @@
 //
 // HTTP/2 and connection keep-alive are left to the runtime's `fetch`.
 
-import { abortable, currentSignal, rethrowIfCancelled } from "@pipecat-ts/asyncio";
+import { abortable, currentSignal, rethrowIfCancelled } from "@pipedog/asyncio";
 
 /** A request could not be sent or answered (upstream's `httpx.HTTPError`). */
 export class HttpError extends Error {

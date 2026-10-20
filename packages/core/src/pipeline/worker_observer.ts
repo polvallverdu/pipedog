@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/pipeline/worker_observer.py
@@ -12,7 +12,7 @@
  * main pipeline execution.
  */
 
-import { currentTask, Queue, rethrowIfCancelled, type Task } from "@pipecat-ts/asyncio";
+import { currentTask, Queue, rethrowIfCancelled, type Task } from "@pipedog/asyncio";
 import type { Frame } from "../frames/frames.ts";
 import {
   BaseObserver,

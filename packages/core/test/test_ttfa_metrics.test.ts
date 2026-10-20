@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_ttfa_metrics.py
@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { time } from "@pipecat-ts/asyncio";
+import { time } from "@pipedog/asyncio";
 
 import { detectSpeechOnset } from "../src/audio/utils.ts";
 import type { MetricsFrame } from "../src/frames/frames.ts";

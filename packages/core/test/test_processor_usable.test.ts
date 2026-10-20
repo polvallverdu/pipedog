@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_processor_usable.py
 
 import { describe, expect, test } from "bun:test";
-import { Event, TimeoutError, waitFor } from "@pipecat-ts/asyncio";
+import { Event, TimeoutError, waitFor } from "@pipedog/asyncio";
 
 import { ErrorFrame, type Frame, TextFrame } from "../src/frames/frames.ts";
 import { type FrameDirection, FrameProcessor } from "../src/processors/frame_processor.ts";

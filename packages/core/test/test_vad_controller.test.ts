@@ -1,13 +1,13 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_vad_controller.py
 
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 
-import * as asyncio from "@pipecat-ts/asyncio";
-import { sleep } from "@pipecat-ts/asyncio";
+import * as asyncio from "@pipedog/asyncio";
+import { sleep } from "@pipedog/asyncio";
 
 import { VADAnalyzer, VADParams, VADState } from "../src/audio/vad/vad_analyzer.ts";
 import { VADController } from "../src/audio/vad/vad_controller.ts";

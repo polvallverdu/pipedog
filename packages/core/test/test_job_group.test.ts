@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_job_group.py
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { CancelledError, createTask, Event, sleep, waitFor } from "@pipecat-ts/asyncio";
+import { CancelledError, createTask, Event, sleep, waitFor } from "@pipedog/asyncio";
 import {
   AsyncQueueBus,
   BusDataMessage,

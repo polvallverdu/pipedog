@@ -1,5 +1,5 @@
 {
-  "name": "@pipecat-ts/core",
+  "name": "@pipedog/core",
   "version": "0.0.0",
   "description": "Unofficial TypeScript port of the Pipecat core: frames, processors, pipelines, workers, observers, RTVI.",
   "license": "BSD-2-Clause",
@@ -14,8 +14,8 @@
     "src"
   ],
   "dependencies": {
-    "@pipecat-ts/asyncio": "workspace:*",
-    "@pipecat-ts/sentencex-wasm": "workspace:*"
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/sentencex-wasm": "workspace:*"
   },
   "pipecat": {
     "runtimes": [

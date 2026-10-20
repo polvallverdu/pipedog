@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_filters.py
@@ -119,7 +119,7 @@ describe("TestFunctionFilter", () => {
   // the TextFrame. In JS every await yields to already-woken tasks (microtasks),
   // so the TextFrame starts traversing the pipeline before the system frame is
   // queued and arrives first ([TextFrame, UserStartedSpeakingFrame]). Fixing it
-  // needs asyncio-style "call_soon" scheduling in @pipecat-ts/asyncio, not a
+  // needs asyncio-style "call_soon" scheduling in @pipedog/asyncio, not a
   // change in FunctionFilter.
   test.skip("test_upstream_direction_passes_downstream", async () => {
     // When direction is UPSTREAM, downstream frames pass through unfiltered.

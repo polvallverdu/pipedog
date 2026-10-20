@@ -7,9 +7,9 @@ Three classes take a pipeline from a list of processors to a running bot:
 
 | Class | Module | Job |
 |---|---|---|
-| `Pipeline` | `@pipecat-ts/core/pipeline/pipeline` | Links frame processors in sequence. It is itself a processor, so pipelines nest. |
-| `PipelineWorker` | `@pipecat-ts/core/pipeline/worker` | Runs one pipeline: start, frame queueing, lifecycle events, idle and heartbeat monitoring, observers, RTVI. |
-| `WorkerRunner` | `@pipecat-ts/core/workers/runner` | Runs workers to completion: signal handling, the shared bus, the worker registry. |
+| `Pipeline` | `@pipedog/core/pipeline/pipeline` | Links frame processors in sequence. It is itself a processor, so pipelines nest. |
+| `PipelineWorker` | `@pipedog/core/pipeline/worker` | Runs one pipeline: start, frame queueing, lifecycle events, idle and heartbeat monitoring, observers, RTVI. |
+| `WorkerRunner` | `@pipedog/core/workers/runner` | Runs workers to completion: signal handling, the shared bus, the worker registry. |
 
 <Callout>
   `PipelineTask` and `PipelineRunner` are deprecated aliases upstream (of `PipelineWorker` and

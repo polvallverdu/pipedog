@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_user_turn_stop_strategy.py
 
 import { afterEach, beforeEach, describe, expect, type Mock, spyOn, test } from "bun:test";
 
-import { sleep, type Task } from "@pipecat-ts/asyncio";
+import { sleep, type Task } from "@pipedog/asyncio";
 
 import { SystemClock } from "../src/clocks/system_clock.ts";
 import {

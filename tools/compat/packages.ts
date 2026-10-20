@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Package discovery for the compat harness: finds workspace packages, their
@@ -24,7 +24,7 @@ export interface PackageInfo {
 }
 
 export interface PublicEntry {
-  /** Specifier a consumer would import, e.g. `@pipecat-ts/core/frames/frames`. */
+  /** Specifier a consumer would import, e.g. `@pipedog/core/frames/frames`. */
   specifier: string;
   /** Absolute path of the file it resolves to. */
   file: string;

@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_llm_service.py
 
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 
-import { CancelledError, sleep } from "@pipecat-ts/asyncio";
+import { CancelledError, sleep } from "@pipedog/asyncio";
 
 import { BaseLLMAdapter } from "../src/adapters/base_llm_adapter.ts";
 import { FunctionSchema } from "../src/adapters/schemas/function_schema.ts";

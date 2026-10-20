@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/turns/user_idle_controller.py
 
 /** This module defines a controller for managing user idle detection. */
 
-import { sleep, type Task } from "@pipecat-ts/asyncio";
+import { sleep, type Task } from "@pipedog/asyncio";
 import {
   BotStartedSpeakingFrame,
   BotStoppedSpeakingFrame,

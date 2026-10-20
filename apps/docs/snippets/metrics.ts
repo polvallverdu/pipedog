@@ -1,20 +1,20 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Samples for content/docs/concepts/metrics-and-tracing.mdx. Type-checked on every docs build.
 
-import { type Frame, MetricsFrame } from "@pipecat-ts/core/frames/frames";
+import { type Frame, MetricsFrame } from "@pipedog/core/frames/frames";
 import {
   LLMUsageMetricsData,
   ProcessingMetricsData,
   TTFAMetricsData,
   TTFBMetricsData,
   TTSUsageMetricsData,
-} from "@pipecat-ts/core/metrics/metrics";
-import { MetricsLogObserver } from "@pipecat-ts/core/observers/loggers/metrics_log_observer";
-import { Pipeline } from "@pipecat-ts/core/pipeline/pipeline";
-import { PipelineParams, PipelineWorker } from "@pipecat-ts/core/pipeline/worker";
-import { type FrameDirection, FrameProcessor } from "@pipecat-ts/core/processors/frame_processor";
+} from "@pipedog/core/metrics/metrics";
+import { MetricsLogObserver } from "@pipedog/core/observers/loggers/metrics_log_observer";
+import { Pipeline } from "@pipedog/core/pipeline/pipeline";
+import { PipelineParams, PipelineWorker } from "@pipedog/core/pipeline/worker";
+import { type FrameDirection, FrameProcessor } from "@pipedog/core/processors/frame_processor";
 
 const pipeline = new Pipeline([]);
 

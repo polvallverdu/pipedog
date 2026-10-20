@@ -1,15 +1,15 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Runtime smoke test for tools/compat: imports the core pipeline modules and
 // runs a one-processor pipeline end to end with runTest().
 
-import { type Frame, TextFrame } from "@pipecat-ts/core/frames/frames";
-import { Pipeline } from "@pipecat-ts/core/pipeline/pipeline";
-import { PipelineParams, PipelineWorker } from "@pipecat-ts/core/pipeline/worker";
-import { type FrameDirection, FrameProcessor } from "@pipecat-ts/core/processors/frame_processor";
-import { runTest } from "@pipecat-ts/core/tests/utils";
-import { WorkerRunner } from "@pipecat-ts/core/workers/runner";
+import { type Frame, TextFrame } from "@pipedog/core/frames/frames";
+import { Pipeline } from "@pipedog/core/pipeline/pipeline";
+import { PipelineParams, PipelineWorker } from "@pipedog/core/pipeline/worker";
+import { type FrameDirection, FrameProcessor } from "@pipedog/core/processors/frame_processor";
+import { runTest } from "@pipedog/core/tests/utils";
+import { WorkerRunner } from "@pipedog/core/workers/runner";
 
 class PassThrough extends FrameProcessor {
   override async processFrame(frame: Frame, direction: FrameDirection): Promise<void> {

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/observers/turn_tracking_observer.py
@@ -11,7 +11,7 @@
  * tracking when turns start and end based on user and bot speech patterns.
  */
 
-import { createTask, sleep, type Task } from "@pipecat-ts/asyncio";
+import { createTask, sleep, type Task } from "@pipedog/asyncio";
 import {
   BotStartedSpeakingFrame,
   BotStoppedSpeakingFrame,

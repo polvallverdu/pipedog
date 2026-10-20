@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_base_smart_turn_buffer.py
@@ -19,7 +19,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { monotonic, sleep } from "@pipecat-ts/asyncio";
+import { monotonic, sleep } from "@pipedog/asyncio";
 
 import { EndOfTurnState } from "../src/audio/turn/base_turn_analyzer.ts";
 import {

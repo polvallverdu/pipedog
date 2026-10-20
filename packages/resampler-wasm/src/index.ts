@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 
 /**
@@ -8,7 +8,7 @@
  *
  * @example
  * ```ts
- * import { initResampler } from "@pipecat-ts/resampler-wasm";
+ * import { initResampler } from "@pipedog/resampler-wasm";
  * const engine = await initResampler();
  * const out = engine.resample(pcm16, 8000, 16000, { quality: "VHQ" });
  * ```

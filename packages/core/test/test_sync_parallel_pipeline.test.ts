@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_sync_parallel_pipeline.py
 
 import { describe, expect, test } from "bun:test";
-import { sleep } from "@pipecat-ts/asyncio";
+import { sleep } from "@pipedog/asyncio";
 import { Frame, TextFrame } from "../src/frames/frames.ts";
 import { FrameOrder, SyncParallelPipeline } from "../src/pipeline/sync_parallel_pipeline.ts";
 import { IdentityFilter } from "../src/processors/filters/identity_filter.ts";

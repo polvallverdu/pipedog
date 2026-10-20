@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/turns/user_stop/eager_user_turn_stop_strategy.py
 
 /** User turn stop strategy that answers an eager end of turn speculatively. */
 
-import { sleep, type Task } from "@pipecat-ts/asyncio";
+import { sleep, type Task } from "@pipedog/asyncio";
 import {
   EagerEndOfTurnCancelFrame,
   EagerTranscriptionFrame,

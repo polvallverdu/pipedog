@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_moonshine_stt.py
@@ -11,7 +11,7 @@
  * re-imports `pipecat.services.moonshine.stt`. Here the fake module is
  * installed with `mock.module` and the service is loaded with a dynamic
  * import, so this file still loads while `packages/moonshine/src/stt.ts`
- * (`@pipecat-ts/moonshine`) is unported; the tests are `test.todo` until it
+ * (`@pipedog/moonshine`) is unported; the tests are `test.todo` until it
  * lands.
  *
  * The fake exposes the `moonshine_voice` functions under both their upstream

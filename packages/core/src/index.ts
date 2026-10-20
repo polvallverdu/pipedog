@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/__init__.py
 
 /**
- * The `@pipecat-ts/core` package entry point.
+ * The `@pipedog/core` package entry point.
  *
  * Porting notes:
  * - The version is this package's version (upstream reads the installed
@@ -13,7 +13,7 @@
  * - The check for a separately installed `pipecat-ai-flows` package is Python
  *   packaging specific and is not ported.
  * - The `asyncio.wait_for` replacement for Python < 3.12 has no JS
- *   counterpart (`waitFor` from `@pipecat-ts/asyncio` is used everywhere).
+ *   counterpart (`waitFor` from `@pipedog/asyncio` is used everywhere).
  */
 
 import { logger } from "./utils/logger.ts";

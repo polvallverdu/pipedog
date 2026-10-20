@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/deprecation.py
@@ -24,7 +24,7 @@
  * and warn at runtime with `warnDeprecated`. Everything else — parameters,
  * fields, module moves, behavior/value changes — warns with `warnDeprecated`.
  *
- * Porting notes: pipecat-ts does not port deprecated upstream APIs, so the
+ * Porting notes: pipedog does not port deprecated upstream APIs, so the
  * PEP 702 `deprecated` decorator re-export, `renamed_init_field` (a dataclass
  * constructor rewriter for renamed fields) and the deprecated
  * `warn_deprecated_read` are not ported.

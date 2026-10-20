@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/workers/llm/backend_llm_worker.py
@@ -39,7 +39,7 @@
  *   and its `async for` is `for await`.
  */
 
-import { Event, Queue, rethrowIfCancelled, shield } from "@pipecat-ts/asyncio";
+import { Event, Queue, rethrowIfCancelled, shield } from "@pipedog/asyncio";
 import type { BusJobCancelMessage, BusJobRequestMessage } from "../../bus/messages.ts";
 import {
   type ErrorFrame,

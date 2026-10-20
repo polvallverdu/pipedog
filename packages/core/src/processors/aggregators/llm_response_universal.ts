@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/processors/aggregators/llm_response_universal.py
@@ -17,7 +17,7 @@
  * / `contextSummarizationConfig` fields are not ported.
  */
 
-import { rethrowIfCancelled, sleep, type Task } from "@pipecat-ts/asyncio";
+import { rethrowIfCancelled, sleep, type Task } from "@pipedog/asyncio";
 import type { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
 import type { VADAnalyzer } from "../../audio/vad/vad_analyzer.ts";
 import { VADController } from "../../audio/vad/vad_controller.ts";

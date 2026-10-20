@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_krisp_ip_user_turn_start_strategy.py
@@ -321,7 +321,7 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
   });
 
   // DIVERGENCE: upstream raises FileNotFoundError when the model file does not
-  // exist. @pipecat-ts/core has no filesystem access, so the constructor does
+  // exist. @pipedog/core has no filesystem access, so the constructor does
   // not check file existence; the Krisp runtime that loads the model does.
   test.skip("test_init_raises_if_file_not_found", () => {
     expect(

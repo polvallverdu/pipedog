@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/services/websocket_service.py
@@ -16,7 +16,7 @@
  * point, so cancelling a receive task stops it right away.
  */
 
-import { CancelledError, monotonic, rethrowIfCancelled, sleep, suspend } from "@pipecat-ts/asyncio";
+import { CancelledError, monotonic, rethrowIfCancelled, sleep, suspend } from "@pipedog/asyncio";
 import { ErrorFrame } from "../frames/frames.ts";
 import { logger } from "../utils/logger.ts";
 import { type Ctor, defineMixin } from "../utils/mixin.ts";

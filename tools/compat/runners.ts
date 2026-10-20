@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // One runner per target runtime. Each takes a smoke module (default export:
@@ -29,7 +29,7 @@ const TIMEOUT_MS = 60_000;
 const COMPATIBILITY_DATE = "2026-10-01";
 
 /** Scratch directory for bundles; node_modules is gitignored and excluded from biome. */
-export const OUT_ROOT = join(ROOT, "node_modules", ".cache", "pipecat-compat");
+export const OUT_ROOT = join(ROOT, "node_modules", ".cache", "pipedog-compat");
 
 /** Process entry for bun/node/deno: runs the smoke test and prints a marker. */
 function processEntry(smoke: string): string {

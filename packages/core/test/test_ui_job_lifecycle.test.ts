@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_ui_job_lifecycle.py
@@ -23,7 +23,7 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
-import { createTask, sleep } from "@pipecat-ts/asyncio";
+import { createTask, sleep } from "@pipedog/asyncio";
 
 import {
   BusJobResponseMessage,

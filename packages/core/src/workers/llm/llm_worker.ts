@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/workers/llm/llm_worker.py
@@ -17,7 +17,7 @@
  *   `activateWorker()` instead.
  * - `_IN_TOOL_CALL` is a context variable upstream. JavaScript has no
  *   context variables in core (no `node:async_hooks` outside
- *   `@pipecat-ts/asyncio`), so the worker running a tool is recorded per
+ *   `@pipedog/asyncio`), so the worker running a tool is recorded per
  *   asyncio-style task instead. DIVERGENCE: a task the tool handler spawns
  *   (e.g. with `gather` or `createTask`) does not inherit it, so frames
  *   queued from such a task are not held.
@@ -29,7 +29,7 @@
  *   never auto-register over it.
  */
 
-import { currentTask, type Task } from "@pipecat-ts/asyncio";
+import { currentTask, type Task } from "@pipedog/asyncio";
 import { DirectFunctionWrapper } from "../../adapters/schemas/direct_function.ts";
 import { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
 import { type Frame, LLMMessagesAppendFrame, LLMSetToolsFrame } from "../../frames/frames.ts";

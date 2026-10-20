@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_bridge_processor.py
 
 import { describe, expect, test } from "bun:test";
-import { Event, gather, sleep, waitFor } from "@pipecat-ts/asyncio";
+import { Event, gather, sleep, waitFor } from "@pipedog/asyncio";
 import {
   AsyncQueueBus,
   BusBridgeProcessor,

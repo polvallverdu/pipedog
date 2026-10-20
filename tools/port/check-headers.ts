@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Every source file must carry the BSD-2-Clause header, and files that say
@@ -7,7 +7,7 @@
 import { Glob } from "bun";
 
 const DAILY = "// Copyright (c) 2024-2026, Daily";
-const OURS = "// Copyright (c) 2026, pipecat-ts contributors";
+const OURS = "// Copyright (c) 2026, pipedog contributors";
 const SPDX = "// SPDX-License-Identifier: BSD-2-Clause";
 
 let failures = 0;

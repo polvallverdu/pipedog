@@ -1,9 +1,9 @@
-# @pipecat-ts/sentencex-wasm
+# @pipedog/sentencex-wasm
 
-Sentence segmentation for pipecat-ts with [sentencex](https://github.com/wikimedia/sentencex)
+Sentence segmentation for pipedog with [sentencex](https://github.com/wikimedia/sentencex)
 (Wikimedia, MIT), compiled to WebAssembly. Upstream Pipecat splits sentences with
 `sentencex==1.0.32` (`pipecat/utils/string.py`). This package runs the same Rust core, so
-pipecat-ts gets the same sentence boundaries as upstream on every runtime.
+pipedog gets the same sentence boundaries as upstream on every runtime.
 
 - The `sentencex` npm package is a native Node addon with per-platform binaries. It cannot run
   on Deno or Cloudflare Workers. This package can.
@@ -28,7 +28,7 @@ pipecat-ts gets the same sentence boundaries as upstream on every runtime.
 ## Usage
 
 ```ts
-import { getSentenceBoundaries, segment } from "@pipecat-ts/sentencex-wasm";
+import { getSentenceBoundaries, segment } from "@pipedog/sentencex-wasm";
 
 segment("en", "Dr. Smith arrived at 5 p.m. He was late.");
 // ["Dr. Smith arrived at 5 p.m. ", "He was late."]

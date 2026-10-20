@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_turn_tracking_observer.py
 
 import { describe, expect, test } from "bun:test";
-import { sleep, type Task } from "@pipecat-ts/asyncio";
+import { sleep, type Task } from "@pipedog/asyncio";
 import {
   BotStartedSpeakingFrame,
   BotStoppedSpeakingFrame,

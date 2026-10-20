@@ -1,8 +1,8 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Type-check the documentation samples in snippets/ against the real
-// @pipecat-ts sources. Only diagnostics in snippets/ fail the build: the
+// @pipedog sources. Only diagnostics in snippets/ fail the build: the
 // packages have their own `bun run typecheck`, and an unrelated error there
 // (e.g. a module mid-port) should not block the docs.
 

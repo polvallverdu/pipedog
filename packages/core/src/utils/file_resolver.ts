@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/file_resolver.py
@@ -30,7 +30,7 @@
  * `BaseLLMAdapter.getLlmInvocationParams`.
  */
 
-import { abortable, currentSignal, rethrowIfCancelled, TimeoutError } from "@pipecat-ts/asyncio";
+import { abortable, currentSignal, rethrowIfCancelled, TimeoutError } from "@pipedog/asyncio";
 import { FileNotFoundError, type FileStorage } from "./file_storage.ts";
 import {
   classifyUrlReachability,

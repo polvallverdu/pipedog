@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_ultravox_async_tool_results.py
@@ -15,7 +15,7 @@
  *
  * Upstream imports the service with `pytest.importorskip`. Here the service is
  * loaded with a dynamic import so this file still loads while
- * `packages/ultravox/src/llm.ts` (`@pipecat-ts/ultravox`) is unported; the
+ * `packages/ultravox/src/llm.ts` (`@pipedog/ultravox`) is unported; the
  * tests are `test.todo` until it lands.
  */
 

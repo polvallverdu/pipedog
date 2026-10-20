@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 
 /**
@@ -9,7 +9,7 @@
  *
  * @example
  * ```ts
- * import { segment } from "@pipecat-ts/sentencex-wasm";
+ * import { segment } from "@pipedog/sentencex-wasm";
  * segment("en", "Dr. Smith arrived at 5 p.m. He was late.");
  * // ["Dr. Smith arrived at 5 p.m. ", "He was late."]
  * ```

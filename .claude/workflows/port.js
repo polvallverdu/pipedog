@@ -1,7 +1,7 @@
 export const meta = {
   name: 'port',
   description: 'Port pending upstream Pipecat modules to TypeScript, review them, integrate, and port their tests',
-  whenToUse: 'Porting the next batch of pipecat modules or tests. args: {select: "--mvp" | "--package @pipecat-ts/x" | "--modules a,b", maxLines, review, tests, testLimit, testsOnly}',
+  whenToUse: 'Porting the next batch of pipecat modules or tests. args: {select: "--mvp" | "--package @pipedog/x" | "--modules a,b", maxLines, review, tests, testLimit, testsOnly}',
   phases: [
     { title: 'Plan', detail: 'pack pending modules into work units (tools/port/next.ts)' },
     { title: 'Port', detail: 'one porter per unit, Python -> TS per docs/CONVENTIONS.md' },
@@ -17,7 +17,7 @@ const opts = Object.assign(
   args || {},
 )
 
-const CONTEXT = `You are porting Pipecat (Python, pinned checkout in .upstream/pipecat) to pipecat-ts, a Bun
+const CONTEXT = `You are porting Pipecat (Python, pinned checkout in .upstream/pipecat) to pipedog, a Bun
 monorepo (repo root = current directory). Before writing code, read docs/CONVENTIONS.md in full,
 and skim the hand-ported reference files it lists (packages/asyncio/src/task.ts,
 packages/core/src/processors/frame_processor.ts, packages/core/src/utils/base_object.ts,
@@ -126,12 +126,12 @@ the complete TypeScript port at the given path. Port everything that is not depr
 method, branch, default, log line and docstring (as JSDoc). If the TS file already exists and contains a
 "PORTING:" marker, keep what is above the marker and continue the port below it, then remove the marker.
 If the package directory does not exist yet, create package.json (name, "type": "module", exports
-"./*": "./src/*.ts", the "pipecat" block with runtimes and upstream, dependency on @pipecat-ts/core
+"./*": "./src/*.ts", the "pipecat" block with runtimes and upstream, dependency on @pipedog/core
 "workspace:*") and tsconfig.json modelled on packages/core.
 When a dependency needs a third-party library with no edge-compatible JS equivalent (onnx models, soxr,
 Krisp...), port the interface and leave the implementation as a clearly marked stub that throws
 "not ported yet" and mark that module "partial" with a note.
-Then run \`bunx tsc --noEmit -p ${unit.package === '@pipecat-ts/core' ? 'packages/core' : 'packages/' + unit.package.split('/')[1]}/tsconfig.json 2>&1 | grep -F -e "${unit.modules.map((m) => m.ts.split('/src/')[1]).join('" -e "')}"\`
+Then run \`bunx tsc --noEmit -p ${unit.package === '@pipedog/core' ? 'packages/core' : 'packages/' + unit.package.split('/')[1]}/tsconfig.json 2>&1 | grep -F -e "${unit.modules.map((m) => m.ts.split('/src/')[1]).join('" -e "')}"\`
 and fix errors in YOUR files that are not caused by modules other agents have not written yet.
 Return one entry per module.`,
         { label: `port:${unit.id}`, phase: 'Port', schema: PORT_SCHEMA },
@@ -164,7 +164,7 @@ Fix every real divergence in place. Do not restyle code that is already correct.
 
   phase('Integrate')
   for (const pkg of packagesTouched) {
-    const dir = pkg === '@pipecat-ts/core' ? 'packages/core' : `packages/${pkg.split('/')[1]}`
+    const dir = pkg === '@pipedog/core' ? 'packages/core' : `packages/${pkg.split('/')[1]}`
     let remaining = Infinity
     for (let round = 1; round <= 3 && remaining > 0; round++) {
       const r = await agent(

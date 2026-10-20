@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_daily_transport_service.py
@@ -10,11 +10,11 @@ describe("TestDailyTransport", () => {
   // Skipped upstream: @unittest.skip("FIXME: This test is failing").
   // Upstream it imports `pipecat.transports.daily_transport` (a module path that no
   // longer exists; DailyTransport now lives in transports/daily/transport.py, ported
-  // to @pipecat-ts/transport-daily) and calls `on_first_other_participant_joined`,
+  // to @pipedog/transport-daily) and calls `on_first_other_participant_joined`,
   // which is no longer a DailyTransport method/event. The import is dynamic so this
   // file loads without the unported transport-daily package.
   test.skip("test_event_handler", async () => {
-    // @pipecat-ts/transport-daily is not ported yet.
+    // @pipedog/transport-daily is not ported yet.
     const modulePath = "../../transport-daily/src/transport.ts";
     const { DailyTransport } = (await import(modulePath)) as any;
 

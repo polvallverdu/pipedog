@@ -11,7 +11,7 @@ generate text, play audio, log metrics...). They:
 - **create new frames** with their output,
 - **pass frames along** to the next processor.
 
-pipecat-ts ports Pipecat's built-in processors (aggregators, filters, observers, and services as
+pipedog ports Pipecat's built-in processors (aggregators, filters, observers, and services as
 their packages land). Most applications also need some custom frame processing logic; this page
 shows how to write it.
 
@@ -39,7 +39,7 @@ const pipeline = new Pipeline([
 
 ## Key requirements
 
-Custom processors extend `FrameProcessor` from `@pipecat-ts/core/processors/frame_processor`.
+Custom processors extend `FrameProcessor` from `@pipedog/core/processors/frame_processor`.
 The base class handles `StartFrame`, `CancelFrame`, `InterruptionFrame` and pause /
 resume frames for you, and provides `processFrame()` and `pushFrame()`:
 
@@ -99,7 +99,7 @@ configuration gets it:
 `enableUsageMetrics`, `observer`, `reportOnlyInitialTtfb` and `tracingContext`. The processor also
 exposes `metricsEnabled`, `usageMetricsEnabled`, `reportOnlyInitialTtfb` and, once set up,
 `processorSetup`. Don't read this configuration off the `StartFrame`: upstream deprecated those
-`StartFrame` fields and pipecat-ts doesn't have them.
+`StartFrame` fields and pipedog doesn't have them.
 
 Processors are set up **concurrently**. A processor that throws while setting up pushes an
 `ErrorFrame` upstream, so the application learns its pipeline came up degraded; one that throws
@@ -160,7 +160,7 @@ and `LLMFullResponseEndFrame` bracket every LLM response:
 
 ## Testing a processor
 
-`runTest()` from `@pipecat-ts/core/tests/utils` (the port of `pipecat.tests.utils.run_test`) runs
+`runTest()` from `@pipedog/core/tests/utils` (the port of `pipecat.tests.utils.run_test`) runs
 a processor in a real pipeline, sends frames, and checks the frame types that come out:
 
 <include cwd>snippets/testing.ts#run-test</include>

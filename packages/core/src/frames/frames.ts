@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/frames/frames.py
@@ -22,7 +22,7 @@
  * - `__str__` becomes `toString()`.
  */
 
-import { type Event, time } from "@pipecat-ts/asyncio";
+import { type Event, time } from "@pipedog/asyncio";
 import type { DirectFunction } from "../adapters/schemas/direct_function.ts";
 import type { FunctionSchema } from "../adapters/schemas/function_schema.ts";
 import type { ToolsSchema } from "../adapters/schemas/tools_schema.ts";

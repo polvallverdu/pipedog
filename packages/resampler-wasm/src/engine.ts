@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 
 /**
@@ -214,7 +214,7 @@ export class RubatoEngine {
   constructor(instance: WebAssembly.Instance) {
     this.#x = instance.exports as unknown as Exports;
     if (typeof this.#x.rs_stream_new !== "function") {
-      throw new Error("not the @pipecat-ts/resampler-wasm module");
+      throw new Error("not the @pipedog/resampler-wasm module");
     }
   }
 

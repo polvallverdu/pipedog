@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/audio/turn/smart_turn/base_smart_turn.py
@@ -12,7 +12,7 @@
  * beyond simple silence-based detection.
  */
 
-import { abortable, monotonic } from "@pipecat-ts/asyncio";
+import { abortable, monotonic } from "@pipedog/asyncio";
 import { type MetricsData, TurnMetricsData } from "../../../metrics/metrics.ts";
 import { logger } from "../../../utils/logger.ts";
 import {

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "pipecat-ts",
+      "name": "pipedog",
       "devDependencies": {
         "@biomejs/biome": "2.5.15",
         "@types/bun": "1.4.3",
@@ -12,11 +12,11 @@
       },
     },
     "apps/docs": {
-      "name": "@pipecat-ts/docs",
+      "name": "@pipedog/docs",
       "version": "0.0.0",
       "dependencies": {
-        "@pipecat-ts/asyncio": "workspace:*",
-        "@pipecat-ts/core": "workspace:*",
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
         "cn": "0.4.0",
         "fumadocs-core": "16.16.2",
         "fumadocs-mdx": "15.4.6",
@@ -40,23 +40,23 @@
       },
     },
     "packages/asyncio": {
-      "name": "@pipecat-ts/asyncio",
+      "name": "@pipedog/asyncio",
       "version": "0.0.0",
     },
     "packages/core": {
-      "name": "@pipecat-ts/core",
+      "name": "@pipedog/core",
       "version": "0.0.0",
       "dependencies": {
-        "@pipecat-ts/asyncio": "workspace:*",
-        "@pipecat-ts/sentencex-wasm": "workspace:*",
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/sentencex-wasm": "workspace:*",
       },
     },
     "packages/resampler-wasm": {
-      "name": "@pipecat-ts/resampler-wasm",
+      "name": "@pipedog/resampler-wasm",
       "version": "0.0.0",
     },
     "packages/sentencex-wasm": {
-      "name": "@pipecat-ts/sentencex-wasm",
+      "name": "@pipedog/sentencex-wasm",
       "version": "0.0.0",
       "devDependencies": {
         "sentencex": "1.0.32",
@@ -252,15 +252,15 @@
 
     "@next/swc-win32-x64-msvc": ["@next/swc-win32-x64-msvc@16.3.8", "", { "os": "win32", "cpu": "x64" }, "sha512-WcTlaKt/TWkh5kUjdJcUmB1XgZ+1c6fz4Y9fDHL73YNSdGaUWjceeWrrlwF0nv19iABYWC4iAq1oX1w4Bn0vfg=="],
 
-    "@pipecat-ts/asyncio": ["@pipecat-ts/asyncio@workspace:packages/asyncio"],
+    "@pipedog/asyncio": ["@pipedog/asyncio@workspace:packages/asyncio"],
 
-    "@pipecat-ts/core": ["@pipecat-ts/core@workspace:packages/core"],
+    "@pipedog/core": ["@pipedog/core@workspace:packages/core"],
 
-    "@pipecat-ts/docs": ["@pipecat-ts/docs@workspace:apps/docs"],
+    "@pipedog/docs": ["@pipedog/docs@workspace:apps/docs"],
 
-    "@pipecat-ts/resampler-wasm": ["@pipecat-ts/resampler-wasm@workspace:packages/resampler-wasm"],
+    "@pipedog/resampler-wasm": ["@pipedog/resampler-wasm@workspace:packages/resampler-wasm"],
 
-    "@pipecat-ts/sentencex-wasm": ["@pipecat-ts/sentencex-wasm@workspace:packages/sentencex-wasm"],
+    "@pipedog/sentencex-wasm": ["@pipedog/sentencex-wasm@workspace:packages/sentencex-wasm"],
 
     "@radix-ui/number": ["@radix-ui/number@1.1.3", "", {}, "sha512-Road2bidD0uu/1BGDOWNdPI06g0lIRy6IF9GZcIrDK2KGItfor8IQwQa+yM2ERgHM1MmHxaxpTzk0/Jp42lNfA=="],
 

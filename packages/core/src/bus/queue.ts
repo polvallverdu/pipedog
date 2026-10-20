@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/bus/queue.py
 
 /** Priority queue for bus messages. */
 
-import { heapPop, heapPush, Queue } from "@pipecat-ts/asyncio";
+import { heapPop, heapPush, Queue } from "@pipedog/asyncio";
 import { type BusMessage, BusSystemMessage } from "./messages.ts";
 
 export const HIGH_PRIORITY = 1;

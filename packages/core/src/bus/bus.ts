@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/bus/bus.py
@@ -11,7 +11,7 @@
  * (e.g. `AsyncQueueBus`) live in separate modules.
  */
 
-import { Queue, rethrowIfCancelled, sleep, type Task } from "@pipecat-ts/asyncio";
+import { Queue, rethrowIfCancelled, sleep, type Task } from "@pipedog/asyncio";
 import { BaseObject, type BaseObjectOptions } from "../utils/base_object.ts";
 import { logger } from "../utils/logger.ts";
 import { BusLocalMessage, type BusMessage, BusSystemMessage } from "./messages.ts";

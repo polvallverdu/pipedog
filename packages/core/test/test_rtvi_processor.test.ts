@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_rtvi_processor.py
 
 import { afterEach, beforeEach, describe, expect, type Mock, mock, test } from "bun:test";
 
-import { Queue } from "@pipecat-ts/asyncio";
+import { Queue } from "@pipedog/asyncio";
 import { KeypadEntry } from "../src/audio/dtmf/types.ts";
 import {
   type Frame,

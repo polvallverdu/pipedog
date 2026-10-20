@@ -5,7 +5,7 @@ description: Performance and usage metrics as MetricsFrames, and the state of Op
 
 When building real-time AI applications two things matter to monitor: **performance** (latency),
 which shapes the user experience, and **usage** (LLM tokens, TTS characters), which drives cost.
-pipecat-ts ports Pipecat's built-in metrics for both.
+pipedog ports Pipecat's built-in metrics for both.
 
 ## Enabling metrics
 
@@ -33,7 +33,7 @@ metrics are per interaction, not running totals.
 ## Capturing metrics data
 
 Every measurement travels as a `MetricsFrame` (a system frame) whose `data` is a list of
-`MetricsData` objects from `@pipecat-ts/core/metrics/metrics`:
+`MetricsData` objects from `@pipedog/core/metrics/metrics`:
 
 - `TTFBMetricsData`, `TTFAMetricsData`, `TTFATMetricsData`
 - `ProcessingMetricsData`, `TextAggregationMetricsData`
@@ -56,8 +56,8 @@ the initial empty metrics.
 
 ## Tracing (OpenTelemetry)
 
-Pipecat can trace conversations, turns and service calls with OpenTelemetry. In pipecat-ts the
-tracing utilities are ported in core (`@pipecat-ts/core/utils/tracing/*`), but core takes no
+Pipecat can trace conversations, turns and service calls with OpenTelemetry. In pipedog the
+tracing utilities are ported in core (`@pipedog/core/utils/tracing/*`), but core takes no
 third-party dependencies, so the OpenTelemetry JS modules are handed in once at startup with
 `registerOpenTelemetry()`, then configured with `setupTracing()`. Until then
 `isTracingAvailable()` is false and every tracing helper is a no-op, as upstream behaves without
@@ -68,7 +68,7 @@ import * as api from "@opentelemetry/api";
 import * as sdk from "@opentelemetry/sdk-trace-base";
 import * as resources from "@opentelemetry/resources";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
-import { registerOpenTelemetry, setupTracing } from "@pipecat-ts/core/utils/tracing/setup";
+import { registerOpenTelemetry, setupTracing } from "@pipedog/core/utils/tracing/setup";
 
 registerOpenTelemetry({ api, sdk, resources });
 setupTracing({

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/processors/aggregators/dtmf_aggregator.py
@@ -12,7 +12,7 @@
  * transcription frames for downstream processing by LLM context aggregators.
  */
 
-import { Event, type Task, TimeoutError, waitFor } from "@pipecat-ts/asyncio";
+import { Event, type Task, TimeoutError, waitFor } from "@pipedog/asyncio";
 import { KeypadEntry } from "../../audio/dtmf/types.ts";
 import {
   CancelFrame,

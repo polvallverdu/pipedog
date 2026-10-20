@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/audio/dtmf/utils.py
@@ -15,7 +15,7 @@
  * `dtmf_data.ts`, so no filesystem access is needed on any runtime.
  */
 
-import { Lock } from "@pipecat-ts/asyncio";
+import { Lock } from "@pipedog/asyncio";
 import type { BaseAudioResampler } from "../resamplers/base_audio_resampler.ts";
 import { createFileResampler, readWav } from "../utils.ts";
 import { DTMF_WAV_FILES } from "./dtmf_data.ts";

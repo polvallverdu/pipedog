@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/turns/user_stop/speech_timeout_user_turn_stop_strategy.py
 
 /** Speech timeout-based user turn stop strategy. */
 
-import { CancelledError, sleep, type Task } from "@pipecat-ts/asyncio";
+import { CancelledError, sleep, type Task } from "@pipedog/asyncio";
 import { VAD_STOP_SECS } from "../../audio/vad/vad_analyzer.ts";
 import {
   type Frame,

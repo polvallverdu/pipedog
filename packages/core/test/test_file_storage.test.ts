@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_file_storage.py
@@ -22,7 +22,7 @@ async function withTemporaryDirectory(fn: (dir: string) => Promise<void>): Promi
 }
 
 // LocalFileStorage disk I/O (save/load/delete/_trim) is a documented stub in
-// @pipecat-ts/core, which cannot import node:fs; it needs a runtime-specific
+// @pipedog/core, which cannot import node:fs; it needs a runtime-specific
 // LocalFileStorage implementation. Tests that touch the disk are todo until then.
 const TODO_DISK_IO =
   "needs LocalFileStorage disk I/O (save/load/delete/_trim), unported in packages/core/src/utils/file_storage.ts";

@@ -1,16 +1,16 @@
 ---
 title: Introduction
-description: pipecat-ts is an unofficial TypeScript port of Pipecat, the framework for real-time voice and multimodal conversational AI.
+description: pipedog is an unofficial TypeScript port of Pipecat, the framework for real-time voice and multimodal conversational AI.
 ---
 
-pipecat-ts is an **unofficial** TypeScript port of [Pipecat](https://github.com/pipecat-ai/pipecat),
+pipedog is an **unofficial** TypeScript port of [Pipecat](https://github.com/pipecat-ai/pipecat),
 the open source Python framework (by [Daily](https://www.daily.co), BSD-2-Clause) for building
 voice and multimodal AI agents. Pipecat orchestrates AI services, network transports and audio
-processing for ultra-low latency conversations; pipecat-ts brings the same architecture to
+processing for ultra-low latency conversations; pipedog brings the same architecture to
 **Bun, Node, Deno and Cloudflare Workers**.
 
 <Callout type="warn" title="Unofficial and early">
-  pipecat-ts is a community port. It is not affiliated with or endorsed by Daily or the Pipecat
+  pipedog is a community port. It is not affiliated with or endorsed by Daily or the Pipecat
   project. The core runtime is ported; most service providers and transports are not yet. See the
   [porting status](/docs/contributing/status).
 </Callout>
@@ -20,7 +20,7 @@ processing for ultra-low latency conversations; pipecat-ts brings the same archi
     Run a pipeline with a custom frame processor in a few lines.
   </Card>
   <Card title="Coming from Pipecat (Python)" href="/docs/coming-from-pipecat">
-    How Pipecat's Python API maps to pipecat-ts.
+    How Pipecat's Python API maps to pipedog.
   </Card>
   <Card title="Core concepts" href="/docs/concepts/frames">
     Frames, frame processors, pipelines, workers and cancellation.
@@ -32,7 +32,7 @@ processing for ultra-low latency conversations; pipecat-ts brings the same archi
 
 ## How it works
 
-Like Pipecat, pipecat-ts orchestrates work in a **pipeline**: a series of **frame processors**
+Like Pipecat, pipedog orchestrates work in a **pipeline**: a series of **frame processors**
 that handle real-time audio, text and video **frames**. In a typical voice conversation:
 
 1. A **transport** receives audio from the user (browser, phone, ...).
@@ -46,13 +46,13 @@ many that talk to each other over a shared message bus for multi-agent setups.
 
 ## Relation to Pipecat
 
-pipecat-ts tracks a pinned upstream Pipecat commit and ports it module by module, test by test.
-The goal is that someone who knows Pipecat can read pipecat-ts code (and these docs) without a
+pipedog tracks a pinned upstream Pipecat commit and ports it module by module, test by test.
+The goal is that someone who knows Pipecat can read pipedog code (and these docs) without a
 dictionary:
 
 - **Same names.** Classes, frames, module paths and file names are the same as upstream:
   `src/pipecat/processors/frame_processor.py` becomes
-  `@pipecat-ts/core/processors/frame_processor`.
+  `@pipedog/core/processors/frame_processor`.
 - **Same event names.** `"on_pipeline_started"`, `"on_client_ready"`, ... are unchanged strings.
 - **camelCase members.** `push_frame()` is `pushFrame()`, `audio_in_sample_rate` is
   `audioInSampleRate`.
@@ -60,7 +60,7 @@ dictionary:
   `new TextFrame({ text: "hi" })`.
 - **Seconds.** Durations and timeouts stay in seconds, so upstream configs carry over.
 - **asyncio semantics.** Tasks, cancellation, queues and events behave like Python's `asyncio`,
-  through [`@pipecat-ts/asyncio`](/docs/concepts/interruptions-and-cancellation).
+  through [`@pipedog/asyncio`](/docs/concepts/interruptions-and-cancellation).
 - **Deprecated APIs are not ported.** Things upstream marks as deprecated (for example the
   `PipelineTask` / `PipelineRunner` aliases) are left out.
 
@@ -68,10 +68,10 @@ The upstream test suite is ported 1:1, and is how behavioral parity is proven.
 
 ## Compatibility with Pipecat clients (RTVI)
 
-pipecat-ts keeps Pipecat's **wire protocols** unchanged: RTVI messages, serializers and dict keys
+pipedog keeps Pipecat's **wire protocols** unchanged: RTVI messages, serializers and dict keys
 on the wire are byte-for-byte what Pipecat sends. A protocol is not an API, so nothing there is
 camelCased. That means Pipecat's client SDKs (`@pipecat-ai/client-js`, the React voice-ui-kit, the
-prebuilt UIs) can talk to a pipecat-ts bot unchanged. `PipelineWorker` adds RTVI support
+prebuilt UIs) can talk to a pipedog bot unchanged. `PipelineWorker` adds RTVI support
 automatically unless you pass `enableRtvi: false`.
 
 ## Status
@@ -84,7 +84,7 @@ it is ported, and which runtimes it is verified on.
 
 ## License
 
-pipecat-ts is BSD-2-Clause, like Pipecat. The original Pipecat code is Copyright (c) 2024–2026
-Daily; the port is Copyright (c) 2026 pipecat-ts contributors. Parts of these docs are adapted from
+pipedog is BSD-2-Clause, like Pipecat. The original Pipecat code is Copyright (c) 2024–2026
+Daily; the port is Copyright (c) 2026 pipedog contributors. Parts of these docs are adapted from
 the [Pipecat documentation](https://github.com/pipecat-ai/docs) (Copyright (c) 2024–2025 Daily,
-BSD-2-Clause), with every Python example rewritten in TypeScript against the pipecat-ts API.
+BSD-2-Clause), with every Python example rewritten in TypeScript against the pipedog API.

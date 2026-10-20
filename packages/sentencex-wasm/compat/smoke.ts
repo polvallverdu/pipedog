@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Runtime smoke test for tools/compat. Imports the package by name, so on
@@ -6,7 +6,7 @@
 // what gets exercised; elsewhere the default entry compiles the embedded bytes
 // synchronously.
 
-import { getSentenceBoundaries, segment } from "@pipecat-ts/sentencex-wasm";
+import { getSentenceBoundaries, segment } from "@pipedog/sentencex-wasm";
 
 function check(cond: unknown, message: string): asserts cond {
   if (!cond) throw new Error(`sentencex-wasm smoke: ${message}`);

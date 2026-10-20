@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/file_storage.py
@@ -83,7 +83,7 @@ export interface LocalFileStorageOptions {
 }
 
 const NOT_PORTED =
-  "not ported yet: LocalFileStorage needs filesystem access, which @pipecat-ts/core (runtime-agnostic) does not have";
+  "not ported yet: LocalFileStorage needs filesystem access, which @pipedog/core (runtime-agnostic) does not have";
 
 /**
  * Default storage backend: files on local disk, addressed as `pipecat:<hex>`.

@@ -1,9 +1,9 @@
 ---
 title: Runtimes & compatibility
-description: Running pipecat-ts on Bun, Node, Deno and Cloudflare Workers, and which packages are verified where.
+description: Running pipedog on Bun, Node, Deno and Cloudflare Workers, and which packages are verified where.
 ---
 
-`@pipecat-ts/core` and `@pipecat-ts/asyncio` are runtime-agnostic: they run unchanged on **Bun**,
+`@pipedog/core` and `@pipedog/asyncio` are runtime-agnostic: they run unchanged on **Bun**,
 **Node.js** (22 or later), **Deno** and **Cloudflare Workers** (workerd). Code that only works on
 some runtimes lives in its own package, and every package records where it is verified.
 
@@ -20,7 +20,7 @@ row means the package has not been run through the harness yet.
 
 ## What core avoids
 
-To stay portable, `@pipecat-ts/core` and `@pipecat-ts/asyncio`:
+To stay portable, `@pipedog/core` and `@pipedog/asyncio`:
 
 - import no `node:*` modules except `node:async_hooks` (for `AsyncLocalStorage`, in asyncio);
 - use `Uint8Array` for bytes, never `Buffer` (PCM is 16-bit little-endian);
@@ -36,7 +36,7 @@ Ctrl-C cancels the bot cleanly. Node needs version 22 or later.
 
 ## Cloudflare Workers
 
-Workers are a good fit for pipecat-ts bots that talk to clients over WebSockets, with a few
+Workers are a good fit for pipedog bots that talk to clients over WebSockets, with a few
 constraints:
 
 - **Enable `nodejs_compat`.** Task tracking uses `AsyncLocalStorage` from `node:async_hooks`,
@@ -70,7 +70,7 @@ constraints:
   The `workerd` entry does `import wasm from "../wasm/x.wasm"` and instantiates that
   `WebAssembly.Module`; the default entry loads the bytes (a `fetch` of
   `new URL(..., import.meta.url)`). Both accept an explicit `WebAssembly.Module | BufferSource` so
-  apps can supply their own. `@pipecat-ts/resampler-wasm` is built this way.
+  apps can supply their own. `@pipedog/resampler-wasm` is built this way.
 - **Models are never bundled.** Packages that need a model (Silero VAD, Smart Turn) load it from a
   path or URL you give them, with the upstream file name as the default. On Workers, serve it from
   R2, KV, static assets or a `fetch`.
@@ -81,7 +81,7 @@ constraints:
 
 ## Native and ML dependencies
 
-Where Pipecat uses native modules (onnxruntime, Krisp, Koala, soxr), the pipecat-ts package takes
+Where Pipecat uses native modules (onnxruntime, Krisp, Koala, soxr), the pipedog package takes
 the model as an external file or URL and accepts an injected runtime: `onnxruntime-node` on
 Bun/Node, `onnxruntime-web` (WASM) on Workers. Pure-algorithm fallbacks, such as a linear
 resampler, may live in core.

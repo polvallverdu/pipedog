@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/text/pattern_pair_aggregator.py
@@ -12,7 +12,7 @@
  * support for custom handlers and configurable actions for when a pattern is found.
  */
 
-import { rethrowIfCancelled } from "@pipecat-ts/asyncio";
+import { rethrowIfCancelled } from "@pipedog/asyncio";
 import { logger } from "../logger.ts";
 import { longestTrailingPartialMatch } from "../string.ts";
 import { Aggregation, TextType } from "./base_text_aggregator.ts";

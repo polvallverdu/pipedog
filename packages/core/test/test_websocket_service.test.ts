@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_websocket_service.py
@@ -8,8 +8,8 @@
 
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 
-import * as asyncio from "@pipecat-ts/asyncio";
-import { monotonic } from "@pipecat-ts/asyncio";
+import * as asyncio from "@pipedog/asyncio";
+import { monotonic } from "@pipedog/asyncio";
 
 import { ErrorFrame } from "../src/frames/frames.ts";
 import * as websocketServiceModule from "../src/services/websocket_service.ts";
@@ -57,7 +57,7 @@ const originalAsyncio = { ...asyncio };
 const originalWebsocketServiceModule = { ...websocketServiceModule };
 
 function patchAsyncio(overrides: Partial<typeof asyncio>): void {
-  mock.module("@pipecat-ts/asyncio", () => ({ ...originalAsyncio, ...overrides }));
+  mock.module("@pipedog/asyncio", () => ({ ...originalAsyncio, ...overrides }));
 }
 
 beforeEach(() => {
@@ -68,7 +68,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  mock.module("@pipecat-ts/asyncio", () => originalAsyncio);
+  mock.module("@pipedog/asyncio", () => originalAsyncio);
 });
 
 // ---------------------------------------------------------------------------

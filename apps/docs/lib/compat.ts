@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Reads every packages/*/package.json at build time, so the runtime
@@ -57,6 +57,6 @@ export function readPackageCompat(dir = packagesDir()): PackageCompat[] {
     });
   }
   // Core first, then alphabetical.
-  const rank = (n: string) => (n === "@pipecat-ts/asyncio" ? 0 : n === "@pipecat-ts/core" ? 1 : 2);
+  const rank = (n: string) => (n === "@pipedog/asyncio" ? 0 : n === "@pipedog/core" ? 1 : 2);
   return out.sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name));
 }

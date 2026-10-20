@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/turns/user_stop/external_user_turn_stop_strategy.py
 
 /** User turn stop strategy driven by another component in the pipeline. */
 
-import { Event, type Task, TimeoutError, waitFor } from "@pipecat-ts/asyncio";
+import { Event, type Task, TimeoutError, waitFor } from "@pipedog/asyncio";
 import {
   type Frame,
   InterimTranscriptionFrame,

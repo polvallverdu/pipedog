@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/observers/startup_timing_observer.py
@@ -36,7 +36,7 @@
  * const worker = new PipelineWorker(pipeline, { observers: [observer] });
  */
 
-import { monotonicNs, time } from "@pipecat-ts/asyncio";
+import { monotonicNs, time } from "@pipedog/asyncio";
 import { BotConnectedFrame, ClientConnectedFrame, StartFrame } from "../frames/frames.ts";
 import { BasePipeline } from "../pipeline/base_pipeline.ts";
 import { PipelineSource } from "../pipeline/pipeline.ts";

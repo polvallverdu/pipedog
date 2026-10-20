@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/processors/audio/audio_buffer_processor.py
@@ -12,7 +12,7 @@
  * support for various audio configurations and event-driven processing.
  */
 
-import { monotonic } from "@pipecat-ts/asyncio";
+import { monotonic } from "@pipedog/asyncio";
 import type { BaseAudioResampler } from "../../audio/resamplers/base_audio_resampler.ts";
 import { createStreamResampler, interleaveStereoAudio, mixAudio } from "../../audio/utils.ts";
 import {

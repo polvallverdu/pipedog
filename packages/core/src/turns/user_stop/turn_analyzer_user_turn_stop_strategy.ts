@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/turns/user_stop/turn_analyzer_user_turn_stop_strategy.py
 
 /** User turn stop strategy based on turn detection analyzers. */
 
-import { CancelledError, sleep, type Task, time } from "@pipecat-ts/asyncio";
+import { CancelledError, sleep, type Task, time } from "@pipedog/asyncio";
 import { type BaseTurnAnalyzer, EndOfTurnState } from "../../audio/turn/base_turn_analyzer.ts";
 import { VAD_STOP_SECS } from "../../audio/vad/vad_analyzer.ts";
 import {

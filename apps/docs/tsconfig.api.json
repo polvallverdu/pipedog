@@ -1,5 +1,5 @@
 {
-  "//": "Used by fumadocs-typescript (AutoTypeTable) and Twoslash to read the pipecat-ts sources.",
+  "//": "Used by fumadocs-typescript (AutoTypeTable) and Twoslash to read the pipedog sources.",
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,

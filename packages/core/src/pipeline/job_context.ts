@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/pipeline/job_context.py
@@ -15,7 +15,7 @@
  *   it absorbs) is not ported.
  */
 
-import { Event, Queue, shield, type Task } from "@pipecat-ts/asyncio";
+import { Event, Queue, shield, type Task } from "@pipedog/asyncio";
 import type { BaseWorker } from "../workers/base_worker.ts";
 
 /** A job payload or response: structured JSON-like data. */

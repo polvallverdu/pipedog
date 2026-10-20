@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Runtime smoke test for tools/compat: exercises task cancellation (which
@@ -12,7 +12,7 @@ import {
   sleep,
   TimeoutError,
   waitFor,
-} from "@pipecat-ts/asyncio";
+} from "@pipedog/asyncio";
 
 function check(cond: unknown, message: string): asserts cond {
   if (!cond) throw new Error(`asyncio smoke: ${message}`);

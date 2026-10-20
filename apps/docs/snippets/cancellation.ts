@@ -1,4 +1,4 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Samples for content/docs/concepts/interruptions-and-cancellation.mdx.
@@ -17,7 +17,7 @@ import {
   sleep,
   TimeoutError,
   waitFor,
-} from "@pipecat-ts/asyncio";
+} from "@pipedog/asyncio";
 
 const task = createTask(async () => {
   await sleep(10); // a cancellation point

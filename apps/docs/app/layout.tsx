@@ -6,11 +6,11 @@ import "./global.css";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | pipecat-ts (unofficial)",
-    default: "pipecat-ts (unofficial)",
+    template: "%s | pipedog",
+    default: "pipedog",
   },
   description:
-    "Documentation for pipecat-ts, an unofficial TypeScript port of Pipecat for Bun, Node, Deno and Cloudflare Workers.",
+    "Documentation for pipedog, an unofficial TypeScript port of Pipecat for Bun, Node, Deno and Cloudflare Workers.",
 };
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -19,7 +19,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <body className="flex flex-col min-h-screen">
         <RootProvider>
           <Banner id="unofficial-notice">
-            pipecat-ts is an unofficial community port of Pipecat, not affiliated with Daily.
+            pipedog is an unofficial community port of Pipecat, not affiliated with Daily.
           </Banner>
           {children}
         </RootProvider>

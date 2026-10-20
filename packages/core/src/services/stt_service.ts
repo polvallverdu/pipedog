@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/services/stt_service.py
 
 /** Base classes for Speech-to-Text services with continuous and segmented processing. */
 
-import { monotonic, Queue, rethrowIfCancelled, sleep, type Task, time } from "@pipecat-ts/asyncio";
+import { monotonic, Queue, rethrowIfCancelled, sleep, type Task, time } from "@pipedog/asyncio";
 import { pcmToWav } from "../audio/utils.ts";
 import {
   type CancelFrame,

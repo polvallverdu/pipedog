@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/services/llm_service.py
@@ -10,7 +10,7 @@
  * Porting notes:
  * - Cancelling a function call cancels the task running its handler. In
  *   JavaScript cancellation is delivered at cancellation points (see
- *   `@pipecat-ts/asyncio`), so a handler awaiting foreign work (`fetch`, an
+ *   `@pipedog/asyncio`), so a handler awaiting foreign work (`fetch`, an
  *   SDK) should pass `currentSignal()` to it, or wrap the await in
  *   `abortable()`, to stop as promptly as the Python handler would.
  * - Deprecated upstream APIs are not ported: `FunctionCallParams.tool_resources`,
@@ -29,7 +29,7 @@ import {
   TimeoutError,
   wait,
   waitFor,
-} from "@pipecat-ts/asyncio";
+} from "@pipedog/asyncio";
 import type { BaseLLMAdapter } from "../adapters/base_llm_adapter.ts";
 import { DirectFunctionWrapper } from "../adapters/schemas/direct_function.ts";
 import { ToolsSchema } from "../adapters/schemas/tools_schema.ts";

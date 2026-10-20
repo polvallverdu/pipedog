@@ -1,11 +1,11 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Select the next porting work from porting/manifest.json and pack it into
 // work units for the port workflow. Prints JSON.
 //
-//   bun tools/port/next.ts modules [--mvp] [--package @pipecat-ts/x] [--modules a,b] [--max-lines 3500]
-//   bun tools/port/next.ts tests   [--package @pipecat-ts/x] [--mvp] [--limit 40]
+//   bun tools/port/next.ts modules [--mvp] [--package @pipedog/x] [--modules a,b] [--max-lines 3500]
+//   bun tools/port/next.ts tests   [--package @pipedog/x] [--mvp] [--limit 40]
 //
 // `modules` returns units of related modules (same directory first) up to
 // --max-lines of Python each. `tests` returns upstream test files whose

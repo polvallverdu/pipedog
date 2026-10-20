@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_provider_watch_scripts.py
@@ -15,7 +15,7 @@
 // These are Python repository-maintenance scripts (they scan the Python
 // `src/pipecat` tree, read `pyproject.toml` extras, drive `git`/`gh` and spawn
 // `python scripts/provider-watch/*.py`). They are not library modules and have
-// no pipecat-ts counterpart yet, so every test is a `test.todo` naming the
+// no pipedog counterpart yet, so every test is a `test.todo` naming the
 // unported script. Names and parametrizations are kept so the suites can be
 // diffed.
 

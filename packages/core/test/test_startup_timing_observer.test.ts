@@ -1,13 +1,13 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_startup_timing_observer.py
 
 import { describe, expect, spyOn, test } from "bun:test";
 
-import * as asyncio from "@pipecat-ts/asyncio";
-import { Event, sleep, TimeoutError, waitFor } from "@pipecat-ts/asyncio";
+import * as asyncio from "@pipedog/asyncio";
+import { Event, sleep, TimeoutError, waitFor } from "@pipedog/asyncio";
 
 import {
   BotConnectedFrame,
@@ -71,7 +71,7 @@ class SlowSetupProcessor extends FrameProcessor {
 }
 
 /**
- * Local stand-in for Python's `asyncio.Barrier`, which `@pipecat-ts/asyncio`
+ * Local stand-in for Python's `asyncio.Barrier`, which `@pipedog/asyncio`
  * does not provide: `wait()` resolves once `parties` callers are waiting.
  */
 class Barrier {

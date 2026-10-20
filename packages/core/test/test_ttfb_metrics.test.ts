@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_ttfb_metrics.py
@@ -16,7 +16,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-import { time } from "@pipecat-ts/asyncio";
+import { time } from "@pipedog/asyncio";
 
 import type { Frame } from "../src/frames/frames.ts";
 import { TTFBMetricsData } from "../src/metrics/metrics.ts";

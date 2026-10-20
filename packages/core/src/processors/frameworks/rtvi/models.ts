@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/processors/frameworks/rtvi/models.py
@@ -11,7 +11,7 @@
  * Import this module under the `RTVI` alias to use as a namespace.
  *
  * @example
- * import * as RTVI from "@pipecat-ts/core/processors/frameworks/rtvi/models";
+ * import * as RTVI from "@pipedog/core/processors/frameworks/rtvi/models";
  *
  * const msg = new RTVI.BotReady({
  *   id: "1",

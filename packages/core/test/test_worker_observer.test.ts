@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_worker_observer.py
@@ -7,7 +7,7 @@
 /** Tests for how WorkerObserver hands pushes to the observers it manages. */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { Event, gather, waitFor } from "@pipecat-ts/asyncio";
+import { Event, gather, waitFor } from "@pipedog/asyncio";
 import { type Frame, TextFrame } from "../src/frames/frames.ts";
 import {
   BaseObserver,

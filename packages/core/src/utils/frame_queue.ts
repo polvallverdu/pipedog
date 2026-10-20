@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/frame_queue.py
 
 /** Frame queue utilities for Pipecat pipeline processors. */
 
-import { heapPop, heapPush, pythonCompare, Queue } from "@pipecat-ts/asyncio";
+import { heapPop, heapPush, pythonCompare, Queue } from "@pipedog/asyncio";
 import type { Frame } from "../frames/frames.ts";
 
 export type FrameClass<T extends Frame = Frame> = abstract new (...args: any[]) => T;

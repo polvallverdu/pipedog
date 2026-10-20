@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/processors/async_generator.py
 
 /** Async generator processor for frame serialization and streaming. */
 
-import { Queue } from "@pipecat-ts/asyncio";
+import { Queue } from "@pipedog/asyncio";
 import { CancelFrame, EndFrame, type Frame } from "../frames/frames.ts";
 import type { FrameSerializer } from "../serializers/base_serializer.ts";
 import {

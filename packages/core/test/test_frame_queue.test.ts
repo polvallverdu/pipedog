@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_frame_queue.py
@@ -7,7 +7,7 @@
 /** The frame queue reads a frame's `interruptible` flag as it is. */
 
 import { describe, expect, test } from "bun:test";
-import { waitFor } from "@pipecat-ts/asyncio";
+import { waitFor } from "@pipedog/asyncio";
 import { EndFrame, type Frame, TextFrame } from "../src/frames/frames.ts";
 import { FramePriorityQueue, FrameQueue } from "../src/utils/frame_queue.ts";
 

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_classifiers_openai_decisions.py
@@ -7,8 +7,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { deflateSync } from "node:zlib";
 
-import * as asyncio from "@pipecat-ts/asyncio";
-import { Event, gather, waitFor } from "@pipecat-ts/asyncio";
+import * as asyncio from "@pipedog/asyncio";
+import { Event, gather, waitFor } from "@pipedog/asyncio";
 
 import {
   ChoiceQuestion,
@@ -196,11 +196,11 @@ async function withPatchedSleep(
   body: () => Promise<void>,
 ): Promise<void> {
   const original = { ...asyncio };
-  mock.module("@pipecat-ts/asyncio", () => ({ ...original, sleep: fn }));
+  mock.module("@pipedog/asyncio", () => ({ ...original, sleep: fn }));
   try {
     await body();
   } finally {
-    mock.module("@pipecat-ts/asyncio", () => original);
+    mock.module("@pipedog/asyncio", () => original);
   }
 }
 

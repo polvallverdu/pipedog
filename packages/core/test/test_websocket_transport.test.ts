@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_websocket_transport.py
@@ -12,7 +12,7 @@ import { describe, test } from "bun:test";
 // with `WebsocketTransport`, `WebSocketFrameProcessor`, `_websocket_handler`,
 // `on_connection`, `transport.run(pipeline)`, `AudioFrame`). The current websocket
 // transports live in transports/websocket/{server,client}.py and are ported to
-// @pipecat-ts/transport-websocket with their own tests.
+// @pipedog/transport-websocket with their own tests.
 //
 // The test names are kept here as skipped tests so the two suites can be diffed;
 // there is nothing to port in their bodies.

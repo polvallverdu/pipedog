@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_deprecation_markers.py
@@ -10,7 +10,7 @@
  * Upstream, this file audits the `.. deprecated::` docstring directives across
  * `src/pipecat` through the Python build tooling in `scripts/deprecations/`
  * (`scan.py`, `generate.py`, `generate_removals.py`), and checks that the
- * deprecated runtime shims still warn. Neither carries over to pipecat-ts:
+ * deprecated runtime shims still warn. Neither carries over to pipedog:
  *
  * - the scanner, the registry generator and the removals diff are Python build
  *   tooling over the Python source tree, not part of the shipped library, and

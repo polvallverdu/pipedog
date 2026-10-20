@@ -9,7 +9,7 @@ import {
   remarkAutoTypeTable,
 } from "fumadocs-typescript";
 
-// Reads the pipecat-ts sources (packages/*/src) through tsconfig.api.json.
+// Reads the pipedog sources (packages/*/src) through tsconfig.api.json.
 const generator = createGenerator({
   tsconfigPath: "./tsconfig.api.json",
   cache: createFileSystemGeneratorCache(".next/cache/fumadocs-typescript"),

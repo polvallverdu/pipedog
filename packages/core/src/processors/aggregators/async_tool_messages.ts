@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/processors/aggregators/async_tool_messages.py
@@ -44,7 +44,7 @@
  * functions.
  *
  * @example
- * import * as asyncToolMessages from "@pipecat-ts/core/processors/aggregators/async_tool_messages";
+ * import * as asyncToolMessages from "@pipedog/core/processors/aggregators/async_tool_messages";
  * asyncToolMessages.buildStartedMessage(toolCallId);
  * asyncToolMessages.parseMessage(msg);
  */

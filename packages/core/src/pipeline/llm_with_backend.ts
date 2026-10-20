@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/pipeline/llm_with_backend.py
@@ -23,7 +23,7 @@
  * each output is rendered into the conversation.
  */
 
-import { Event, rethrowIfCancelled, type Task, TimeoutError, waitFor } from "@pipecat-ts/asyncio";
+import { Event, rethrowIfCancelled, type Task, TimeoutError, waitFor } from "@pipedog/asyncio";
 import { FunctionSchema } from "../adapters/schemas/function_schema.ts";
 import { FunctionCallResultProperties, LLMMessagesAppendFrame } from "../frames/frames.ts";
 import {

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_sentencex_tokenizer.py
@@ -19,7 +19,7 @@ const STRING_MODULE = "../src/utils/string.ts";
 // fallback in utils/string.ts, which splits after single-letter initials such
 // as "I." where sentencex keeps "Albert I. Jones" together and only splits
 // "you and I. Did" once the following word is complete.
-// SENTENCEX_TODO: these cases need sentencex (@pipecat-ts/sentencex-wasm)
+// SENTENCEX_TODO: these cases need sentencex (@pipedog/sentencex-wasm)
 // wired into core utils/string.ts; until then they are test.todo.
 
 async function texts(iter: AsyncIterable<Aggregation>): Promise<string[]> {

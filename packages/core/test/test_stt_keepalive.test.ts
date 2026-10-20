@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_stt_keepalive.py
@@ -8,7 +8,7 @@
 
 import { expect, test } from "bun:test";
 
-import { sleep, timeout } from "@pipecat-ts/asyncio";
+import { sleep, timeout } from "@pipedog/asyncio";
 
 import type { Frame } from "../src/frames/frames.ts";
 import { STTService, type STTServiceOptions } from "../src/services/stt_service.ts";

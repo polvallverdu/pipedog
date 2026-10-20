@@ -1,4 +1,4 @@
-pipecat-ts is an unofficial TypeScript port of Pipecat (https://github.com/pipecat-ai/pipecat),
+pipedog is an unofficial TypeScript port of Pipecat (https://github.com/pipecat-ai/pipecat),
 a framework for voice and multimodal conversational AI created by Daily.
 
 It is not affiliated with or endorsed by Daily. Pipecat is distributed under

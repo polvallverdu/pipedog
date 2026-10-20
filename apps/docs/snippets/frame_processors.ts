@@ -1,9 +1,9 @@
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Samples for content/docs/concepts/frame-processors.mdx. Type-checked on every docs build.
 
-import { Event } from "@pipecat-ts/asyncio";
+import { Event } from "@pipedog/asyncio";
 import {
   type ErrorFrame,
   type Frame,
@@ -13,15 +13,15 @@ import {
   TextFrame,
   TranscriptionFrame,
   UserStartedSpeakingFrame,
-} from "@pipecat-ts/core/frames/frames";
-import type { MetricsData } from "@pipecat-ts/core/metrics/metrics";
+} from "@pipedog/core/frames/frames";
+import type { MetricsData } from "@pipedog/core/metrics/metrics";
 import {
   FrameDirection,
   FrameProcessor,
   type FrameProcessorOptions,
   type FrameProcessorSetup,
-} from "@pipecat-ts/core/processors/frame_processor";
-import { logger } from "@pipecat-ts/core/utils/logger";
+} from "@pipedog/core/processors/frame_processor";
+import { logger } from "@pipedog/core/utils/logger";
 
 // #region metrics-logger
 function formatMetrics(metrics: MetricsData[]): string {

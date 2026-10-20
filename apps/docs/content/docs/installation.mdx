@@ -1,18 +1,18 @@
 ---
 title: Installation
-description: Add pipecat-ts to a Bun, Node, Deno or Cloudflare Workers project.
+description: Add pipedog to a Bun, Node, Deno or Cloudflare Workers project.
 ---
 
-pipecat-ts is split into packages, like Pipecat's optional extras:
+pipedog is split into packages, like Pipecat's optional extras:
 
 | Package | What |
 |---|---|
-| `@pipecat-ts/asyncio` | asyncio semantics for JavaScript: tasks, cooperative cancellation, queues, events |
-| `@pipecat-ts/core` | frames, processors, pipelines, workers, bus, observers, RTVI, base services and transports |
-| `@pipecat-ts/<provider>` | one package per service provider, transport, serializer or audio model (being ported) |
+| `@pipedog/asyncio` | asyncio semantics for JavaScript: tasks, cooperative cancellation, queues, events |
+| `@pipedog/core` | frames, processors, pipelines, workers, bus, observers, RTVI, base services and transports |
+| `@pipedog/<provider>` | one package per service provider, transport, serializer or audio model (being ported) |
 
-Where Python installs `pipecat-ai[deepgram,openai]`, you will add `@pipecat-ts/core` plus
-`@pipecat-ts/deepgram` and `@pipecat-ts/openai`.
+Where Python installs `pipecat-ai[deepgram,openai]`, you will add `@pipedog/core` plus
+`@pipedog/deepgram` and `@pipedog/openai`.
 
 <Callout type="warn" title="Not on npm yet">
   The packages are not published yet (they are at version `0.0.0`). Until they are, use them from
@@ -25,22 +25,22 @@ Where Python installs `pipecat-ai[deepgram,openai]`, you will add `@pipecat-ts/c
 <Tabs items={["bun", "npm", "pnpm", "deno"]}>
   <Tab value="bun">
     ```bash
-    bun add @pipecat-ts/core @pipecat-ts/asyncio
+    bun add @pipedog/core @pipedog/asyncio
     ```
   </Tab>
   <Tab value="npm">
     ```bash
-    npm install @pipecat-ts/core @pipecat-ts/asyncio
+    npm install @pipedog/core @pipedog/asyncio
     ```
   </Tab>
   <Tab value="pnpm">
     ```bash
-    pnpm add @pipecat-ts/core @pipecat-ts/asyncio
+    pnpm add @pipedog/core @pipedog/asyncio
     ```
   </Tab>
   <Tab value="deno">
     ```bash
-    deno add npm:@pipecat-ts/core npm:@pipecat-ts/asyncio
+    deno add npm:@pipedog/core npm:@pipedog/asyncio
     ```
   </Tab>
 </Tabs>
@@ -67,14 +67,14 @@ from pipecat.workers.runner import WorkerRunner
 ```
 
 ```ts
-import { Pipeline } from "@pipecat-ts/core/pipeline/pipeline";
-import { PipelineParams, PipelineWorker } from "@pipecat-ts/core/pipeline/worker";
-import { WorkerRunner } from "@pipecat-ts/core/workers/runner";
+import { Pipeline } from "@pipedog/core/pipeline/pipeline";
+import { PipelineParams, PipelineWorker } from "@pipedog/core/pipeline/worker";
+import { WorkerRunner } from "@pipedog/core/workers/runner";
 ```
 
 ## From source
 
-pipecat-ts is a Bun monorepo. Clone it, install, and add your app as a workspace (for example
+pipedog is a Bun monorepo. Clone it, install, and add your app as a workspace (for example
 under `examples/`), depending on the packages with `workspace:*`:
 
 ```bash
@@ -89,8 +89,8 @@ bun run typecheck   # tsc over every package
   "private": true,
   "type": "module",
   "dependencies": {
-    "@pipecat-ts/asyncio": "workspace:*",
-    "@pipecat-ts/core": "workspace:*"
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
   }
 }
 ```

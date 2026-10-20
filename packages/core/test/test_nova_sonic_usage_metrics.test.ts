@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_nova_sonic_usage_metrics.py
@@ -17,7 +17,7 @@
  * Upstream imports the service with `pytest.importorskip` so the suite is skipped
  * when the optional AWS dependencies aren't installed. Here the service is
  * loaded with a dynamic import so this file still loads while
- * `packages/aws/src/nova_sonic/llm.ts` (`@pipecat-ts/aws`) is unported; the
+ * `packages/aws/src/nova_sonic/llm.ts` (`@pipedog/aws`) is unported; the
  * tests are `test.todo` until it lands.
  */
 

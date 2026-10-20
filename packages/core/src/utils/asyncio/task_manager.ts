@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/asyncio/task_manager.py
@@ -20,7 +20,7 @@ import {
   type TaskFn,
   TimeoutError,
   waitFor,
-} from "@pipecat-ts/asyncio";
+} from "@pipedog/asyncio";
 import { logger } from "../logger.ts";
 
 /** Stand-in for asyncio's event loop: only its clock is used by pipecat. */

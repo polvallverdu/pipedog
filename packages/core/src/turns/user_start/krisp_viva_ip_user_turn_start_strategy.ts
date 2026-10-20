@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/turns/user_start/krisp_viva_ip_user_turn_start_strategy.py
@@ -22,7 +22,7 @@
  * Subclasses (or tests) can override it to supply a `KrispIpSession`.
  */
 
-import { rethrowIfCancelled } from "@pipecat-ts/asyncio";
+import { rethrowIfCancelled } from "@pipedog/asyncio";
 import {
   intToKrispFrameDuration,
   intToKrispSampleRate,

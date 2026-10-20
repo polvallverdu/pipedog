@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_backend_llm_worker.py
@@ -15,7 +15,7 @@
 
 import { expect, test } from "bun:test";
 
-import { Event, gather, sleep, waitFor } from "@pipecat-ts/asyncio";
+import { Event, gather, sleep, waitFor } from "@pipedog/asyncio";
 
 import { toolOptions } from "../src/adapters/schemas/direct_function.ts";
 import type { BusJobRequestMessage } from "../src/bus/messages.ts";
@@ -565,7 +565,7 @@ test("test_a_message_sent_while_only_an_asynchronous_tool_is_in_flight_runs_at_o
 // handler starts. Under asyncio the assistant aggregator has already taken the
 // call's FunctionCallsStartedFrame and FunctionCallInProgressFrame by then, so
 // the FunctionCallCancelFrame the detach brings settles the call. Under the
-// JS microtask emulation (@pipecat-ts/asyncio) each await is at least one
+// JS microtask emulation (@pipedog/asyncio) each await is at least one
 // microtick, so the frame path lags the bus path: the aggregator takes the
 // (system) cancel before the (control) in-progress frame, which then re-opens
 // the synchronous call; the next session's request is held for it forever and

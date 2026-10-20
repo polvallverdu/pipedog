@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/turns/user_start/wake_phrase_user_turn_start_strategy.py
 
 /** User turn start strategy that gates interaction behind wake phrase detection. */
 
-import { Event, type Task, TimeoutError, waitFor } from "@pipecat-ts/asyncio";
+import { Event, type Task, TimeoutError, waitFor } from "@pipedog/asyncio";
 import {
   BotSpeakingFrame,
   type Frame,

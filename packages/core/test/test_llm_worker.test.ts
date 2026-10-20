@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_llm_worker.py
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
-import { createTask, Event, sleep } from "@pipecat-ts/asyncio";
+import { createTask, Event, sleep } from "@pipedog/asyncio";
 import { type Frame, LLMMessagesAppendFrame, PipelineFlushFrame } from "../src/frames/frames.ts";
 import { PipelineWorker } from "../src/pipeline/worker.ts";
 import { FrameDirection, FrameProcessor } from "../src/processors/frame_processor.ts";

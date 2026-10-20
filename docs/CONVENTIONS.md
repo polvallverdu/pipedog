@@ -1,6 +1,6 @@
 # Porting conventions
 
-This is the rulebook for porting Pipecat (Python) to pipecat-ts. It is written
+This is the rulebook for porting Pipecat (Python) to pipedog. It is written
 for humans and for the porting agents (`.claude/workflows/port.js`). When a
 case is not covered, look at how the hand-ported reference files do it:
 
@@ -21,7 +21,7 @@ case is not covered, look at how the hand-ported reference files do it:
 2. **Recognizable API.** Someone who knows Pipecat Python can read our code
    and our docs. Class names, event names, module paths and file names are the
    same; only the casing of members changes (see Naming).
-3. **Runs everywhere.** `@pipecat-ts/core` runs on Bun, Node ≥ 22, Deno and
+3. **Runs everywhere.** `@pipedog/core` runs on Bun, Node ≥ 22, Deno and
    Cloudflare Workers. Runtime-specific code lives in its own package.
 4. **Idiomatic TypeScript** where that doesn't conflict with 1–3.
 
@@ -30,19 +30,19 @@ case is not covered, look at how the hand-ported reference files do it:
 - One Python module → one TS file, at the same path, with the same snake_case
   name: `src/pipecat/processors/frame_processor.py` →
   `packages/core/src/processors/frame_processor.ts`. Consumers import
-  `@pipecat-ts/core/processors/frame_processor`.
+  `@pipedog/core/processors/frame_processor`.
 - `__init__.py` that only re-exports → `index.ts`. An `__init__.py` with code
   → `index.ts` holding that code.
 - One Python test file → one TS test file: `tests/test_frame_processor.py` →
   `packages/<pkg>/test/test_frame_processor.test.ts`.
 - **Packages.** The core import closure (frames, processors base, pipeline,
   workers, bus, observers, RTVI, base transports and services, turns, utils)
-  is mutually dependent, so it is one package, `@pipecat-ts/core`.
+  is mutually dependent, so it is one package, `@pipedog/core`.
   Everything outside it gets its own package:
-  - `services/<provider>` → `@pipecat-ts/<provider>`
-  - `transports/<name>` → `@pipecat-ts/transport-<name>`
-  - `serializers/<name>` → `@pipecat-ts/serializer-<name>` (base serializers stay in core)
-  - audio filters, VAD and turn models → `@pipecat-ts/<name>`
+  - `services/<provider>` → `@pipedog/<provider>`
+  - `transports/<name>` → `@pipedog/transport-<name>`
+  - `serializers/<name>` → `@pipedog/serializer-<name>` (base serializers stay in core)
+  - audio filters, VAD and turn models → `@pipedog/<name>`
   - `flows`, `evals`, `runner`, `cli` → their own packages.
   `porting/manifest.json` records the assignment for every module.
 - Every `package.json` has a `"pipecat"` block:
@@ -61,7 +61,7 @@ Every ported file starts with:
 
 ```ts
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/<path>.py
@@ -116,17 +116,17 @@ constructor(options: FrameProcessorOptions = {}) { super(options); ... }
 ## Time and units
 
 - Durations and timeouts stay in **seconds** (floats), as upstream does, so
-  configs and docs carry over. Use `sleep(s)` from `@pipecat-ts/asyncio`, never raw `setTimeout`.
+  configs and docs carry over. Use `sleep(s)` from `@pipedog/asyncio`, never raw `setTimeout`.
 - Clock values stay in **nanoseconds** as `number` (exact up to ~104 days of uptime).
 - `bytes` → `Uint8Array` (never `Buffer`). PCM is 16-bit little-endian;
   read samples with `new Int16Array(u8.buffer, u8.byteOffset, u8.length / 2)`
   (copy first if `byteOffset` is odd).
 - `time.time()` → `time()`; `time.monotonic()` → `monotonic()`; `time.monotonic_ns()` → `monotonicNs()`
-  (all from `@pipecat-ts/asyncio`).
+  (all from `@pipedog/asyncio`).
 
 ## Async and cancellation (most important)
 
-Python's `asyncio` semantics are kept by `@pipecat-ts/asyncio`. Read its
+Python's `asyncio` semantics are kept by `@pipedog/asyncio`. Read its
 `task.ts` header before porting anything with tasks.
 
 | Python | TypeScript |
@@ -134,10 +134,10 @@ Python's `asyncio` semantics are kept by `@pipecat-ts/asyncio`. Read its
 | `asyncio.create_task(coro())` | `createTask(() => coro())` (in a BaseObject: `this.createTask(() => this.x(), "name")`) |
 | `await self.cancel_task(task)` | `await this.cancelTask(task)` |
 | `asyncio.sleep(s)` | `sleep(s)` |
-| `asyncio.Event / Queue / PriorityQueue / Lock / Semaphore` | same names from `@pipecat-ts/asyncio` |
+| `asyncio.Event / Queue / PriorityQueue / Lock / Semaphore` | same names from `@pipedog/asyncio` |
 | `asyncio.wait_for(coro(), timeout=t)` | `waitFor(() => coro(), t)` (pass a function so it can be cancelled) |
 | `asyncio.gather(a(), b())` | `gather(() => a(), () => b())` |
-| `asyncio.TimeoutError` / `TimeoutError` | `TimeoutError` from `@pipecat-ts/asyncio` |
+| `asyncio.TimeoutError` / `TimeoutError` | `TimeoutError` from `@pipedog/asyncio` |
 | `asyncio.CancelledError` | `CancelledError` |
 | `asyncio.current_task()` | `currentTask()` |
 | `async with lock:` | `await lock.run(async () => { ... })` |
@@ -227,7 +227,7 @@ See the top of `frames/frames.ts`.
 
 ## Dependencies
 
-- Core takes no runtime dependencies beyond `@pipecat-ts/asyncio` (and `zod`
+- Core takes no runtime dependencies beyond `@pipedog/asyncio` (and `zod`
   if needed). No `node:*` imports in core except `node:async_hooks` (in asyncio).
 - Python SDK → the provider's official JS SDK if it is edge-compatible (uses
   `fetch`/`WebSocket`), else talk to the HTTP/WebSocket API directly with `fetch`
@@ -274,7 +274,7 @@ methods; they carry design intent.
   Keep test names so the two suites can be diffed.
 - `self.assertEqual(a, b)` → `expect(a).toEqual(b)`; `assertIsInstance` →
   `expect(x).toBeInstanceOf(C)`; `with self.assertRaises(E)` → `expect(...).toThrow(E)` / `rejects`.
-- `run_test(...)` → `runTest(...)` from `@pipecat-ts/core/tests/utils`.
+- `run_test(...)` → `runTest(...)` from `@pipedog/core/tests/utils`.
 - `unittest.mock` / `AsyncMock` → `mock()` / `spyOn()` from `bun:test`.
 - Tests that need a real network or API keys are skipped by default, as upstream does.
 - A test that cannot pass yet because a dependency is unported →

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: src/pipecat/utils/base_object.py
@@ -18,7 +18,7 @@ import {
   type Task,
   type TaskFn,
   wait,
-} from "@pipecat-ts/asyncio";
+} from "@pipedog/asyncio";
 import type { BaseTaskManager } from "./asyncio/task_manager.ts";
 import { logger } from "./logger.ts";
 import { objCount, objId } from "./utils.ts";

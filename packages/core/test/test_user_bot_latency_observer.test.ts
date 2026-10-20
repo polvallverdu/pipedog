@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026, Daily
-// Copyright (c) 2026, pipecat-ts contributors
+// Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Ported from pipecat: tests/test_user_bot_latency_observer.py
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-import { sleep } from "@pipecat-ts/asyncio";
+import { sleep } from "@pipedog/asyncio";
 
 import { SystemClock } from "../src/clocks/system_clock.ts";
 import {
