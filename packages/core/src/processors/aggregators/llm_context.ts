@@ -20,6 +20,7 @@ import { FunctionSchema } from "../../adapters/schemas/function_schema.ts";
 import { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
 import { pcmToWav } from "../../audio/utils.ts";
 import type { AudioRawFrame, FileSourceType } from "../../frames/frames.ts";
+import { bytesToBase64 } from "../../utils/base64.ts";
 import { encodeImage } from "../../utils/image.ts";
 import { logger } from "../../utils/logger.ts";
 import { NOT_GIVEN, type NotGiven } from "../../utils/types.ts";
@@ -77,15 +78,6 @@ function isDict(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
   const proto = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
-  return btoa(binary);
 }
 
 function typeName(value: unknown): string {

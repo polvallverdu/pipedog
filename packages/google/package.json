@@ -1,0 +1,54 @@
+{
+  "name": "@pipedog/google",
+  "version": "0.2.0",
+  "description": "Google services (Gemini, Cloud Speech-to-Text, Cloud Text-to-Speech) for pipedog.",
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/google"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/google#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@google/genai": "^2.27.0"
+  },
+  "peerDependencies": {
+    "@google-cloud/speech": "^8.0.0",
+    "@google-cloud/text-to-speech": "^7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@google-cloud/speech": {
+      "optional": true
+    },
+    "@google-cloud/text-to-speech": {
+      "optional": true
+    }
+  },
+  "pipecat": {
+    "runtimes": [],
+    "upstream": [
+      "src/pipecat/services/google"
+    ]
+  },
+  "devDependencies": {
+    "@google-cloud/speech": "8.1.1",
+    "@google-cloud/text-to-speech": "7.1.1"
+  }
+}

@@ -38,6 +38,7 @@ import {
   UserImageRawFrame,
 } from "../../../frames/frames.ts";
 import { version as pipecatVersion } from "../../../index.ts";
+import { base64ToBytes } from "../../../utils/base64.ts";
 import { logger } from "../../../utils/logger.ts";
 import {
   type FrameDirection,
@@ -80,15 +81,6 @@ function parsePythonInt(value: string): number {
     throw new RangeError(`invalid literal for int() with base 10: '${value}'`);
   }
   return Number.parseInt(value, 10);
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
 }
 
 /** Options for `RTVIProcessor`. */

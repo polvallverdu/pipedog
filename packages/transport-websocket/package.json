@@ -1,0 +1,51 @@
+{
+  "name": "@pipedog/transport-websocket",
+  "version": "0.2.0",
+  "description": "WebSocket transports for pipedog: client, single-client server and bring-your-own-socket (FastAPI) transports over a runtime-agnostic socket, with servers for Bun, Node (ws) and Deno.",
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/transport-websocket"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/transport-websocket#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/serializer-protobuf": "workspace:*",
+    "@pipedog/serializer-rtvi-client": "workspace:*"
+  },
+  "peerDependencies": {
+    "ws": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    }
+  },
+  "pipecat": {
+    "runtimes": [],
+    "upstream": [
+      "src/pipecat/transports/websocket/client.py",
+      "src/pipecat/transports/websocket/fastapi.py",
+      "src/pipecat/transports/websocket/rtvi_client.py",
+      "src/pipecat/transports/websocket/server.py"
+    ]
+  },
+  "devDependencies": {
+    "ws": "8.22.0",
+    "@types/ws": "8.18.2"
+  }
+}

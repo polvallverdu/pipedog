@@ -71,6 +71,7 @@ import {
 } from "../../processors/frameworks/rtvi/models.ts";
 import type { LLMService } from "../../services/llm_service.ts";
 import { logger } from "../../utils/logger.ts";
+import { pyJsonDumps } from "../../utils/py_json.ts";
 import type { JobGroupOptions } from "../base_worker.ts";
 import { LLMContextWorker } from "../llm/llm_context_worker.ts";
 import { _collectUiEventHandlers } from "./ui_event_decorator.ts";
@@ -131,34 +132,6 @@ function pyRepr(value: unknown): string {
   if (value === null || value === undefined) return "None";
   if (typeof value === "string") return `'${value}'`;
   return String(value);
-}
-
-/**
- * Encode a value as Python's `json.dumps(value, default=str)` does: `", "` and
- * `": "` separators, non-ASCII characters escaped, and anything that is not
- * JSON encoded as its string form.
- */
-function pyJsonDumps(value: unknown): string {
-  const encodeString = (s: string): string =>
-    JSON.stringify(s).replace(
-      /[\u0080-￿]/g,
-      (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`,
-    );
-  if (value === null || value === undefined) return "null";
-  if (typeof value === "boolean") return value ? "true" : "false";
-  if (typeof value === "number") {
-    if (Number.isNaN(value)) return "NaN";
-    if (value === Number.POSITIVE_INFINITY) return "Infinity";
-    if (value === Number.NEGATIVE_INFINITY) return "-Infinity";
-    return String(value);
-  }
-  if (typeof value === "string") return encodeString(value);
-  if (Array.isArray(value)) return `[${value.map((v) => pyJsonDumps(v)).join(", ")}]`;
-  if (isPlainObject(value) && Object.getPrototypeOf(value) === Object.prototype) {
-    const entries = Object.entries(value).map(([k, v]) => `${encodeString(k)}: ${pyJsonDumps(v)}`);
-    return `{${entries.join(", ")}}`;
-  }
-  return encodeString(String(value));
 }
 
 /**
@@ -1084,7 +1057,7 @@ export class UIWorker extends LLMContextWorker {
    * @returns A string to append to the LLM context as a developer message.
    */
   renderUiEvent(message: BusUIEventMessage): string {
-    const payloadRepr = pyJsonDumps(message.payload);
+    const payloadRepr = pyJsonDumps(message.payload, { default: String });
     return `<ui_event name="${message.eventName}">${payloadRepr}</ui_event>`;
   }
 

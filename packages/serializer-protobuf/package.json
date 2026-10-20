@@ -1,0 +1,34 @@
+{
+  "name": "@pipedog/serializer-protobuf",
+  "version": "0.2.0",
+  "description": "Protobuf frame serializer (ProtobufFrameSerializer) for pipedog, wire-compatible with Pipecat's frames.proto.",
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/serializer-protobuf"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/serializer-protobuf#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [],
+    "upstream": [
+      "src/pipecat/serializers/protobuf.py"
+    ]
+  }
+}

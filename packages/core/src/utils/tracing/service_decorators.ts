@@ -46,6 +46,7 @@ import { LLMTokenUsage, TTFBMetricsData } from "../../metrics/metrics.ts";
 import { NOT_GIVEN } from "../../processors/aggregators/llm_context.ts";
 import { FrameDirection } from "../../processors/frame_processor.ts";
 import { logger } from "../logger.ts";
+import { pyJsonDumps } from "../py_json.ts";
 import { isGiven } from "../types.ts";
 import {
   addGeminiLiveSpanAttributes,
@@ -99,34 +100,12 @@ function isObject(value: unknown): value is Dict {
   return typeof value === "object" && value !== null;
 }
 
-/**
- * Python `json.dumps(value)` with default arguments: `JSON.stringify` output with
- * `", "` and `": "` separators and non-ASCII characters escaped (`ensure_ascii`).
- */
-function jsonDumps(value: unknown): string {
-  return jsonDumpsRaw(value).replace(
-    /[\u0080-\uffff]/g,
-    (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`,
-  );
+/** Objects that are not dicts are encoded by their own enumerable properties. */
+function lenientDefault(value: unknown): unknown {
+  return typeof value === "object" && value !== null ? { ...value } : String(value);
 }
 
-function jsonDumpsRaw(value: unknown): string {
-  if (value === undefined) return "null";
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value) ?? "null";
-  }
-  const withToJson = value as { toJSON?: () => unknown };
-  if (typeof withToJson.toJSON === "function") {
-    return jsonDumpsRaw(withToJson.toJSON());
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((v) => jsonDumpsRaw(v)).join(", ")}]`;
-  }
-  const entries = Object.entries(value as Dict)
-    .filter(([, v]) => v !== undefined && typeof v !== "function")
-    .map(([k, v]) => `${JSON.stringify(k)}: ${jsonDumpsRaw(v)}`);
-  return `{${entries.join(", ")}}`;
-}
+const jsonDumps = (value: unknown): string => pyJsonDumps(value, { default: lenientDefault });
 
 /** Python truthiness for values that may be `NOT_GIVEN` (falsy upstream). */
 function truthy(value: unknown): boolean {

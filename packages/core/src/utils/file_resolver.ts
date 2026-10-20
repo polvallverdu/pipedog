@@ -31,6 +31,7 @@
  */
 
 import { abortable, currentSignal, rethrowIfCancelled, TimeoutError } from "@pipedog/asyncio";
+import { base64ToBytes, bytesToBase64 } from "./base64.ts";
 import { FileNotFoundError, type FileStorage } from "./file_storage.ts";
 import {
   classifyUrlReachability,
@@ -68,24 +69,6 @@ export interface FileResolverOptions {
 }
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-
-function bytesToBase64(data: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < data.length; i += chunk) {
-    binary += String.fromCharCode(...data.subarray(i, i + chunk));
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(encoded: string): Uint8Array {
-  const binary = atob(encoded);
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    out[i] = binary.charCodeAt(i);
-  }
-  return out;
-}
 
 function concatBytes(chunks: Uint8Array[], total: number): Uint8Array {
   const out = new Uint8Array(total);

@@ -18,6 +18,7 @@ import {
   LLMSpecificMessage,
   type NotGiven,
 } from "../processors/aggregators/llm_context.ts";
+import { base64ToBytes } from "../utils/base64.ts";
 import { warnDeprecated } from "../utils/deprecation.ts";
 import type { FileResolver } from "../utils/file_resolver.ts";
 import { logger } from "../utils/logger.ts";
@@ -34,13 +35,6 @@ let warnedBuiltinToolsNotInjected = false;
 export function urlScheme(url: string): string {
   const match = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(url);
   return match ? (match[1] as string).toLowerCase() : "";
-}
-
-function base64Decode(data: string): Uint8Array {
-  const binary = atob(data);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
 }
 
 /**
@@ -329,7 +323,7 @@ export abstract class BaseLLMAdapter<TLLMInvocationParams = Record<string, unkno
     if (comma < 0) {
       throw new Error("Invalid data URL: missing ','");
     }
-    return base64Decode(dataUrl.slice(comma + 1));
+    return base64ToBytes(dataUrl.slice(comma + 1));
   }
 
   /**
