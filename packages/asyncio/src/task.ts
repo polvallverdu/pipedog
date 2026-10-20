@@ -1,18 +1,27 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// asyncio-style tasks with cooperative cancellation.
+// asyncio-style futures and tasks with cooperative cancellation.
+//
+// Scheduling follows asyncio (see loop.ts): a task runs until it awaits a
+// future that is not done. Completing a future queues its waiters' wakeups on
+// the ready queue instead of resuming them, so every fast path (awaiting a
+// done future, `get()` on a non-empty queue, `put()` on an unbounded one,
+// `wait()` on a set event) completes without letting another task run.
 //
 // Python delivers `CancelledError` *into* a coroutine at the await it is
 // suspended on. JavaScript cannot interrupt an arbitrary await, so we emulate
-// it: every primitive in this package (sleep, Event.wait, Queue.get, awaiting a
-// Task, waitFor, gather...) is a "cancellation point". When a task is
-// cancelled:
+// it. Every await on a Future (and so on every primitive in this package:
+// sleep, Event.wait, Queue.get, awaiting a Task, waitFor, gather...) is a
+// "cancellation point". When a task is cancelled:
 //
-//   - if it is suspended on a cancellation point, that await rejects with
-//     CancelledError right away (the request is consumed, as in asyncio);
-//   - otherwise the request stays pending and the next cancellation point the
-//     task reaches throws it;
+//   - if it is suspended on a future, that future is cancelled and the task
+//     resumes (on the ready queue, as in asyncio) with CancelledError; if it
+//     awaits another task, that task is cancelled and this one resumes when it
+//     finishes;
+//   - otherwise the request stays pending: a task already woken up gets the
+//     CancelledError when it resumes, and a task inside a foreign await gets
+//     it at the next cancellation point it reaches;
 //   - `task.signal` is aborted, so foreign awaits (fetch, WebSocket, SDKs) can
 //     be made cancellable by passing the signal or wrapping them in
 //     `abortable()`.
@@ -24,7 +33,7 @@
 // (The reference keeps the declaration with this file: packages that compile
 // it from source through the workspace exports don't include async-hooks.d.ts.)
 
-import { AsyncLocalStorage } from "node:async_hooks";
+import { callSoon, taskStorage } from "./loop.ts";
 
 export class CancelledError extends Error {
   override name = "CancelledError";
@@ -58,14 +67,138 @@ export function rethrowIfCancelled(e: unknown): void {
   if (e instanceof CancelledError) throw e;
 }
 
-const storage = new AsyncLocalStorage<Task<unknown>>();
-
 /** The task the caller is running in, if any (asyncio.current_task). */
 export function currentTask(): Task<unknown> | undefined {
-  return storage.getStore();
+  return taskStorage.getStore() as Task<unknown> | undefined;
 }
 
-type Waiter = (error: CancelledError) => void;
+type FutureState = "pending" | "fulfilled" | "rejected" | "cancelled";
+
+/**
+ * asyncio.Future: a result that becomes available later. Awaiting it (it is
+ * thenable) suspends the current task until it is done, unless it already is.
+ * Done callbacks run on the ready queue, never synchronously.
+ */
+export class Future<T = unknown> implements PromiseLike<T> {
+  #state: FutureState = "pending";
+  #result: T | undefined;
+  #error: unknown;
+  #cancelMessage: string | undefined;
+  #callbacks: ((future: any) => void)[] = [];
+
+  done(): boolean {
+    return this.#state !== "pending";
+  }
+
+  cancelled(): boolean {
+    return this.#state === "cancelled";
+  }
+
+  result(): T {
+    if (this.#state === "pending") throw new InvalidStateError("Result is not set.");
+    if (this.#state === "fulfilled") return this.#result as T;
+    if (this.#state === "cancelled") throw this._makeCancelledError();
+    throw this.#error;
+  }
+
+  exception(): unknown {
+    if (this.#state === "pending") throw new InvalidStateError("Exception is not set.");
+    if (this.#state === "cancelled") throw this._makeCancelledError();
+    return this.#state === "rejected" ? this.#error : undefined;
+  }
+
+  setResult(value: T): void {
+    if (this.#state !== "pending") throw new InvalidStateError(`invalid state: ${this.#state}`);
+    this._setDone("fulfilled", value, undefined);
+  }
+
+  setException(error: unknown): void {
+    if (this.#state !== "pending") throw new InvalidStateError(`invalid state: ${this.#state}`);
+    this._setDone("rejected", undefined, error);
+  }
+
+  /** Cancel the future. Returns false if it is already done. */
+  cancel(message?: string): boolean {
+    if (this.#state !== "pending") return false;
+    this.#cancelMessage = message;
+    this._setDone("cancelled", undefined, undefined);
+    return true;
+  }
+
+  addDoneCallback(callback: (future: this) => void): void {
+    if (this.#state !== "pending") {
+      callSoon(() => callback(this));
+    } else {
+      this.#callbacks.push(callback);
+    }
+  }
+
+  removeDoneCallback(callback: (future: this) => void): number {
+    const before = this.#callbacks.length;
+    this.#callbacks = this.#callbacks.filter((c) => c !== callback);
+    return before - this.#callbacks.length;
+  }
+
+  // biome-ignore lint/suspicious/noThenProperty: Futures are awaitable by design, like asyncio.
+  then<R1 = T, R2 = never>(
+    onfulfilled?: ((value: T) => R1 | PromiseLike<R1>) | null,
+    onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | null,
+  ): Promise<R1 | R2> {
+    return awaitFuture(this).then(onfulfilled, onrejected);
+  }
+
+  /** @internal The CancelledError a cancelled future raises. */
+  _makeCancelledError(): CancelledError {
+    if (this.#error instanceof CancelledError) return this.#error;
+    return new CancelledError(this.#cancelMessage);
+  }
+
+  /** @internal Mark the future done and schedule its callbacks. */
+  _setDone(state: Exclude<FutureState, "pending">, value: T | undefined, error: unknown): void {
+    this.#state = state;
+    this.#result = value;
+    this.#error = error;
+    const callbacks = this.#callbacks;
+    this.#callbacks = [];
+    for (const callback of callbacks) callSoon(() => callback(this));
+  }
+}
+
+/**
+ * Await `future` from the current task (Future.__await__ plus the task's
+ * wakeup). A done future returns at once, without suspending. Otherwise the
+ * task resumes on the ready queue once the future is done, and cancelling
+ * the task meanwhile cancels the future.
+ */
+export function awaitFuture<T>(future: Future<T>): Promise<T> {
+  if (future.done()) {
+    try {
+      return Promise.resolve(future.result());
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+  const task = currentTask();
+  return new Promise<T>((resolve, reject) => {
+    future.addDoneCallback(() => {
+      if (task) {
+        task._futWaiter = null;
+        // A cancellation requested after the wakeup was queued wins (Task.__step).
+        const cancelled = task._takeCancelRequest();
+        if (cancelled) {
+          reject(cancelled);
+          return;
+        }
+      }
+      try {
+        resolve(future.result());
+      } catch (e) {
+        reject(e);
+      }
+    });
+    task?._block(future);
+  });
+}
 
 let taskCounter = 0;
 
@@ -76,33 +209,49 @@ export type TaskFn<T> = () => Promise<T> | T;
  * Awaiting a Task (it is thenable) is a cancellation point; cancelling the
  * awaiting task also cancels the awaited one, as in asyncio.
  */
-export class Task<T> implements PromiseLike<T> {
-  readonly #controller = new AbortController();
-  readonly #promise: Promise<T>;
-  readonly #waiters = new Set<Waiter>();
-  readonly #doneCallbacks: ((task: any) => void)[] = [];
+export class Task<T> extends Future<T> {
+  #controller = new AbortController();
   #name: string;
-  #state: "pending" | "fulfilled" | "rejected" | "cancelled" = "pending";
-  #result: T | undefined;
-  #error: unknown;
   #mustCancel = false;
   #cancelMessage: string | undefined;
   #cancelRequests = 0;
+  #promise: Promise<T> | undefined;
+  /** @internal The future this task is suspended on (Task._fut_waiter). */
+  _futWaiter: Future<unknown> | null = null;
 
   constructor(fn: TaskFn<T>, name?: string) {
+    super();
     this.#name = name ?? `Task-${++taskCounter}`;
-    this.#promise = storage.run(this as Task<unknown>, async () => {
-      // Like asyncio, a task never starts running synchronously in the
-      // caller: it starts once the caller yields.
-      await Promise.resolve();
-      this.checkpoint();
-      return await fn();
+    let start!: { resolve: () => void; reject: (e: unknown) => void };
+    const started = new Promise<void>((resolve, reject) => {
+      start = { resolve, reject };
     });
-    this.#promise.then(
-      (value) => this.#settle("fulfilled", value, undefined),
-      (error) =>
-        this.#settle(error instanceof CancelledError ? "cancelled" : "rejected", undefined, error),
-    );
+    // Like asyncio, a task never starts running synchronously in the caller:
+    // its first step is scheduled on the ready queue.
+    callSoon(() => {
+      const cancelled = this._takeCancelRequest();
+      if (cancelled) start.reject(cancelled);
+      else start.resolve();
+    });
+    taskStorage
+      .run(this as Task<unknown>, async () => {
+        await started;
+        return await fn();
+      })
+      .then(
+        (value) => {
+          // Cancelled right before returning: the task ends cancelled.
+          const cancelled = this._takeCancelRequest();
+          if (cancelled) this._setDone("cancelled", undefined, cancelled);
+          else this._setDone("fulfilled", value, undefined);
+        },
+        (error) =>
+          this._setDone(
+            error instanceof CancelledError ? "cancelled" : "rejected",
+            undefined,
+            error,
+          ),
+      );
   }
 
   get name(): string {
@@ -118,17 +267,12 @@ export class Task<T> implements PromiseLike<T> {
     this.#name = name;
   }
 
-  /** Aborted when cancellation is requested. Pass it to fetch() and friends. */
+  /**
+   * Aborted when cancellation is requested. Pass it to fetch() and friends.
+   * Once every request is withdrawn with `uncancel()`, a fresh signal is used.
+   */
   get signal(): AbortSignal {
     return this.#controller.signal;
-  }
-
-  done(): boolean {
-    return this.#state !== "pending";
-  }
-
-  cancelled(): boolean {
-    return this.#state === "cancelled";
   }
 
   /** Number of pending cancellation requests (asyncio Task.cancelling()). */
@@ -138,122 +282,79 @@ export class Task<T> implements PromiseLike<T> {
 
   uncancel(): number {
     if (this.#cancelRequests > 0) this.#cancelRequests--;
-    if (this.#cancelRequests === 0) this.#mustCancel = false;
+    if (this.#cancelRequests === 0) {
+      this.#mustCancel = false;
+      if (this.#controller.signal.aborted) this.#controller = new AbortController();
+    }
     return this.#cancelRequests;
   }
 
-  result(): T {
-    if (this.#state === "pending") throw new InvalidStateError("Result is not set.");
-    if (this.#state === "fulfilled") return this.#result as T;
-    throw this.#error;
+  override setResult(_value: T): void {
+    throw new InvalidStateError("Task does not support setResult()");
   }
 
-  exception(): unknown {
-    if (this.#state === "pending") throw new InvalidStateError("Exception is not set.");
-    if (this.#state === "cancelled") throw this.#error;
-    return this.#state === "rejected" ? this.#error : undefined;
+  override setException(_error: unknown): void {
+    throw new InvalidStateError("Task does not support setException()");
   }
 
-  addDoneCallback(callback: (task: Task<T>) => void): void {
-    if (this.done()) {
-      queueMicrotask(() => callback(this));
-    } else {
-      this.#doneCallbacks.push(callback);
-    }
-  }
-
-  removeDoneCallback(callback: (task: Task<T>) => void): number {
-    const before = this.#doneCallbacks.length;
-    for (let i = this.#doneCallbacks.length - 1; i >= 0; i--) {
-      if (this.#doneCallbacks[i] === callback) this.#doneCallbacks.splice(i, 1);
-    }
-    return before - this.#doneCallbacks.length;
-  }
-
-  /**
-   * Request cancellation. Returns false if the task is already done.
-   */
-  cancel(message?: string): boolean {
+  /** Request cancellation. Returns false if the task is already done. */
+  override cancel(message?: string): boolean {
     if (this.done()) return false;
     this.#cancelRequests++;
-    this.#cancelMessage = message;
     if (!this.#controller.signal.aborted) {
       this.#controller.abort(new CancelledError(message));
     }
-    if (this.#waiters.size > 0) {
-      // Deliver to the await the task is suspended on; consumed.
-      const waiters = [...this.#waiters];
-      this.#waiters.clear();
-      for (const waiter of waiters) waiter(new CancelledError(message));
-    } else {
-      this.#mustCancel = true;
-    }
+    // Cancel what the task is suspended on; it resumes with the outcome.
+    if (this._futWaiter?.cancel(message)) return true;
+    // Running, woken up but not resumed yet, or inside a foreign await.
+    this.#mustCancel = true;
+    this.#cancelMessage = message;
     return true;
   }
 
   /**
-   * Throw CancelledError if a cancellation request is pending. Every
-   * primitive calls this before suspending.
+   * Throw CancelledError if a cancellation request is pending. Primitives
+   * call this on their fast paths, so a task that resumes from a foreign
+   * await after being cancelled stops at the next one.
    */
   checkpoint(): void {
-    if (this.#mustCancel) {
-      this.#mustCancel = false;
-      throw new CancelledError(this.#cancelMessage);
-    }
-  }
-
-  /** @internal Register the rejecter of the await this task is suspended on. */
-  _addWaiter(waiter: Waiter): void {
-    this.#waiters.add(waiter);
-  }
-
-  /** @internal */
-  _removeWaiter(waiter: Waiter): void {
-    this.#waiters.delete(waiter);
+    const cancelled = this._takeCancelRequest();
+    if (cancelled) throw cancelled;
   }
 
   /** A promise that settles with the task, without being a cancellation point. */
   get promise(): Promise<T> {
+    if (!this.#promise) {
+      this.#promise = new Promise<T>((resolve, reject) => {
+        this.addDoneCallback(() => {
+          try {
+            resolve(this.result());
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+      // Errors are observed through the task; never an unhandled rejection.
+      this.#promise.catch(() => {});
+    }
     return this.#promise;
   }
 
-  // biome-ignore lint/suspicious/noThenProperty: Tasks are awaitable by design, like asyncio.
-  then<R1 = T, R2 = never>(
-    onfulfilled?: ((value: T) => R1 | PromiseLike<R1>) | null,
-    onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | null,
-  ): Promise<R1 | R2> {
-    const awaited = suspend<T>(
-      (resolve, reject) => {
-        this.#promise.then(resolve, reject);
-        return () => {};
-      },
-      () => {
-        // asyncio: cancelling a task that awaits another task cancels the latter.
-        this.cancel();
-      },
-    );
-    return awaited.then(onfulfilled, onrejected);
-  }
-
-  toString(): string {
+  override toString(): string {
     return this.#name;
   }
 
-  #settle(state: "fulfilled" | "rejected" | "cancelled", value: T | undefined, error: unknown) {
-    this.#state = state;
-    this.#result = value;
-    this.#error = error;
-    this.#waiters.clear();
-    const callbacks = this.#doneCallbacks.splice(0);
-    for (const callback of callbacks) {
-      try {
-        callback(this);
-      } catch (e) {
-        queueMicrotask(() => {
-          throw e;
-        });
-      }
-    }
+  /** @internal Consume a pending cancellation request, returning its error. */
+  _takeCancelRequest(): CancelledError | undefined {
+    if (!this.#mustCancel) return undefined;
+    this.#mustCancel = false;
+    return new CancelledError(this.#cancelMessage);
+  }
+
+  /** @internal The task suspends on `future` (Task.__step yielding a future). */
+  _block(future: Future<unknown>): void {
+    this._futWaiter = future;
+    if (this.#mustCancel && future.cancel(this.#cancelMessage)) this.#mustCancel = false;
   }
 }
 
@@ -263,50 +364,33 @@ export class Task<T> implements PromiseLike<T> {
  * registration (clear a timer, remove a listener...) when the wait is
  * cancelled. `onCancel` runs after the disposer, e.g. to cancel a child task.
  */
-export function suspend<T>(
+export async function suspend<T>(
   register: (resolve: (value: T) => void, reject: (error: unknown) => void) => () => void,
   onCancel?: () => void,
 ): Promise<T> {
-  const task = currentTask();
+  const future = new Future<T>();
+  const dispose = register(
+    (value) => {
+      if (!future.done()) future.setResult(value);
+    },
+    (error) => {
+      if (!future.done()) future.setException(error);
+    },
+  );
   try {
-    task?.checkpoint();
+    return await awaitFuture(future);
   } catch (e) {
-    return Promise.reject(e);
-  }
-  return new Promise<T>((resolve, reject) => {
-    let settled = false;
-    let dispose: () => void = () => {};
-    const waiter: Waiter = (error) => {
-      if (settled) return;
-      settled = true;
+    if (future.cancelled()) {
       dispose();
       onCancel?.();
-      reject(error);
-    };
-    task?._addWaiter(waiter);
-    dispose = register(
-      (value) => {
-        if (settled) return;
-        settled = true;
-        task?._removeWaiter(waiter);
-        resolve(value);
-      },
-      (error) => {
-        if (settled) return;
-        settled = true;
-        task?._removeWaiter(waiter);
-        reject(error);
-      },
-    );
-  });
+    }
+    throw e;
+  }
 }
 
 /** Create and schedule a task (asyncio.create_task). */
 export function createTask<T>(fn: TaskFn<T>, name?: string): Task<T> {
-  const task = new Task(fn, name);
-  // Errors are observed through the task; never surface as unhandled rejections.
-  task.promise.catch(() => {});
-  return task;
+  return new Task(fn, name);
 }
 
 /** Throw if the current task has a pending cancellation (an explicit `await asyncio.sleep(0)`). */
@@ -320,10 +404,16 @@ export function checkCancelled(): void {
  * The foreign operation keeps running unless it was also given `task.signal`.
  */
 export function abortable<T>(promise: PromiseLike<T>): Promise<T> {
-  return suspend<T>((resolve, reject) => {
-    promise.then(resolve, reject);
-    return () => {};
-  });
+  const future = new Future<T>();
+  promise.then(
+    (value) => {
+      if (!future.done()) future.setResult(value);
+    },
+    (error) => {
+      if (!future.done()) future.setException(error);
+    },
+  );
+  return awaitFuture(future);
 }
 
 /** The current task's abort signal, or a never-aborting one outside tasks. */

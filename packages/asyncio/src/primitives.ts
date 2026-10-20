@@ -1,15 +1,20 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// asyncio synchronization primitives and helpers. Every wait here is a
-// cancellation point (see task.ts). Durations are in seconds, as in Python.
+// asyncio synchronization primitives and helpers, ported from CPython's
+// asyncio (locks.py, queues.py, tasks.py, timeouts.py) on top of Future, so
+// they wake waiters exactly as asyncio does: through the ready queue, never
+// synchronously. Every wait here is a cancellation point (see task.ts).
+// Durations are in seconds, as in Python.
 
+import { callLater, callSoon, type Handle } from "./loop.ts";
 import {
+  abortable,
+  awaitFuture,
   CancelledError,
   createTask,
   currentTask,
-  suspend,
-  Task,
+  Future,
   type TaskFn,
   TimeoutError,
 } from "./task.ts";
@@ -37,49 +42,77 @@ export function time(): number {
   return origin ? (origin + performance.now()) / 1000 : Date.now() / 1000;
 }
 
-/** asyncio.sleep(seconds). `sleep(0)` yields to other tasks. */
+function remove<T>(items: T[], item: T): boolean {
+  const i = items.indexOf(item);
+  if (i < 0) return false;
+  items.splice(i, 1);
+  return true;
+}
+
+/**
+ * asyncio.sleep(seconds). `sleep(0)` yields once: the task goes to the back
+ * of the ready queue, so everything already scheduled runs first.
+ */
 export function sleep(seconds: number): Promise<void> {
-  return suspend<void>((resolve) => {
-    const timer = setTimeout(resolve, Math.max(0, seconds * 1000));
-    return () => clearTimeout(timer);
+  if (!(seconds > 0)) return sleep0();
+  const future = new Future<void>();
+  const handle = callLater(seconds, () => {
+    if (!future.done()) future.setResult(undefined);
+  });
+  const done = awaitFuture(future);
+  done.then(
+    () => handle.cancel(),
+    () => handle.cancel(),
+  );
+  return done;
+}
+
+/** A bare `yield` in a task: reschedule it at the back of the ready queue. */
+function sleep0(): Promise<void> {
+  const task = currentTask();
+  return new Promise<void>((resolve, reject) => {
+    callSoon(() => {
+      const cancelled = task?._takeCancelRequest();
+      if (cancelled) reject(cancelled);
+      else resolve();
+    });
   });
 }
 
 /** asyncio.Event */
 export class Event {
-  #set = false;
-  #waiters = new Set<() => void>();
+  #value = false;
+  #waiters: Future<true>[] = [];
 
   isSet(): boolean {
-    return this.#set;
+    return this.#value;
   }
 
   set(): void {
-    if (this.#set) return;
-    this.#set = true;
-    const waiters = [...this.#waiters];
-    this.#waiters.clear();
-    for (const waiter of waiters) waiter();
+    if (this.#value) return;
+    this.#value = true;
+    for (const future of this.#waiters) {
+      if (!future.done()) future.setResult(true);
+    }
   }
 
   clear(): void {
-    this.#set = false;
+    this.#value = false;
   }
 
-  wait(): Promise<true> {
-    if (this.#set) {
-      try {
-        currentTask()?.checkpoint();
-      } catch (e) {
-        return Promise.reject(e);
-      }
-      return Promise.resolve(true);
+  async wait(): Promise<true> {
+    if (this.#value) {
+      currentTask()?.checkpoint();
+      return true;
     }
-    return suspend<true>((resolve) => {
-      const waiter = () => resolve(true);
-      this.#waiters.add(waiter);
-      return () => this.#waiters.delete(waiter);
-    });
+    const future = new Future<true>();
+    this.#waiters.push(future);
+    try {
+      await future;
+      return true;
+    } finally {
+      remove(this.#waiters, future);
+    }
   }
 }
 
@@ -96,13 +129,13 @@ export class QueueShutDown extends Error {
 }
 
 /**
- * asyncio.Queue. Subclasses override `_init/_put/_get/_size/_items` to change
+ * asyncio.Queue. Subclasses override `_init/_put/_get/_size` to change
  * ordering, as Python's PriorityQueue and LifoQueue do.
  */
 export class Queue<T> {
   readonly maxsize: number;
-  #getters: { resolve: (item: T) => void; reject: (e: unknown) => void }[] = [];
-  #putters: (() => void)[] = [];
+  #getters: Future<void>[] = [];
+  #putters: Future<void>[] = [];
   #unfinished = 0;
   #finished = new Event();
   #shutdown = false;
@@ -113,19 +146,47 @@ export class Queue<T> {
     this.#finished.set();
   }
 
-  // Storage hooks.
+  // Storage hooks. FIFO storage is `_items` from index `_head` on: a deque
+  // (collections.deque in Python), since Array.shift() is O(n) on V8.
   protected _items: T[] = [];
+  protected _head = 0;
   protected _init(): void {
     this._items = [];
+    this._head = 0;
   }
   protected _put(item: T): void {
     this._items.push(item);
   }
   protected _get(): T {
-    return this._items.shift() as T;
+    const items = this._items;
+    const item = items[this._head] as T;
+    items[this._head] = undefined as T;
+    this._head++;
+    if (this._head === items.length) {
+      items.length = 0;
+      this._head = 0;
+    } else if (this._head >= 1024 && this._head * 2 >= items.length) {
+      items.splice(0, this._head);
+      this._head = 0;
+    }
+    return item;
   }
   protected _size(): number {
-    return this._items.length;
+    return this._items.length - this._head;
+  }
+  /** The queued items in storage order (for subclasses that inspect them). */
+  protected _queued(): readonly T[] {
+    return this._head === 0 ? this._items : this._items.slice(this._head);
+  }
+
+  #wakeupNext(waiters: Future<void>[]): void {
+    while (waiters.length > 0) {
+      const waiter = waiters.shift()!;
+      if (!waiter.done()) {
+        waiter.setResult(undefined);
+        break;
+      }
+    }
   }
 
   qsize(): number {
@@ -146,13 +207,17 @@ export class Queue<T> {
     currentTask()?.checkpoint();
     while (this.full()) {
       if (this.#shutdown) throw new QueueShutDown();
-      await suspend<void>((resolve) => {
-        this.#putters.push(resolve);
-        return () => {
-          const i = this.#putters.indexOf(resolve);
-          if (i >= 0) this.#putters.splice(i, 1);
-        };
-      });
+      const putter = new Future<void>();
+      this.#putters.push(putter);
+      try {
+        await putter;
+      } catch (e) {
+        putter.cancel();
+        remove(this.#putters, putter);
+        // Woken up by getNowait() but can't take the slot: pass it on.
+        if (!this.full() && !putter.cancelled()) this.#wakeupNext(this.#putters);
+        throw e;
+      }
     }
     this.putNowait(item);
   }
@@ -163,25 +228,26 @@ export class Queue<T> {
     this._put(item);
     this.#unfinished++;
     this.#finished.clear();
-    this.#wakeGetter();
+    this.#wakeupNext(this.#getters);
   }
 
   async get(): Promise<T> {
-    if (!this.empty() && this.#getters.length === 0) {
-      currentTask()?.checkpoint();
-      return this.getNowait();
-    }
-    if (this.#shutdown && this.empty()) throw new QueueShutDown();
-    return suspend<T>((resolve, reject) => {
-      const getter = { resolve, reject };
+    if (!this.empty()) currentTask()?.checkpoint();
+    while (this.empty()) {
+      if (this.#shutdown && this.empty()) throw new QueueShutDown();
+      const getter = new Future<void>();
       this.#getters.push(getter);
-      // Item may already be available if getters were queued before us.
-      this.#wakeGetter();
-      return () => {
-        const i = this.#getters.indexOf(getter);
-        if (i >= 0) this.#getters.splice(i, 1);
-      };
-    });
+      try {
+        await getter;
+      } catch (e) {
+        getter.cancel();
+        remove(this.#getters, getter);
+        // Woken up by putNowait() but can't take the item: pass it on.
+        if (!this.empty() && !getter.cancelled()) this.#wakeupNext(this.#getters);
+        throw e;
+      }
+    }
+    return this.getNowait();
   }
 
   getNowait(): T {
@@ -190,7 +256,7 @@ export class Queue<T> {
       throw new QueueEmpty();
     }
     const item = this._get();
-    this.#wakePutter();
+    this.#wakeupNext(this.#putters);
     return item;
   }
 
@@ -213,22 +279,13 @@ export class Queue<T> {
       }
       if (this.#unfinished === 0) this.#finished.set();
     }
-    for (const getter of this.#getters.splice(0)) getter.reject(new QueueShutDown());
-    for (const putter of this.#putters.splice(0)) putter();
-  }
-
-  #wakeGetter(): void {
-    while (this.#getters.length > 0 && !this.empty()) {
-      const getter = this.#getters.shift()!;
-      const item = this._get();
-      getter.resolve(item);
-      this.#wakePutter();
+    // All getters need to re-check queue-empty to raise QueueShutDown.
+    for (const getter of this.#getters.splice(0)) {
+      if (!getter.done()) getter.setResult(undefined);
     }
-  }
-
-  #wakePutter(): void {
-    const putter = this.#putters.shift();
-    putter?.();
+    for (const putter of this.#putters.splice(0)) {
+      if (!putter.done()) putter.setResult(undefined);
+    }
   }
 }
 
@@ -313,24 +370,31 @@ export class PriorityQueue<T> extends Queue<T> {
 /** asyncio.Lock */
 export class Lock {
   #locked = false;
-  #waiters: (() => void)[] = [];
+  #waiters: Future<true>[] | null = null;
 
   locked(): boolean {
     return this.#locked;
   }
 
   async acquire(): Promise<true> {
-    if (!this.#locked && this.#waiters.length === 0) {
+    if (!this.#locked && (this.#waiters === null || this.#waiters.every((w) => w.cancelled()))) {
       this.#locked = true;
       return true;
     }
-    await suspend<void>((resolve) => {
-      this.#waiters.push(resolve);
-      return () => {
-        const i = this.#waiters.indexOf(resolve);
-        if (i >= 0) this.#waiters.splice(i, 1);
-      };
-    });
+    this.#waiters ??= [];
+    const future = new Future<true>();
+    this.#waiters.push(future);
+    try {
+      try {
+        await future;
+      } finally {
+        remove(this.#waiters, future);
+      }
+    } catch (e) {
+      // If the lock is free, make sure the next waiter in line runs.
+      if (e instanceof CancelledError && !this.#locked) this.#wakeUpFirst();
+      throw e;
+    }
     this.#locked = true;
     return true;
   }
@@ -338,13 +402,13 @@ export class Lock {
   release(): void {
     if (!this.#locked) throw new Error("Lock is not acquired.");
     this.#locked = false;
-    const next = this.#waiters.shift();
-    if (next) {
-      // Hand over directly so no one can barge in.
-      this.#locked = true;
-      next();
-      // `acquire` sets locked again after resuming; keep it consistent.
-    }
+    this.#wakeUpFirst();
+  }
+
+  #wakeUpFirst(): void {
+    const first = this.#waiters?.[0];
+    // done() means that the waiter is already set to wake up.
+    if (first && !first.done()) first.setResult(true);
   }
 
   /** `async with lock:` → `await lock.run(async () => {...})` */
@@ -361,35 +425,63 @@ export class Lock {
 /** asyncio.Semaphore */
 export class Semaphore {
   #value: number;
-  #waiters: (() => void)[] = [];
+  #waiters: Future<true>[] | null = null;
 
   constructor(value = 1) {
+    if (value < 0) throw new RangeError("Semaphore initial value must be >= 0");
     this.#value = value;
   }
 
+  /** Due to state, or FIFO rules (must allow others to run first). */
   locked(): boolean {
-    return this.#value === 0;
+    return this.#value === 0 || (this.#waiters ?? []).some((w) => !w.cancelled());
   }
 
   async acquire(): Promise<true> {
-    if (this.#value > 0 && this.#waiters.length === 0) {
+    if (!this.locked()) {
+      // Maintain FIFO, wait for others to start even if value > 0.
       this.#value--;
       return true;
     }
-    await suspend<void>((resolve) => {
-      this.#waiters.push(resolve);
-      return () => {
-        const i = this.#waiters.indexOf(resolve);
-        if (i >= 0) this.#waiters.splice(i, 1);
-      };
-    });
+    this.#waiters ??= [];
+    const future = new Future<true>();
+    this.#waiters.push(future);
+    try {
+      try {
+        await future;
+      } finally {
+        remove(this.#waiters, future);
+      }
+    } catch (e) {
+      if (e instanceof CancelledError && future.done() && !future.cancelled()) {
+        // Woken up by #wakeUpNext() but not acquiring: undo its bookkeeping.
+        this.#value++;
+      }
+      throw e;
+    } finally {
+      // New waiters may have arrived but had to wait due to FIFO.
+      while (this.#value > 0) {
+        if (!this.#wakeUpNext()) break;
+      }
+    }
     return true;
   }
 
   release(): void {
-    const next = this.#waiters.shift();
-    if (next) next();
-    else this.#value++;
+    this.#value++;
+    this.#wakeUpNext();
+  }
+
+  #wakeUpNext(): boolean {
+    if (!this.#waiters) return false;
+    for (const future of this.#waiters) {
+      if (!future.done()) {
+        this.#value--;
+        future.setResult(true);
+        return true;
+      }
+    }
+    return false;
   }
 
   async run<R>(fn: () => Promise<R> | R): Promise<R> {
@@ -402,75 +494,196 @@ export class Semaphore {
   }
 }
 
-export type Awaitable<T> = TaskFn<T> | Task<T> | PromiseLike<T>;
+/** Something to await: a function (a "coroutine"), a Task or Future, or a foreign promise. */
+export type Awaitable<T> = TaskFn<T> | Future<T> | PromiseLike<T>;
 
-function toTask<T>(aw: Awaitable<T>, name?: string): Task<T> {
-  if (aw instanceof Task) return aw;
+/** asyncio.ensure_future: functions and foreign promises run as tasks. */
+function ensureFuture<T>(aw: Awaitable<T>, name?: string): Future<T> {
+  if (aw instanceof Future) return aw;
   if (typeof aw === "function") return createTask(aw as TaskFn<T>, name);
   return createTask(() => aw as PromiseLike<T> as Promise<T>, name);
 }
 
-/**
- * asyncio.wait_for(aw, timeout). Pass a function (a "coroutine") so it can
- * run as a child task that is cancelled on timeout. `timeout` null waits forever.
- */
-export async function waitFor<T>(aw: Awaitable<T>, timeout: number | null | undefined): Promise<T> {
-  const child = toTask(aw, "wait_for");
-  if (timeout === null || timeout === undefined) return await child;
+/** Await `aw` in the current task, as `await aw` would in Python. */
+function awaitInline<T>(aw: Awaitable<T>): Promise<T> | T {
+  if (aw instanceof Future) return awaitFuture(aw);
+  if (typeof aw === "function") return (aw as TaskFn<T>)();
+  // A foreign promise: make the wait cancellable.
+  return abortable(aw);
+}
 
-  let timedOut = false;
-  const timer = setTimeout(
-    () => {
-      timedOut = true;
-      child.cancel();
-    },
-    Math.max(0, timeout * 1000),
-  );
+/** tasks._cancel_and_wait: cancel `future` and wait until it is done. */
+async function cancelAndWait(future: Future<unknown>): Promise<void> {
+  const waiter = new Future<void>();
+  const release = () => {
+    if (!waiter.done()) waiter.setResult(undefined);
+  };
+  future.addDoneCallback(release);
   try {
-    return await child;
+    future.cancel();
+    // Not waiting on `future` directly keeps this reliably cancellable.
+    await waiter;
+  } finally {
+    future.removeDoneCallback(release);
+  }
+}
+
+/**
+ * asyncio.timeout(seconds) around `fn`, run in the current task: on expiry
+ * the task is cancelled and the CancelledError becomes TimeoutError
+ * (timeouts.Timeout). `seconds` null never expires.
+ */
+async function withTimeout<T>(seconds: number | null | undefined, fn: TaskFn<T>): Promise<T> {
+  const task = currentTask();
+  if (!task) {
+    // asyncio.timeout() needs a task; give it one.
+    return await createTask(() => withTimeout(seconds, fn), "timeout");
+  }
+  let expiring = false;
+  const cancelling = task.cancelling();
+  let handle: Handle | null = null;
+  if (seconds !== null && seconds !== undefined) {
+    const onTimeout = () => {
+      task.cancel();
+      expiring = true;
+      handle = null;
+    };
+    handle = seconds <= 0 ? callSoon(onTimeout) : callLater(seconds, onTimeout);
+  }
+  let result: T;
+  try {
+    result = await fn();
   } catch (e) {
-    if (timedOut && e instanceof CancelledError && !(currentTask()?.cancelling() ?? 0)) {
+    (handle as Handle | null)?.cancel();
+    if (expiring && task.uncancel() <= cancelling && e instanceof CancelledError) {
       throw new TimeoutError();
     }
     throw e;
-  } finally {
-    clearTimeout(timer);
   }
+  (handle as Handle | null)?.cancel();
+  if (expiring) task.uncancel();
+  return result;
+}
+
+/**
+ * asyncio.wait_for(aw, timeout). A function (a "coroutine") or a foreign
+ * promise is awaited in the current task, a Task is awaited (and cancelled on
+ * timeout). `timeout` null waits forever.
+ */
+export async function waitFor<T>(aw: Awaitable<T>, timeout: number | null | undefined): Promise<T> {
+  if (timeout !== null && timeout !== undefined && timeout <= 0) {
+    const future = ensureFuture(aw, "wait_for");
+    if (future.done()) return future.result();
+    await cancelAndWait(future);
+    try {
+      return future.result();
+    } catch (e) {
+      if (e instanceof CancelledError) throw new TimeoutError();
+      throw e;
+    }
+  }
+  return await withTimeout(timeout, () => awaitInline(aw));
+}
+
+/**
+ * asyncio.timeout(seconds) as a scope: runs `fn` and cancels it on timeout,
+ * raising TimeoutError.
+ */
+export function timeout<T>(seconds: number | null, fn: TaskFn<T>): Promise<T> {
+  return withTimeout(seconds, fn);
+}
+
+/** tasks._GatheringFuture: cancelling it cancels the children. */
+class GatheringFuture<T> extends Future<T> {
+  readonly #children: Future<unknown>[];
+  cancelRequested = false;
+
+  constructor(children: Future<unknown>[]) {
+    super();
+    this.#children = children;
+  }
+
+  override cancel(message?: string): boolean {
+    if (this.done()) return false;
+    let cancelled = false;
+    for (const child of this.#children) {
+      if (child.cancel(message)) cancelled = true;
+    }
+    // Propagate the cancellation once the children are done.
+    if (cancelled) this.cancelRequested = true;
+    return cancelled;
+  }
+}
+
+function gatherFuture(aws: Awaitable<unknown>[], returnExceptions: boolean): Future<unknown[]> {
+  if (aws.length === 0) {
+    const outer = new Future<unknown[]>();
+    outer.setResult([]);
+    return outer;
+  }
+  const children: Future<unknown>[] = [];
+  const doneFutures: Future<unknown>[] = [];
+  const seen = new Map<unknown, Future<unknown>>();
+  let nfutures = 0;
+  let nfinished = 0;
+  let outer: GatheringFuture<unknown[]> | null = null;
+
+  const onDone = (future: Future<unknown>) => {
+    nfinished++;
+    if (outer === null || outer.done()) return;
+    if (!returnExceptions) {
+      if (future.cancelled()) {
+        outer.setException(future._makeCancelledError());
+        return;
+      }
+      const error = future.exception();
+      if (error !== undefined) {
+        outer.setException(error);
+        return;
+      }
+    }
+    if (nfinished === nfutures) {
+      const results = children.map((child) => {
+        if (child.cancelled()) return child._makeCancelledError();
+        const error = child.exception();
+        return error !== undefined ? error : child.result();
+      });
+      if (outer.cancelRequested) outer.setException(future._makeCancelledError());
+      else outer.setResult(results);
+    }
+  };
+
+  for (const aw of aws) {
+    let future = seen.get(aw);
+    if (!future) {
+      future = ensureFuture(aw);
+      nfutures++;
+      seen.set(aw, future);
+      if (future.done()) doneFutures.push(future);
+      else future.addDoneCallback(onDone);
+    }
+    children.push(future);
+  }
+  outer = new GatheringFuture<unknown[]>(children);
+  for (const future of doneFutures) onDone(future);
+  return outer;
 }
 
 /**
  * asyncio.gather(*aws). Functions run as child tasks; if the caller is
  * cancelled, all children are cancelled.
  */
-export async function gather<T extends readonly unknown[]>(
+export function gather<T extends readonly unknown[]>(
   ...aws: { [K in keyof T]: Awaitable<T[K]> }
 ): Promise<T> {
-  const tasks = aws.map((aw) => toTask(aw as Awaitable<unknown>));
-  return (await suspend<unknown[]>(
-    (resolve, reject) => {
-      Promise.all(tasks.map((t) => t.promise)).then(resolve, reject);
-      return () => {};
-    },
-    () => {
-      for (const t of tasks) t.cancel();
-    },
-  )) as unknown as T;
+  return awaitFuture(
+    gatherFuture(aws as Awaitable<unknown>[], false),
+  ) as Promise<unknown> as Promise<T>;
 }
 
 /** asyncio.gather(*aws, return_exceptions=True) */
-export async function gatherSettled(...aws: Awaitable<unknown>[]): Promise<unknown[]> {
-  const tasks = aws.map((aw) => toTask(aw));
-  return await suspend<unknown[]>(
-    (resolve) => {
-      Promise.allSettled(tasks.map((t) => t.promise)).then((results) =>
-        resolve(results.map((r) => (r.status === "fulfilled" ? r.value : r.reason))),
-      );
-      return () => {};
-    },
-    () => {
-      for (const t of tasks) t.cancel();
-    },
-  );
+export function gatherSettled(...aws: Awaitable<unknown>[]): Promise<unknown[]> {
+  return awaitFuture(gatherFuture(aws, true));
 }
 
 export const FIRST_COMPLETED = "FIRST_COMPLETED";
@@ -482,55 +695,69 @@ export type ReturnWhen = typeof FIRST_COMPLETED | typeof FIRST_EXCEPTION | typeo
  * asyncio.wait(tasks, timeout, return_when). Does not cancel anything on
  * timeout. Returns [done, pending].
  */
-export function wait<T>(
-  tasks: Iterable<Task<T>>,
+export async function wait<F extends Future<any>>(
+  tasks: Iterable<F>,
   options: { timeout?: number | null; returnWhen?: ReturnWhen } = {},
-): Promise<[Set<Task<T>>, Set<Task<T>>]> {
-  const all = [...tasks];
+): Promise<[Set<F>, Set<F>]> {
+  const all = [...new Set(tasks)];
   const returnWhen = options.returnWhen ?? ALL_COMPLETED;
-  const result = (): [Set<Task<T>>, Set<Task<T>>] => [
-    new Set(all.filter((t) => t.done())),
-    new Set(all.filter((t) => !t.done())),
-  ];
-  return suspend((resolve) => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const check = () => {
-      const done = all.filter((t) => t.done());
-      const finished =
-        done.length === all.length ||
-        (returnWhen === FIRST_COMPLETED && done.length > 0) ||
-        (returnWhen === FIRST_EXCEPTION &&
-          done.some((t) => !t.cancelled() && t.exception() !== undefined));
-      if (finished) {
-        if (timer) clearTimeout(timer);
-        resolve(result());
+  if (all.length > 0) {
+    const waiter = new Future<void>();
+    let timeoutHandle: Handle | null = null;
+    if (options.timeout !== undefined && options.timeout !== null) {
+      timeoutHandle = callLater(options.timeout, () => {
+        if (!waiter.done()) waiter.setResult(undefined);
+      });
+    }
+    let counter = all.length;
+    const onCompletion = (future: F) => {
+      counter--;
+      if (
+        counter <= 0 ||
+        returnWhen === FIRST_COMPLETED ||
+        (returnWhen === FIRST_EXCEPTION && !future.cancelled() && future.exception() !== undefined)
+      ) {
+        timeoutHandle?.cancel();
+        if (!waiter.done()) waiter.setResult(undefined);
       }
     };
-    for (const t of all) t.addDoneCallback(check);
-    if (options.timeout !== undefined && options.timeout !== null) {
-      timer = setTimeout(() => resolve(result()), options.timeout * 1000);
+    for (const future of all) future.addDoneCallback(onCompletion);
+    try {
+      await waiter;
+    } finally {
+      timeoutHandle?.cancel();
+      for (const future of all) future.removeDoneCallback(onCompletion);
     }
-    check();
-    return () => {
-      if (timer) clearTimeout(timer);
-      for (const t of all) t.removeDoneCallback(check);
-    };
-  });
-}
-
-/**
- * asyncio.timeout(seconds) as a scope: runs `fn` and cancels it on timeout,
- * raising TimeoutError.
- */
-export function timeout<T>(seconds: number | null, fn: TaskFn<T>): Promise<T> {
-  return waitFor(fn, seconds);
+  }
+  const done = new Set<F>();
+  const pending = new Set<F>();
+  for (const future of all) (future.done() ? done : pending).add(future);
+  return [done, pending];
 }
 
 /** asyncio.shield(aw): the caller can be cancelled without cancelling `aw`. */
 export function shield<T>(aw: Awaitable<T>): Promise<T> {
-  const task = toTask(aw);
-  return suspend<T>((resolve, reject) => {
-    task.promise.then(resolve, reject);
-    return () => {};
+  const inner = ensureFuture(aw);
+  if (inner.done()) return awaitFuture(inner);
+  const outer = new Future<T>();
+  const onInnerDone = () => {
+    if (outer.cancelled()) return;
+    if (inner.cancelled()) {
+      outer.cancel();
+      return;
+    }
+    const error = inner.exception();
+    if (error !== undefined) outer.setException(error);
+    else outer.setResult(inner.result());
+  };
+  inner.addDoneCallback(onInnerDone);
+  outer.addDoneCallback(() => {
+    if (!inner.done()) inner.removeDoneCallback(onInnerDone);
   });
+  return awaitFuture(outer);
+}
+
+/** Whether `value` is a Future or Task (asyncio.isfuture). */
+export function isFuture(value: unknown): value is Future<unknown> {
+  return value instanceof Future;
 }

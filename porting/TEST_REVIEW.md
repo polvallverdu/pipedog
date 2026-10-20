@@ -56,7 +56,7 @@ ported) and one newly runnable test is a documented divergence.
 | (c) | needs a package that isn't ported yet | 87 |
 | (d) | needs an optional devDependency (not installed here) | 24 |
 | (e) | real gap in core, fixed in this branch: these tests now run | 37 |
-| (f) | divergence: behavior intentionally differs | 73 |
+| (f) | divergence: behavior intentionally differs | 66 |
 
 ### (e) Fixed in this branch (37 tests now run and pass)
 
@@ -98,12 +98,18 @@ under (f) with its assertions unchanged.
 |---|---|---|
 | test_provider_watch_scripts | 40 | Python repository-maintenance scripts (`scripts/provider-watch/*.py`), not part of the library. Converted from todo to skip. |
 | test_deprecation_markers | 19 | Python build tooling over the Python source tree (`scripts/deprecations/*.py`, `deprecations.json`, `removals.json`). |
-| test_filters, test_service_switcher, test_llm_with_backend, test_backend_llm_worker, test_job_group, test_context_aggregators_universal (2) | 7 | Frame interleaving: asyncio's `Queue.put`/`get` on a ready queue never suspends, while every JS `await` yields a microtask. Same code paths, different order. Fixing it means asyncio-style `call_soon` scheduling in `@pipedog/asyncio`. |
 | test_classifiers_openai_decisions, test_classifiers_jev, test_classifiers_clef | 3 | Upstream inspects httpx's pool keep-alive (240 s). The port uses `fetch`, so the runtime owns connection reuse. |
 | test_websocket_service | 1 | Bun's client `WebSocket` fires `close` without waiting for the peer's close frame, so a deaf peer looks like a clean close. Bounded close is covered with a stand-in socket. |
 | test_krisp_ip_user_turn_start_strategy | 1 | No filesystem in core, so the constructor can't check that the model file exists. |
 | test_base_smart_turn_buffer | 1 | No threads, so there is no `_executor` for `cleanup()` to shut down. |
 | test_local_smart_turn_v3_resample | 1 | `@pipedog/resampler-wasm`'s HQ preset has a lower cutoff than VHQ (0.895 vs 0.947 of Nyquist); soxr's share a passband. HQ vs VHQ agree to 1e-5 below 5 kHz but not on the chirp's top end. |
+
+Seven more (f) skips were frame-interleaving divergences (test_filters, test_service_switcher,
+test_llm_with_backend, test_backend_llm_worker, test_job_group, test_context_aggregators_universal
+×2): asyncio's `Queue.put`/`get` on a ready queue never suspends, while every JS `await` let
+already-woken tasks run. `@pipedog/asyncio` now schedules like asyncio (wakeups go through a
+`call_soon` ready queue drained one callback per macrotask), so they run with upstream's
+assertions and pass. The (f) count above is after that change: 73 − 7 = 66.
 
 ### (d) Optional devDependencies (not done here)
 
@@ -339,8 +345,8 @@ classes core can see. Each provider package adds its services to that test autom
 | test_deprecation_markers.test.ts:105 |  › test_deprecated_warn_deprecated_read_still_names_the_reading_line | skip | (b) | deprecated alias/shim not ported (`PipelineTask`, `PipelineTaskParams`, `PipelineRunner`, task frame aliases, `StartFrame.enable_metrics`, `warn_deprecated_read`, `renamed_init_field`) |
 | test_deprecation_markers.test.ts:108 |  › test_intercepted_read_warns_through_an_ignore_filter | skip | (b) | deprecated alias/shim not ported (`PipelineTask`, `PipelineTaskParams`, `PipelineRunner`, task frame aliases, `StartFrame.enable_metrics`, `warn_deprecated_read`, `renamed_init_field`) |
 | test_deprecation_markers.test.ts:114 |  › test_renamed_field_reaches_a_constructor_that_passes_it_to_super | skip | (b) | deprecated alias/shim not ported (`PipelineTask`, `PipelineTaskParams`, `PipelineRunner`, task frame aliases, `StartFrame.enable_metrics`, `warn_deprecated_read`, `renamed_init_field`) |
-| test_filters.test.ts:143 | TestWakeCheckFilter › test_no_wake_word | skip | (b) | `WakeCheckFilter` (0.0.106) |
-| test_filters.test.ts:146 | TestWakeCheckFilter › test_wake_word | skip | (b) | `WakeCheckFilter` (0.0.106) |
+| test_filters.test.ts:133 | TestWakeCheckFilter › test_no_wake_word | skip | (b) | `WakeCheckFilter` (0.0.106) |
+| test_filters.test.ts:136 | TestWakeCheckFilter › test_wake_word | skip | (b) | `WakeCheckFilter` (0.0.106) |
 | test_frames_interruptible.test.ts:45 | TestInterruptibleFlag › test_the_marker_still_works_and_warns | skip | (b) | `UninterruptibleFrame` marker (1.11.0) |
 | test_llm_service.test.ts:1244 | TestCancellationToolBehaviour › test_a_call_covered_only_by_the_deprecated_flag_is_cancelled | skip | (b) | `enable_async_tool_cancellation`; construction-time turn-completion warnings |
 | test_llm_service.test.ts:1341 | TestAsyncToolCancellationExposure › test_deprecated_flag_covers_every_async_tool | skip | (b) | `enable_async_tool_cancellation`; construction-time turn-completion warnings |
@@ -444,13 +450,10 @@ classes core can see. Each provider package adds its services to that test autom
 | test_turn_trace_observer.test.ts:421 | TestTurnTraceObserver › test_concurrent_pipelines_are_isolated | skip | (d) | needs @opentelemetry/api + @opentelemetry/sdk-trace-base (devDependencies); separate tracing task |
 | test_turn_trace_observer.test.ts:493 | TestTurnTraceObserver › test_end_conversation_closes_active_turn | skip | (d) | needs @opentelemetry/api + @opentelemetry/sdk-trace-base (devDependencies); separate tracing task |
 | test_turn_trace_observer.test.ts:517 | TestTurnTraceObserver › test_conversation_id_auto_generated | skip | (d) | needs @opentelemetry/api + @opentelemetry/sdk-trace-base (devDependencies); separate tracing task |
-| test_backend_llm_worker.test.ts:574 |  › test_closing_the_session_stops_the_backend_and_the_next_session_starts_clean | skip | (f) | DIVERGENCE: asyncio vs JS microtask scheduling: same code path, different interleaving (needs asyncio-style call_soon in @pipedog/asyncio) |
 | test_base_smart_turn_buffer.test.ts:290 | cleanup › test_cleanup_releases_the_model_thread | skip | (f) | DIVERGENCE: no threads, so there is no `_executor` for cleanup() to shut down |
 | test_classifiers_clef.test.ts:384 | TestClefClient › test_keeps_idle_connections_open_between_questions | skip | (f) | DIVERGENCE: upstream checks httpx's pool keep-alive expiry (240 s); the port uses `fetch`, connection reuse is the runtime's |
 | test_classifiers_jev.test.ts:742 | TestJevClientConnection › test_keeps_idle_connections_open_between_questions | skip | (f) | DIVERGENCE: upstream checks httpx's pool keep-alive expiry (240 s); the port uses `fetch`, connection reuse is the runtime's |
 | test_classifiers_openai_decisions.test.ts:445 | TestOpenAIDecisionsClient › test_keeps_idle_connections_open_between_questions | skip | (f) | DIVERGENCE: upstream checks httpx's pool keep-alive expiry (240 s); the port uses `fetch`, connection reuse is the runtime's |
-| test_context_aggregators_universal.test.ts:1791 | TestLLMAssistantAggregator › test_appends_queued_together_run_inference_once | skip | (f) | DIVERGENCE: asyncio vs JS microtask scheduling: same code path, different interleaving (needs asyncio-style call_soon in @pipedog/asyncio) |
-| test_context_aggregators_universal.test.ts:2948 | TestRealtimeServiceModeAggregator › test_interruption_writes_assistant_immediately | skip | (f) | DIVERGENCE: asyncio vs JS microtask scheduling: same code path, different interleaving (needs asyncio-style call_soon in @pipedog/asyncio) |
 | test_deprecation_markers.test.ts:34 |  › test_directives_parse | skip | (f) | DIVERGENCE: Python build tooling (`scripts/deprecations/*.py`, deprecations.json/removals.json) over the Python source tree; not part of the library |
 | test_deprecation_markers.test.ts:35 |  › test_directives_state_removal_version | skip | (f) | DIVERGENCE: Python build tooling (`scripts/deprecations/*.py`, deprecations.json/removals.json) over the Python source tree; not part of the library |
 | test_deprecation_markers.test.ts:36 |  › test_no_replacement_directive_extracts_no_replacement | skip | (f) | DIVERGENCE: Python build tooling (`scripts/deprecations/*.py`, deprecations.json/removals.json) over the Python source tree; not part of the library |
@@ -470,10 +473,7 @@ classes core can see. Each provider package adds its services to that test autom
 | test_deprecation_markers.test.ts:124 |  › test_compute_removals_is_idempotent | skip | (f) | DIVERGENCE: Python build tooling (`scripts/deprecations/*.py`, deprecations.json/removals.json) over the Python source tree; not part of the library |
 | test_deprecation_markers.test.ts:125 |  › test_compute_removals_bootstrap_has_no_previous | skip | (f) | DIVERGENCE: Python build tooling (`scripts/deprecations/*.py`, deprecations.json/removals.json) over the Python source tree; not part of the library |
 | test_deprecation_markers.test.ts:126 |  › test_compute_removals_records_actual_vs_announced_version | skip | (f) | DIVERGENCE: Python build tooling (`scripts/deprecations/*.py`, deprecations.json/removals.json) over the Python source tree; not part of the library |
-| test_filters.test.ts:124 | TestFunctionFilter › test_upstream_direction_passes_downstream | skip | (f) | DIVERGENCE: asyncio vs JS microtask scheduling: same code path, different interleaving (needs asyncio-style call_soon in @pipedog/asyncio) |
-| test_job_group.test.ts:569 | TestJobGroupContext › test_urgent_response_has_system_priority | skip | (f) | DIVERGENCE: asyncio vs JS microtask scheduling: same code path, different interleaving (needs asyncio-style call_soon in @pipedog/asyncio) |
 | test_krisp_ip_user_turn_start_strategy.test.ts:326 | TestKrispVivaIPUserTurnStartStrategy › test_init_raises_if_file_not_found | skip | (f) | DIVERGENCE: core has no filesystem, so the constructor can't check that the model file exists (the Krisp runtime does) |
-| test_llm_with_backend.test.ts:741 |  › test_a_local_backend_is_heard_through_the_frontends_conversation | skip | (f) | DIVERGENCE: asyncio vs JS microtask scheduling: same code path, different interleaving (needs asyncio-style call_soon in @pipedog/asyncio) |
 | test_local_smart_turn_v3_resample.test.ts:91 | test_local_smart_turn_v3_resample › test_resample_48k_to_16k_close_to_vhq | skip | (f) | DIVERGENCE: resampler-wasm's HQ and VHQ presets differ in cutoff (soxr's share a passband), so HQ vs VHQ differ above ~6 kHz |
 | test_provider_watch_scripts.test.ts:31 | TestInventory › test_covers_the_services_tree | skip | (f) | DIVERGENCE: Python repository-maintenance scripts (`scripts/provider-watch/*.py`); not part of the library |
 | test_provider_watch_scripts.test.ts:31 | TestInventory › test_unit_ids_are_unique_and_sorted | skip | (f) | DIVERGENCE: Python repository-maintenance scripts (`scripts/provider-watch/*.py`); not part of the library |
@@ -515,5 +515,4 @@ classes core can see. Each provider package adds its services to that test autom
 | test_provider_watch_scripts.test.ts:31 | TestPublish › test_missing_branch_is_skipped | skip | (f) | DIVERGENCE: Python repository-maintenance scripts (`scripts/provider-watch/*.py`); not part of the library |
 | test_provider_watch_scripts.test.ts:31 | TestSdkVersions › test_sdk_requirements_come_from_pyproject_extras | skip | (f) | DIVERGENCE: Python repository-maintenance scripts (`scripts/provider-watch/*.py`); not part of the library |
 | test_provider_watch_scripts.test.ts:31 | TestSdkVersions › test_thin_wrappers_fall_back_to_openai | skip | (f) | DIVERGENCE: Python repository-maintenance scripts (`scripts/provider-watch/*.py`); not part of the library |
-| test_service_switcher.test.ts:444 | TestServiceSwitcher › test_default_active_service | skip | (f) | DIVERGENCE: asyncio vs JS microtask scheduling: same code path, different interleaving (needs asyncio-style call_soon in @pipedog/asyncio) |
 | test_websocket_service.test.ts:475 |  › test_bounded_close_against_unresponsive_peer | skip | (f) | DIVERGENCE: Bun's client WebSocket reports `close` without waiting for the peer's close frame, so a deaf peer looks like a clean close; bounded close is covered with a stand-in socket |

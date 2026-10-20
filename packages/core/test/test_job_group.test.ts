@@ -558,15 +558,7 @@ describe("TestJobGroupContext", () => {
     expect(errors[0]!.response).toEqual({ error: "critical" });
   });
 
-  // DIVERGENCE: upstream sends the data messages while the bus is already
-  // running and relies on asyncio not switching tasks during
-  // `await bus.send(...)` (AsyncQueueBus.publish never suspends), so nothing
-  // is dispatched until the bus is restarted. In JavaScript every `await`
-  // drains the microtask queue, so the running router/data tasks deliver
-  // `data_0` before the urgent message is even queued. The bus priority
-  // ordering itself is covered by test_bus.test.ts
-  // (test_task_cancel_is_system_priority), which queues before `start()`.
-  test.skip("test_urgent_response_has_system_priority", async () => {
+  test("test_urgent_response_has_system_priority", async () => {
     // Urgent job response is delivered before normal data messages.
 
     // Queue data messages first, then an urgent response

@@ -431,17 +431,7 @@ describe("TestServiceSwitcher", () => {
     expect(switcher.strategy.services).toBe(services);
   });
 
-  // DIVERGENCE: upstream expects the DummySystemFrames to overtake the earlier
-  // TextFrames ([Dummy, Dummy, Text, Text, Text]). That relies on asyncio
-  // scheduling: the non-blocking Queue.put calls in run_test's push_frames
-  // never yield, so every frame is queued before the worker's push task runs,
-  // and the input priority queues hand out the system frames first. In JS
-  // every await yields to already-woken tasks (microtasks), so each TextFrame
-  // starts traversing the pipeline before the next frame is queued and the
-  // frames arrive in send order. Same cause as test_filters'
-  // test_upstream_direction_passes_downstream; fixing it needs asyncio-style
-  // "call_soon" scheduling in @pipedog/asyncio, not a ServiceSwitcher change.
-  test.skip("test_default_active_service", async () => {
+  test("test_default_active_service", async () => {
     const switcher = new ServiceSwitcher(services);
 
     // Reset counters

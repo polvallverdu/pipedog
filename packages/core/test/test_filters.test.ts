@@ -111,17 +111,7 @@ describe("TestFunctionFilter", () => {
     await runTest(pipeline, { framesToSend, expectedDownFrames, expectedUpFrames });
   });
 
-  // DIVERGENCE: upstream expects the UserStartedSpeakingFrame (a SystemFrame)
-  // to overtake the earlier TextFrame. That relies on asyncio scheduling: the
-  // non-blocking Queue.put calls in run_test's push_frames never yield, so both
-  // frames are queued before the worker's push task runs, and each processor's
-  // input task then handles the system frame before its process task forwards
-  // the TextFrame. In JS every await yields to already-woken tasks (microtasks),
-  // so the TextFrame starts traversing the pipeline before the system frame is
-  // queued and arrives first ([TextFrame, UserStartedSpeakingFrame]). Fixing it
-  // needs asyncio-style "call_soon" scheduling in @pipedog/asyncio, not a
-  // change in FunctionFilter.
-  test.skip("test_upstream_direction_passes_downstream", async () => {
+  test("test_upstream_direction_passes_downstream", async () => {
     // When direction is UPSTREAM, downstream frames pass through unfiltered.
     const blockText = async (frame: Frame) => !(frame instanceof TextFrame);
 

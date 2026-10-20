@@ -1779,16 +1779,7 @@ describe("TestLLMAssistantAggregator", () => {
     expect(context.getMessages().length).toEqual(2);
   });
 
-  // DIVERGENCE: scheduling, not behavior. Upstream, `await queue_frame()` and
-  // `await queue.get()` on a non-empty queue do not suspend, so the three
-  // appends travel the pipeline as one batch and the aggregator sees the later
-  // ones queued (`hasQueuedFrame(LLMMessagesAppendFrame)`) when it handles the
-  // first. Under the JS microtask emulation (@pipedog/asyncio) every await is
-  // at least one microtick, so the frames arrive as a pipelined stream and each
-  // append is handled with nothing queued behind it: the first two each push a
-  // context frame. Same code path as upstream (`_maybePushContext`); only the
-  // interleaving differs.
-  test.skip("test_appends_queued_together_run_inference_once", async () => {
+  test("test_appends_queued_together_run_inference_once", async () => {
     // A burst of messages is one run, whatever the last one asks.
     const aggregator = new LLMAssistantAggregator(new LLMContext());
     await runTest(aggregator, {
@@ -2935,17 +2926,7 @@ describe("TestRealtimeServiceModeAggregator", () => {
     }
   });
 
-  // DIVERGENCE: scheduling, not behavior. The user message is not written when
-  // the assistant starts: the realtime handoff flush waits DEFAULT_TTFS_P99
-  // (1 s), so upstream it is written by the user half's EndFrame (`_stop`). The
-  // run_test EndFrame is queued right behind the InterruptionFrame; under
-  // asyncio the assistant's interruption handling (cancelling and re-creating
-  // its process task) takes event-loop iterations, during which the user half
-  // processes EndFrame, so "Hi!" lands first. Under the JS microtask emulation
-  // (@pipedog/asyncio) the assistant handles the interruption first and
-  // writes "Hello" before the user half reaches EndFrame. Same code paths as
-  // upstream; only the interleaving differs.
-  test.skip("test_interruption_writes_assistant_immediately", async () => {
+  test("test_interruption_writes_assistant_immediately", async () => {
     const [, pair] = buildPair({ realtimeServiceMode: true });
     const [user, assistant] = [pair.user(), pair.assistant()];
 

@@ -561,17 +561,7 @@ test("test_a_message_sent_while_only_an_asynchronous_tool_is_in_flight_runs_at_o
   expect(contentsOf(llm.contextsSeen[1] as LLMContextMessage[])).toContain("Second");
 });
 
-// DIVERGENCE: scheduling, not behavior. The session closes as soon as the
-// handler starts. Under asyncio the assistant aggregator has already taken the
-// call's FunctionCallsStartedFrame and FunctionCallInProgressFrame by then, so
-// the FunctionCallCancelFrame the detach brings settles the call. Under the
-// JS microtask emulation (@pipedog/asyncio) each await is at least one
-// microtick, so the frame path lags the bus path: the aggregator takes the
-// (system) cancel before the (control) in-progress frame, which then re-opens
-// the synchronous call; the next session's request is held for it forever and
-// the test times out. Same code path and frame semantics as upstream; only
-// the interleaving differs.
-test.skip("test_closing_the_session_stops_the_backend_and_the_next_session_starts_clean", async () => {
+test("test_closing_the_session_stops_the_backend_and_the_next_session_starts_clean", async () => {
   const started = new Event();
 
   /** Look something up, slowly. */
