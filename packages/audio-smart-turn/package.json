@@ -1,0 +1,44 @@
+{
+  "name": "@pipedog/audio-smart-turn",
+  "version": "0.1.0",
+  "description": "Local Smart Turn v3 end-of-turn detection for pipedog: core's LocalSmartTurnAnalyzerV3 wired to @pipedog/onnx, with the upstream smart-turn-v3.2-cpu.onnx model included.",
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/audio-smart-turn"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/audio-smart-turn#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./smart-turn-v3.2-cpu.onnx": "./data/smart-turn-v3.2-cpu.onnx"
+  },
+  "files": [
+    "dist",
+    "src",
+    "data"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/core": "workspace:*",
+    "@pipedog/onnx": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/audio/turn/smart_turn/data/smart-turn-v3.2-cpu.onnx"
+    ]
+  }
+}

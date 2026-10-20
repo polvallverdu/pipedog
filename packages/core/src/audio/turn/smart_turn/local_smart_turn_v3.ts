@@ -12,11 +12,12 @@
  *
  * PORTING NOTES:
  * - There is no ONNX runtime in core. The analyzer takes an injected
- *   `createSession` (backed by `onnxruntime-node` on Bun/Node or
- *   `onnxruntime-web` on Workers); the default one is a stub that throws
- *   "not ported yet".
- * - The model is not bundled; `smartTurnModelPath` defaults to the upstream
- *   file name and is handed to `createSession` as is.
+ *   `createSession`; `createLocalSmartTurnAnalyzerV3()` in
+ *   `@pipedog/audio-smart-turn` wires it to `@pipedog/onnx` (onnxruntime-node
+ *   or onnxruntime-web) and the model. Without one, the default factory throws.
+ * - The model is not in core; `smartTurnModelPath` defaults to the upstream
+ *   file name and is handed to `createSession` as is (`@pipedog/audio-smart-turn`
+ *   ships the file).
  * - Resampling to 16 kHz uses the resampler engine (`audio/resamplers/engine`)
  *   instead of soxr. `_predictEndpoint` makes sure it is loaded before the
  *   (synchronous) `_resampleToModelRate` runs.
@@ -76,7 +77,10 @@ export type SmartTurnSessionFactory = (
 ) => Promise<SmartTurnInferenceSession>;
 
 const notPortedSessionFactory: SmartTurnSessionFactory = async () => {
-  throw new Error("LocalSmartTurnAnalyzerV3: ONNX runtime is not ported yet; pass `createSession`");
+  throw new Error(
+    "LocalSmartTurnAnalyzerV3: core has no ONNX runtime; use createLocalSmartTurnAnalyzerV3() " +
+      "from @pipedog/audio-smart-turn, or pass `createSession`",
+  );
 };
 
 export interface LocalSmartTurnAnalyzerV3Options extends BaseSmartTurnOptions {
