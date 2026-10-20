@@ -229,13 +229,8 @@ Report counts from the final run.`,
 }
 
 phase('Record')
-await record(
-  testResults.map(
-    (t) => `bun tools/port/status.ts --set ${t.file} ${t.status} ${JSON.stringify(`${t.passed} pass, ${t.failed} fail, ${t.skipped} skip. ${t.notes}`)}`,
-  ),
-  'record:tests',
-)
-await record(['bun tools/port/status.ts'], 'record:status')
+// Statuses come from actually running each test file, not from agents' reports.
+await record(['bun tools/port/status.ts --sync-tests', 'bun tools/port/status.ts'], 'record:tests')
 
 return {
   modules: portResults.flatMap((r) => r.modules),

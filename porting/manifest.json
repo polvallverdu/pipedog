@@ -17699,8 +17699,8 @@
         "pipecat.utils.text.simple_text_aggregator"
       ],
       "needsModules": 4,
-      "status": "in_progress",
-      "notes": "28 pass, 24 fail, 0 skip, 0 todo"
+      "status": "ported",
+      "notes": "BLOCKED: 24 fail until core uses @pipecat-ts/sentencex-wasm (upstream uses sentencex; Intl.Segmenter fallback differs)"
     },
     {
       "file": "tests/test_error_observer.py",
