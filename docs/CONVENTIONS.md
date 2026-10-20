@@ -238,6 +238,11 @@ See the top of `frames/frames.ts`.
   runtime (`onnxruntime-node` on Bun/Node, `onnxruntime-web` WASM on Workers).
   Pure-algorithm fallbacks (e.g. a linear resampler) may live in core.
 - `numpy` on PCM → typed arrays (`Int16Array`, `Float32Array`).
+- `num2words` → [`num2words-ts`](https://www.npmjs.com/package/num2words-ts) (our exact port of it,
+  LGPL as a dependency, like upstream's). `num2words(n, lang="en")` → `num2words(n, { lang: "en" })`.
+  Python ints → `bigint` (or integer `number`); Python floats with an integral value (`1.0`) →
+  `asFloat(1)` from `num2words-ts`, because num2words treats ints and floats differently.
+- `sentencex` → `@pipedog/sentencex-wasm` (already wired into `utils/string.ts`).
 
 ## WASM and Cloudflare Workers
 

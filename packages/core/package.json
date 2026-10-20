@@ -24,7 +24,8 @@
   ],
   "dependencies": {
     "@pipedog/asyncio": "workspace:*",
-    "@pipedog/sentencex-wasm": "workspace:*"
+    "@pipedog/sentencex-wasm": "workspace:*",
+    "num2words-ts": "1.0.2"
   },
   "pipecat": {
     "runtimes": [
