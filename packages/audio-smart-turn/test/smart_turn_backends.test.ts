@@ -39,7 +39,11 @@ describe("Smart Turn backends", () => {
     const web = await predict({ backend: createWebBackend() });
     expect(native.probability).toBeGreaterThanOrEqual(0);
     expect(native.probability).toBeLessThanOrEqual(1);
-    expect(Math.abs(native.probability - web.probability)).toBeLessThan(1e-3);
+    // Smart Turn is int8-quantized, and onnxruntime-node uses different integer
+    // kernels per CPU (x64 AVX2/VNNI vs arm64) than onnxruntime-web's WASM SIMD:
+    // the probabilities differ slightly by platform (measured: ~6e-3 on Linux x64,
+    // <1e-3 on Apple Silicon). The end-of-turn decision must be identical.
+    expect(Math.abs(native.probability - web.probability)).toBeLessThan(0.02);
     expect(native.prediction).toBe(web.prediction);
   }, 60_000);
 
