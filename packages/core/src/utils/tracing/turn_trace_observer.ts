@@ -10,6 +10,10 @@
  * This module provides an observer that creates trace spans for each
  * conversation turn, integrating with the turn tracking system to provide
  * hierarchical tracing of conversation flows.
+ *
+ * Porting notes: upstream gets the tracer in `__init__`. Core imports
+ * OpenTelemetry asynchronously, so an observer built before that import
+ * finished gets its tracer on first use instead (`_getTracer()`).
  */
 
 import { StartFrame } from "../../frames/frames.ts";
@@ -102,6 +106,15 @@ export class TurnTraceObserver extends BaseObserver {
   }
 
   /**
+   * The turn tracer, resolved on first use if OpenTelemetry was not available
+   * yet when the observer was built (core imports it asynchronously).
+   */
+  protected _getTracer(): OtelTracer | null {
+    this._tracer ??= getOpenTelemetry()?.api.trace.getTracer("pipecat.turn") ?? null;
+    return this._tracer;
+  }
+
+  /**
    * Handle latency measurement events.
    *
    * Called when the latency tracker measures user-to-bot latency.
@@ -139,7 +152,8 @@ export class TurnTraceObserver extends BaseObserver {
    * @param conversationId Optional custom ID for the conversation. If null, a UUID will be generated.
    */
   startConversationTracing(conversationId: string | null = null): void {
-    if (!isTracingAvailable() || !this._tracer) {
+    const tracer = this._getTracer();
+    if (!isTracingAvailable() || !tracer) {
       return;
     }
 
@@ -152,7 +166,7 @@ export class TurnTraceObserver extends BaseObserver {
     this._conversationId = conversationId;
 
     // Create a new span for this conversation
-    const conversationSpan = this._tracer.startSpan("conversation");
+    const conversationSpan = tracer.startSpan("conversation");
     this._conversationSpan = conversationSpan;
 
     // Set span attributes
@@ -204,7 +218,8 @@ export class TurnTraceObserver extends BaseObserver {
 
   /** Handle a turn start event by creating a new span. */
   protected async _handleTurnStarted(turnNumber: number): Promise<void> {
-    if (!isTracingAvailable() || !this._tracer) {
+    const tracer = this._getTracer();
+    if (!isTracingAvailable() || !tracer) {
       return;
     }
 
@@ -219,7 +234,7 @@ export class TurnTraceObserver extends BaseObserver {
     }
 
     // Create a new span for this turn
-    const currentSpan = this._tracer.startSpan("turn", undefined, parentContext ?? undefined);
+    const currentSpan = tracer.startSpan("turn", undefined, parentContext ?? undefined);
     this._currentSpan = currentSpan;
     this._currentTurnNumber = turnNumber;
 

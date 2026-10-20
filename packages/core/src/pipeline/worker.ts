@@ -95,7 +95,11 @@ import type { BaseTaskManager } from "../utils/asyncio/task_manager.ts";
 import type { FrameClass } from "../utils/frame_queue.ts";
 import { logger } from "../utils/logger.ts";
 import { runSetupHook } from "../utils/startup.ts";
-import { isTracingAvailable, type OtelAttributeValue } from "../utils/tracing/setup.ts";
+import {
+  isTracingAvailable,
+  loadOpenTelemetry,
+  type OtelAttributeValue,
+} from "../utils/tracing/setup.ts";
 import { TracingContext } from "../utils/tracing/tracing_context.ts";
 import { TurnTraceObserver } from "../utils/tracing/turn_trace_observer.ts";
 import {
@@ -453,6 +457,8 @@ export class PipelineWorker extends BaseWorker {
   protected _clock: BaseClock;
   protected _conversationId: string | null;
   protected _enableTracing: boolean;
+  /** `enableTracing` as given; `_enableTracing` also needs OpenTelemetry. */
+  protected _tracingRequested: boolean;
   protected _enableTurnTracking: boolean;
   protected _idleTimeoutSecs: number | null;
   protected _appResources: unknown;
@@ -540,7 +546,10 @@ export class PipelineWorker extends BaseWorker {
     this._startTimeoutSecs = options.startTimeoutSecs ?? START_TIMEOUT_SECS;
     this._clock = options.clock ?? new SystemClock();
     this._conversationId = options.conversationId ?? null;
-    this._enableTracing = (options.enableTracing ?? false) && isTracingAvailable();
+    this._tracingRequested = options.enableTracing ?? false;
+    // Rechecked in _setup() (after awaiting core's asynchronous import of
+    // OpenTelemetry), so building the worker early never disables tracing.
+    this._enableTracing = this._tracingRequested && isTracingAvailable();
     this._enableTurnTracking = options.enableTurnTracking ?? true;
     this._idleTimeoutSecs =
       options.idleTimeoutSecs === undefined ? IDLE_TIMEOUT_SECS : options.idleTimeoutSecs;
@@ -562,21 +571,8 @@ export class PipelineWorker extends BaseWorker {
       this._turnTrackingObserver = new TurnTrackingObserver();
       observers.push(this._turnTrackingObserver);
     }
-    if (this._enableTracing && this._turnTrackingObserver) {
-      // Create pipeline-scoped tracing context
-      this._tracingContext = new TracingContext();
-      // Create latency observer for tracing
-      this._userBotLatencyObserver = new UserBotLatencyObserver();
-      observers.push(this._userBotLatencyObserver);
-      // Create turn trace observer with latency tracking
-      this._turnTraceObserver = new TurnTraceObserver({
-        turnTracker: this._turnTrackingObserver,
-        latencyTracker: this._userBotLatencyObserver,
-        conversationId: this._conversationId,
-        additionalSpanAttributes: this._additionalSpanAttributes,
-        tracingContext: this._tracingContext,
-      });
-      observers.push(this._turnTraceObserver);
+    if (this._enableTracing) {
+      observers.push(...this._createTracingObservers());
     }
 
     // RTVI support
@@ -743,6 +739,29 @@ export class PipelineWorker extends BaseWorker {
    */
   get pipeline(): BasePipeline {
     return this._pipeline;
+  }
+
+  /**
+   * Create the pipeline-scoped tracing context and the latency and turn trace
+   * observers (with turn tracking enabled), and return the observers to add.
+   */
+  protected _createTracingObservers(): BaseObserver[] {
+    if (!this._turnTrackingObserver) {
+      return [];
+    }
+    // Create pipeline-scoped tracing context
+    this._tracingContext = new TracingContext();
+    // Create latency observer for tracing
+    this._userBotLatencyObserver = new UserBotLatencyObserver();
+    // Create turn trace observer with latency tracking
+    this._turnTraceObserver = new TurnTraceObserver({
+      turnTracker: this._turnTrackingObserver,
+      latencyTracker: this._userBotLatencyObserver,
+      conversationId: this._conversationId,
+      additionalSpanAttributes: this._additionalSpanAttributes,
+      tracingContext: this._tracingContext,
+    });
+    return [this._userBotLatencyObserver, this._turnTraceObserver];
   }
 
   /** The turn tracking observer if enabled, or null. */
@@ -1541,6 +1560,16 @@ export class PipelineWorker extends BaseWorker {
 
     // Do any additional pipeline worker setup externally.
     await this._loadSetupFiles();
+
+    // Core imports OpenTelemetry asynchronously: a worker built before that
+    // import finished (e.g. at module top level) turns tracing on here,
+    // before the observers start and the processors get `enableTracing`.
+    if (this._tracingRequested && !this._enableTracing && (await loadOpenTelemetry())) {
+      this._enableTracing = true;
+      for (const observer of this._createTracingObservers()) {
+        this._observer.addObserver(observer);
+      }
+    }
 
     // Start worker observer.
     await this._observer.setup(this.taskManager);

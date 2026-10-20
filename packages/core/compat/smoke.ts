@@ -7,7 +7,7 @@
 // optional OpenTelemetry peer is detected exactly when it is installed.
 
 import { createFileResampler, createStreamResampler } from "@pipedog/core/audio/utils";
-import { type Frame, TextFrame } from "@pipedog/core/frames/frames";
+import { EndFrame, type Frame, TextFrame } from "@pipedog/core/frames/frames";
 import { TurnTrackingObserver } from "@pipedog/core/observers/turn_tracking_observer";
 import { UserBotLatencyObserver } from "@pipedog/core/observers/user_bot_latency_observer";
 import { Pipeline } from "@pipedog/core/pipeline/pipeline";
@@ -25,6 +25,13 @@ class PassThrough extends FrameProcessor {
     await this.pushFrame(frame, direction);
   }
 }
+
+// Built at module top level, before core's asynchronous import of
+// @opentelemetry/api has finished: tracing must still turn on when it runs.
+const topLevelWorker = new PipelineWorker(new Pipeline([new PassThrough()]), {
+  enableTracing: true,
+  cancelOnIdleTimeout: false,
+});
 
 function check(cond: unknown, message: string): asserts cond {
   if (!cond) throw new Error(`core smoke: ${message}`);
@@ -75,6 +82,18 @@ async function tracing(): Promise<void> {
   check(
     (worker as unknown as { _enableTracing: boolean })._enableTracing === available,
     "PipelineWorker enableTracing does not follow isTracingAvailable()",
+  );
+
+  // The worker built before OpenTelemetry loaded picks tracing up when it runs.
+  topLevelWorker.eventHandler("on_pipeline_started", async () => {
+    await topLevelWorker.queueFrame(new EndFrame());
+  });
+  const runner = new WorkerRunner({ handleSigint: false });
+  await runner.addWorkers(topLevelWorker);
+  await runner.run();
+  check(
+    (topLevelWorker.turnTraceObserver !== null) === available,
+    `top-level PipelineWorker: turn tracing ${topLevelWorker.turnTraceObserver ? "on" : "off"}, OpenTelemetry ${available ? "available" : "unavailable"}`,
   );
 
   // Conversation and turn spans go to the API's no-op tracer without an SDK.

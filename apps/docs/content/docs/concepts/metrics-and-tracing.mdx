@@ -136,9 +136,7 @@ on exit).
 ### Without `@pipedog/tracing`
 
 If you already set up the OpenTelemetry SDK yourself (for example with `@opentelemetry/sdk-node`),
-you only need `@opentelemetry/api` installed: core imports it on its own. That import is
-asynchronous (core never uses top-level await), so tracing becomes available a moment after core
-loads. Inside a request handler this is already done; at module top level, wait for it or register
-the API yourself:
+you only need `@opentelemetry/api` installed: core imports it on its own, and a worker with
+`enableTracing: true` traces whenever it is found, wherever and whenever the worker was built:
 
 <include cwd>snippets/tracing.ts#core-only</include>

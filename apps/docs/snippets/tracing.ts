@@ -67,13 +67,14 @@ export default {
 // #endregion workers
 
 // #region core-only
-// Without @pipedog/tracing: core imports @opentelemetry/api on its own when it is
-// installed, a moment after it loads. Wait for it before building a worker at
-// module top level...
-if (await loadOpenTelemetry()) {
-  console.log("tracing available");
-}
-// ...or hand the API in yourself, synchronously (e.g. with your own SDK setup).
+// Without @pipedog/tracing: set up the OpenTelemetry SDK your way (it registers
+// the global tracer provider), then enable tracing on the worker as usual. Core
+// imports @opentelemetry/api on its own.
+const traced = new PipelineWorker(pipeline, { enableTracing: true });
+
+// Optional: check whether OpenTelemetry was found...
+console.log(await loadOpenTelemetry(), isTracingAvailable());
+// ...or hand in a specific copy of the API yourself.
 registerOpenTelemetry({ api });
-console.log(isTracingAvailable()); // true
 // #endregion core-only
+void traced;

@@ -21,6 +21,8 @@
  *   unavailable, exactly like upstream's `OPENTELEMETRY_AVAILABLE = False`.
  *   Because the import is asynchronous, `isTracingAvailable()` turns true a
  *   moment after core loads; `await loadOpenTelemetry()` waits for it.
+ *   Nothing latches the early "unavailable": `PipelineWorker` awaits it in
+ *   its async setup before creating the tracing observers.
  * - `registerOpenTelemetry()` hands the modules in explicitly and
  *   synchronously (it wins over the automatic import). `@pipedog/tracing`'s
  *   `setupTracing()` does this, also registering `@opentelemetry/sdk-trace-base`
@@ -153,8 +155,9 @@ const autoLoad: Promise<void> = importOpenTelemetryApi().then((api) => {
  * Wait for the automatic `import("@opentelemetry/api")` started when core
  * loaded, and report whether tracing is available.
  *
- * Only needed when tracing must be on before the first await of the app, e.g.
- * a `PipelineWorker({ enableTracing: true })` built at module top level.
+ * `PipelineWorker` awaits this in its async setup, so a worker built before
+ * the import finished (e.g. at module top level) still traces; the turn trace
+ * observer and the service decorators check availability when they run.
  *
  * @returns True if tracing is available, False otherwise.
  */
