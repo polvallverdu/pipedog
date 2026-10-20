@@ -25,7 +25,7 @@
 
 import { envTruthy } from "../../../utils/env.ts";
 import { logger } from "../../../utils/logger.ts";
-import { soxrResample } from "../../resamplers/soxr_resampler.ts";
+import { initSoxr, soxrResample } from "../../resamplers/soxr_resampler.ts";
 import {
   computeWhisperLogMelFeatures,
   WHISPER_NUM_FRAMES,
@@ -191,6 +191,8 @@ export class LocalSmartTurnAnalyzerV3 extends BaseSmartTurn {
     const actualRate = this._sampleRate || MODEL_SAMPLE_RATE;
 
     // Resample to 16 kHz if the pipeline uses a different sample rate
+    // (`_resampleToModelRate` is synchronous, so load the resampler first).
+    if (actualRate !== MODEL_SAMPLE_RATE) await initSoxr();
     audioArray = this._resampleToModelRate(audioArray);
 
     // Truncate to 8 seconds (keeping the end) or pad to 8 seconds

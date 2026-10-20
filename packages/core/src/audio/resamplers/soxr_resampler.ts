@@ -14,28 +14,43 @@
  * 1. For batch processing of complete audio files
  * 2. When you have all the audio data available at once
  *
- * PORTING NOTE: libsoxr has no edge-compatible JavaScript equivalent yet. The
- * class logic is ported, but the actual resampling (`soxrResample`) is a stub
- * that throws "not ported yet". A WASM build of libsoxr, injected at runtime,
- * is the intended replacement.
+ * Porting note: libsoxr is LGPL and has no edge-compatible JavaScript build, so
+ * the resampling runs on `@pipedog/resampler-wasm` (rubato's windowed-sinc
+ * resampler compiled to WebAssembly), whose quality presets carry libsoxr's
+ * names. The output is close to libsoxr's but not bit-identical.
  */
 
+import { getResampler, initResampler } from "@pipedog/resampler-wasm";
 import { BaseAudioResampler, type SoxrQuality } from "./base_audio_resampler.ts";
 
 /**
- * Stand-in for `soxr.resample()`: resample a whole mono signal.
+ * `soxr.resample()`: resample a whole mono signal, filter tail included.
  *
- * STUB: libsoxr is not available in JavaScript yet; always throws.
+ * Synchronous, so the WebAssembly engine must be loaded first with
+ * `await initSoxr()`. The async resamplers here do that themselves, and on
+ * Workers the engine loads on first use.
  *
  * @internal
  */
 export function soxrResample<T extends Int16Array | Float32Array>(
-  _audio: T,
-  _inRate: number,
-  _outRate: number,
-  _quality: SoxrQuality,
+  audio: T,
+  inRate: number,
+  outRate: number,
+  quality: SoxrQuality,
 ): T {
-  throw new Error("soxr resampling is not ported yet");
+  const engine = getResampler();
+  if (audio instanceof Float32Array) {
+    return engine.resampleFloat32(audio, inRate, outRate, { quality }) as T;
+  }
+  return engine.resampleSamples(audio as Int16Array, inRate, outRate, { quality }) as T;
+}
+
+/**
+ * Load the WebAssembly resampling engine (idempotent), so that the
+ * synchronous `soxrResample` and `SoxrResampleStream` can run.
+ */
+export async function initSoxr(): Promise<void> {
+  await initResampler();
 }
 
 export interface SOXRAudioResamplerOptions {
@@ -73,6 +88,7 @@ export class SOXRAudioResampler extends BaseAudioResampler {
     if (inRate === outRate) {
       return audio;
     }
+    await initSoxr();
     const audioData = bytesToInt16(audio);
     const resampledAudio = soxrResample(audioData, inRate, outRate, this._quality);
     return new Uint8Array(

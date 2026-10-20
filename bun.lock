@@ -50,8 +50,10 @@
       "version": "0.1.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
+        "@pipedog/resampler-wasm": "workspace:*",
         "@pipedog/sentencex-wasm": "workspace:*",
         "num2words-ts": "1.0.2",
+        "yaml": "2.9.1",
       },
     },
     "packages/resampler-wasm": {

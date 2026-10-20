@@ -26,8 +26,7 @@ describe("TestLoadDTMFAudio", () => {
     loadDtmfAudio = utils.loadDtmfAudio;
   });
 
-  // TODO: needs unported module audio/resamplers/soxr_resampler.ts (soxrResample is a libsoxr stub).
-  test.todo("test_cache_is_keyed_by_sample_rate", async () => {
+  test("test_cache_is_keyed_by_sample_rate", async () => {
     // Different sample rates for the same button must not collide in the cache.
     const audio8k = await loadDtmfAudio(KeypadEntry.ONE, { sampleRate: 8000 });
     const audio16k = await loadDtmfAudio(KeypadEntry.ONE, { sampleRate: 16000 });
@@ -38,8 +37,7 @@ describe("TestLoadDTMFAudio", () => {
     expect(audio16k.length).toBeGreaterThan(audio8k.length * 1.8);
   });
 
-  // TODO: needs unported module audio/resamplers/soxr_resampler.ts (soxrResample is a libsoxr stub).
-  test.todo("test_cached_rate_returns_identical_bytes", async () => {
+  test("test_cached_rate_returns_identical_bytes", async () => {
     // Re-requesting a previously loaded sample rate returns the same bytes.
     const first = await loadDtmfAudio(KeypadEntry.ONE, { sampleRate: 8000 });
     // Load a different rate in between; it must not clobber the 8 kHz entry.

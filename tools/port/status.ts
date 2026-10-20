@@ -57,8 +57,11 @@ if (args[0] === "--sync-tests") {
     if (!existsSync(t.ts)) continue;
     const proc = Bun.spawnSync(["bun", "test", t.ts], { stdout: "pipe", stderr: "pipe" });
     const out = `${proc.stdout.toString()}${proc.stderr.toString()}`;
-    const count = (k: string) => Number(new RegExp(`(\\d+) ${k}`).exec(out)?.[1] ?? 0);
-    const [pass, fail, skip, todo] = [count("pass"), count("fail"), count("skip"), count("todo")];
+    // Only bun's summary lines (" 3 fail"), not log output such as "attempt 1 failed".
+    const count = (k: string) => Number(new RegExp(`^ *(\\d+) ${k}$`, "m").exec(out)?.[1] ?? 0);
+    const [pass, skip, todo] = [count("pass"), count("skip"), count("todo")];
+    // A non-zero exit with no failing test (an unhandled error between tests) is a failure too.
+    const fail = Math.max(count("fail"), proc.exitCode === 0 ? 0 : 1);
     // Failures: re-port. Todos: blocked on an unported module. Only skips: skipped upstream/deprecated.
     t.status =
       fail > 0 || pass + skip + todo === 0
@@ -131,7 +134,7 @@ const extra = readdirSync("packages").filter((d) => !packages.has(`@pipedog/${d}
 if (extra.length) {
   lines.push(
     "",
-    "Packages without an upstream counterpart: " + extra.map((d) => `\`@pipedog/${d}\``).join(", "),
+    `Packages without an upstream counterpart: ${extra.map((d) => `\`@pipedog/${d}\``).join(", ")}`,
   );
 }
 const notes = manifest.modules.filter((m) => m.notes);

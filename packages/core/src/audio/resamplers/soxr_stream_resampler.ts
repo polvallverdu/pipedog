@@ -17,40 +17,53 @@
  * 4. When you need to reuse the same resampler configuration multiple times,
  *    as it saves initialization overhead
  *
- * PORTING NOTE: libsoxr has no edge-compatible JavaScript equivalent yet. The
- * stream management (rate checks, idle clearing, flush/reset) is ported, but
- * `SoxrResampleStream` is a stub whose constructor throws "not ported yet".
+ * Porting note: the stream is `@pipedog/resampler-wasm`'s rubato stream rather
+ * than libsoxr (see soxr_resampler.ts).
  */
 
 import { time } from "@pipedog/asyncio";
+import { getResampler, type RubatoStream } from "@pipedog/resampler-wasm";
 import { BaseAudioResampler, type SoxrQuality } from "./base_audio_resampler.ts";
-import { bytesToInt16 } from "./soxr_resampler.ts";
+import { bytesToInt16, initSoxr } from "./soxr_resampler.ts";
 
 const EMPTY_AUDIO = new Int16Array(0);
 
 /**
- * Stand-in for `soxr.ResampleStream` (mono, int16).
- *
- * STUB: libsoxr is not available in JavaScript yet; constructing one throws.
+ * `soxr.ResampleStream` (int16) on the WebAssembly engine, which must be
+ * loaded first (`await initSoxr()`).
  *
  * @internal
  */
 export class SoxrResampleStream {
-  constructor(_options: {
+  #stream: RubatoStream;
+
+  constructor(options: {
     inRate: number;
     outRate: number;
     numChannels: number;
     quality: SoxrQuality;
   }) {
-    throw new Error("soxr stream resampling is not ported yet");
+    this.#stream = getResampler().createStream(options.inRate, options.outRate, {
+      quality: options.quality,
+      channels: options.numChannels,
+    });
   }
 
-  resampleChunk(_chunk: Int16Array, _last = false): Int16Array {
-    throw new Error("soxr stream resampling is not ported yet");
+  /** Resample the next chunk; with `last`, also emit the filter tail and start over. */
+  resampleChunk(chunk: Int16Array, last = false): Int16Array {
+    const head = this.#stream.processSamples(chunk);
+    if (!last) return head;
+    const tail = this.#stream.flushSamples();
+    if (head.length === 0) return tail;
+    const out = new Int16Array(head.length + tail.length);
+    out.set(head);
+    out.set(tail, head.length);
+    return out;
   }
 
+  /** Discard the held audio. */
   clear(): void {
-    throw new Error("soxr stream resampling is not ported yet");
+    this.#stream.reset();
   }
 }
 
@@ -153,6 +166,7 @@ export class SOXRStreamAudioResampler extends BaseAudioResampler {
       return audio;
     }
 
+    await initSoxr();
     const stream = this._maybeInitializeSoxStream(inRate, outRate);
     const audioData = bytesToInt16(audio);
     const resampledAudio = stream.resampleChunk(audioData);
