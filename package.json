@@ -22,7 +22,8 @@
     "changeset": "changeset",
     "version-packages": "changeset version && bun tools/release/sync-version.ts && bun install && biome format --write packages .changeset",
     "release:verify": "bun tools/release/verify.ts",
-    "release": "bun run build && bun tools/release/prepare.ts && changeset publish"
+    "release": "bun run build && bun tools/release/prepare.ts && changeset publish",
+    "release:setup-npm": "bun tools/release/setup-npm.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
