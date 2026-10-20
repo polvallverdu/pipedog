@@ -23,7 +23,6 @@ import { join, resolve } from "node:path";
 
 export const ROOT = resolve(import.meta.dir, "../..");
 
-// biome-ignore lint/suspicious/noExplicitAny: package.json is free-form.
 export type Manifest = Record<string, any>;
 
 export interface Pkg {
