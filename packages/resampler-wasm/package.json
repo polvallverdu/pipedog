@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "High-quality PCM resampling (rubato sinc, compiled to WebAssembly) for pipedog: one-shot and streaming, soxr-style quality presets, runs on Bun, Node, Deno and Cloudflare Workers.",
   "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/resampler-wasm"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/resampler-wasm#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {

@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "asyncio-style tasks, cancellation, queues and events for JavaScript runtimes (Bun, Node, Workers).",
   "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/asyncio"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/asyncio#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
