@@ -2,7 +2,10 @@
   "name": "pipecat-ts",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*", "examples/*"],
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
   "scripts": {
     "upstream": "bun tools/upstream.ts",
     "typecheck": "tsc -b packages/*/tsconfig.json",

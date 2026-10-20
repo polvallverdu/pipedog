@@ -13,7 +13,7 @@ export const meta = {
 }
 
 const opts = Object.assign(
-  { select: '--mvp', maxLines: 4000, review: true, tests: true, testLimit: 40, testsOnly: false },
+  { select: '--mvp', maxLines: 4000, review: true, tests: true, testLimit: 1000, testsOnly: false },
   args || {},
 )
 

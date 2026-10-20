@@ -1,26 +1,54 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
-  "files": { "includes": ["**", "!**/node_modules", "!**/dist", "!.upstream", "!porting"] },
-  "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
+  "files": {
+    "includes": ["**", "!**/node_modules", "!**/dist", "!.upstream", "!porting", "!.claude"]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
   "linter": {
     "rules": {
       "recommended": true,
-      "suspicious": { "noExplicitAny": "off" },
+      "suspicious": {
+        "noExplicitAny": "off"
+      },
       "style": {
-        "noNonNullAssertion": "off",
-        "noRestrictedImports": {
-          "level": "error",
-          "options": {
-            "paths": {
-              "node:fs": "Core must run on edge runtimes; put Node-only code in a separate package.",
-              "node:net": "Core must run on edge runtimes; put Node-only code in a separate package.",
-              "node:buffer": "Use Uint8Array instead of Buffer."
+        "noNonNullAssertion": "off"
+      },
+      "complexity": {
+        "noStaticOnlyClass": "off",
+        "noBannedTypes": "off",
+        "noUselessConstructor": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/core/src/**", "packages/asyncio/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "node:fs": "Core must run on edge runtimes; put Node-only code in a separate package.",
+                  "node:net": "Core must run on edge runtimes; put Node-only code in a separate package.",
+                  "node:buffer": "Use Uint8Array instead of Buffer."
+                }
+              }
             }
           }
         }
-      },
-      "complexity": { "noStaticOnlyClass": "off", "noBannedTypes": "off" }
+      }
     }
-  },
-  "javascript": { "formatter": { "quoteStyle": "double", "semicolons": "always" } }
+  ]
 }

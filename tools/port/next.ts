@@ -118,7 +118,7 @@ if (kind === "modules") {
     ),
   );
 } else if (kind === "tests") {
-  const limit = Number(flag("limit") ?? 40);
+  const limit = Number(flag("limit") ?? 1000);
   let todo = manifest.tests.filter((t) => !done(t.status));
   if (flag("package")) todo = todo.filter((t) => t.package === flag("package"));
   const ready = todo

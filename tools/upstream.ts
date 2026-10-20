@@ -9,8 +9,8 @@
 //                               they are reset to "todo" with a note, so the port
 //                               workflow picks them up again.
 
-import { $ } from "bun";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { $ } from "bun";
 
 const pin = JSON.parse(readFileSync("upstream.json", "utf8"));
 const dir: string = pin.path;

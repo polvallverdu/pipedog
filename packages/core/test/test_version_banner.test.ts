@@ -1,0 +1,41 @@
+// Copyright (c) 2024-2026, Daily
+// Copyright (c) 2026, pipecat-ts contributors
+// SPDX-License-Identifier: BSD-2-Clause
+//
+// Ported from pipecat: tests/test_version_banner.py
+
+/** The import-time version banner is suppressed for the pipecat/pc CLI. */
+
+import { afterEach, beforeEach, expect, test } from "bun:test";
+
+import { _shouldLogVersionBanner } from "../src/index.ts";
+
+// Python's `sys.argv[0]` (the program) is `process.argv[1]` in JS;
+// `process.argv[0]` is the runtime executable.
+let savedArgv: string[];
+
+beforeEach(() => {
+  savedArgv = process.argv;
+});
+
+afterEach(() => {
+  process.argv = savedArgv;
+});
+
+function setProgram(prog: string): void {
+  process.argv = [savedArgv[0] ?? "bun", prog];
+}
+
+test("test_banner_suppressed_for_cli_programs", () => {
+  for (const prog of ["pipecat", "pc", "/usr/local/bin/pipecat", "pipecat.exe"]) {
+    setProgram(prog);
+    expect(_shouldLogVersionBanner()).toBe(false);
+  }
+});
+
+test("test_banner_shown_for_bots_and_library_use", () => {
+  for (const prog of ["bot.py", "python", "-c", "pytest", "/path/to/myapp"]) {
+    setProgram(prog);
+    expect(_shouldLogVersionBanner()).toBe(true);
+  }
+});

@@ -41,7 +41,7 @@ import { type BaseObserver, FrameProcessed, FramePushed } from "../observers/bas
 import type { PipelineWorker } from "../pipeline/worker.ts";
 import type { BaseTaskManager, EventLoop } from "../utils/asyncio/task_manager.ts";
 import { BaseObject, type BaseObjectOptions } from "../utils/base_object.ts";
-import { ErrorCategory, classifyHttpException } from "../utils/errors.ts";
+import { classifyHttpException, ErrorCategory } from "../utils/errors.ts";
 import { type FrameClass, FrameQueue } from "../utils/frame_queue.ts";
 import { logger } from "../utils/logger.ts";
 import type { TracingContext } from "../utils/tracing/tracing_context.ts";
