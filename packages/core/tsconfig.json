@@ -1,6 +1,19 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist", "types": [] },
-  "include": ["src"],
-  "references": [{ "path": "../asyncio" }]
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": []
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../asyncio"
+    },
+    {
+      "path": "../sentencex-wasm"
+    }
+  ]
 }

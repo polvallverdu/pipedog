@@ -6,6 +6,7 @@
       "!**/node_modules",
       "!**/dist",
       "!**/rust/target",
+      "!packages/sentencex-wasm/src/wasm_bytes.ts",
       "!.upstream",
       "!porting",
       "!.claude",

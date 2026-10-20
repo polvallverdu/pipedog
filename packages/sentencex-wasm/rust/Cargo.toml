@@ -1,0 +1,27 @@
+# Copyright (c) 2026, pipecat-ts contributors
+# SPDX-License-Identifier: BSD-2-Clause
+
+[package]
+name = "pipecat-sentencex-wasm"
+version = "0.0.0"
+edition = "2021"
+license = "BSD-2-Clause"
+publish = false
+description = "Wikimedia sentencex sentence segmentation behind a tiny C ABI, built for wasm32-unknown-unknown."
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+# MIT (Wikimedia). crates.io 0.1.32 is the same release (git tag v1.0.32, commit 268ff94)
+# as the Python/npm sentencex==1.0.32 that upstream Pipecat pins.
+sentencex = "=0.1.32"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+debug = false

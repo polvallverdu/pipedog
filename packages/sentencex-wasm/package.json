@@ -1,0 +1,41 @@
+{
+  "name": "@pipecat-ts/sentencex-wasm",
+  "version": "0.0.0",
+  "description": "Wikimedia sentencex sentence segmentation (the Rust core, compiled to WebAssembly) for pipecat-ts: synchronous segment() and getSentenceBoundaries() on Bun, Node, Deno and Cloudflare Workers.",
+  "license": "BSD-2-Clause AND MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "workerd": "./src/workerd.ts",
+      "default": "./src/index.ts"
+    },
+    "./engine": "./src/engine.ts",
+    "./sentencex.wasm": "./wasm/sentencex.wasm"
+  },
+  "files": [
+    "dist",
+    "src",
+    "wasm",
+    "rust/Cargo.toml",
+    "rust/Cargo.lock",
+    "rust/src",
+    "LICENSE-sentencex"
+  ],
+  "scripts": {
+    "build:wasm": "bun scripts/build-wasm.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "sentencex": "1.0.32"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ]
+  }
+}

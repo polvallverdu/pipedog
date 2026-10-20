@@ -14,7 +14,8 @@
     "src"
   ],
   "dependencies": {
-    "@pipecat-ts/asyncio": "workspace:*"
+    "@pipecat-ts/asyncio": "workspace:*",
+    "@pipecat-ts/sentencex-wasm": "workspace:*"
   },
   "pipecat": {
     "runtimes": [

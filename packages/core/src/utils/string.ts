@@ -11,16 +11,17 @@
  * sentence boundary detection, email and number pattern handling, and XML-style
  * tag parsing for structured text content.
  *
- * Upstream segments sentences with sentencex (a native extension with embedded
- * language rules). There is no edge-compatible build of it for JavaScript, so
- * segmentation goes through a pluggable `SentenceSegmenter`. The default one
- * uses `Intl.Segmenter` (available on Bun, Node, Deno and Workers) and merges
- * splits after common abbreviations. Install a sentencex-compatible segmenter
- * with `setSentenceSegmenter()` for exact parity.
+ * Sentence boundaries use sentencex's embedded language rules without external
+ * data, like upstream: `@pipecat-ts/sentencex-wasm` is the same sentencex
+ * release upstream pins, compiled to WebAssembly so it runs on every runtime.
+ * The segmenter is pluggable with `setSentenceSegmenter()`;
+ * `intlSentenceSegmenter` is a lighter `Intl.Segmenter`-based alternative.
  *
  * Offsets returned by this module are JavaScript string indices (UTF-16 code
  * units), so `text.slice(0, matchEndofsentence(text))` is the first sentence.
  */
+
+import { segment } from "@pipecat-ts/sentencex-wasm";
 
 /**
  * Split `text` into spans, like sentencex's `segment(language, text)`.
@@ -125,7 +126,7 @@ function endsWithAbbreviation(span: string): boolean {
   return /^(\p{L}\.)+\p{L}$/u.test(word);
 }
 
-/** The default segmenter: `Intl.Segmenter` plus abbreviation merging. */
+/** An alternative segmenter: `Intl.Segmenter` plus abbreviation merging. */
 export const intlSentenceSegmenter: SentenceSegmenter = (language, text) => {
   let segmenter: Intl.Segmenter;
   try {
@@ -145,16 +146,19 @@ export const intlSentenceSegmenter: SentenceSegmenter = (language, text) => {
   return spans;
 };
 
-let sentenceSegmenter: SentenceSegmenter = intlSentenceSegmenter;
+/** The default segmenter: sentencex, as upstream. */
+export const sentencexSegmenter: SentenceSegmenter = (language, text) => segment(language, text);
+
+let sentenceSegmenter: SentenceSegmenter = sentencexSegmenter;
 const tokenizerCache = new Map<string, (text: string) => string[]>();
 
 /**
  * Install the sentence segmenter used for sentence boundary detection (for
- * example one backed by a sentencex build). Pass `null` to restore the
- * default `Intl.Segmenter`-based one.
+ * example `intlSentenceSegmenter`). Pass `null` to restore the default,
+ * sentencex.
  */
 export function setSentenceSegmenter(segmenter: SentenceSegmenter | null): void {
-  sentenceSegmenter = segmenter ?? intlSentenceSegmenter;
+  sentenceSegmenter = segmenter ?? sentencexSegmenter;
   tokenizerCache.clear();
 }
 
