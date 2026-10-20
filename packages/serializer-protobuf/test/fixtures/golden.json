@@ -1,0 +1,647 @@
+{
+  "serialize": [
+    {
+      "input": {
+        "kind": "text",
+        "id": 1,
+        "name": "TextFrame#0",
+        "text": "hello"
+      },
+      "hex": "0a160801120b546578744672616d6523301a0568656c6c6f"
+    },
+    {
+      "input": {
+        "kind": "text",
+        "id": 7,
+        "name": "TextFrame#1",
+        "text": "héllo 🌍 — 你好"
+      },
+      "hex": "0a270807120b546578744672616d6523311a1668c3a96c6c6f20f09f8c8d20e2809420e4bda0e5a5bd"
+    },
+    {
+      "input": {
+        "kind": "text",
+        "id": 0,
+        "name": "",
+        "text": ""
+      },
+      "hex": ""
+    },
+    {
+      "input": {
+        "kind": "text",
+        "id": 1099511627781,
+        "name": "Big#id",
+        "text": "x"
+      },
+      "hex": "0a120885808080802012064269672369641a0178"
+    },
+    {
+      "input": {
+        "kind": "text",
+        "id": 9007199254740991,
+        "name": "Max#id",
+        "text": "y"
+      },
+      "hex": "0a1408ffffffffffffff0f12064d61782369641a0179"
+    },
+    {
+      "input": {
+        "kind": "audio",
+        "id": 3,
+        "name": "OutputAudioRawFrame#0",
+        "audio": "00004f0b9214341a721b85188f12570bd604c1001f000b03ad08710f6415b0180d181113510a3fffd7f330eafce32de2bbe4a8ea46f298f9cdfeb100f4fe3bfaf8f310ee67ea67eaa8eec7f67a01d60cc316721dc71f9c1dc117cd0fbc07740154fee1feaa026208360e3a12e512710f0f08defdb1f29ee88ae1b9de81e03ee675ee32f77cfecd026d03990073fbbbf55ef102f098f224f9b1028e0da8170a1f4c22e820561bf0129e096601f2fb2bfa0afc97002e06e00af20c480bab05dffc75f272e8d8e031dd2fde88e308ecd5f5e3fe68054b0860076f0300fefcf831f6e4f67dfb6b03440d1217cd1ecf223922261da314760aae002ef93cf538f58bf8ccfd1e03a306f0066d0376fc4cf3cee907e2b5dde1dda0e20deb7df5e3ff4508350d200e6c0b5d06c20085fc30fb8ffd7a03da0bee14ad1c44218421271de914",
+        "sample_rate": 16000,
+        "num_channels": 1
+      },
+      "hex": "12e102080312154f7574707574417564696f5261774672616d6523301ac00200004f0b9214341a721b85188f12570bd604c1001f000b03ad08710f6415b0180d181113510a3fffd7f330eafce32de2bbe4a8ea46f298f9cdfeb100f4fe3bfaf8f310ee67ea67eaa8eec7f67a01d60cc316721dc71f9c1dc117cd0fbc07740154fee1feaa026208360e3a12e512710f0f08defdb1f29ee88ae1b9de81e03ee675ee32f77cfecd026d03990073fbbbf55ef102f098f224f9b1028e0da8170a1f4c22e820561bf0129e096601f2fb2bfa0afc97002e06e00af20c480bab05dffc75f272e8d8e031dd2fde88e308ecd5f5e3fe68054b0860076f0300fefcf831f6e4f67dfb6b03440d1217cd1ecf223922261da314760aae002ef93cf538f58bf8ccfd1e03a306f0066d0376fc4cf3cee907e2b5dde1dda0e20deb7df5e3ff4508350d200e6c0b5d06c20085fc30fb8ffd7a03da0bee14ad1c44218421271de91420807d2801"
+    },
+    {
+      "input": {
+        "kind": "audio",
+        "id": 4,
+        "name": "OutputAudioRawFrame#1",
+        "audio": "00009d080c112119b3209b27b62de8321a373a3a413c2b3dfd3cc33b90397c36a5322f2e3e29fd23961e34190014220fc00afa06ec03ad014d00d4ff45009b01cb03c306690aa10e48133818491d50222427992b892fce324935dc367337fd367135ce32192f5f2ab2242d1eee16190fd70653feb9f538edfbe42fddfcd587cfefc951c5bfc148bff1bdbabd9cbe87c066c31ec78ecb92d003d6b6db80e136e7afecc3f14ff633fa56fda2ff0b018a011e01d0ffadfdc9fa3ef72df3b8ee07ea43e595e027dc24d8b0d4f0d102d0ffceface02d01bd244d575d9a0deade481ebfcf2f6fa4703c30b3c14861c7424db2b95327e38793d6f414c4408469f4614467244cc41393ed739c934342f42291d23f21cea163011e90b38073a030800b4fd48fccafb36fc82fd9fff7602eb05dd09270ea2122417821b951f332337268128f329782afd297928e9255122bc1d3b18e811e00a470344fb00f3a9ea6ce276daf2d209cce1c59ac04fbc16b9fdb60cb642b699b702ba6abdb4c1c2c66fcc93d204d995df1ce66eec62f2d4f7a1fcaf00e7033a069e0713089d07480628045401eafd0dfae3f594f149ed2de968e521e27cdf97dd8fdc76dc5bdd45df36e225e604ebc1f03ff75ffefb05ed0d07161e1e05268f2d9134e53a6740f9448248ef4a374c534c484b1f49ea45c041bf3c0737c130142a2d23371c5f15ce0eac081c033ffe2efafdf6b9f469f30bf398f302f532f710fa7cfd500168059909bb0da4112b152b18821a131cc51c871c4c1b1119d815aa11980cb9062a000bf985f1c0e9e7e128daafd2a8cb3bc58fbfc4baf7b63db4a5b238b2f6b2d9b4d5b7d4bbbdc070c6c9cca0d3cbda1ce269e984f045f786fd2303ff07030c1c0f41116d12a512f1116310130e1d0ba107c603b2ff8ffb87f7c2f369f09eed84eb34eac5e947eac2eb38eea4f1f9f526fb100199079e0ef7157a1dfb244d2c4533b7397d3f72447948774b5b4d174ea74d0e4c53498945c640263bcb34dd2d8326ea1e3f17ad0f6108820137fb9ff5d7f0f5ec06ea13e81de71fe70be8cde94eec6def09f3fbf61bfb3fff3d03ee062a0acf0cbf0edf0f1d106c0fc40d270b9d07340302fe22f8b4f1ddeac5e398dc82d5adce47c878c265bd30b9f5b5cbb3c2b2e2b22db49fb629bababe36c480ca73d1e7d8b1e0a5e896f057f8bfffa506e50c6012fe16aa1a591d051fb01f631f2c1e221c611908163b12230ee809b305af0103fed4fa44f86ff66df54ff520f6e2f794fa2afe9402b9077e0dbf13571a1c21e427832ecc34963ab93f12448147ed49414b724b7a4a59481945ca40803b5a35772eff261b1ff616bd0e9f06c5fe5cf787f06bea24e5c8e069dd11dbc1d975d923dab7db1ade2ee1d1e4dee82ced91f1e5f5fdf9b2fde2006b0333052506310651058203ca0037fddcf8d2f338ee32e8e6e17fdb27d50bcf54c92dc4bbbf1fbc76b9d8b754b7f5b7bdb9a7bca8c0aec59ecb5bd2c1d9a8e1e5e94bf2aefae102b70a0912b1188f1e89238a27842a6f2c4d2d252d042c002a3327bc23c01f641bd3163612b70d7f09b4057902ebff24fe37fd30fd15fee4ff96021a065c0a400fa514671a5d205f26402cd531f436773b393f1a420144d94494442c43a240fd3c4c38a532232ce624161dda145f0cd20360fb36f37feb61e400de7ad8e7d35ad0ddcd75cc1ecccdcc73cef8d03fd427d88adc40e120e6ffeab3ef14f4fef74efbe9fdb7ffa800b100d0ff08fe64fbf6f7d5f31feff5e97de4dfde47d9dfd3d2ce48ca67c652c324c1f7bfdbbfdbc0fac236c682cacdcf00d6fbdc9de4bdec32f5cefd6506c80ecd16491e1725162b29303b343d372739f839b5396c3830361c334e2fea2a1626fb20c51b9d16ad111c0d0f09a405f8021e0125001500ee00aa023d0591088e0c151102162f1b7320a225942a1d2f17335d36cf38533ad43a423a9838d335fc311f2d5127ac205219671113098300e2f760ef28e766df42d8dfd15dccd6c75bc4fac1b8c092c080c171c34fc6fdc95cce46d392d816dea8e31de94cee0ef341f7c6fa86fd6cff6e008500b4ff03fe82fb47f86df414f061eb7ce68ee1c2dc41d835d4c2d00cce30cc47cb63cb90ccd1ce26d283d6d8db0fe20ae9a7f0bff82801b7093d128e1a7d22e129923070365c3b413f0f42bc434544b1430b42673fdc3b8b379532222d5b276b217d1bbb154f105d0b070769039a00abfea4fd8afd57fe000074029b055709870d0512a916481bba1fd4237027672a9b2cf02d4f2ea92df52b332966259c20e81a64142e0d6b0544fde1f472ec22e41fdc94d4a9cd84c743c201bed3bac4b8dcb719b873b9dbbb3abf77c36ec8fdcdfad33bda94e0dae6e3ec88f2a3f716fcc5ff9c028e049105a805d7042e03bf00a4fdfef9eef59bf12eedd2e8afe4efe0b7dd2bdb69d98ad8a2d8bdd9e2db0edf3be358e850ee07f55bfc2804440c8214b71cb524502c5e33b8393c3fcb435047b849f94a114b034adc47ad448f40a03b0336de2f5c29a722ec1b55150d0f3a0900047bffc5fbf1f809f713f60cf6ebf6a0f816fb2ffecb01c705fb093c0e63124516ba199e1ccf1e3120ae203420b81e391cba184614ef0ece08ff01a6faeaf2f6eaf5e214db80d365cceac535c066bb97b7dfb44ab3e0b2a0b383b57ab871bc4bc1eac627cddad3",
+        "sample_rate": 48000,
+        "num_channels": 2,
+        "pts": 1234567890123
+      },
+      "hex": "12a90f080412154f7574707574417564696f5261774672616d6523311a800f00009d080c112119b3209b27b62de8321a373a3a413c2b3dfd3cc33b90397c36a5322f2e3e29fd23961e34190014220fc00afa06ec03ad014d00d4ff45009b01cb03c306690aa10e48133818491d50222427992b892fce324935dc367337fd367135ce32192f5f2ab2242d1eee16190fd70653feb9f538edfbe42fddfcd587cfefc951c5bfc148bff1bdbabd9cbe87c066c31ec78ecb92d003d6b6db80e136e7afecc3f14ff633fa56fda2ff0b018a011e01d0ffadfdc9fa3ef72df3b8ee07ea43e595e027dc24d8b0d4f0d102d0ffceface02d01bd244d575d9a0deade481ebfcf2f6fa4703c30b3c14861c7424db2b95327e38793d6f414c4408469f4614467244cc41393ed739c934342f42291d23f21cea163011e90b38073a030800b4fd48fccafb36fc82fd9fff7602eb05dd09270ea2122417821b951f332337268128f329782afd297928e9255122bc1d3b18e811e00a470344fb00f3a9ea6ce276daf2d209cce1c59ac04fbc16b9fdb60cb642b699b702ba6abdb4c1c2c66fcc93d204d995df1ce66eec62f2d4f7a1fcaf00e7033a069e0713089d07480628045401eafd0dfae3f594f149ed2de968e521e27cdf97dd8fdc76dc5bdd45df36e225e604ebc1f03ff75ffefb05ed0d07161e1e05268f2d9134e53a6740f9448248ef4a374c534c484b1f49ea45c041bf3c0737c130142a2d23371c5f15ce0eac081c033ffe2efafdf6b9f469f30bf398f302f532f710fa7cfd500168059909bb0da4112b152b18821a131cc51c871c4c1b1119d815aa11980cb9062a000bf985f1c0e9e7e128daafd2a8cb3bc58fbfc4baf7b63db4a5b238b2f6b2d9b4d5b7d4bbbdc070c6c9cca0d3cbda1ce269e984f045f786fd2303ff07030c1c0f41116d12a512f1116310130e1d0ba107c603b2ff8ffb87f7c2f369f09eed84eb34eac5e947eac2eb38eea4f1f9f526fb100199079e0ef7157a1dfb244d2c4533b7397d3f72447948774b5b4d174ea74d0e4c53498945c640263bcb34dd2d8326ea1e3f17ad0f6108820137fb9ff5d7f0f5ec06ea13e81de71fe70be8cde94eec6def09f3fbf61bfb3fff3d03ee062a0acf0cbf0edf0f1d106c0fc40d270b9d07340302fe22f8b4f1ddeac5e398dc82d5adce47c878c265bd30b9f5b5cbb3c2b2e2b22db49fb629bababe36c480ca73d1e7d8b1e0a5e896f057f8bfffa506e50c6012fe16aa1a591d051fb01f631f2c1e221c611908163b12230ee809b305af0103fed4fa44f86ff66df54ff520f6e2f794fa2afe9402b9077e0dbf13571a1c21e427832ecc34963ab93f12448147ed49414b724b7a4a59481945ca40803b5a35772eff261b1ff616bd0e9f06c5fe5cf787f06bea24e5c8e069dd11dbc1d975d923dab7db1ade2ee1d1e4dee82ced91f1e5f5fdf9b2fde2006b0333052506310651058203ca0037fddcf8d2f338ee32e8e6e17fdb27d50bcf54c92dc4bbbf1fbc76b9d8b754b7f5b7bdb9a7bca8c0aec59ecb5bd2c1d9a8e1e5e94bf2aefae102b70a0912b1188f1e89238a27842a6f2c4d2d252d042c002a3327bc23c01f641bd3163612b70d7f09b4057902ebff24fe37fd30fd15fee4ff96021a065c0a400fa514671a5d205f26402cd531f436773b393f1a420144d94494442c43a240fd3c4c38a532232ce624161dda145f0cd20360fb36f37feb61e400de7ad8e7d35ad0ddcd75cc1ecccdcc73cef8d03fd427d88adc40e120e6ffeab3ef14f4fef74efbe9fdb7ffa800b100d0ff08fe64fbf6f7d5f31feff5e97de4dfde47d9dfd3d2ce48ca67c652c324c1f7bfdbbfdbc0fac236c682cacdcf00d6fbdc9de4bdec32f5cefd6506c80ecd16491e1725162b29303b343d372739f839b5396c3830361c334e2fea2a1626fb20c51b9d16ad111c0d0f09a405f8021e0125001500ee00aa023d0591088e0c151102162f1b7320a225942a1d2f17335d36cf38533ad43a423a9838d335fc311f2d5127ac205219671113098300e2f760ef28e766df42d8dfd15dccd6c75bc4fac1b8c092c080c171c34fc6fdc95cce46d392d816dea8e31de94cee0ef341f7c6fa86fd6cff6e008500b4ff03fe82fb47f86df414f061eb7ce68ee1c2dc41d835d4c2d00cce30cc47cb63cb90ccd1ce26d283d6d8db0fe20ae9a7f0bff82801b7093d128e1a7d22e129923070365c3b413f0f42bc434544b1430b42673fdc3b8b379532222d5b276b217d1bbb154f105d0b070769039a00abfea4fd8afd57fe000074029b055709870d0512a916481bba1fd4237027672a9b2cf02d4f2ea92df52b332966259c20e81a64142e0d6b0544fde1f472ec22e41fdc94d4a9cd84c743c201bed3bac4b8dcb719b873b9dbbb3abf77c36ec8fdcdfad33bda94e0dae6e3ec88f2a3f716fcc5ff9c028e049105a805d7042e03bf00a4fdfef9eef59bf12eedd2e8afe4efe0b7dd2bdb69d98ad8a2d8bdd9e2db0edf3be358e850ee07f55bfc2804440c8214b71cb524502c5e33b8393c3fcb435047b849f94a114b034adc47ad448f40a03b0336de2f5c29a722ec1b55150d0f3a0900047bffc5fbf1f809f713f60cf6ebf6a0f816fb2ffecb01c705fb093c0e63124516ba199e1ccf1e3120ae203420b81e391cba184614ef0ece08ff01a6faeaf2f6eaf5e214db80d365cceac535c066bb97b7dfb44ab3e0b2a0b383b57ab871bc4bc1eac627cddad32080f702280230cb89ec8ff723"
+    },
+    {
+      "input": {
+        "kind": "audio",
+        "id": 5,
+        "name": "a",
+        "audio": "",
+        "sample_rate": 8000,
+        "num_channels": 1,
+        "pts": 0
+      },
+      "hex": "120a080512016120c03e2801"
+    },
+    {
+      "input": {
+        "kind": "transcription",
+        "id": 9,
+        "name": "TranscriptionFrame#0",
+        "text": "¿Qué tal? Ça va — 日本語 👍",
+        "user_id": "üser-1",
+        "timestamp": "2026-10-21T10:00:00.123+00:00"
+      },
+      "hex": "1a67080912145472616e736372697074696f6e4672616d6523301a25c2bf5175c3a92074616c3f20c3876120766120e2809420e697a5e69cace8aa9e20f09f918d2207c3bc7365722d312a1d323032362d31302d32315431303a30303a30302e3132332b30303a3030"
+    },
+    {
+      "input": {
+        "kind": "transcription",
+        "id": 10,
+        "name": "TranscriptionFrame#1",
+        "text": "",
+        "user_id": "",
+        "timestamp": ""
+      },
+      "hex": "1a18080a12145472616e736372697074696f6e4672616d652331"
+    },
+    {
+      "input": {
+        "kind": "interruption",
+        "id": 11,
+        "name": "InterruptionFrame#0"
+      },
+      "hex": "2a17080b1213496e74657272757074696f6e4672616d652330"
+    },
+    {
+      "input": {
+        "kind": "interruption",
+        "id": 0,
+        "name": ""
+      },
+      "hex": ""
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 100,
+        "name": "M#0",
+        "message": {
+          "type": "hello"
+        }
+      },
+      "hex": "22130a117b2274797065223a202268656c6c6f227d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 200,
+        "name": "U#0",
+        "message": {
+          "type": "hello"
+        }
+      },
+      "hex": "22130a117b2274797065223a202268656c6c6f227d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 101,
+        "name": "M#1",
+        "message": {}
+      },
+      "hex": "22040a027b7d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 201,
+        "name": "U#1",
+        "message": {}
+      },
+      "hex": "22040a027b7d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 102,
+        "name": "M#2",
+        "message": {
+          "a": {
+            "b": [
+              1,
+              2,
+              {
+                "c": null
+              }
+            ],
+            "d": true,
+            "e": false
+          }
+        }
+      },
+      "hex": "223a0a387b2261223a207b2262223a205b312c20322c207b2263223a206e756c6c7d5d2c202264223a20747275652c202265223a2066616c73657d7d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 202,
+        "name": "U#2",
+        "message": {
+          "a": {
+            "b": [
+              1,
+              2,
+              {
+                "c": null
+              }
+            ],
+            "d": true,
+            "e": false
+          }
+        }
+      },
+      "hex": "223a0a387b2261223a207b2262223a205b312c20322c207b2263223a206e756c6c7d5d2c202264223a20747275652c202265223a2066616c73657d7d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 103,
+        "name": "M#3",
+        "message": {
+          "unicode": "héllo wörld — 你好 🎉",
+          "emoji": "😀",
+          "ctl": "tab\tnl\n\"q\"\\"
+        }
+      },
+      "hex": "227b0a797b22756e69636f6465223a2022685c75303065396c6c6f20775c7530306636726c64205c7532303134205c75346636305c7535393764205c75643833635c7564663839222c2022656d6f6a69223a20225c75643833645c7564653030222c202263746c223a20227461625c746e6c5c6e5c22715c225c5c227d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 203,
+        "name": "U#3",
+        "message": {
+          "unicode": "héllo wörld — 你好 🎉",
+          "emoji": "😀",
+          "ctl": "tab\tnl\n\"q\"\\"
+        }
+      },
+      "hex": "227b0a797b22756e69636f6465223a2022685c75303065396c6c6f20775c7530306636726c64205c7532303134205c75346636305c7535393764205c75643833635c7564663839222c2022656d6f6a69223a20225c75643833645c7564653030222c202263746c223a20227461625c746e6c5c6e5c22715c225c5c227d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 104,
+        "name": "M#4",
+        "message": {
+          "floats": [0.1, 1.5, -2.25, 1e-7, 1.7976931348623157e308, 123456.789, 1e21, 5e-324]
+        }
+      },
+      "hex": "225a0a587b22666c6f617473223a205b302e312c20312e352c202d322e32352c2031652d30372c20312e37393736393331333438363233313537652b3330382c203132333435362e3738392c2031652b32312c2035652d3332345d7d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 204,
+        "name": "U#4",
+        "message": {
+          "floats": [0.1, 1.5, -2.25, 1e-7, 1.7976931348623157e308, 123456.789, 1e21, 5e-324]
+        }
+      },
+      "hex": "225a0a587b22666c6f617473223a205b302e312c20312e352c202d322e32352c2031652d30372c20312e37393736393331333438363233313537652b3330382c203132333435362e3738392c2031652b32312c2035652d3332345d7d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 105,
+        "name": "M#5",
+        "message": {
+          "ints": [0, -1, 42, 2147483648, 9007199254740991, -9007199254740991]
+        }
+      },
+      "hex": "22480a467b22696e7473223a205b302c202d312c2034322c20323134373438333634382c20393030373139393235343734303939312c202d393030373139393235343734303939315d7d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 205,
+        "name": "U#5",
+        "message": {
+          "ints": [0, -1, 42, 2147483648, 9007199254740991, -9007199254740991]
+        }
+      },
+      "hex": "22480a467b22696e7473223a205b302c202d312c2034322c20323134373438333634382c20393030373139393235343734303939312c202d393030373139393235343734303939315d7d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 106,
+        "name": "M#6",
+        "message": [1, "two", 3.5, null, true]
+      },
+      "hex": "221d0a1b5b312c202274776f222c20332e352c206e756c6c2c20747275655d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 206,
+        "name": "U#6",
+        "message": [1, "two", 3.5, null, true]
+      },
+      "hex": "221d0a1b5b312c202274776f222c20332e352c206e756c6c2c20747275655d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 107,
+        "name": "M#7",
+        "message": "just a string"
+      },
+      "hex": "22110a0f226a757374206120737472696e6722"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 207,
+        "name": "U#7",
+        "message": "just a string"
+      },
+      "hex": "22110a0f226a757374206120737472696e6722"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 108,
+        "name": "M#8",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "bot-ready",
+          "id": "1",
+          "data": {
+            "version": "1.0.0"
+          }
+        }
+      },
+      "hex": "22540a527b226c6162656c223a2022727476692d6169222c202274797065223a2022626f742d7265616479222c20226964223a202231222c202264617461223a207b2276657273696f6e223a2022312e302e30227d7d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 208,
+        "name": "U#8",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "bot-ready",
+          "id": "1",
+          "data": {
+            "version": "1.0.0"
+          }
+        }
+      },
+      "hex": "22540a527b226c6162656c223a2022727476692d6169222c202274797065223a2022626f742d7265616479222c20226964223a202231222c202264617461223a207b2276657273696f6e223a2022312e302e30227d7d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 109,
+        "name": "M#9",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "server-message",
+          "data": {
+            "k": "v"
+          }
+        }
+      },
+      "hex": "22440a427b226c6162656c223a2022727476692d6169222c202274797065223a20227365727665722d6d657373616765222c202264617461223a207b226b223a202276227d7d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 209,
+        "name": "U#9",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "server-message",
+          "data": {
+            "k": "v"
+          }
+        }
+      },
+      "hex": "22440a427b226c6162656c223a2022727476692d6169222c202274797065223a20227365727665722d6d657373616765222c202264617461223a207b226b223a202276227d7d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 110,
+        "name": "M#10",
+        "message": {
+          "nested": {
+            "deep": {
+              "deeper": {
+                "deepest": [
+                  "x",
+                  {
+                    "y": "ü"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "hex": "22470a457b226e6573746564223a207b2264656570223a207b22646565706572223a207b2264656570657374223a205b2278222c207b2279223a20225c7530306663227d5d7d7d7d7d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 210,
+        "name": "U#10",
+        "message": {
+          "nested": {
+            "deep": {
+              "deeper": {
+                "deepest": [
+                  "x",
+                  {
+                    "y": "ü"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "hex": "22470a457b226e6573746564223a207b2264656570223a207b22646565706572223a207b2264656570657374223a205b2278222c207b2279223a20225c7530306663227d5d7d7d7d7d"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "id": 111,
+        "name": "M#11",
+        "message": {
+          "key with spaces": 1,
+          "ключ": "значение",
+          "": "empty key"
+        }
+      },
+      "hex": "22790a777b226b6579207769746820737061636573223a20312c20225c75303433615c75303433625c75303434655c7530343437223a20225c75303433375c75303433645c75303433305c75303434375c75303433355c75303433645c75303433385c7530343335222c2022223a2022656d707479206b6579227d"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "id": 211,
+        "name": "U#11",
+        "message": {
+          "key with spaces": 1,
+          "ключ": "значение",
+          "": "empty key"
+        }
+      },
+      "hex": "22790a777b226b6579207769746820737061636573223a20312c20225c75303433615c75303433625c75303434655c7530343437223a20225c75303433375c75303433645c75303433305c75303434375c75303433355c75303433645c75303433385c7530343335222c2022223a2022656d707479206b6579227d"
+    }
+  ],
+  "deserialize": [
+    {
+      "label": "text",
+      "hex": "0a17080c120b546578744672616d6523391a06686920e29c93",
+      "frame": {
+        "type": "TextFrame",
+        "text": "hi ✓",
+        "id": "12",
+        "name": "TextFrame#9",
+        "pts": null
+      }
+    },
+    {
+      "label": "text no id",
+      "hex": "0a071a05706c61696e",
+      "frame": {
+        "type": "TextFrame",
+        "text": "plain",
+        "id": null,
+        "name": null,
+        "pts": null
+      }
+    },
+    {
+      "label": "text big id",
+      "hex": "0a0f0881808080802012016e1a03626967",
+      "frame": {
+        "type": "TextFrame",
+        "text": "big",
+        "id": "1099511627777",
+        "name": "n",
+        "pts": null
+      }
+    },
+    {
+      "label": "audio",
+      "hex": "12d302080d1207417564696f23311ac00200004f0b9214341a721b85188f12570bd604c1001f000b03ad08710f6415b0180d181113510a3fffd7f330eafce32de2bbe4a8ea46f298f9cdfeb100f4fe3bfaf8f310ee67ea67eaa8eec7f67a01d60cc316721dc71f9c1dc117cd0fbc07740154fee1feaa026208360e3a12e512710f0f08defdb1f29ee88ae1b9de81e03ee675ee32f77cfecd026d03990073fbbbf55ef102f098f224f9b1028e0da8170a1f4c22e820561bf0129e096601f2fb2bfa0afc97002e06e00af20c480bab05dffc75f272e8d8e031dd2fde88e308ecd5f5e3fe68054b0860076f0300fefcf831f6e4f67dfb6b03440d1217cd1ecf223922261da314760aae002ef93cf538f58bf8ccfd1e03a306f0066d0376fc4cf3cee907e2b5dde1dda0e20deb7df5e3ff4508350d200e6c0b5d06c20085fc30fb8ffd7a03da0bee14ad1c44218421271de91420807d2801",
+      "frame": {
+        "type": "InputAudioRawFrame",
+        "audio": {
+          "hex": "00004f0b9214341a721b85188f12570bd604c1001f000b03ad08710f6415b0180d181113510a3fffd7f330eafce32de2bbe4a8ea46f298f9cdfeb100f4fe3bfaf8f310ee67ea67eaa8eec7f67a01d60cc316721dc71f9c1dc117cd0fbc07740154fee1feaa026208360e3a12e512710f0f08defdb1f29ee88ae1b9de81e03ee675ee32f77cfecd026d03990073fbbbf55ef102f098f224f9b1028e0da8170a1f4c22e820561bf0129e096601f2fb2bfa0afc97002e06e00af20c480bab05dffc75f272e8d8e031dd2fde88e308ecd5f5e3fe68054b0860076f0300fefcf831f6e4f67dfb6b03440d1217cd1ecf223922261da314760aae002ef93cf538f58bf8ccfd1e03a306f0066d0376fc4cf3cee907e2b5dde1dda0e20deb7df5e3ff4508350d200e6c0b5d06c20085fc30fb8ffd7a03da0bee14ad1c44218421271de914"
+        },
+        "sample_rate": 16000,
+        "num_channels": 1,
+        "id": "13",
+        "name": "Audio#1",
+        "pts": null
+      }
+    },
+    {
+      "label": "audio pts",
+      "hex": "1230080e1a2000004f0b9214341a721b85188f12570bd604c1001f000b03ad08710f6415b01820c0bb01280230b1d1f9d603",
+      "frame": {
+        "type": "InputAudioRawFrame",
+        "audio": {
+          "hex": "00004f0b9214341a721b85188f12570bd604c1001f000b03ad08710f6415b018"
+        },
+        "sample_rate": 24000,
+        "num_channels": 2,
+        "id": "14",
+        "name": null,
+        "pts": 987654321
+      }
+    },
+    {
+      "label": "transcription",
+      "hex": "1a19080f1201541a0ac3bc62657220f09f8ea4220275312a027473",
+      "frame": {
+        "type": "TranscriptionFrame",
+        "text": "über 🎤",
+        "user_id": "u1",
+        "timestamp": "ts",
+        "id": "15",
+        "name": "T",
+        "pts": null
+      }
+    },
+    {
+      "label": "message",
+      "hex": "227b0a797b22756e69636f6465223a2022685c75303065396c6c6f20775c7530306636726c64205c7532303134205c75346636305c7535393764205c75643833635c7564663839222c2022656d6f6a69223a20225c75643833645c7564653030222c202263746c223a20227461625c746e6c5c6e5c22715c225c5c227d",
+      "frame": {
+        "type": "InputTransportMessageFrame",
+        "message": "{\"unicode\": \"h\\u00e9llo w\\u00f6rld \\u2014 \\u4f60\\u597d \\ud83c\\udf89\", \"emoji\": \"\\ud83d\\ude00\", \"ctl\": \"tab\\tnl\\n\\\"q\\\"\\\\\"}",
+        "id": null,
+        "name": null,
+        "pts": null
+      }
+    },
+    {
+      "label": "message floats",
+      "hex": "225a0a587b22666c6f617473223a205b302e312c20312e352c202d322e32352c2031652d30372c20312e37393736393331333438363233313537652b3330382c203132333435362e3738392c2031652b32312c2035652d3332345d7d",
+      "frame": {
+        "type": "InputTransportMessageFrame",
+        "message": "{\"floats\": [0.1, 1.5, -2.25, 1e-07, 1.7976931348623157e+308, 123456.789, 1e+21, 5e-324]}",
+        "id": null,
+        "name": null,
+        "pts": null
+      }
+    },
+    {
+      "label": "message nested",
+      "hex": "223a0a387b2261223a207b2262223a205b312c20322c207b2263223a206e756c6c7d5d2c202264223a20747275652c202265223a2066616c73657d7d",
+      "frame": {
+        "type": "InputTransportMessageFrame",
+        "message": "{\"a\": {\"b\": [1, 2, {\"c\": null}], \"d\": true, \"e\": false}}",
+        "id": null,
+        "name": null,
+        "pts": null
+      }
+    },
+    {
+      "label": "message invalid json",
+      "hex": "220b0a097b6e6f74206a736f6e",
+      "frame": null
+    },
+    {
+      "label": "message empty",
+      "hex": "2200",
+      "frame": null
+    },
+    {
+      "label": "interruption",
+      "hex": "2a050810120149",
+      "frame": {
+        "type": "InterruptionFrame",
+        "id": "16",
+        "name": "I",
+        "pts": null
+      }
+    },
+    {
+      "label": "interruption empty",
+      "hex": "2a00",
+      "frame": {
+        "type": "InterruptionFrame",
+        "id": null,
+        "name": null,
+        "pts": null
+      }
+    },
+    {
+      "label": "empty frame",
+      "hex": "",
+      "frame": null
+    },
+    {
+      "label": "unknown inner field",
+      "hex": "0a0708111a01757801",
+      "frame": {
+        "type": "TextFrame",
+        "text": "u",
+        "id": "17",
+        "name": null,
+        "pts": null
+      }
+    },
+    {
+      "label": "unknown top-level field",
+      "hex": "4801",
+      "frame": null
+    },
+    {
+      "label": "unknown trailing field",
+      "hex": "0a0508121a0174509601",
+      "frame": {
+        "type": "TextFrame",
+        "text": "t",
+        "id": "18",
+        "name": null,
+        "pts": null
+      }
+    },
+    {
+      "label": "message NaN",
+      "hex": "221b0a197b2278223a204e614e2c202279223a20496e66696e6974797d",
+      "frame": {
+        "type": "InputTransportMessageFrame",
+        "message": "{\"x\": NaN, \"y\": Infinity}",
+        "id": null,
+        "name": null,
+        "pts": null
+      }
+    },
+    {
+      "label": "text huge id",
+      "hex": "0a0e08818080808080808080011a0168",
+      "frame": {
+        "type": "TextFrame",
+        "text": "h",
+        "id": "9223372036854775809",
+        "name": null,
+        "pts": null
+      }
+    },
+    {
+      "label": "truncated",
+      "hex": "0a0d08131a097472756e6361",
+      "error": "DecodeError"
+    },
+    {
+      "label": "invalid utf-8 string",
+      "hex": "0a0608141a02c328",
+      "error": "DecodeError"
+    }
+  ]
+}

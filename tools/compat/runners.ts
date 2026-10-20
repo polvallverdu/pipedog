@@ -18,6 +18,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { builtinModules } from "node:module";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { BunPlugin } from "bun";
@@ -153,6 +154,8 @@ interface BundleOptions {
   plugins?: BunPlugin[];
   /** Bare specifiers to make unresolvable (optional peers a consumer did not install). */
   hidden?: string[];
+  /** Code prepended to the bundle. */
+  banner?: string;
 }
 
 /**
@@ -201,9 +204,11 @@ function moduleUrlPlugin(): BunPlugin {
  * which packages import at runtime. Make them resolvable from the bundle in
  * `dir`, as they are for a user who installed them: symlinks in
  * `<dir>/node_modules` and a package.json listing them (Deno resolves bare
- * specifiers through it). Only peers the bundle mentions are provided.
+ * specifiers through it). Only peers the bundle mentions are provided, and
+ * never a hidden one: a computed `import(name)` that the bundler cannot see
+ * must fail to resolve too.
  */
-function provideOptionalPeers(dir: string): void {
+function provideOptionalPeers(dir: string, hidden: string[]): void {
   const code = readFileSync(join(dir, "bundle.mjs"), "utf8");
   const deps: Record<string, string> = {};
   for (const name of readdirSync(join(ROOT, "packages"))) {
@@ -212,7 +217,8 @@ function provideOptionalPeers(dir: string): void {
     if (!existsSync(file)) continue;
     const pkg = JSON.parse(readFileSync(file, "utf8"));
     for (const [peer, meta] of Object.entries(pkg.peerDependenciesMeta ?? {})) {
-      if (!(meta as { optional?: boolean }).optional || peer in deps) continue;
+      if (!(meta as { optional?: boolean }).optional || peer in deps || hidden.includes(peer))
+        continue;
       if (!code.includes(JSON.stringify(peer))) continue;
       const installed = join(pkgDir, "node_modules", peer);
       if (!existsSync(installed)) continue;
@@ -241,6 +247,7 @@ async function bundle(entry: string, dir: string, opts: BundleOptions): Promise<
       target: opts.target,
       format: "esm",
       conditions: opts.conditions,
+      ...(opts.banner ? { banner: opts.banner } : {}),
       external: ["node:*", "cloudflare:*"],
       plugins: [
         ...(opts.hidden?.length ? [hideModulesPlugin(opts.hidden)] : []),
@@ -275,7 +282,7 @@ async function runBun(smoke: string, dir: string, hidden: string[]): Promise<Run
   const err = await bundle(entry, dir, { target: "bun", hidden, plugins: [moduleUrlPlugin()] });
   if (err) return fail(`bundle: ${firstErrorLine(err)}`, err);
   // Optional peers the package may use (not hidden) must resolve from the bundle's dir.
-  provideOptionalPeers(dir);
+  provideOptionalPeers(dir, hidden);
   return judge(await exec([process.execPath, "run", join(dir, "bundle.mjs")]));
 }
 
@@ -307,12 +314,28 @@ async function runNode(smoke: string, dir: string, hidden: string[]): Promise<Ru
   await Bun.write(entry, processEntry(smoke, hidden));
   const err = await bundle(entry, dir, { target: "node", hidden, plugins: [moduleUrlPlugin()] });
   if (err) return fail(`bundle: ${firstErrorLine(err)}`, err, notes);
-  provideOptionalPeers(dir);
+  provideOptionalPeers(dir, hidden);
   return judge(await exec(["node", join(dir, "bundle.mjs")]), notes);
 }
 
 // ---------------------------------------------------------------------------
 // deno
+
+/**
+ * Bare Node builtin specifiers (`"dgram"`, `"crypto"`), which a browser-target
+ * build rejects, become external `node:` imports, which Deno provides.
+ */
+function nodeBuiltinsPlugin(): BunPlugin {
+  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+  const names = builtinModules.filter((m) => !m.startsWith("_") && !m.startsWith("node:"));
+  const filter = new RegExp(`^(${names.map(escapeRegExp).join("|")})$`);
+  return {
+    name: "deno-node-builtins",
+    setup(build) {
+      build.onResolve({ filter }, (args) => ({ path: `node:${args.path}`, external: true }));
+    },
+  };
+}
 
 async function runDeno(smoke: string, dir: string, hidden: string[]): Promise<RunResult> {
   const entry = join(dir, "entry.mjs");
@@ -321,10 +344,13 @@ async function runDeno(smoke: string, dir: string, hidden: string[]): Promise<Ru
     target: "browser",
     conditions: ["deno"],
     hidden,
-    plugins: [moduleUrlPlugin()],
+    plugins: [moduleUrlPlugin(), nodeBuiltinsPlugin()],
+    // CommonJS dependencies `require()` Node builtins; give them Deno's require.
+    banner:
+      'import { createRequire as __pdCreateRequire } from "node:module"; var require = __pdCreateRequire(import.meta.url);',
   });
   if (err) return fail(`bundle: ${firstErrorLine(err)}`, err);
-  provideOptionalPeers(dir);
+  provideOptionalPeers(dir, hidden);
   // With optional peers, Deno must read the package.json written next to the bundle.
   const configFlags = existsSync(join(dir, "package.json")) ? [] : ["--no-config"];
   return judge(

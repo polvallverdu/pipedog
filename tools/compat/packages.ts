@@ -5,8 +5,8 @@
 // public entries (package.json "exports") and their smoke test, and rewrites
 // the `pipecat.runtimes` field from measured results.
 
-import { existsSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { Glob } from "bun";
 
 export const RUNTIMES = ["bun", "node", "deno", "workerd"] as const;
@@ -165,7 +165,36 @@ export function optionalPeersToHide(pkg: PackageInfo, all: PackageInfo[]): strin
     ...Object.keys(own.peerDependencies ?? {}).filter((n) => !ownMeta[n]?.optional),
     ...uses,
   ]);
+  // A required dependency may itself depend on an optional peer (e.g.
+  // @google/genai on `ws`): that module is installed for everyone, so keep it.
+  for (const n of installedDependencies(pkg.dir, required)) required.add(n);
   return [...optional].filter((n) => !required.has(n)).sort();
+}
+
+/** Package directory of `name` as resolved from `fromDir`, or null when not installed. */
+function findPackageDir(name: string, fromDir: string): string | null {
+  for (let dir = fromDir; ; dir = dirname(dir)) {
+    const candidate = join(dir, "node_modules", name, "package.json");
+    if (existsSync(candidate)) return dirname(realpathSync(candidate));
+    if (dirname(dir) === dir) return null;
+  }
+}
+
+/** Names of every package reachable through `dependencies` of `roots` (installed ones only). */
+function installedDependencies(fromDir: string, roots: Iterable<string>): Set<string> {
+  const names = new Set<string>();
+  const seen = new Set<string>();
+  const queue: [string, string][] = [...roots].map((n) => [n, fromDir]);
+  while (queue.length > 0) {
+    const [name, from] = queue.pop() as [string, string];
+    const dir = findPackageDir(name, from);
+    if (!dir || seen.has(dir)) continue;
+    seen.add(dir);
+    names.add(name);
+    const json = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    for (const dep of Object.keys(json.dependencies ?? {})) queue.push([dep, dir]);
+  }
+  return names;
 }
 
 export function rel(p: string): string {

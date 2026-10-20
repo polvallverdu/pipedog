@@ -42,6 +42,7 @@ import * as metrics from "../../metrics/metrics.ts";
 import { LLMContext, LLMSpecificMessage } from "../../processors/aggregators/llm_context.ts";
 import { FrameDirection } from "../../processors/frame_processor.ts";
 import * as registryTypes from "../../registry/types.ts";
+import { base64ToBytes, bytesToBase64 } from "../../utils/base64.ts";
 import { ErrorCategory } from "../../utils/errors.ts";
 import { logger } from "../../utils/logger.ts";
 import type { Ctor } from "../../utils/mixin.ts";
@@ -143,24 +144,6 @@ function camelToSnake(name: string): string {
 
 function snakeToCamel(name: string): string {
   return name.replace(/([a-z0-9])_([a-z0-9])/g, (_m, a: string, b: string) => a + b.toUpperCase());
-}
-
-function bytesToBase64(data: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < data.length; i += chunk) {
-    binary += String.fromCharCode(...data.subarray(i, i + chunk));
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(encoded: string): Uint8Array {
-  const binary = atob(encoded);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
 }
 
 function isJsonNative(value: unknown): value is string | number | boolean | null {

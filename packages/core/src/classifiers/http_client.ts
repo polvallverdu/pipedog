@@ -11,6 +11,10 @@
 
 import { abortable, currentSignal, rethrowIfCancelled } from "@pipedog/asyncio";
 
+export { bytesToBase64 } from "../utils/base64.ts";
+
+import { bytesToBase64 } from "../utils/base64.ts";
+
 /** A request could not be sent or answered (upstream's `httpx.HTTPError`). */
 export class HttpError extends Error {
   override name = "HttpError";
@@ -146,16 +150,6 @@ export class HttpClient {
   async aclose(): Promise<void> {
     this._closed = true;
   }
-}
-
-/** Base64 of `data`, without `Buffer`. */
-export function bytesToBase64(data: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < data.length; i += chunk) {
-    binary += String.fromCharCode(...data.subarray(i, i + chunk));
-  }
-  return btoa(binary);
 }
 
 /** Whether `value` is a JSON object (a Python dict). */

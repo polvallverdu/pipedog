@@ -1,0 +1,164 @@
+{
+  "generator": "tools/client-compat/generate.ts",
+  "client": {
+    "@pipecat-ai/websocket-transport": "1.7.2",
+    "@pipecat-ai/client-js": "1.13.1",
+    "@protobuf-ts/runtime": "2.11.1"
+  },
+  "clientToServer": [
+    {
+      "name": "audio_16k_mono",
+      "bytes": "121e1205617564696f1a1000000100ffffff7f0080d2041fef070020807d2801",
+      "expect": {
+        "kind": "audio",
+        "sampleRate": 16000,
+        "numChannels": 1,
+        "samples": [0, 1, -1, 32767, -32768, 1234, -4321, 7]
+      }
+    },
+    {
+      "name": "message_client-ready",
+      "bytes": "229e010a9b017b226c6162656c223a22727476692d6169222c2274797065223a22636c69656e742d7265616479222c2264617461223a7b2276657273696f6e223a22312e322e30222c2261626f7574223a7b226c696272617279223a2240706970656361742d61692f636c69656e742d6a73222c226c6962726172795f76657273696f6e223a22312e31332e31227d7d2c226964223a226330666665653031227d",
+      "expect": {
+        "kind": "message",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "client-ready",
+          "data": {
+            "version": "1.2.0",
+            "about": {
+              "library": "@pipecat-ai/client-js",
+              "library_version": "1.13.1"
+            }
+          },
+          "id": "c0ffee01"
+        }
+      }
+    },
+    {
+      "name": "message_send-text",
+      "bytes": "22a9010aa6017b226c6162656c223a22727476692d6169222c2274797065223a2273656e642d74657874222c2264617461223a7b22636f6e74656e74223a22486f6c612c20c2bf7175c3a92074616c3f20f09f918b20e697a5e69cace8aa9e222c226f7074696f6e73223a7b2272756e5f696d6d6564696174656c79223a747275652c22617564696f5f726573706f6e7365223a66616c73657d7d2c226964223a226330666665653032227d",
+      "expect": {
+        "kind": "message",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "send-text",
+          "data": {
+            "content": "Hola, ¿qué tal? 👋 日本語",
+            "options": {
+              "run_immediately": true,
+              "audio_response": false
+            }
+          },
+          "id": "c0ffee02"
+        }
+      }
+    },
+    {
+      "name": "message_client-message",
+      "bytes": "22a8010aa5017b226c6162656c223a22727476692d6169222c2274797065223a22636c69656e742d6d657373616765222c2264617461223a7b2274223a22637573746f6d222c2264223a7b226e223a312e352c22626967223a31323334353637383930312c226e6573746564223a5b312c7b2261223a6e756c6c2c2262223a747275657d5d2c2273223a22c3a95c75303030305c6e5c22227d7d2c226964223a226330666665653033227d",
+      "expect": {
+        "kind": "message",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "client-message",
+          "data": {
+            "t": "custom",
+            "d": {
+              "n": 1.5,
+              "big": 12345678901,
+              "nested": [
+                1,
+                {
+                  "a": null,
+                  "b": true
+                }
+              ],
+              "s": "é\u0000\n\""
+            }
+          },
+          "id": "c0ffee03"
+        }
+      }
+    },
+    {
+      "name": "message_disconnect-bot",
+      "bytes": "22470a457b226c6162656c223a22727476692d6169222c2274797065223a22646973636f6e6e6563742d626f74222c2264617461223a7b7d2c226964223a226330666665653034227d",
+      "expect": {
+        "kind": "message",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "disconnect-bot",
+          "data": {},
+          "id": "c0ffee04"
+        }
+      }
+    }
+  ],
+  "serverToClient": [
+    {
+      "name": "audio_24k_mono",
+      "bytes": "122d080712154f7574707574417564696f5261774672616d6523331a0c000064009cffff7f00802a0020c0bb012801",
+      "client": {
+        "type": "audio",
+        "samples": [0, 100, -100, 32767, -32768, 42]
+      }
+    },
+    {
+      "name": "message_bot_ready",
+      "bytes": "22bf010abc017b226c6162656c223a2022727476692d6169222c202274797065223a2022626f742d7265616479222c20226964223a20226330666665653031222c202264617461223a207b2276657273696f6e223a2022312e322e30222c202261626f7574223a207b226c696272617279223a202270697065646f67222c20226e6f7465223a20225c75303066636e5c7530306566635c7530306636645c7530306539205c75643833645c7564633336222c2022726174696f223a20302e317d7d7d",
+      "client": {
+        "type": "message",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "bot-ready",
+          "id": "c0ffee01",
+          "data": {
+            "version": "1.2.0",
+            "about": {
+              "library": "pipedog",
+              "note": "ünïcödé 🐶",
+              "ratio": 0.1
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "message_server_message",
+      "bytes": "22630a617b226c6162656c223a2022727476692d6169222c202274797065223a20227365727665722d6d657373616765222c202264617461223a207b2273636f7265223a20332e32352c20226974656d73223a205b2261222c20225c7530306466225d7d7d",
+      "client": {
+        "type": "message",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "server-message",
+          "data": {
+            "score": 3.25,
+            "items": ["a", "ß"]
+          }
+        }
+      }
+    },
+    {
+      "name": "text",
+      "bytes": "0a1a080a120b546578744672616d6523311a0968656c6c6f20e29c93",
+      "client": {
+        "error": "Unknown frame kind"
+      }
+    },
+    {
+      "name": "transcription",
+      "bytes": "1a3a080b12145472616e736372697074696f6e4672616d6523311a0668c3a96c6c6f220275312a14323032362d30312d30315430303a30303a30305a",
+      "client": {
+        "error": "Unknown frame kind"
+      }
+    },
+    {
+      "name": "interruption",
+      "bytes": "2a17080c1213496e74657272757074696f6e4672616d652331",
+      "client": {
+        "error": "Unknown frame kind"
+      }
+    }
+  ]
+}

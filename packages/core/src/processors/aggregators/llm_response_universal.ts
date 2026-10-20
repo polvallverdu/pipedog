@@ -104,6 +104,7 @@ import {
 } from "../../turns/user_turn_strategies.ts";
 import type { LLMAutoContextSummarizationConfig } from "../../utils/context/llm_context_summarization.ts";
 import { logger } from "../../utils/logger.ts";
+import { pyJsonDumps } from "../../utils/py_json.ts";
 import { concatenateAggregatedText, TextPartForConcatenation } from "../../utils/string.ts";
 import { TextType } from "../../utils/text/base_text_aggregator.ts";
 import { timeNowIso8601 } from "../../utils/time.ts";
@@ -125,28 +126,14 @@ import {
 } from "./llm_context.ts";
 import { LLMContextSummarizer, type SummaryAppliedEvent } from "./llm_context_summarizer.ts";
 
-/**
- * Python `json.dumps(value, ensure_ascii=False)`: same output as
- * `JSON.stringify`, but with Python's `", "` and `": "` separators so
- * contexts are identical across ports.
- */
-function jsonDumps(value: unknown): string {
-  if (value === undefined) return "null";
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value) ?? "null";
-  }
-  const withToJson = value as { toJSON?: () => unknown };
-  if (typeof withToJson.toJSON === "function") {
-    return jsonDumps(withToJson.toJSON());
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((v) => jsonDumps(v)).join(", ")}]`;
-  }
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => v !== undefined && typeof v !== "function")
-    .map(([k, v]) => `${JSON.stringify(k)}: ${jsonDumps(v)}`);
-  return `{${entries.join(", ")}}`;
+/** Objects that are not dicts are encoded by their own enumerable properties. */
+function lenientDefault(value: unknown): unknown {
+  return typeof value === "object" && value !== null ? { ...value } : String(value);
 }
+
+/** Python `json.dumps(value, ensure_ascii=False)`. */
+const jsonDumps = (value: unknown): string =>
+  pyJsonDumps(value, { ensureAscii: false, default: lenientDefault });
 
 /** Python truthiness for a function call result (empty dicts/lists/strings are falsy). */
 function isTruthy(value: unknown): boolean {

@@ -5733,9 +5733,9 @@
       "tests": [
         "test_langchain.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported to /Users/pol/vscode/pipedog/packages/langchain/src/langchain.ts. New package @pipedog/langchain (package.json, tsconfig.json); @langchain/core is a peer dependency (>=0.3.0) and a dev dependency pinned to 1.2.20. bun install ran, so bun.lock changed. Constructor is (chain, { transcriptKey = 'input' }). Python's chain.astream becomes Runnable.stream, which receives configurable.session_id and currentSignal(); each stream step is wrapped in abortable() so cancellation can interrupt it, and the catch starts with rethrowIfCancelled. Python's isinstance(dict) check becomes: a plain object that is not an LLMSpecificMessage. AIMessageChunk is detected with AIMessageChunk.isInstance. DIVERGENCE: list content is turned into text with JSON.stringify, not Python's str() repr. The GeneratorExit branch has no JS equivalent and is not ported; a comment marks where it was, and the iterator is closed in a finally block. tsc and biome report no errors in this file."
     },
     {
       "module": "pipecat.processors.frameworks.rtvi",
@@ -6504,9 +6504,9 @@
       "tests": [
         "test_protobuf_serializer.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "New package @pipedog/serializer-protobuf (package.json, tsconfig.json). Its dependencies are @pipedog/core and @pipedog/asyncio (for rethrowIfCancelled). It uses core's hand-written codec, packages/core/src/frames/protobufs/frames_pb2.ts, so it needs no third-party protobuf library and runs on any runtime. Type-check is clean, biome is clean, and a quick round-trip smoke run worked (text, transcription, audio, interruption, transport message, and the warning for an unsupported type). Constructor: upstream's positional `params` is now an options object (`{ params }`). Matching is on the exact type, as upstream: SERIALIZABLE_TYPES and DESERIALIZABLE_TYPES are Maps keyed by constructor, so subclasses such as LLMTextFrame are not serializable, same as upstream. Serialize: it walks the proto submessage's fields (not dataclasses.fields) and copies a field when the frame has that property and the value is truthy in Python's sense (an empty Uint8Array counts as false). The submessage is attached to the oneof only once one of its fields is set, as with protobuf's getattr. Transport messages are JSON-encoded by a local copy of Python's json.dumps (', ' and ': ' separators, ensure_ascii escapes, TypeError for values that are not JSON), so MessageFrame.data matches upstream byte for byte. Core's pyJsonDumps in workers/ui/ui_worker.ts is not exported, so I could not reuse it. DIVERGENCE: deserialize(string) throws TypeError, the way Python protobuf's FromString rejects a str. A JSON.parse failure in a MessageFrame is caught after rethrowIfCancelled and logged. Not done: the test file test_protobuf_serializer.py is not ported, and runtimes in package.json is left empty for `bun run compat --write` to fill. | UNRESOLVED: JSON.parse in deserialize rejects NaN/Infinity/-Infinity, which Python's json.loads accepts. Messages that contain them make deserialize log an error and return null. The wording of the logged parse error also differs from Python's JSONDecodeError text. | UNRESOLVED: The 'Frame type X is not serializable' warning logs the constructor name. Python logs \"<class 'pipecat.frames.frames.X'>\" there."
     },
     {
       "module": "pipecat.serializers.rtvi_client",
@@ -6531,9 +6531,9 @@
         "test_rtvi_client_serializer.py",
         "test_rtvi_client_transport.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported in full to /Users/pol/vscode/pipedog/packages/serializer-rtvi-client/src/rtvi_client.ts. Upstream has nothing deprecated here, so nothing was dropped. I created the new package with package.json (\"runtimes\" left empty because `bun run compat --write` fills it) and a tsconfig.json that references ../core. The options type is Omit<FrameSerializerOptions, \"params\">, because upstream always forces params to InputParams(ignore_rtvi_messages=False). Output matches Python's json.dumps byte for byte through a local jsonDumps helper (\", \" and \": \" separators, ensure_ascii escaping), and base64 goes through a local bytesToBase64 helper. Python dict.get, `or` and truthiness are copied with small local helpers. deserialize decodes bytes with TextDecoder and catches only SyntaxError/TypeError, like upstream's (JSONDecodeError, TypeError). Two small differences: (1) invalid UTF-8 bytes become replacement characters instead of raising UnicodeDecodeError; (2) a payload that is not a dict throws a TypeError, matching upstream's AttributeError on payload.get. The JS JSON parse error text in the warning log differs from Python's. tsc shows no errors for this file and biome passes. A throwaway smoke test (since deleted) produced the same raw-audio wire string as upstream and mapped user-transcription to InterimTranscriptionFrame correctly. The upstream tests are not ported yet. | UNRESOLVED: Log text for non-JSON input uses JavaScriptCore/V8's JSON.parse error message rather than Python's JSONDecodeError text (e.g. 'Expecting value: line 1 column 1 (char 0)'); not reproducible without a JSON parser port. | UNRESOLVED: jsonDumps cannot tell Python int from float (1.0 serializes as '1' rather than '1.0', -0.0 as '0', 1e21 as '1e+21' vs Python '1e+21'/exponent formats differ for some values); JS numbers carry no int/float distinction. Only matters for caller-built transport messages containing floats with integral values. | UNRESOLVED: Python json.loads(bytes) also auto-detects UTF-16/UTF-32 encodings; the port decodes bytes as UTF-8 only."
     },
     {
       "module": "pipecat.serializers.telnyx",
@@ -6558,9 +6558,9 @@
       "tests": [
         "test_telnyx_serializer.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Created the new package @pipedog/serializer-telnyx (package.json, tsconfig.json, src/telnyx.ts). The constructor takes an options object ({ streamId, outboundEncoding, inboundEncoding, callControlId, apiKey, params }) instead of positional args. The hang-up call uses fetch with currentSignal()/abortable. For the 422 response, the body is read once as text and then parsed as JSON, because a fetch body can only be consumed once (aiohttp caches it). JSON output goes through a local Python-json.dumps-compatible helper (', ' and ': ' separators, ensure_ascii), so the wire format matches upstream. Base64 uses btoa/atob, not Buffer. ValueError becomes Error. KeypadEntry(digit) validation checks the digit against the KeypadEntry values. Nothing upstream is deprecated, so nothing was dropped. tsc reports no errors. A manual smoke run of serialize/deserialize/DTMF and the credential check worked. Run `bun install` to link the new workspace package. pipecat.runtimes is left empty for `bun run compat --write` to fill."
     },
     {
       "module": "pipecat.serializers.twilio",
@@ -8632,9 +8632,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported to /Users/pol/vscode/pipedog/packages/google/src/frames.ts. LLMSearchResult and LLMSearchOrigin are dataclasses with options constructors, and their toString() reproduces Python's dataclass repr so LLMSearchResponseFrame.toString() prints the same text as upstream. Created the package scaffold /Users/pol/vscode/pipedog/packages/google/package.json and tsconfig.json. The package.json has `exports \"./*\"`, depends on @pipedog/asyncio and @pipedog/core, lists @google-cloud/speech as an optional peer dependency, and has a pipecat block with runtimes [] (filled later by `bun run compat --write`) and upstream src/pipecat/services/google. Ran `bun install` to link the workspace; the lockfile was rewritten but no installs changed. tsc and biome report no errors in this file. | UNRESOLVED: packages/google/src/stt.ts: upstream _normalize_speech_adaptation returns a native SpeechAdaptation message unchanged (identity, test_normalize_speech_adaptation_accepts_native_message). In this port messages are plain objects, so the function always returns a normalized copy. A ported test should assert toEqual, not identity. | UNRESOLVED: packages/google/src/stt.ts: when phrase_sets is explicitly None, upstream raises a TypeError (list(None)). The port treats null as an empty list. This is an edge case and was left as is. | UNRESOLVED: packages/google/src/stt.ts: the porter's documented DIVERGENCE stays. With credentialsPath or ADC, credential and project ID errors are raised on first connect (in _ensureClient during setup), not in the constructor."
     },
     {
       "module": "pipecat.services.google.gemini_live",
@@ -8754,9 +8754,9 @@
       "tests": [
         "test_gemini_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Uses GoogleGenAI.live.connect from @google/genai. Its callbacks (onmessage/onerror/onclose) feed an asyncio Queue that the receive task reads, standing in for session.receive(); socket errors and closes are raised in the receive loop, so they go through upstream's reconnect / MAX_CONSECUTIVE_FAILURES path. __aenter__/__aexit__ map to connect()/session.close(); the close cause is only logged. The google-genai>=2.9.0 ImportError check is dropped (no runtime types in JS); the transcription config (languageHints/languageAuto/adaptationPhrases/mode) is sent as plain camelCase objects, which 2.8.0 typings lack, hence a cast. Audio is sent base64. The ttfsP99Latency default is GEMINI_TTFS_P99. Imports languageToGoogleSttLanguage from ../stt.ts (another agent's module; it already exists). Only remaining tsc error: missing @google/genai install. | UNRESOLVED: packages/google/src/tts.ts createGoogleCloudTTSClient: the function that feeds the streaming requests is a plain async function nobody awaits, not a tracked Task. It catches its own errors, so it can never cause an unhandled rejection. It sits behind the SDK adapter, not in upstream-ported logic, so I left it as is. | UNRESOLVED: Type-checking packages/google finds no errors in the three files except that `@google/genai` cannot be resolved, because it is not installed. I could not compile them against the real SDK types. | UNRESOLVED: Two divergences remain that the port's notes document: credentials are not checked when the service is built (ADC resolves on the first request), and there is no google-genai version gate. Neither can be expressed with the JS SDKs, so I left both."
     },
     {
       "module": "pipecat.services.google.gemini_live.vertex",
@@ -8926,9 +8926,9 @@
       "tests": [
         "test_google_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported to /Users/pol/vscode/pipedog/packages/google/src/stt.ts. Contains languageToGoogleSttLanguage (the full language map), _modelSupportsAdaptation, _normalizeSpeechAdaptation, GoogleSTTSettings and GoogleSTTService. Ported deprecated-code handling, request generator, stream loop with streaming-limit reconnects, ABORTED handling, response processing, usage metrics, and tracing via installTracedStt. Speech V2 streaming is gRPC-only, so the default client is the Node SDK @google-cloud/speech (v2 SpeechClient._streamingRecognize). It is an optional peer that is imported lazily through a variable specifier, so importing the module never loads it. A `client` option takes any GoogleSTTClient (a streaming call that can be written to and read from, plus an optional getProjectId) for other transports or test fakes. The request generator is fed into the call by a tracked task (_sendRequests), and reading responses goes through abortable(). Every broad catch calls rethrowIfCancelled. Deprecated APIs dropped: InputParams and the `params` option, Settings.language_codes (so _getLanguageCodes uses only `languages`, then falls back to en-US), set_languages(), update_options(), and the language_codes deprecation warning in _updateSettings. DIVERGENCE: with credentialsPath or default credentials, the client and project ID are resolved on first connect (in setup()) instead of the constructor, so the 'No valid credentials provided.' and 'Project ID not found in credentials' errors appear there. Inline `credentials` JSON is still checked in the constructor. Protobuf SpeechAdaptation and DenoiserConfig messages are plain objects; snake_case or camelCase keys are accepted and converted to the SDK's camelCase field names when the request is built. Aborted (409) is detected as gRPC code 10. tsc and biome report no errors in this file. A quick run built the service and its settings, normalized an adaptation payload and printed the frame; it did not open a stream. | UNRESOLVED: packages/google/src/stt.ts: upstream _normalize_speech_adaptation returns a native SpeechAdaptation message unchanged (identity, test_normalize_speech_adaptation_accepts_native_message). In this port messages are plain objects, so the function always returns a normalized copy. A ported test should assert toEqual, not identity. | UNRESOLVED: packages/google/src/stt.ts: when phrase_sets is explicitly None, upstream raises a TypeError (list(None)). The port treats null as an empty list. This is an edge case and was left as is. | UNRESOLVED: packages/google/src/stt.ts: the porter's documented DIVERGENCE stays. With credentialsPath or ADC, credential and project ID errors are raised on first connect (in _ensureClient during setup), not in the constructor."
     },
     {
       "module": "pipecat.services.google.tts",
@@ -8959,9 +8959,9 @@
         "test_gemini_tts.py",
         "test_google_http_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Cloud TTS (GoogleHttpTTSService, GoogleTTSService, the GCP backend of GeminiTTSService) runs through @google-cloud/text-to-speech, added as an optional peer. It is loaded lazily with import() behind a small GoogleCloudTTSClient interface (createGoogleCloudTTSClient), so it needs Node/Bun; the GenAI backend uses @google/genai (added as a dependency) and stays portable. Divergences: with no credentials or credentialsPath, the SDK resolves ADC on the first request, so upstream's construction-time ValueError('No valid credentials provided.') shows up as a synthesis error instead. The SpeechMetadata SDK-version gate in _checkGenaiModelSupported never fires (GENAI_SUPPORTS_SPEECH_METADATA=true). _closeClient only calls aclose() if the client has one, because the JS GenAI client has none. Base64 inlineData is decoded. multi-speaker speaker_configs keep snake_case keys (speaker_alias/speaker_id). Tracing goes through installTracedTts in static blocks. Dropped as deprecated: the InputParams classes, the params/voiceId/(Gemini) model constructor options, the GoogleStreamTTSSettings alias and _warnInitParamMovedToSettings calls. GRPC_ENABLE_FORK_SUPPORT is not ported. Typecheck is clean against @google/genai 2.8.0 types (checked through a temporary link that was then removed). The only remaining tsc error is TS2307 'Cannot find module @google/genai', because the package is not installed yet. Run bun install. | UNRESOLVED: packages/google/src/tts.ts createGoogleCloudTTSClient: the function that feeds the streaming requests is a plain async function nobody awaits, not a tracked Task. It catches its own errors, so it can never cause an unhandled rejection. It sits behind the SDK adapter, not in upstream-ported logic, so I left it as is. | UNRESOLVED: Type-checking packages/google finds no errors in the three files except that `@google/genai` cannot be resolved, because it is not installed. I could not compile them against the real SDK types. | UNRESOLVED: Two divergences remain that the port's notes document: credentials are not checked when the service is built (ADC resolves on the first request), and there is no google-genai version gate. Neither can be expressed with the JS SDKs, so I left both."
     },
     {
       "module": "pipecat.services.google.utils",
@@ -8979,9 +8979,9 @@
       "tests": [
         "test_google_utils.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "updateGoogleClientHttpOptions uses version() from @pipedog/core (pipedog version) and keeps the 'pipecat/<version>' header value. A plain object is copied (dict branch); any other object with a headers property is modified in place, as upstream does. The upstream test monkeypatches pipecat_version; there is no injection hook, so a ported test should compare against version(). | UNRESOLVED: packages/google/src/tts.ts createGoogleCloudTTSClient: the function that feeds the streaming requests is a plain async function nobody awaits, not a tracked Task. It catches its own errors, so it can never cause an unhandled rejection. It sits behind the SDK adapter, not in upstream-ported logic, so I left it as is. | UNRESOLVED: Type-checking packages/google finds no errors in the three files except that `@google/genai` cannot be resolved, because it is not installed. I could not compile them against the real SDK types. | UNRESOLVED: Two divergences remain that the port's notes document: credentials are not checked when the service is built (ADC resolves on the first request), and there is no google-genai version gate. Neither can be expressed with the JS SDKs, so I left both."
     },
     {
       "module": "pipecat.services.google.vertex",
@@ -13382,9 +13382,9 @@
       "tests": [
         "test_smallwebrtc_transport.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "aiortc -> werift 0.25.0 through rtc.ts (aiortc-shaped adapter: RTCPeerConnection events, transceivers, receiver._enabled, RemoteStreamTrack frames, sender replaceTrack pumps); Opus via libopus-wasm behind OpusCodec (opus.ts). SCTP clamp: werift sctp.mtu set so DATA chunk payload = PIPECAT_SCTP_MAX_CHUNK_SIZE (default 1100). TrackStatusMessage validated by hand (no pydantic). IceServer = RTCIceServer class. Options object adds videoDecoderFactory/videoEncoderFactory/opusCodec/werift. SmallWebRTCTrack.setAudioOutputFormat lets Opus decode straight to the pipeline rate. mDNS (.local) candidates are added in the background (werift resolves them in ~1 s) so PATCH returns at once; end-of-candidates waits behind them. werift reports 'disconnected', which aiortc never does; forwarded as upstream would."
     },
     {
       "module": "pipecat.transports.smallwebrtc.request_handler",
@@ -13407,9 +13407,9 @@
       "tests": [
         "test_smallwebrtc_request_handler.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "HTTPException is a local class (FastAPI's). Constructor is an options object; adds connectionOptions (passed to each SmallWebRTCConnection). SmallWebRTCRequest/SmallWebRTCPatchRequest gain fromDict() for JSON bodies. ESP32 munging uses a local copy of runner.utils.smallwebrtc_sdp_munging (smallwebrtcSdpMunging) until @pipedog/runner exists. http.ts (ours) serves the runner's POST/PATCH /api/offer contract as Request->Response, plus a Node http adapter."
     },
     {
       "module": "pipecat.transports.smallwebrtc.transport",
@@ -13444,9 +13444,9 @@
         "test_smallwebrtc_transport.py",
         "test_video_in_sources.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Dropped deprecated: capture_participant_video without participant_id / with a source as first arg (1.13.0). PyAV AudioFrame/VideoFrame/AudioResampler and aiortc tracks -> media.ts; cv2 conversions -> video.ts convertToRgb. DIVERGENCE: video codecs are injected (videoDecoderFactory/videoEncoderFactory); without a decoder no UserImageRawFrames are produced (warned once); RawVideoTrack needs an encoder. DIVERGENCE: RawAudioTrack.stop() settles queued writes and the client stops the old output track on disconnected/closed, so restart_pc doesn't hang the output transport until its write timeout. SmallWebRTC cases of tests/test_video_in_sources.py ported in packages/transport-smallwebrtc/test/test_video_in_sources_smallwebrtc.test.ts (15 pass, 1 skip: deprecated)."
     },
     {
       "module": "pipecat.transports.tavus",
@@ -13663,9 +13663,9 @@
         "test_evals_client_transport.py",
         "test_websocket_client_transport.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Runs on the new runtime-agnostic socket layer in packages/transport-websocket/src/socket.ts (WebsocketConnection, websocketConnect over the global WebSocket). That file is pipedog's own, with no upstream counterpart. additionalHeaders is passed as { headers }, which works on Bun, Node (undici) and Deno; browsers and Workers ignore or reject it. WebsocketClientCallbacks became a class with an options constructor. acquires/releases('connection') are applied in a static block. Divergence: WebsocketClientSession has a replaceable `_connect` field (defaults to websocketConnect), standing in for the upstream tests' monkeypatch of `websocket_connect`. The default serializer is imported from @pipedog/serializer-protobuf/protobuf. The connection's async iterator ends normally on close codes 1000, 1001 and 1005 and throws ConnectionClosedError on any other code, matching `websockets`. tsc is clean. | UNRESOLVED: No real divergences found, so nothing was edited. I compared client.ts, fastapi.ts, rtvi_client.ts and server.ts line by line against their Python sources and checked: event registrations and handler arguments; defaults (all use ??); truthiness (payload.length > 0 for bytes and str, allowedOrigins.length > 0, sessionTimeout and fixedAudioPacketSize use JS truthiness that matches Python for 0 and null); rethrowIfCancelled in every broad catch; the deliberate CancelledError re-raise in _monitorWebsocket; durations in seconds; Uint8Array buffer math in the fixed-size audio packetizer; the acquires/releases wrapping of connect/disconnect; and the deprecated WebsocketServer* aliases, which were correctly left out. | UNRESOLVED: Minor cosmetic difference, left as is: server.ts logs remoteAddress as 'host:port' (built by serve.ts), while upstream logs websockets' remote_address tuple, e.g. \"('127.0.0.1', 12345)\". | UNRESOLVED: Minor edge case, left as is: in rtvi_client.ts, _isBotReady decodes binary messages with a lenient TextDecoder, so invalid UTF-8 returns false. Upstream json.loads would raise an uncaught UnicodeDecodeError, and it also auto-detects UTF-16/32 input."
     },
     {
       "module": "pipecat.transports.websocket.fastapi",
@@ -13695,9 +13695,9 @@
       "tests": [
         "test_fastapi_websocket.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Bring your own socket: the transport takes a `FastAPIWebSocket` interface, which is the subset of Starlette's WebSocket the transport uses (headers.get, clientState, applicationState, receive() returning ASGI-style messages, sendBytes, sendText, close). WebsocketConnection implements it, and WebsocketConnection.fromWebSocket(ws, { headers }) wraps a WebSocketPair, Deno, ws or Hono socket. This keeps the upstream mock-based tests portable 1:1. Starlette's WebSocketState is re-exported as an as-const object. The origin check throws Error rather than ValueError. input_name/output_name moved into a trailing options object. The close task is a raw asyncio createTask with a done callback, as upstream does. The bytearray buffer became a growable Uint8Array. tsc is clean. | UNRESOLVED: No real divergences found, so nothing was edited. I compared client.ts, fastapi.ts, rtvi_client.ts and server.ts line by line against their Python sources and checked: event registrations and handler arguments; defaults (all use ??); truthiness (payload.length > 0 for bytes and str, allowedOrigins.length > 0, sessionTimeout and fixedAudioPacketSize use JS truthiness that matches Python for 0 and null); rethrowIfCancelled in every broad catch; the deliberate CancelledError re-raise in _monitorWebsocket; durations in seconds; Uint8Array buffer math in the fixed-size audio packetizer; the acquires/releases wrapping of connect/disconnect; and the deprecated WebsocketServer* aliases, which were correctly left out. | UNRESOLVED: Minor cosmetic difference, left as is: server.ts logs remoteAddress as 'host:port' (built by serve.ts), while upstream logs websockets' remote_address tuple, e.g. \"('127.0.0.1', 12345)\". | UNRESOLVED: Minor edge case, left as is: in rtvi_client.ts, _isBotReady decodes binary messages with a lenient TextDecoder, so invalid UTF-8 returns false. Upstream json.loads would raise an uncaught UnicodeDecodeError, and it also auto-detects UTF-16/32 input."
     },
     {
       "module": "pipecat.transports.websocket.rtvi_client",
@@ -13717,9 +13717,9 @@
       "tests": [
         "test_rtvi_client_transport.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Imports RTVIClientSerializer from @pipedog/serializer-rtvi-client/rtvi_client. client-ready is sent as JSON.stringify(message.modelDump()), which matches pydantic's compact model_dump_json. _isBotReady also decodes Uint8Array messages as UTF-8 and returns false for invalid JSON. tsc is clean. | UNRESOLVED: No real divergences found, so nothing was edited. I compared client.ts, fastapi.ts, rtvi_client.ts and server.ts line by line against their Python sources and checked: event registrations and handler arguments; defaults (all use ??); truthiness (payload.length > 0 for bytes and str, allowedOrigins.length > 0, sessionTimeout and fixedAudioPacketSize use JS truthiness that matches Python for 0 and null); rethrowIfCancelled in every broad catch; the deliberate CancelledError re-raise in _monitorWebsocket; durations in seconds; Uint8Array buffer math in the fixed-size audio packetizer; the acquires/releases wrapping of connect/disconnect; and the deprecated WebsocketServer* aliases, which were correctly left out. | UNRESOLVED: Minor cosmetic difference, left as is: server.ts logs remoteAddress as 'host:port' (built by serve.ts), while upstream logs websockets' remote_address tuple, e.g. \"('127.0.0.1', 12345)\". | UNRESOLVED: Minor edge case, left as is: in rtvi_client.ts, _isBotReady decodes binary messages with a lenient TextDecoder, so invalid UTF-8 returns false. Upstream json.loads would raise an uncaught UnicodeDecodeError, and it also auto-detects UTF-16/32 input."
     },
     {
       "module": "pipecat.transports.websocket.server",
@@ -13749,9 +13749,9 @@
       "tests": [
         "test_websocket_server_transport.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "The deprecated WebsocketServer{Params,Callbacks,InputTransport,OutputTransport,Transport} aliases were dropped. `websockets.serve` became an injectable `WebsocketServe` (the `serve` option on the transport and input transport). It defaults to websocketServe in the new packages/transport-websocket/src/serve.ts, which uses Bun.serve, Deno.serve, or Node's `ws` (added as an optional peer dependency). On Workers it throws and points to FastAPIWebsocketTransport. Origin rejection returns HTTP 403, as websockets does. Server shutdown closes open connections with code 1001 and waits for their handlers. host, port, inputName and outputName are in a trailing options object. remote_address is now a string such as 'ip:port'. Smoke-tested on Bun: echo server and client, text and binary, close. Not yet tested on Node or Deno. tsc is clean. Package files: packages/transport-websocket/package.json (runtimes [] until `bun run compat --write`) and tsconfig.json. | UNRESOLVED: No real divergences found, so nothing was edited. I compared client.ts, fastapi.ts, rtvi_client.ts and server.ts line by line against their Python sources and checked: event registrations and handler arguments; defaults (all use ??); truthiness (payload.length > 0 for bytes and str, allowedOrigins.length > 0, sessionTimeout and fixedAudioPacketSize use JS truthiness that matches Python for 0 and null); rethrowIfCancelled in every broad catch; the deliberate CancelledError re-raise in _monitorWebsocket; durations in seconds; Uint8Array buffer math in the fixed-size audio packetizer; the acquires/releases wrapping of connect/disconnect; and the deprecated WebsocketServer* aliases, which were correctly left out. | UNRESOLVED: Minor cosmetic difference, left as is: server.ts logs remoteAddress as 'host:port' (built by serve.ts), while upstream logs websockets' remote_address tuple, e.g. \"('127.0.0.1', 12345)\". | UNRESOLVED: Minor edge case, left as is: in rtvi_client.ts, _isBotReady decodes binary messages with a lenient TextDecoder, so invalid UTF-8 returns false. Upstream json.loads would raise an uncaught UnicodeDecodeError, and it also auto-detects UTF-16/32 input."
     },
     {
       "module": "pipecat.transports.whatsapp",
@@ -17995,8 +17995,8 @@
         "pipecat.transports.websocket.fastapi"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "15 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_file_resolver.py",
@@ -18347,8 +18347,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "18 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_gemini_tts.py",
@@ -18361,8 +18361,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 130,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "14 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_get_llm_invocation_params.py",
@@ -18434,8 +18434,8 @@
         "pipecat.services.google.tts"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "1 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_google_image.py",
@@ -18501,8 +18501,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "17 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_google_thinking_defaults.py",
@@ -18540,8 +18540,8 @@
         "pipecat.services.google.utils"
       ],
       "needsModules": 2,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_gradium_stt.py",
@@ -18742,8 +18742,8 @@
         "pipecat.turns.user_turn_strategies"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "1 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_livekit_transport.py",
@@ -19729,8 +19729,8 @@
         "pipecat.serializers.protobuf"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_provider_watch_scripts.py",
@@ -19956,8 +19956,8 @@
         "pipecat.serializers.rtvi_client"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "10 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_rtvi_client_transport.py",
@@ -19971,8 +19971,8 @@
         "pipecat.transports.websocket.rtvi_client"
       ],
       "needsModules": 121,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_rtvi_observer_cleanup.py",
@@ -20360,7 +20360,7 @@
       ],
       "needsModules": 113,
       "status": "ported",
-      "notes": "5 pass, 0 fail, 1 skip, 0 todo"
+      "notes": "15 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_service_language.py",
@@ -20528,8 +20528,8 @@
         "pipecat.transports.smallwebrtc.request_handler"
       ],
       "needsModules": 139,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_smallwebrtc_transport.py",
@@ -20543,8 +20543,8 @@
         "pipecat.transports.smallwebrtc.transport"
       ],
       "needsModules": 117,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "15 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_soniox_stt.py",
@@ -20827,8 +20827,8 @@
         "pipecat.serializers.telnyx"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_text_segment_map.py",
@@ -21587,8 +21587,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "3 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_websocket_proxy.py",
@@ -21623,8 +21623,8 @@
         "pipecat.workers.runner"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_websocket_service.py",

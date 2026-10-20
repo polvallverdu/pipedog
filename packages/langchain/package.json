@@ -1,0 +1,50 @@
+{
+  "name": "@pipedog/langchain",
+  "version": "0.2.0",
+  "description": "LangChain integration (LangchainProcessor) for pipedog.",
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/langchain"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/langchain#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@langchain/core": "^1.0.0"
+  },
+  "devDependencies": {
+    "@langchain/core": "1.2.17",
+    "@langchain/langgraph": "1.4.20"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/processors/frameworks/langchain.py"
+    ]
+  }
+}

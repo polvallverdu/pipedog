@@ -4,7 +4,8 @@
 // Runtime compatibility harness. Runs each package's smoke test (its
 // `compat/smoke.ts`, or a default that imports every public entry) on Bun,
 // Node, Deno and workerd, prints a package x runtime matrix, and with
-// --write records the passing runtimes in `pipecat.runtimes`.
+// --write records the passing runtimes in `pipecat.runtimes`. Runtimes listed in
+// `pipecat.compat.unsupportedRuntimes` are not run.
 //
 //   bun tools/compat/run.ts [--package <name>] [--runtime <rt>] [--write] [--with-optional-peers]
 //
@@ -99,7 +100,11 @@ for (const pkg of packages) {
   }
   const hidden = values["with-optional-peers"] ? [] : optionalPeersToHide(pkg, all);
   if (hidden.length) row.smokeLabel += ` (without optional peers: ${hidden.join(", ")})`;
+  // Runtimes the package cannot support (e.g. WebRTC on workerd), declared as
+  // "pipecat": { "compat": { "unsupportedRuntimes": [...] } }: not run, shown as n/a.
+  const unsupported: string[] = pkg.pkgJson.pipecat?.compat?.unsupportedRuntimes ?? [];
   for (const rt of runtimes) {
+    if (unsupported.includes(rt)) continue;
     process.stderr.write(`running ${pkg.name} on ${rt}...\n`);
     row.results[rt] = await runSmoke(rt, smoke, slug(pkg.name), hidden);
   }
@@ -111,7 +116,7 @@ for (const pkg of packages) {
 const CELL = 48;
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const cell = (r: RunResult | undefined) =>
-  !r ? "-" : r.ok ? "✅" : `❌ ${clip(r.error.replace(/\s+/g, " "), CELL - 3)}`;
+  !r ? "n/a" : r.ok ? "✅" : `❌ ${clip(r.error.replace(/\s+/g, " "), CELL - 3)}`;
 // ✅ and ❌ render two columns wide in terminals.
 const width = (s: string) => [...s].reduce((n, ch) => n + (ch === "✅" || ch === "❌" ? 2 : 1), 0);
 const nameWidth = Math.max(7, ...rows.map((r) => r.pkg.name.length));
