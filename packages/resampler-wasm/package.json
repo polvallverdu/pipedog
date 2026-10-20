@@ -1,0 +1,40 @@
+{
+  "name": "@pipecat-ts/resampler-wasm",
+  "version": "0.0.0",
+  "description": "High-quality PCM resampling (rubato sinc, compiled to WebAssembly) for pipecat-ts: one-shot and streaming, soxr-style quality presets, runs on Bun, Node, Deno and Cloudflare Workers.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "workerd": "./src/workerd.ts",
+      "default": "./src/index.ts"
+    },
+    "./engine": "./src/engine.ts",
+    "./resampler.wasm": "./wasm/resampler.wasm"
+  },
+  "files": [
+    "dist",
+    "src",
+    "wasm",
+    "rust/Cargo.toml",
+    "rust/Cargo.lock",
+    "rust/src"
+  ],
+  "scripts": {
+    "build:wasm": "bun scripts/build-wasm.ts",
+    "test": "bun test",
+    "smoke:node": "node test/smoke/node.ts",
+    "smoke:deno": "deno run -A test/smoke/deno.ts",
+    "smoke:workerd": "bun test/smoke/workerd/run.ts"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ]
+  }
+}
