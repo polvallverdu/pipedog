@@ -20,6 +20,10 @@
 // The current task is tracked with AsyncLocalStorage, which Bun, Node, Deno
 // and Cloudflare Workers (nodejs_compat) all provide.
 
+/// <reference path="./async-hooks.d.ts" />
+// (The reference keeps the declaration with this file: packages that compile
+// it from source through the workspace exports don't include async-hooks.d.ts.)
+
 import { AsyncLocalStorage } from "node:async_hooks";
 
 export class CancelledError extends Error {

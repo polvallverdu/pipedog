@@ -17,8 +17,9 @@
  */
 
 import { logger } from "./utils/logger.ts";
+import { VERSION } from "./version.ts";
 
-const __version__ = "0.0.0";
+const __version__ = VERSION;
 
 interface ProcessLike {
   argv?: string[];
@@ -58,10 +59,11 @@ export function _shouldLogVersionBanner(): boolean {
 }
 
 if (_shouldLogVersionBanner()) {
-  logger.info(`ᓚᘏᗢ Pipecat ${__version__} (${runtimeDescription()}) ᓚᘏᗢ`);
+  // Upstream prints "ᓚᘏᗢ Pipecat <version> ᓚᘏᗢ"; this is pipedog, with its own version.
+  logger.info(`pipedog ${__version__} (${runtimeDescription()})`);
 }
 
-/** Returns the Pipecat version. */
+/** Returns the pipedog version (shared by every @pipedog package). */
 export function version(): string {
   return __version__;
 }

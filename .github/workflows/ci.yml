@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun test packages
+      - name: Runtime compatibility (bun, node, deno, workerd)
+        run: bun tools/compat/run.ts
+      - name: Release rehearsal (pack, install from tarballs, import everything from Node)
+        run: bun run release:verify
+      - name: Docs build
+        run: bun run docs:build
+      - name: Changeset present
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'changeset-release/')
+        run: bunx changeset status --since=origin/main || echo "::warning::No changeset in this PR. Add one with 'bun changeset' if it changes a published package."

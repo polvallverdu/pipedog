@@ -1,0 +1,110 @@
+name: Release
+
+# Changesets, fixed mode: every @pipedog/* package is released at the same
+# version. Pushing changesets to main keeps a "Version Packages" PR up to date;
+# merging that PR publishes every package to npm with trusted publishing (OIDC,
+# no token) and provenance, then creates one `v<version>` tag and GitHub release.
+#
+# One-time setup per package on npmjs.com: Settings -> Trusted publisher ->
+# GitHub Actions, repository polvallverdu/pipedog, workflow `release.yml`,
+# environment `npm`.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      has-changesets: ${{ steps.changesets.outputs.has-changesets }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - name: Create or update the Version Packages PR
+        id: changesets
+        uses: changesets/action@v2
+        with:
+          version-script: bun run version-packages
+          commit-message: "Version Packages"
+          pr-title: "Version Packages"
+
+  publish:
+    needs: version
+    if: needs.version.outputs.has-changesets == 'false'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write # the v<version> tag and GitHub release
+      id-token: write # npm trusted publishing and provenance
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      # Trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@12.2.0
+      - run: bun install --frozen-lockfile
+
+      - name: Version to release
+        id: v
+        run: |
+          version="$(jq -r .version packages/core/package.json)"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          if npm view "@pipedog/core@${version}" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "@pipedog/core@${version} is already on npm; nothing to release."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checks
+        if: steps.v.outputs.published == 'false'
+        run: |
+          bun run typecheck
+          bun run lint
+          bun test packages
+          bun tools/compat/run.ts
+          bun run release:verify
+
+      - name: Publish every package (fixed version)
+        if: steps.v.outputs.published == 'false'
+        env:
+          NPM_CONFIG_PROVENANCE: "true"
+        run: bun run release
+
+      - name: Tag and GitHub release v${{ steps.v.outputs.version }}
+        if: steps.v.outputs.published == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          awk -v v="## ${VERSION}" '$0==v{f=1;next} /^## /{f=0} f' packages/core/CHANGELOG.md > notes.md
+          {
+            echo
+            echo "All \`@pipedog/*\` packages are released at ${VERSION}:"
+            for p in packages/*/package.json; do
+              jq -r 'select(.private != true) | "- [`\(.name)`](https://www.npmjs.com/package/\(.name)/v/\(.version))"' "$p"
+            done
+          } >> notes.md
+          gh release create "v${VERSION}" --target "${GITHUB_SHA}" --title "v${VERSION}" --notes-file notes.md
