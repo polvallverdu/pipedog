@@ -272,8 +272,10 @@ async function runBun(smoke: string, dir: string, hidden: string[]): Promise<Run
   await Bun.write(entry, processEntry(smoke, hidden));
   if (!hidden.length) return judge(await exec([process.execPath, "run", entry]));
   // Hiding modules needs the bundler's resolver; run the bundle instead of the sources.
-  const err = await bundle(entry, dir, { target: "bun", hidden });
+  const err = await bundle(entry, dir, { target: "bun", hidden, plugins: [moduleUrlPlugin()] });
   if (err) return fail(`bundle: ${firstErrorLine(err)}`, err);
+  // Optional peers the package may use (not hidden) must resolve from the bundle's dir.
+  provideOptionalPeers(dir);
   return judge(await exec([process.execPath, "run", join(dir, "bundle.mjs")]));
 }
 

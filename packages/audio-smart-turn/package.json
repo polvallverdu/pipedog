@@ -39,6 +39,12 @@
     ],
     "upstream": [
       "src/pipecat/audio/turn/smart_turn/data/smart-turn-v3.2-cpu.onnx"
-    ]
+    ],
+    "compat": {
+      "usesOptionalPeers": [
+        "onnxruntime-node",
+        "onnxruntime-web"
+      ]
+    }
   }
 }

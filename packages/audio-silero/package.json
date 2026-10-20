@@ -42,6 +42,12 @@
     "upstream": [
       "src/pipecat/audio/vad/silero.py",
       "src/pipecat/audio/vad/data/silero_vad.onnx"
-    ]
+    ],
+    "compat": {
+      "usesOptionalPeers": [
+        "onnxruntime-node",
+        "onnxruntime-web"
+      ]
+    }
   }
 }

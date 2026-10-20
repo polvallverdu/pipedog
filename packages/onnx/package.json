@@ -53,6 +53,12 @@
       "node",
       "deno",
       "workerd"
-    ]
+    ],
+    "compat": {
+      "usesOptionalPeers": [
+        "onnxruntime-node",
+        "onnxruntime-web"
+      ]
+    }
   }
 }

@@ -155,9 +155,15 @@ export function optionalPeersToHide(pkg: PackageInfo, all: PackageInfo[]): strin
   }
   const own = pkg.pkgJson;
   const ownMeta = (own.peerDependenciesMeta ?? {}) as Record<string, { optional?: boolean }>;
+  // Optional peers this package's users are expected to install (e.g. an ONNX
+  // runtime for the ONNX packages), declared in package.json as
+  // "pipecat": { "compat": { "usesOptionalPeers": [...] } }. Not hidden.
+  const uses = ((own.pipecat as { compat?: { usesOptionalPeers?: string[] } } | undefined)?.compat
+    ?.usesOptionalPeers ?? []) as string[];
   const required = new Set<string>([
     ...Object.keys(own.dependencies ?? {}),
     ...Object.keys(own.peerDependencies ?? {}).filter((n) => !ownMeta[n]?.optional),
+    ...uses,
   ]);
   return [...optional].filter((n) => !required.has(n)).sort();
 }
