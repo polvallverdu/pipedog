@@ -236,9 +236,10 @@ See the top of `frames/frames.ts`.
   and the global `WebSocket`. Keep a provider client behind a small interface
   so it can be swapped.
 - Native/ML deps (Silero, Krisp, Koala, soxr, onnx models) live in their own
-  packages, take the model as an external file/URL, and accept an injected
-  runtime (`onnxruntime-node` on Bun/Node, `onnxruntime-web` WASM on Workers).
-  Pure-algorithm fallbacks (e.g. a linear resampler) may live in core.
+  packages, accept the model as bytes/path/URL, and run ONNX through an
+  `@pipedog/onnx` backend (`onnxruntime-node` or `onnxruntime-web`, optional
+  peer dependencies; users can pass their own backend). Pure-algorithm
+  fallbacks (e.g. a linear resampler) may live in core.
 - `numpy` on PCM → typed arrays (`Int16Array`, `Float32Array`).
 - `num2words` → [`num2words-ts`](https://www.npmjs.com/package/num2words-ts) (our exact port of it,
   LGPL as a dependency, like upstream's). `num2words(n, lang="en")` → `num2words(n, { lang: "en" })`.
@@ -258,9 +259,9 @@ See the top of `frames/frames.ts`.
   `entry.ts` loads the bytes (fetch of `new URL(..., import.meta.url)`, or `node:fs` as a fallback
   in that entry only). Both also accept an explicit `WebAssembly.Module | BufferSource` so apps can
   supply their own.
-- Models (Silero, Smart Turn) are never bundled: they are loaded from a path/URL given by the
-  user, with the upstream file name as the default. On Workers they come from R2, KV, static
-  assets, or a `fetch`.
+- Models (Silero, Smart Turn) ship in their package's `data/` (the upstream file, and the
+  default on Bun, Node and Deno), but are never bundled into a Worker: on Workers the user passes
+  their bytes (from R2, KV, static assets, or a `fetch`).
 - No threads: upstream `ThreadPoolExecutor` / `run_in_executor` work runs inline (async) or in an
   injected runner. Keep per-call CPU low; Workers have CPU-time limits.
 - WebRTC is unavailable on Workers; WebSocket-based transports must work there.

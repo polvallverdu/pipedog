@@ -23,12 +23,17 @@
     "version-packages": "changeset version && bun tools/release/sync-version.ts && bun install && biome format --write packages .changeset",
     "release:verify": "bun tools/release/verify.ts",
     "release": "bun run build && bun tools/release/prepare.ts && changeset publish",
-    "release:setup-npm": "bun tools/release/setup-npm.ts"
+    "release:setup-npm": "bun tools/release/setup-npm.ts",
+    "bench": "bun tools/bench.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@changesets/changelog-github": "1.0.1",
     "@changesets/cli": "3.0.3",
+    "@pipedog/audio-silero": "workspace:*",
+    "@pipedog/audio-smart-turn": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/onnx": "workspace:*",
     "@types/bun": "1.4.3",
     "typescript": "7.0.2",
     "workerd": "1.20261005.1"

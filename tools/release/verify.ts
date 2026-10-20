@@ -84,7 +84,7 @@ const imports: string[] = [];
 for (const m of published) {
   const dir = join(app, "node_modules", m.name);
   for (const [key, target] of Object.entries(m.exports ?? {})) {
-    if (key.endsWith(".wasm") || key === "./package.json") continue;
+    if (key.endsWith(".wasm") || key.endsWith(".onnx") || key === "./package.json") continue;
     if (key.includes("*")) {
       // Every file the wildcard covers, e.g. "./*" -> dist/**/*.js
       const t = (

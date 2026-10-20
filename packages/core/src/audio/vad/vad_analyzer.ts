@@ -138,10 +138,13 @@ export abstract class VADAnalyzer {
   /**
    * Calculate voice activity confidence for the given audio buffer.
    *
+   * May return a promise: JavaScript ONNX runtimes only run models
+   * asynchronously. Upstream calls this on the analyzer's model thread.
+   *
    * @param buffer Audio buffer to analyze.
    * @returns Voice confidence score between 0.0 and 1.0.
    */
-  abstract voiceConfidence(buffer: Uint8Array): number;
+  abstract voiceConfidence(buffer: Uint8Array): number | Promise<number>;
 
   /**
    * Set the sample rate for audio processing.
@@ -192,11 +195,31 @@ export abstract class VADAnalyzer {
    * @returns Current VAD state after processing the buffer.
    */
   async analyzeAudio(buffer: Uint8Array): Promise<VADState> {
-    return this._runAnalyzer(buffer);
+    // One buffer at a time, like upstream's single-thread executor: an
+    // asynchronous model must not interleave two buffers' windows.
+    while (this.#analyzing) await this.#analyzing;
+    const state = this._runAnalyzer(buffer);
+    if (!isPromiseLike(state)) return state;
+    const done = Promise.resolve(state).then(
+      () => {},
+      () => {},
+    );
+    this.#analyzing = done;
+    try {
+      return await state;
+    } finally {
+      if (this.#analyzing === done) this.#analyzing = null;
+    }
   }
 
-  /** Analyze audio buffer and return current VAD state. */
-  protected _runAnalyzer(buffer: Uint8Array): VADState {
+  #analyzing: Promise<void> | null = null;
+
+  /**
+   * Analyze audio buffer and return current VAD state.
+   *
+   * Synchronous when `voiceConfidence` is; otherwise returns a promise.
+   */
+  protected _runAnalyzer(buffer: Uint8Array): VADState | Promise<VADState> {
     const combined = new Uint8Array(this._vadBuffer.length + buffer.length);
     combined.set(this._vadBuffer, 0);
     combined.set(buffer, this._vadBuffer.length);
@@ -207,46 +230,24 @@ export abstract class VADAnalyzer {
       return this._vadState;
     }
 
+    return this.#analyzeWindows();
+  }
+
+  /** Score every complete window in the buffer, then settle the state. */
+  #analyzeWindows(): VADState | Promise<VADState> {
+    const numRequiredBytes = this._vadFramesNumBytes;
     while (this._vadBuffer.length >= numRequiredBytes) {
       const audioFrames = this._vadBuffer.slice(0, numRequiredBytes);
       this._vadBuffer = this._vadBuffer.subarray(numRequiredBytes);
 
       const confidence = this.voiceConfidence(audioFrames);
-
-      const volume = this._getSmoothedVolume(audioFrames);
-      this._prevVolume = volume;
-
-      const speaking = confidence >= this._params.confidence && volume >= this._params.minVolume;
-
-      if (speaking) {
-        switch (this._vadState) {
-          case VADState.QUIET:
-            this._vadState = VADState.STARTING;
-            this._vadStartingCount = 1;
-            break;
-          case VADState.STARTING:
-            this._vadStartingCount += 1;
-            break;
-          case VADState.STOPPING:
-            this._vadState = VADState.SPEAKING;
-            this._vadStoppingCount = 0;
-            break;
-        }
-      } else {
-        switch (this._vadState) {
-          case VADState.STARTING:
-            this._vadState = VADState.QUIET;
-            this._vadStartingCount = 0;
-            break;
-          case VADState.SPEAKING:
-            this._vadState = VADState.STOPPING;
-            this._vadStoppingCount = 1;
-            break;
-          case VADState.STOPPING:
-            this._vadStoppingCount += 1;
-            break;
-        }
+      if (isPromiseLike(confidence)) {
+        return Promise.resolve(confidence).then((c) => {
+          this.#updateState(audioFrames, c);
+          return this.#analyzeWindows();
+        });
       }
+      this.#updateState(audioFrames, confidence);
     }
 
     if (this._vadState === VADState.STARTING && this._vadStartingCount >= this._vadStartFrames) {
@@ -262,6 +263,44 @@ export abstract class VADAnalyzer {
     return this._vadState;
   }
 
+  /** Advance the state machine with one window's confidence. */
+  #updateState(audioFrames: Uint8Array, confidence: number): void {
+    const volume = this._getSmoothedVolume(audioFrames);
+    this._prevVolume = volume;
+
+    const speaking = confidence >= this._params.confidence && volume >= this._params.minVolume;
+
+    if (speaking) {
+      switch (this._vadState) {
+        case VADState.QUIET:
+          this._vadState = VADState.STARTING;
+          this._vadStartingCount = 1;
+          break;
+        case VADState.STARTING:
+          this._vadStartingCount += 1;
+          break;
+        case VADState.STOPPING:
+          this._vadState = VADState.SPEAKING;
+          this._vadStoppingCount = 0;
+          break;
+      }
+    } else {
+      switch (this._vadState) {
+        case VADState.STARTING:
+          this._vadState = VADState.QUIET;
+          this._vadStartingCount = 0;
+          break;
+        case VADState.SPEAKING:
+          this._vadState = VADState.STOPPING;
+          this._vadStoppingCount = 1;
+          break;
+        case VADState.STOPPING:
+          this._vadStoppingCount += 1;
+          break;
+      }
+    }
+  }
+
   /**
    * Release the analyzer's resources.
    *
@@ -269,6 +308,10 @@ export abstract class VADAnalyzer {
    * (Upstream shuts down its model thread here; there is none in the port.)
    */
   async cleanup(): Promise<void> {}
+}
+
+function isPromiseLike<T>(x: T | PromiseLike<T>): x is PromiseLike<T> {
+  return typeof (x as { then?: unknown } | null)?.then === "function";
 }
 
 /** Python's round(): half to even. */

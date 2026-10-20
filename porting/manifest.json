@@ -1138,9 +1138,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "No code: the model (smart-turn-v3.2-cpu.onnx) ships in packages/audio-smart-turn/data/; createLocalSmartTurnAnalyzerV3() (packages/audio-smart-turn/src/index.ts) loads it by default."
     },
     {
       "module": "pipecat.audio.turn.smart_turn.http_smart_turn",
@@ -1239,7 +1239,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "PARTIAL | There is no ONNX runtime in core. The runtime is injected through createSession(modelPath, sessionOptions), a new option. The default factory throws 'ONNX runtime is not ported yet'. The session is created asynchronously in the constructor and awaited on the first prediction. The model is not bundled; smartTurnModelPath defaults to the upstream file name. Resampling to 16 kHz uses the soxr stub, so only 16 kHz pipelines work. The PIPECAT_SMART_TURN_LOG_DATA WAV dump needs a filesystem and is a stub that logs a warning. Uses envTruthy from utils/env.ts. | UNRESOLVED: audio/resamplers/soxr_resampler.ts and soxr_stream_resampler.ts: soxrResample and SoxrResampleStream are stubs that throw. So createFileResampler/createStreamResampler, ulawToPcm/pcmToUlaw/alawToPcm/pcmToAlaw at different rates, loadDtmfAudio at any rate other than 8000, and LocalSmartTurnAnalyzerV3 at any rate other than 16 kHz all throw at runtime. This needs an injected libsoxr WASM build or a pure-TS resampler fallback in core, which is a design decision beyond a parity fix. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
+      "notes": "PARTIAL | There is no ONNX runtime in core. The runtime is injected through createSession(modelPath, sessionOptions), a new option. The default factory throws; createLocalSmartTurnAnalyzerV3() in @pipedog/audio-smart-turn wires it to @pipedog/onnx and the shipped model. The session is created asynchronously in the constructor and awaited on the first prediction. The model is not bundled; smartTurnModelPath defaults to the upstream file name. Resampling to 16 kHz uses the soxr stub, so only 16 kHz pipelines work. The PIPECAT_SMART_TURN_LOG_DATA WAV dump needs a filesystem and is a stub that logs a warning. Uses envTruthy from utils/env.ts. | UNRESOLVED: audio/resamplers/soxr_resampler.ts and soxr_stream_resampler.ts: soxrResample and SoxrResampleStream are stubs that throw. So createFileResampler/createStreamResampler, ulawToPcm/pcmToUlaw/alawToPcm/pcmToAlaw at different rates, loadDtmfAudio at any rate other than 8000, and LocalSmartTurnAnalyzerV3 at any rate other than 16 kHz all throw at runtime. This needs an injected libsoxr WASM build or a pure-TS resampler fallback in core, which is a design decision beyond a parity fix. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
     },
     {
       "module": "pipecat.audio.utils",
@@ -1373,9 +1373,9 @@
       "tests": [
         "test_silero_vad.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/audio-silero/src/silero.ts: SileroOnnxModel + SileroVADAnalyzer on @pipedog/onnx (onnxruntime-node or onnxruntime-web). Async model call/voiceConfidence (JS ONNX runtimes are async); upstream model shipped in data/ (default on Bun/Node/Deno, bytes required on workerd); load failure rejects analyzeAudio instead of throwing in the constructor; chunks are Float32Array or {data, dims}; cleanup() releases the session."
     },
     {
       "module": "pipecat.audio.vad.vad_analyzer",
@@ -1407,7 +1407,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "The ThreadPoolExecutor is gone and analysis runs inline (convention rule 5). cleanup() is a no-op. VADParams, a pydantic model, is a class with an options constructor and a pydantic-style toString for the log line. round() uses Python's half-to-even rule. | UNRESOLVED: audio/resamplers/soxr_resampler.ts and soxr_stream_resampler.ts: soxrResample and SoxrResampleStream are stubs that throw. So createFileResampler/createStreamResampler, ulawToPcm/pcmToUlaw/alawToPcm/pcmToAlaw at different rates, loadDtmfAudio at any rate other than 8000, and LocalSmartTurnAnalyzerV3 at any rate other than 16 kHz all throw at runtime. This needs an injected libsoxr WASM build or a pure-TS resampler fallback in core, which is a design decision beyond a parity fix. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
+      "notes": "The ThreadPoolExecutor is gone and analysis runs inline (convention rule 5). cleanup() is a no-op. VADParams, a pydantic model, is a class with an options constructor and a pydantic-style toString for the log line. round() uses Python's half-to-even rule. | UNRESOLVED: audio/resamplers/soxr_resampler.ts and soxr_stream_resampler.ts: soxrResample and SoxrResampleStream are stubs that throw. So createFileResampler/createStreamResampler, ulawToPcm/pcmToUlaw/alawToPcm/pcmToAlaw at different rates, loadDtmfAudio at any rate other than 8000, and LocalSmartTurnAnalyzerV3 at any rate other than 16 kHz all throw at runtime. This needs an injected libsoxr WASM build or a pure-TS resampler fallback in core, which is a design decision beyond a parity fix. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules. | voiceConfidence may return a Promise (JS ONNX runtimes are async); analyzeAudio then awaits it and serializes buffers like upstream's single-thread executor."
     },
     {
       "module": "pipecat.audio.vad.vad_controller",
@@ -19010,7 +19010,7 @@
       ],
       "needsModules": 7,
       "status": "ported",
-      "notes": "3 pass, 0 fail, 0 skip, 1 todo | test_predict_endpoint_on_48k_input_runs needs an ONNX runtime (none in core)."
+      "notes": "3 pass, 0 fail, 0 skip, 1 todo | test_predict_endpoint_on_48k_input_runs needs an ONNX runtime (none in core). | test_predict_endpoint_on_48k_input_runs runs in packages/audio-smart-turn/test/test_local_smart_turn_v3_resample.test.ts (1 pass) with @pipedog/onnx."
     },
     {
       "file": "tests/test_log_config.py",
@@ -20462,8 +20462,8 @@
         "pipecat.audio.vad.vad_analyzer"
       ],
       "needsModules": 7,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo (default backend onnxruntime-node; seeded RNG instead of numpy default_rng)"
     },
     {
       "file": "tests/test_simple_text_aggregator.py",
