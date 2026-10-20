@@ -18,6 +18,11 @@ Generated at build time from the `pipecat.runtimes` field of each `packages/*/pa
 `bun run compat --write` records the runtimes that passed. It is never edited by hand. An empty
 row means the package has not been run through the harness yet.
 
+A package that cannot work on a runtime (SmallWebRTC on Workers, which has no UDP) lists it in
+`pipecat.compat.unsupportedRuntimes`; the harness skips it there. Optional peers a package's users
+are expected to install go in `pipecat.compat.usesOptionalPeers`; all other optional peers are made
+unresolvable during the run, so a package that silently depends on one fails.
+
 ## What core avoids
 
 To stay portable, `@pipedog/core` and `@pipedog/asyncio`:

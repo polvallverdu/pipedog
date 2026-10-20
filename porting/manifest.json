@@ -13382,9 +13382,9 @@
       "tests": [
         "test_smallwebrtc_transport.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "aiortc -> werift 0.25.0 through rtc.ts (aiortc-shaped adapter: RTCPeerConnection events, transceivers, receiver._enabled, RemoteStreamTrack frames, sender replaceTrack pumps); Opus via libopus-wasm behind OpusCodec (opus.ts). SCTP clamp: werift sctp.mtu set so DATA chunk payload = PIPECAT_SCTP_MAX_CHUNK_SIZE (default 1100). TrackStatusMessage validated by hand (no pydantic). IceServer = RTCIceServer class. Options object adds videoDecoderFactory/videoEncoderFactory/opusCodec/werift. SmallWebRTCTrack.setAudioOutputFormat lets Opus decode straight to the pipeline rate. mDNS (.local) candidates are added in the background (werift resolves them in ~1 s) so PATCH returns at once; end-of-candidates waits behind them. werift reports 'disconnected', which aiortc never does; forwarded as upstream would."
     },
     {
       "module": "pipecat.transports.smallwebrtc.request_handler",
@@ -13407,9 +13407,9 @@
       "tests": [
         "test_smallwebrtc_request_handler.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "HTTPException is a local class (FastAPI's). Constructor is an options object; adds connectionOptions (passed to each SmallWebRTCConnection). SmallWebRTCRequest/SmallWebRTCPatchRequest gain fromDict() for JSON bodies. ESP32 munging uses a local copy of runner.utils.smallwebrtc_sdp_munging (smallwebrtcSdpMunging) until @pipedog/runner exists. http.ts (ours) serves the runner's POST/PATCH /api/offer contract as Request->Response, plus a Node http adapter."
     },
     {
       "module": "pipecat.transports.smallwebrtc.transport",
@@ -13444,9 +13444,9 @@
         "test_smallwebrtc_transport.py",
         "test_video_in_sources.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Dropped deprecated: capture_participant_video without participant_id / with a source as first arg (1.13.0). PyAV AudioFrame/VideoFrame/AudioResampler and aiortc tracks -> media.ts; cv2 conversions -> video.ts convertToRgb. DIVERGENCE: video codecs are injected (videoDecoderFactory/videoEncoderFactory); without a decoder no UserImageRawFrames are produced (warned once); RawVideoTrack needs an encoder. DIVERGENCE: RawAudioTrack.stop() settles queued writes and the client stops the old output track on disconnected/closed, so restart_pc doesn't hang the output transport until its write timeout. SmallWebRTC cases of tests/test_video_in_sources.py ported in packages/transport-smallwebrtc/test/test_video_in_sources_smallwebrtc.test.ts (15 pass, 1 skip: deprecated)."
     },
     {
       "module": "pipecat.transports.tavus",
@@ -20528,8 +20528,8 @@
         "pipecat.transports.smallwebrtc.request_handler"
       ],
       "needsModules": 139,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_smallwebrtc_transport.py",
@@ -20543,8 +20543,8 @@
         "pipecat.transports.smallwebrtc.transport"
       ],
       "needsModules": 117,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "15 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_soniox_stt.py",

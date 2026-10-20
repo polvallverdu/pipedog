@@ -1,0 +1,57 @@
+{
+  "name": "@pipedog/transport-smallwebrtc",
+  "version": "0.2.0",
+  "description": "SmallWebRTC transport for pipedog: a peer-to-peer WebRTC transport (werift, Opus via WASM) that works with the Pipecat browser SDK's SmallWebRTCTransport.",
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/transport-smallwebrtc"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/transport-smallwebrtc#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src",
+    "THIRD_PARTY_LICENSES.md"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "libopus-wasm": "0.4.1",
+    "werift": "0.25.0"
+  },
+  "devDependencies": {
+    "@pipecat-ai/client-js": "1.13.1",
+    "@pipecat-ai/small-webrtc-transport": "1.10.8",
+    "playwright-core": "1.63.0"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno"
+    ],
+    "upstream": [
+      "src/pipecat/transports/smallwebrtc/connection.py",
+      "src/pipecat/transports/smallwebrtc/request_handler.py",
+      "src/pipecat/transports/smallwebrtc/transport.py"
+    ],
+    "compat": {
+      "unsupportedRuntimes": [
+        "workerd"
+      ]
+    }
+  }
+}

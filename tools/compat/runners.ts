@@ -217,7 +217,8 @@ function provideOptionalPeers(dir: string, hidden: string[]): void {
     if (!existsSync(file)) continue;
     const pkg = JSON.parse(readFileSync(file, "utf8"));
     for (const [peer, meta] of Object.entries(pkg.peerDependenciesMeta ?? {})) {
-      if (!(meta as { optional?: boolean }).optional || peer in deps || hidden.includes(peer)) continue;
+      if (!(meta as { optional?: boolean }).optional || peer in deps || hidden.includes(peer))
+        continue;
       if (!code.includes(JSON.stringify(peer))) continue;
       const installed = join(pkgDir, "node_modules", peer);
       if (!existsSync(installed)) continue;
@@ -345,7 +346,8 @@ async function runDeno(smoke: string, dir: string, hidden: string[]): Promise<Ru
     hidden,
     plugins: [moduleUrlPlugin(), nodeBuiltinsPlugin()],
     // CommonJS dependencies `require()` Node builtins; give them Deno's require.
-    banner: 'import { createRequire as __pdCreateRequire } from "node:module"; var require = __pdCreateRequire(import.meta.url);',
+    banner:
+      'import { createRequire as __pdCreateRequire } from "node:module"; var require = __pdCreateRequire(import.meta.url);',
   });
   if (err) return fail(`bundle: ${firstErrorLine(err)}`, err);
   provideOptionalPeers(dir, hidden);
