@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Runtime smoke test for tools/compat: exercises task cancellation (which
-// needs AsyncLocalStorage), queues and waitFor timeouts on the target runtime.
+// needs AsyncLocalStorage), queues and waitFor timeouts on the target runtime,
+// then replays every CPython-recorded interleaving (test/trace_scenarios.ts),
+// which checks that the runtime's ready-queue drain runs one wakeup per turn.
 
 import {
   CancelledError,
@@ -13,6 +15,7 @@ import {
   TimeoutError,
   waitFor,
 } from "@pipedog/asyncio";
+import { expectedTraces, runScenario, scenarios } from "../test/trace_scenarios.ts";
 
 function check(cond: unknown, message: string): asserts cond {
   if (!cond) throw new Error(`asyncio smoke: ${message}`);
@@ -76,4 +79,11 @@ export default async function smoke(): Promise<void> {
   check(timedOut, "waitFor did not raise TimeoutError");
   check(innerCancelled, "waitFor did not cancel the inner coroutine");
   check((await waitFor(async () => 42, 1)) === 42, "waitFor result");
+
+  // Scheduling: the interleavings CPython's asyncio produces.
+  for (const name of Object.keys(scenarios)) {
+    const got = JSON.stringify(await runScenario(name));
+    const want = JSON.stringify(expectedTraces[name]);
+    check(got === want, `scenario ${name} logged ${got}, CPython ${want}`);
+  }
 }

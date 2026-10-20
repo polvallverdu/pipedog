@@ -1,0 +1,193 @@
+{
+  "queue_producer_consumer": [
+    "put 0",
+    "put 1",
+    "put 2",
+    "got 0",
+    "got 1",
+    "got 2",
+    "producer after sleep(0)",
+    "put 3",
+    "put 4",
+    "got 3",
+    "got 4",
+    "done"
+  ],
+  "bounded_queue": [
+    "putting 0",
+    "put 0",
+    "putting 1",
+    "got 0",
+    "put 1",
+    "putting 2",
+    "got 1",
+    "put 2",
+    "putting 3",
+    "got 2",
+    "put 3",
+    "got 3",
+    "done"
+  ],
+  "event_set_while_running": [
+    "a waiting",
+    "b waiting",
+    "set",
+    "nested 2",
+    "nested 1",
+    "leaf",
+    "main wait on set event did not yield",
+    "a woke",
+    "b woke",
+    "main after sleep(0)",
+    "done"
+  ],
+  "gather_order": [
+    "a start",
+    "b start",
+    "c start",
+    "a step 0",
+    "c step 0",
+    "a step 1",
+    "results ['a', 'b', 'c']"
+  ],
+  "task_creation_order": [
+    "created",
+    "nested 1",
+    "leaf",
+    "main still running",
+    "t0 start",
+    "t1 start",
+    "t2 start",
+    "main after sleep(0)",
+    "t0 end",
+    "t1 end",
+    "t2 end",
+    "awaited t2",
+    "t0 done True",
+    "done"
+  ],
+  "sleep0_pingpong": ["ping 0", "pong 0", "ping 1", "pong 1", "ping 2", "pong 2"],
+  "fast_paths_do_not_yield": [
+    "main start",
+    "nested 3",
+    "nested 2",
+    "nested 1",
+    "leaf",
+    "get x",
+    "put y",
+    "get y",
+    "event waited",
+    "lock acquired",
+    "done future ready",
+    "main suspends",
+    "other ran",
+    "main end"
+  ],
+  "burst_through_two_queues": [
+    "burst queued",
+    "input moves 0",
+    "input moves 1",
+    "input moves 2",
+    "straggler queued",
+    "process 0 with 2 queued behind",
+    "process 1 with 1 queued behind",
+    "process 2 with 0 queued behind",
+    "input moves 3",
+    "process 3 with 0 queued behind"
+  ],
+  "priority_queue_burst": ["queued", "got (1, 'a')", "got (2, 'b')", "got (3, 'c')"],
+  "queue_item_taken_before_woken_getter_runs": [
+    "getter waiting",
+    "main took first",
+    "main after sleep(0)",
+    "getter got second"
+  ],
+  "cancel_waiting_get": [
+    "cancel True",
+    "done right after cancel False",
+    "getter cancelled",
+    "getter finally",
+    "awaiting raised CancelledError",
+    "cancelled True"
+  ],
+  "cancel_after_wakeup": ["a cancelled", "b got item", "a cancelled True, qsize 0"],
+  "cancel_before_start": ["cancelled before start"],
+  "cancel_parent_awaiting_child": [
+    "child cancelling 1",
+    "child finally",
+    "parent got CancelledError",
+    "parent cancelled True, child cancelled True"
+  ],
+  "child_swallows_cancel": [
+    "child swallows",
+    "parent got child result",
+    "parent result child result, parent cancelling 1"
+  ],
+  "lock_fairness": ["a in", "a out", "b in", "b out", "c in", "c out"],
+  "semaphore_order": ["a in", "b in", "a out", "b out", "c in", "d in", "c out", "d out"],
+  "wait_for_timeout": [
+    "slow finally",
+    "TimeoutError",
+    "wait_for result fast",
+    "cancelling 0",
+    "zero timeout TimeoutError"
+  ],
+  "wait_first_completed": [
+    "b finished",
+    "a finished",
+    "done ['a', 'b'] pending []",
+    "done ['a', 'b'] pending 0"
+  ],
+  "done_callbacks_order": [
+    "child runs",
+    "awaiter resumed",
+    "main after awaiter",
+    "callback 1",
+    "callback 2",
+    "callback 3 (added when done)",
+    "main end"
+  ],
+  "shield_inner_survives": [
+    "outer cancelled",
+    "inner finished",
+    "inner done True",
+    "inner result inner"
+  ],
+  "gather_cancel": [
+    "a cancelled",
+    "b cancelled",
+    "a cleanup done",
+    "b cleanup done",
+    "parent got CancelledError",
+    "parent cancelled True"
+  ],
+  "gather_exception": [
+    "good finished",
+    "gather raised boom",
+    "good done True",
+    "gather settled [ValueError('boom'), 'good']"
+  ],
+  "event_cleared_before_waiter_runs": ["waiter got True", "is_set False"],
+  "timers_in_order": ["zero woke", "early woke", "late woke"],
+  "queue_join": ["work 0", "work 1", "work 2", "joined", "worker cancelled True"],
+  "task_started_from_callback": [
+    "first runs",
+    "sibling runs",
+    "main resumed",
+    "from callback runs",
+    "main end"
+  ],
+  "timeout_scope": [
+    "body cancelled",
+    "scope raised TimeoutError",
+    "body finished in time",
+    "cancelling 0"
+  ],
+  "wait_for_task_cancels_it": ["child cancelled", "timed out, child cancelled True"],
+  "lock_waiter_cancelled": ["a in", "a out", "b cancelled", "c in", "c out", "locked False"],
+  "bounded_putter_cancelled": ["got full", "a cancelled", "b put", "queue holds b"],
+  "cancelled_right_before_returning": [
+    "child returns",
+    "awaiting raised CancelledError, cancelled True"
+  ]
+}

@@ -31,12 +31,12 @@ export class FrameQueue<T = Frame> extends Queue<T> {
 
   /** Whether any frame of the given type is in the queue. */
   hasFrame(frameType: FrameClass): boolean {
-    return this._items.some((item) => this._frameGetter(item) instanceof frameType);
+    return this._queued().some((item) => this._frameGetter(item) instanceof frameType);
   }
 
   /** Whether any uninterruptible frame is currently in the queue. */
   get hasUninterruptible(): boolean {
-    return this._items.some((item) => this._isUninterruptible(item));
+    return this._queued().some((item) => this._isUninterruptible(item));
   }
 
   /** Remove all interruptible items, keeping uninterruptible ones. */

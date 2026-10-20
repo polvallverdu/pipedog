@@ -126,8 +126,8 @@ constructor(options: FrameProcessorOptions = {}) { super(options); ... }
 
 ## Async and cancellation (most important)
 
-Python's `asyncio` semantics are kept by `@pipedog/asyncio`. Read its
-`task.ts` header before porting anything with tasks.
+Python's `asyncio` semantics are kept by `@pipedog/asyncio`, scheduling included. Read the
+headers of its `loop.ts` and `task.ts` before porting anything with tasks.
 
 | Python | TypeScript |
 |---|---|
@@ -135,11 +135,14 @@ Python's `asyncio` semantics are kept by `@pipedog/asyncio`. Read its
 | `await self.cancel_task(task)` | `await this.cancelTask(task)` |
 | `asyncio.sleep(s)` | `sleep(s)` |
 | `asyncio.Event / Queue / PriorityQueue / Lock / Semaphore` | same names from `@pipedog/asyncio` |
-| `asyncio.wait_for(coro(), timeout=t)` | `waitFor(() => coro(), t)` (pass a function so it can be cancelled) |
+| `asyncio.wait_for(coro(), timeout=t)` | `waitFor(() => coro(), t)` (the function runs in the current task, as in Python 3.12+) |
+| `asyncio.timeout(t)` | `await timeout(t, async () => { ... })` |
 | `asyncio.gather(a(), b())` | `gather(() => a(), () => b())` |
 | `asyncio.TimeoutError` / `TimeoutError` | `TimeoutError` from `@pipedog/asyncio` |
 | `asyncio.CancelledError` | `CancelledError` |
 | `asyncio.current_task()` | `currentTask()` |
+| `loop.create_future()` / `fut.set_result(x)` | `new Future()` / `fut.setResult(x)` |
+| `loop.call_soon(cb)` / `loop.call_later(s, cb)` | `callSoon(cb)` / `callLater(s, cb)` |
 | `async with lock:` | `await lock.run(async () => { ... })` |
 | `async for x in aiter` | `for await (const x of aiter)` |
 | `async def gen(): yield` | `async function* gen()` |
@@ -161,6 +164,15 @@ Python's `asyncio` semantics are kept by `@pipedog/asyncio`. Read its
    use `this.createTask(...)` so it is tracked and cancelled at cleanup.
 5. `loop.run_in_executor(None, fn)` (blocking work in a thread) → run it
    inline if cheap; otherwise an injectable async function. There are no threads on Workers.
+6. Scheduling is asyncio's, so ported code interleaves exactly as upstream. A task runs until it
+   awaits something that is not done; waking a waiter (a future's result, `Event.set()`,
+   `Queue.put()`, a task finishing, a timer) only queues its wakeup, and queued wakeups run one at
+   a time, in order, each once the microtask queue is empty. So the fast paths (`get()` on a
+   non-empty queue, `put()` on an unbounded one, `wait()` on a set event, awaiting a done task or
+   a coroutine that never suspends) do not let any other task run, and `sleep(0)` yields exactly
+   one turn. Hand values between tasks with these primitives (or a `Future`), not with a raw
+   `new Promise` resolver: a raw promise resumes its awaiter on the next microtask, mid-step of
+   whoever resolved it, which asyncio never does.
 
 ## Classes and inheritance
 

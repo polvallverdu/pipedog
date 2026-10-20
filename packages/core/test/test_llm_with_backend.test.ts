@@ -729,16 +729,7 @@ test("test_client_tracing_sends_each_exchange_as_a_server_message", async () => 
   expect(traced[traced.length - 2]?.spoken).toBe(true);
 });
 
-// DIVERGENCE: the expected order of the backend's "note" output and its
-// "working" (in_progress) report depends on asyncio's event-loop scheduling.
-// Upstream, the scripted backend LLM queues LLMFullResponseEndFrame into the
-// assistant aggregator before the function-call task it just created runs, and
-// the on_assistant_turn_stopped handler task emits the note before the
-// aggregator reaches FunctionCallInProgressFrame. With @pipedog/asyncio a
-// created task starts after one microtask, so the function call's
-// FunctionCallInProgressFrame reaches the aggregator first and the order of the
-// first two appended messages is swapped. Every other assertion passes.
-test.skip("test_a_local_backend_is_heard_through_the_frontends_conversation", async () => {
+test("test_a_local_backend_is_heard_through_the_frontends_conversation", async () => {
   // The whole path, with the backend worker added and attached by the service itself.
   const backend = new BackendLLMWorker({
     name: "backend",
