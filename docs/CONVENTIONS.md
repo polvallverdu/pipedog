@@ -308,3 +308,36 @@ methods; they carry design intent.
   `test.todo` with the missing module in the message. Never weaken an
   assertion to make a test pass; if behavior must differ, `test.skip` with
   a `// DIVERGENCE:` comment and list it in the manifest.
+
+
+## Providers and transports
+
+Services and transports are where runtimes differ. Keep the upstream class and its behavior;
+choose the client so it runs on as many of Bun, Node, Deno and Workers as the provider allows,
+and declare honestly where it doesn't.
+
+- **Client choice, in order:** the provider's official JS SDK if it works over `fetch` /
+  `WebSocket` (e.g. `@google/genai`, `@langchain/core`); otherwise call the provider's REST or
+  WebSocket API directly with `fetch` / the global `WebSocket`; only when the provider offers
+  nothing but gRPC streaming (e.g. Google Cloud Speech streaming, Cloud TTS
+  `streaming_synthesize`), use its Node SDK (`@google-cloud/speech`, `@google-cloud/text-to-speech`).
+  SDKs are dependencies of the provider package; heavy or runtime-limited ones are optional peers.
+- **Per-class runtimes:** when one package mixes portable and Node-only services, keep the
+  Node-only SDK out of the portable classes' import graph (lazy `import()` inside the class, or a
+  separate subpath), so importing the package and using a portable class works on Workers. Say
+  per class in the README which runtimes work, and make `compat/smoke.ts` exercise every class
+  on every runtime it claims (with a fake server where a real API key would be needed).
+- **No real network in tests.** Port upstream's tests with their mocks; for SDK calls, inject a
+  fake client or point the client at a local fake server (`Bun.serve`). Tests that need real API
+  keys are skipped by default, as upstream does.
+- **Audio codecs:** μ-law / A-law and PCM conversions live in core (`audio/utils`). Opus or other
+  codecs come from a WASM package, never a native addon, unless the transport itself is native.
+- **WebSocket transports:** upstream's server (the `websockets` package), client, and FastAPI
+  transports become runtime-agnostic transports over a minimal socket interface (`send`, `close`,
+  message/close events), plus thin adapters for each runtime's server: `Bun.serve` websockets,
+  Node `ws`, `Deno.serve` upgrade, Cloudflare `WebSocketPair` (and Hono, which runs on all of
+  them). The FastAPI transport's role (a socket accepted by the app's own web framework) maps to
+  "bring your own socket". The client uses the global `WebSocket`.
+- **Serializers** (Telnyx, Twilio, protobuf, RTVI) are pure and must run everywhere. Their wire
+  format is the protocol: byte-for-byte identical to upstream. Protobuf uses the same
+  `frames.proto` as upstream with a pure-JS protobuf library.
