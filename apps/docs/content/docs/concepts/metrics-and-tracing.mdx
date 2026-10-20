@@ -1,6 +1,6 @@
 ---
 title: Metrics & tracing
-description: Performance and usage metrics as MetricsFrames, and the state of OpenTelemetry tracing.
+description: Performance and usage metrics as MetricsFrames, and OpenTelemetry tracing of conversations, turns and services.
 ---
 
 When building real-time AI applications two things matter to monitor: **performance** (latency),
@@ -56,32 +56,89 @@ the initial empty metrics.
 
 ## Tracing (OpenTelemetry)
 
-Pipecat can trace conversations, turns and service calls with OpenTelemetry. In pipedog the
-tracing utilities are ported in core (`@pipedog/core/utils/tracing/*`), but core takes no
-third-party dependencies, so the OpenTelemetry JS modules are handed in once at startup with
-`registerOpenTelemetry()`, then configured with `setupTracing()`. Until then
-`isTracingAvailable()` is false and every tracing helper is a no-op, as upstream behaves without
-OpenTelemetry installed:
+pipedog ports Pipecat's OpenTelemetry tracing: one trace per conversation, a span per turn, and
+spans for the service calls in each turn. Span names, attributes and their hierarchy are the same
+as upstream's, so dashboards and LLM-observability tools built for Pipecat traces (Langfuse,
+Honeycomb, Grafana Tempo, Jaeger, ...) work unchanged.
 
-```ts
-import * as api from "@opentelemetry/api";
-import * as sdk from "@opentelemetry/sdk-trace-base";
-import * as resources from "@opentelemetry/resources";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
-import { registerOpenTelemetry, setupTracing } from "@pipedog/core/utils/tracing/setup";
+Like upstream's `pipecat-ai[tracing]` extra, OpenTelemetry is optional:
 
-registerOpenTelemetry({ api, sdk, resources });
-setupTracing({
-  serviceName: "my-bot",
-  exporter: new OTLPTraceExporter({ url: "http://localhost:4318/v1/traces" }),
-});
+- `@pipedog/core` has `@opentelemetry/api` as an **optional peer dependency**. Without it, core
+  runs exactly the same, `isTracingAvailable()` is false and every tracing helper is a no-op.
+- `@pipedog/tracing` brings the OpenTelemetry SDK, an OTLP/HTTP exporter and `setupTracing()`.
+
+```bash
+bun add @pipedog/tracing @opentelemetry/api
 ```
 
-Then enable it per worker with `new PipelineWorker(pipeline, { enableTracing: true })`, and add
-attributes to the conversation span with `additionalSpanAttributes`.
+### Setup
 
-<Callout title="Planned: an OpenTelemetry package">
-  A dedicated tracing package that wires up the OpenTelemetry SDK, exporters and the service span
-  decorators for you, on every runtime including Cloudflare Workers, is planned. Until it lands,
-  the setup above is manual, and service spans only appear for services that have been ported.
-</Callout>
+Call `setupTracing()` once at startup, then turn tracing on per worker with `enableTracing`:
+
+<include cwd>snippets/tracing.ts#setup</include>
+
+`setupTracing({ serviceName, exporter, consoleExport })` matches upstream's
+`setup_tracing(service_name, exporter, console_export)`. It sets the resource attributes
+`service.name`, `service.instance.id` (`$HOSTNAME`) and `deployment.environment`
+(`$ENVIRONMENT`, default `development`), adds a batch span processor for each exporter, and
+registers the global tracer provider (which, as in Python, can only be set once per process). It
+returns `false` if setup failed.
+
+`@pipedog/tracing` re-exports `OTLPTraceExporter` (from `@opentelemetry/exporter-trace-otlp-http`,
+which sends OTLP/HTTP JSON with `fetch` or `node:http`), `ConsoleSpanExporter`,
+`InMemorySpanExporter` and the span processors. Any OpenTelemetry `SpanExporter` works. Pointing
+it at a hosted backend is a matter of URL and headers:
+
+<include cwd>snippets/tracing.ts#vendors</include>
+
+### Spans and attributes
+
+```
+conversation                    conversation.id, conversation.type = "voice", + additionalSpanAttributes
+└── turn                        turn.number, turn.type, conversation.id, turn.duration_seconds,
+    │                           turn.was_interrupted, turn.user_bot_latency_seconds
+    ├── stt                     gen_ai.provider.name, gen_ai.request.model, gen_ai.operation.name,
+    │                           transcript, is_final, language, vad_enabled, metrics.ttfb,
+    │                           metrics.audio_seconds, settings.*
+    ├── llm                     gen_ai.provider.name, gen_ai.request.model, gen_ai.operation.name = "chat",
+    │                           stream, input, output, tools, tool_count, tool_choice,
+    │                           gen_ai.system_instructions, gen_ai.usage.input_tokens,
+    │                           gen_ai.usage.output_tokens, metrics.ttfb, gen_ai.request.*, param.*
+    └── tts                     gen_ai.provider.name, gen_ai.request.model, gen_ai.output.type = "speech",
+                                voice_id, text, metrics.character_count, metrics.ttfb, settings.*
+```
+
+- The **conversation** span starts with the pipeline (`StartFrame`) and ends when the worker
+  finishes; its id is `conversationId`, or a random UUID.
+- A **turn** span covers one user turn and the bot's answer, as tracked by `TurnTrackingObserver`.
+- **Service** spans are children of the current turn (or of the conversation, between turns).
+  They come from the `tracedStt` / `tracedLlm` / `tracedTts` decorators (and `tracedGeminiLive`,
+  `tracedOpenaiRealtime` for speech-to-speech services, whose spans are named after the operation:
+  `llm_setup`, `llm_request`, `llm_response`, `llm_tool_call`, `llm_tool_result`) in
+  `@pipedog/core/utils/tracing/service_decorators`. Provider packages apply them as upstream's
+  services do, so a service shows up in traces once its package is ported.
+
+The metrics described above are recorded on these spans (`metrics.ttfb`, token usage, character
+counts), not as separate OpenTelemetry metrics: like Pipecat, pipedog has no OpenTelemetry metrics
+exporter. Read `MetricsFrame`s with an observer if you need them as time series.
+
+### Cloudflare Workers
+
+`@pipedog/core` and `@pipedog/tracing` run on Workers (see the
+[compatibility table](/docs/runtimes)). The OTLP exporter posts spans with `fetch`, and spans are
+batched, so flush them before the request ends:
+
+<include cwd>snippets/tracing.ts#workers</include>
+
+`forceFlushTracing()` and `shutdownTracing()` are pipedog additions (a Python process flushes
+on exit).
+
+### Without `@pipedog/tracing`
+
+If you already set up the OpenTelemetry SDK yourself (for example with `@opentelemetry/sdk-node`),
+you only need `@opentelemetry/api` installed: core imports it on its own. That import is
+asynchronous (core never uses top-level await), so tracing becomes available a moment after core
+loads. Inside a request handler this is already done; at module top level, wait for it or register
+the API yourself:
+
+<include cwd>snippets/tracing.ts#core-only</include>

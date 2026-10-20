@@ -13,8 +13,8 @@
  *
  * Porting notes:
  * - Upstream decides at import time whether tracing is available and returns
- *   a no-op decorator otherwise. Here OpenTelemetry is registered at runtime
- *   (`registerOpenTelemetry()`), possibly after service classes are defined,
+ *   a no-op decorator otherwise. Here OpenTelemetry is imported asynchronously
+ *   or registered at runtime (see `setup.ts`), possibly after service classes are defined,
  *   so the wrappers check `isTracingAvailable()` when they run instead. With
  *   tracing unavailable they call straight through, as upstream's no-op does.
  * - Every decorator works three ways:

@@ -6,15 +6,21 @@
 // Node, Deno and workerd, prints a package x runtime matrix, and with
 // --write records the passing runtimes in `pipecat.runtimes`.
 //
-//   bun tools/compat/run.ts [--package <name>] [--runtime <rt>] [--write]
+//   bun tools/compat/run.ts [--package <name>] [--runtime <rt>] [--write] [--with-optional-peers]
 //
 // --package and --runtime may be repeated (or comma-separated).
+//
+// By default, optional peer dependencies (peerDependenciesMeta optional, e.g.
+// core's @opentelemetry/api) that the package under test does not itself
+// require are made unresolvable, as for a consumer who never installed them.
+// --with-optional-peers resolves them from the workspace instead.
 
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import {
   discoverPackages,
+  optionalPeersToHide,
   type PackageInfo,
   RUNTIMES,
   type Runtime,
@@ -30,6 +36,7 @@ const { values } = parseArgs({
     package: { type: "string", multiple: true },
     runtime: { type: "string", multiple: true },
     write: { type: "boolean", default: false },
+    "with-optional-peers": { type: "boolean", default: false },
     verbose: { type: "boolean", short: "v", default: false },
     help: { type: "boolean", short: "h", default: false },
   },
@@ -37,7 +44,7 @@ const { values } = parseArgs({
 
 if (values.help) {
   console.log(
-    "usage: bun tools/compat/run.ts [--package <name>] [--runtime <bun|node|deno|workerd>] [--write] [--verbose]",
+    "usage: bun tools/compat/run.ts [--package <name>] [--runtime <bun|node|deno|workerd>] [--write] [--with-optional-peers] [--verbose]",
   );
   process.exit(0);
 }
@@ -90,9 +97,11 @@ for (const pkg of packages) {
     for (const rt of runtimes) row.results[rt] = { ok: false, error, detail: error, notes: [] };
     continue;
   }
+  const hidden = values["with-optional-peers"] ? [] : optionalPeersToHide(pkg, all);
+  if (hidden.length) row.smokeLabel += ` (without optional peers: ${hidden.join(", ")})`;
   for (const rt of runtimes) {
     process.stderr.write(`running ${pkg.name} on ${rt}...\n`);
-    row.results[rt] = await runSmoke(rt, smoke, slug(pkg.name));
+    row.results[rt] = await runSmoke(rt, smoke, slug(pkg.name), hidden);
   }
 }
 

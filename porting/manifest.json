@@ -15961,7 +15961,7 @@
       "tests": [],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "DIVERGENCE: core cannot depend on OpenTelemetry, so the OTel JS modules are injected once with registerOpenTelemetry({ api, sdk, resources }), replacing upstream's try-import. isTracingAvailable() is true once they are registered. setupTracing({ serviceName, exporter, consoleExport }) uses the sdk-trace-base v2 API (BasicTracerProvider with spanProcessors, resourceFromAttributes, trace.setGlobalTracerProvider). The OTel types are structural interfaces (OtelSpan, OtelSpanContext, OtelContext, OtelTracer). Upstream's print() of setup errors is logger.error. | UNRESOLVED: packages/core/src/utils/security/redaction.ts: JS `\\w` and `\\b` only match ASCII, while Python's match Unicode. In the PAIR name lookbehind and in KNOWN_TOKENS (`\\b`, `github_pat_\\w{82,}`), a credential name or token right after a non-ASCII letter can be redacted in JS where Python would leave it. This only over-redacts and is harmless, so I left it unchanged. | UNRESOLVED: packages/core/src/workers/base_worker.ts checkWorkerNames: the TypeError message names JS types (\"number\") where Python names its own (\"int\"). It only affects the error text. | UNRESOLVED: packages/core/src/utils/string.ts: the default sentence splitter (Intl.Segmenter plus an abbreviation list) is a documented replacement for sentencex, so some sentence boundaries can differ from upstream. Install a sentencex-compatible splitter with setSentenceSegmenter() to get exact parity. This is a design gap, not a line-level porting bug."
+      "notes": "@opentelemetry/api is an optional peer of @pipedog/core (upstream's [tracing] extra). Upstream's import-time try-import becomes a dynamic import(\"@opentelemetry/api\") started when the module loads (no top-level await; a missing package is caught), so isTracingAvailable() turns true a moment after load; loadOpenTelemetry() awaits it. registerOpenTelemetry({ api, sdk, resources }) registers explicitly and synchronously and wins over the automatic import (@pipedog/tracing's setupTracing() does this). setupTracing({ serviceName, exporter, consoleExport }) needs sdk and resources registered and uses the sdk-trace-base v2 API (BasicTracerProvider with spanProcessors, resourceFromAttributes, trace.setGlobalTracerProvider). The OTel types are structural interfaces (OtelSpan, OtelSpanContext, OtelContext, OtelTracer), so the published types do not need the peer. Upstream's print() of setup errors is logger.error. | UNRESOLVED: packages/core/src/utils/security/redaction.ts: JS `\\w` and `\\b` only match ASCII, while Python's match Unicode. In the PAIR name lookbehind and in KNOWN_TOKENS (`\\b`, `github_pat_\\w{82,}`), a credential name or token right after a non-ASCII letter can be redacted in JS where Python would leave it. This only over-redacts and is harmless, so I left it unchanged. | UNRESOLVED: packages/core/src/workers/base_worker.ts checkWorkerNames: the TypeError message names JS types (\"number\") where Python names its own (\"int\"). It only affects the error text. | UNRESOLVED: packages/core/src/utils/string.ts: the default sentence splitter (Intl.Segmenter plus an abbreviation list) is a documented replacement for sentencex, so some sentence boundaries can differ from upstream. Install a sentencex-compatible splitter with setSentenceSegmenter() to get exact parity. This is a design gap, not a line-level porting bug."
     },
     {
       "module": "pipecat.utils.tracing.tracing_context",
@@ -18318,8 +18318,8 @@
         "pipecat.utils.tracing.service_decorators"
       ],
       "needsModules": 115,
-      "status": "skipped",
-      "notes": "0 pass, 0 fail, 7 skip, 0 todo"
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo (uses a stub service, not the unported Gemini Live provider; runs with the @opentelemetry devDependencies)"
     },
     {
       "file": "tests/test_gemini_live_user_audio.py",
@@ -20880,8 +20880,8 @@
         "pipecat.utils.tracing.tracing_context"
       ],
       "needsModules": 2,
-      "status": "skipped",
-      "notes": "0 pass, 0 fail, 10 skip, 0 todo"
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo (runs with the @opentelemetry/api + sdk-trace-base devDependencies)"
     },
     {
       "file": "tests/test_tracing_system_instruction.py",
@@ -21118,8 +21118,8 @@
         "pipecat.utils.tracing.turn_trace_observer"
       ],
       "needsModules": 115,
-      "status": "skipped",
-      "notes": "0 pass, 0 fail, 12 skip, 0 todo"
+      "status": "tested",
+      "notes": "10 pass, 0 fail, 0 skip, 0 todo (runs with the @opentelemetry/api + sdk-trace-base devDependencies)"
     },
     {
       "file": "tests/test_turn_tracking_observer.py",
