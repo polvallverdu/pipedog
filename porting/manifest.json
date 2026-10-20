@@ -17076,8 +17076,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 113,
-      "status": "ported",
-      "notes": "18 pass, 0 fail, 0 skip, 5 todo"
+      "status": "tested",
+      "notes": "23 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_base_smart_turn_buffer.py",
@@ -17585,8 +17585,8 @@
         "pipecat.audio.dtmf.utils"
       ],
       "needsModules": 7,
-      "status": "ported",
-      "notes": "0 pass, 0 fail, 0 skip, 2 todo"
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_eager_end_of_turn_mixin.py",
@@ -19010,7 +19010,7 @@
       ],
       "needsModules": 7,
       "status": "ported",
-      "notes": "1 pass, 0 fail, 0 skip, 2 todo"
+      "notes": "2 pass, 0 fail, 1 skip, 1 todo | DIVERGENCE: test_resample_48k_to_16k_close_to_vhq is skipped for the default engine (@pipedog/resampler-wasm): its HQ and VHQ presets use different cutoffs (0.895 vs 0.947 x Nyquist), so HQ vs VHQ RMS is ~0.037 (bound 5e-3). The same assertions pass with core's TypeScript sinc engine (extra test). test_predict_endpoint_on_48k_input_runs needs an ONNX runtime."
     },
     {
       "file": "tests/test_log_config.py",

@@ -50,6 +50,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
+        "@pipedog/resampler-wasm": "workspace:*",
         "@pipedog/sentencex-wasm": "workspace:*",
       },
     },

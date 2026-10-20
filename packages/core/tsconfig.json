@@ -11,6 +11,9 @@
       "path": "../asyncio"
     },
     {
+      "path": "../resampler-wasm"
+    },
+    {
       "path": "../sentencex-wasm"
     }
   ]

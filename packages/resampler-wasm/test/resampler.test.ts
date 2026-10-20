@@ -9,6 +9,7 @@ import {
   QUALITIES,
   type RubatoEngine,
 } from "../src/index.ts";
+import { WASM_BASE64, WASM_SIZE } from "../src/wasm_bytes.ts";
 
 let engine: RubatoEngine;
 
@@ -96,6 +97,14 @@ describe("init", () => {
     expect(e.resample(new Uint8Array(sine(160, 16000).buffer), 16000, 8000).length).toBe(160);
     const fromModule = await initResampler(new WebAssembly.Module(bytes));
     expect(getResampler()).toBe(fromModule);
+  });
+
+  test("embedded bytes match the committed wasm/resampler.wasm", async () => {
+    const file = new Uint8Array(
+      await Bun.file(new URL("../wasm/resampler.wasm", import.meta.url)).arrayBuffer(),
+    );
+    expect(WASM_SIZE).toBe(file.length);
+    expect(WASM_BASE64).toBe(Buffer.from(file).toString("base64"));
   });
 });
 

@@ -601,8 +601,7 @@ function _oneSecondOfAudio(): OutputAudioRawFrame {
 /** A peer that stops reading blocks the write on buffers that never drain. */
 describe("TestBaseOutputTransportWriteTimeout", () => {
   /** `processFrame` pushes the EndFrame only after `stop()` returns. */
-  // TODO: needs audio/resamplers/soxr_stream_resampler (SoxrResampleStream, libsoxr) which is not ported.
-  test.todo("test_end_frame_still_reaches_downstream", async () => {
+  test("test_end_frame_still_reaches_downstream", async () => {
     const neverReturns = new Event();
 
     const wedged = async (_frame: unknown) => {
@@ -622,8 +621,7 @@ describe("TestBaseOutputTransportWriteTimeout", () => {
   });
 
   /** Paying the timeout per queued frame would hang shutdown by a slower route. */
-  // TODO: needs audio/resamplers/soxr_stream_resampler (SoxrResampleStream, libsoxr) which is not ported.
-  test.todo("test_peer_is_written_off_once", async () => {
+  test("test_peer_is_written_off_once", async () => {
     const neverReturns = new Event();
 
     const wedged = async (_frame: unknown) => {
@@ -643,8 +641,7 @@ describe("TestBaseOutputTransportWriteTimeout", () => {
   });
 
   /** Long playout is legitimately slow; only a stalled write is written off. */
-  // TODO: needs audio/resamplers/soxr_stream_resampler (SoxrResampleStream, libsoxr) which is not ported.
-  test.todo("test_slow_write_within_the_bound_is_not_cut_short", async () => {
+  test("test_slow_write_within_the_bound_is_not_cut_short", async () => {
     const slow = async (_frame: unknown) => {
       await sleep(0.05);
       return true;
@@ -722,8 +719,7 @@ describe("TestBaseOutputTransportResampling", () => {
    * nothing about the stream: the audio either side of it is one utterance,
    * and all of it has to reach the transport.
    */
-  // TODO: needs audio/resamplers/soxr_stream_resampler (SoxrResampleStream, libsoxr) which is not ported.
-  test.todo("test_delivery_pause_does_not_drop_audio", async () => {
+  test("test_delivery_pause_does_not_drop_audio", async () => {
     const transport = await _makeTransport({ audioOutSampleRate: OUT_RATE });
     try {
       const sender = transport._mediaSenders.get(null);
@@ -757,8 +753,7 @@ describe("TestBaseOutputTransportResampling", () => {
   });
 
   /** Audio cut short is dropped, not carried into what the bot says next. */
-  // TODO: needs audio/resamplers/soxr_stream_resampler (SoxrResampleStream, libsoxr) which is not ported.
-  test.todo("test_interruption_does_not_replay_aborted_audio", async () => {
+  test("test_interruption_does_not_replay_aborted_audio", async () => {
     const transport = await _makeTransport({ audioOutSampleRate: OUT_RATE });
     try {
       const sender = transport._mediaSenders.get(null);
