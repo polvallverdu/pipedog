@@ -37,7 +37,7 @@ import {
 } from "@pipedog/core/serializers/base_serializer";
 import { base64ToBytes, bytesToBase64 } from "@pipedog/core/utils/base64";
 import { logger } from "@pipedog/core/utils/logger";
-import { pyJsonDumps as jsonDumps } from "@pipedog/core/utils/py_json";
+import { pyJsonDumps as jsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 
 export interface TelnyxFrameSerializerInputParamsOptions extends FrameSerializerInputParamsOptions {
   /** Sample rate used by Telnyx, defaults to 8000 Hz. */
@@ -297,7 +297,7 @@ export class TelnyxFrameSerializer extends FrameSerializer {
         // Error code 90018: "Call has already ended"
         // Source: https://developers.telnyx.com/api/errors/90018
         try {
-          const errorData: unknown = JSON.parse(errorText);
+          const errorData: unknown = pyJsonLoads(errorText);
           // `dictGet` raises like upstream's `.get()` on a non-dict, which
           // falls through below (and stops `any()` at that element).
           const errors = dictGet(errorData, "errors", []);
@@ -343,7 +343,7 @@ export class TelnyxFrameSerializer extends FrameSerializer {
     let message: unknown;
     try {
       const text = typeof data === "string" ? data : new TextDecoder().decode(data);
-      message = JSON.parse(text);
+      message = pyJsonLoads(text);
     } catch (e) {
       rethrowIfCancelled(e);
       logger.warning(`Failed to parse JSON message: ${String(data)}`);

@@ -34,7 +34,14 @@
  */
 
 import { GoogleGenAI, type HttpOptions, type LiveConnectConfig, type Session } from "@google/genai";
-import { CancelledError, Queue, rethrowIfCancelled, type Task, time } from "@pipedog/asyncio";
+import {
+  CancelledError,
+  Future,
+  Queue,
+  rethrowIfCancelled,
+  type Task,
+  time,
+} from "@pipedog/asyncio";
 import {
   type CancelFrame,
   type EndFrame,
@@ -496,24 +503,75 @@ export class GeminiSTTService extends STTService {
     const config = this._buildLiveConfig();
     const messages = new Queue<SessionEvent>();
     this._sessionMessages = messages;
-    const session = await this._client.live.connect({
-      model,
-      config,
-      callbacks: {
-        onmessage: (message: unknown) => {
-          messages.putNowait({ kind: "message", message: message as LiveServerMessageLike });
+
+    // `live.connect()` resolves once the socket is open and the server has
+    // answered the setup with `setupComplete`. If the socket fails or is
+    // closed before that (refused connection, failed handshake, or Google
+    // closing it over a bad API key or model) the SDK reports it only through
+    // `onerror` / `onclose` and the promise never settles. Upstream's
+    // `connect()` raises in those cases, so until the session is open those
+    // callbacks fail the connect instead of feeding the receive queue.
+    const opened = new Future<Session>();
+    let connected = false;
+    const failConnect = (error: unknown) => {
+      if (!opened.done()) opened.setException(error);
+    };
+    this._client.live
+      .connect({
+        model,
+        config,
+        callbacks: {
+          onmessage: (message: unknown) => {
+            messages.putNowait({ kind: "message", message: message as LiveServerMessageLike });
+          },
+          onerror: (event: unknown) => {
+            const error = (event as { error?: unknown }).error ?? event;
+            if (!connected) {
+              failConnect(error instanceof Error ? error : new Error(errorMessage(error)));
+              return;
+            }
+            messages.putNowait({ kind: "error", error });
+          },
+          onclose: (event: { code?: number; reason?: string } | null | undefined) => {
+            if (!connected) {
+              failConnect(
+                new Error(
+                  `Gemini Live connection closed (code ${event?.code ?? "unknown"}): ${event?.reason ?? ""}`,
+                ),
+              );
+              return;
+            }
+            messages.putNowait({ kind: "close", code: event?.code, reason: event?.reason });
+          },
         },
-        onerror: (event: unknown) => {
-          messages.putNowait({
-            kind: "error",
-            error: (event as { error?: unknown }).error ?? event,
-          });
+      })
+      .then(
+        (session) => {
+          // Opened after the caller gave up (cancelled, or the socket already
+          // failed): nobody owns this session, so close it.
+          if (opened.done()) {
+            session.close();
+            return;
+          }
+          // From here on, socket errors and closes go to the receive task.
+          connected = true;
+          opened.setResult(session);
         },
-        onclose: (event: { code?: number; reason?: string } | null | undefined) => {
-          messages.putNowait({ kind: "close", code: event?.code, reason: event?.reason });
-        },
-      },
-    });
+        (e: unknown) => failConnect(e),
+      );
+    // A Future is a cancellation point; the SDK's promise is not.
+    let session: Session;
+    try {
+      session = await opened;
+    } catch (e) {
+      // Cancelled after the session opened, before this task resumed.
+      if (e instanceof CancelledError && opened.done() && !opened.cancelled()) {
+        if (opened.exception() === null || opened.exception() === undefined) {
+          opened.result().close();
+        }
+      }
+      throw e;
+    }
     this._sessionCtx = session;
     this._session = session;
     this._connectionStartTime = time();

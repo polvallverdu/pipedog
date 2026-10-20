@@ -19,8 +19,8 @@
  */
 
 import * as RTVI from "@pipedog/core/processors/frameworks/rtvi/models";
+import { pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { RTVIClientSerializer } from "@pipedog/serializer-rtvi-client/rtvi_client";
-
 import { WebsocketClientParams, WebsocketClientTransport } from "./client.ts";
 import type { WebsocketConnection, WebsocketData } from "./socket.ts";
 
@@ -103,9 +103,9 @@ export class RTVIClientTransport extends WebsocketClientTransport {
     let data: unknown;
     try {
       if (typeof message === "string") {
-        data = JSON.parse(message);
+        data = pyJsonLoads(message);
       } else if (message instanceof Uint8Array) {
-        data = JSON.parse(new TextDecoder().decode(message));
+        data = pyJsonLoads(new TextDecoder().decode(message));
       } else {
         return false;
       }

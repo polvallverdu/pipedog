@@ -194,7 +194,8 @@ export class Reader {
 }
 
 const encoder = new TextEncoder();
-const decoder = new TextDecoder();
+// proto3 `string` fields must be valid UTF-8; upstream's parser rejects others.
+const decoder = new TextDecoder("utf-8", { fatal: true });
 
 /** Base class of the generated-style messages. */
 export abstract class Message {
@@ -298,7 +299,12 @@ export abstract class Message {
           break;
         }
         case "string":
-          self[f.attr] = decoder.decode(reader.take(reader.varint()));
+          try {
+            self[f.attr] = decoder.decode(reader.take(reader.varint()));
+          } catch (e) {
+            if (!(e instanceof TypeError)) throw e;
+            throw new Error("Error parsing message: invalid UTF-8 in string field");
+          }
           break;
         case "bytes":
           self[f.attr] = reader.take(reader.varint());

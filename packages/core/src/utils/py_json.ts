@@ -104,3 +104,45 @@ export function pyJsonDumps(value: unknown, options: PyJsonDumpsOptions = {}): s
 
   return encode(value);
 }
+
+/**
+ * Python's `json.loads`: `JSON.parse`, plus the `NaN`, `Infinity` and
+ * `-Infinity` literals Python's encoder writes (and its decoder accepts).
+ * Errors are `JSON.parse`'s `SyntaxError`.
+ */
+export function pyJsonLoads(text: string): unknown {
+  if (!/NaN|Infinity/.test(text)) return JSON.parse(text);
+  // Rewrite the literals outside string tokens to sentinel strings that
+  // cannot occur in the input, then turn those back into numbers.
+  let tag = "pyjson";
+  while (text.includes(tag)) tag += "_";
+  const sentinels: Record<string, number> = {
+    [`\u0000${tag}:NaN`]: Number.NaN,
+    [`\u0000${tag}:Infinity`]: Number.POSITIVE_INFINITY,
+    [`\u0000${tag}:-Infinity`]: Number.NEGATIVE_INFINITY,
+  };
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    const c = text[i] as string;
+    if (c === '"') {
+      // Copy the string token verbatim.
+      let j = i + 1;
+      while (j < text.length && text[j] !== '"') j += text[j] === "\\" ? 2 : 1;
+      out += text.slice(i, j + 1);
+      i = j + 1;
+      continue;
+    }
+    const literal = ["-Infinity", "Infinity", "NaN"].find((l) => text.startsWith(l, i));
+    if (literal) {
+      out += JSON.stringify(`\u0000${tag}:${literal}`);
+      i += literal.length;
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return JSON.parse(out, (_key, value) =>
+    typeof value === "string" && value in sentinels ? sentinels[value] : value,
+  );
+}

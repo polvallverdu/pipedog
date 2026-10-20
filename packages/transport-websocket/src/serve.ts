@@ -151,11 +151,15 @@ async function serveDeno(options: WebsocketServeOptions): Promise<WebsocketServe
         return upgradeRequired();
       }
       if (isOriginRejected(options.origins, req.headers.get("origin"))) return forbidden();
-      const { socket, response } = Deno.upgradeWebSocket(req);
+      // Read the request first: once upgraded, it is closed and its headers,
+      // URL and `info.remoteAddr` throw.
       const addr = info?.remoteAddr;
+      const headers = new Headers(req.headers);
+      const path = new URL(req.url).pathname;
+      const { socket, response } = Deno.upgradeWebSocket(req);
       const connection = WebsocketConnection.fromWebSocket(socket, {
-        headers: req.headers,
-        path: new URL(req.url).pathname,
+        headers,
+        path,
         remoteAddress: addr ? `${addr.hostname}:${addr.port}` : null,
       });
       socket.addEventListener("open", () => tracker.handle(connection));

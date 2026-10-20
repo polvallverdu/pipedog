@@ -99,12 +99,23 @@ export abstract class FrameSerializer extends BaseObject {
     if (
       this._params.ignoreRtviMessages &&
       (frame instanceof OutputTransportMessageFrame ||
-        frame instanceof OutputTransportMessageUrgentFrame) &&
-      typeof frame.message === "object" &&
-      frame.message !== null &&
-      (frame.message as Record<string, unknown>).label === RTVI.MESSAGE_LABEL
+        frame instanceof OutputTransportMessageUrgentFrame)
     ) {
-      return true;
+      const message: unknown = frame.message;
+      // Upstream calls `frame.message.get("label")`, which raises for a
+      // message that is not a dict.
+      if (typeof message !== "object" || message === null || Array.isArray(message)) {
+        const type =
+          message === null || message === undefined
+            ? "NoneType"
+            : Array.isArray(message)
+              ? "list"
+              : typeof message === "string"
+                ? "str"
+                : typeof message;
+        throw new TypeError(`'${type}' object has no attribute 'get'`);
+      }
+      return (message as Record<string, unknown>).label === RTVI.MESSAGE_LABEL;
     }
     return false;
   }

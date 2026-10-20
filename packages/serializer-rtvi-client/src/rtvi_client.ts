@@ -52,7 +52,7 @@ import {
 } from "@pipedog/core/serializers/base_serializer";
 import { bytesToBase64 } from "@pipedog/core/utils/base64";
 import { logger } from "@pipedog/core/utils/logger";
-import { pyJsonDumps as jsonDumps } from "@pipedog/core/utils/py_json";
+import { pyJsonDumps as jsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { TextType } from "@pipedog/core/utils/text/base_text_aggregator";
 
 type Dict = Record<string, unknown>;
@@ -185,7 +185,7 @@ export class RTVIClientSerializer extends FrameSerializer {
           `the JSON object must be str, bytes or bytearray, not ${pyTypeName(text)}`,
         );
       }
-      message = JSON.parse(text);
+      message = pyJsonLoads(text);
     } catch (e) {
       if (!(e instanceof SyntaxError || e instanceof TypeError)) throw e;
       logger.warning(`RTVIClientSerializer: dropping non-JSON message: ${e.message}`);

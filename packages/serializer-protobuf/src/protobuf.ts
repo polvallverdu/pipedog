@@ -25,7 +25,7 @@ import {
   type SerializedData,
 } from "@pipedog/core/serializers/base_serializer";
 import { logger } from "@pipedog/core/utils/logger";
-import { pyJsonDumps as jsonDumps } from "@pipedog/core/utils/py_json";
+import { pyJsonDumps as jsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 
 export interface MessageFrameOptions {
   /** JSON-encoded message data for transport. */
@@ -206,7 +206,7 @@ export class ProtobufFrameSerializer extends FrameSerializer {
     // Special handling for MessageFrame -> InputTransportMessageFrame
     if (className === MessageFrame) {
       try {
-        const msg = JSON.parse(argsDict.data as string);
+        const msg = pyJsonLoads(argsDict.data as string);
         instance = new InputTransportMessageFrame({ message: msg });
         logger.debug(`ProtobufFrameSerializer: Transport message ${instance}`);
       } catch (e) {

@@ -4,7 +4,7 @@
 // Expected strings were produced by CPython's json.dumps.
 
 import { describe, expect, test } from "bun:test";
-import { pyJsonDumps, pyNumberRepr } from "../src/utils/py_json.ts";
+import { pyJsonDumps, pyJsonLoads, pyNumberRepr } from "../src/utils/py_json.ts";
 
 const CASES: [unknown, string, string][] = [
   [null, "null", "null"],
@@ -65,5 +65,28 @@ describe("pyJsonDumps", () => {
     expect(pyNumberRepr(1.5e300)).toBe("1.5e+300");
     expect(pyNumberRepr(0.0001)).toBe("0.0001");
     expect(pyJsonDumps(2n ** 60n)).toBe("1152921504606846976");
+  });
+});
+
+describe("pyJsonLoads", () => {
+  test("accepts Python's NaN and Infinity literals", () => {
+    const value = pyJsonLoads('{"a": NaN, "b": [Infinity, -Infinity], "s": "NaN Infinity"}') as {
+      a: number;
+      b: number[];
+      s: string;
+    };
+    expect(Number.isNaN(value.a)).toBe(true);
+    expect(value.b).toEqual([Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]);
+    expect(value.s).toBe("NaN Infinity");
+  });
+
+  test("round-trips pyJsonDumps", () => {
+    const value = { x: [1.5, Number.NEGATIVE_INFINITY], y: 'q"NaN\\' };
+    expect(pyJsonLoads(pyJsonDumps(value))).toEqual(value);
+  });
+
+  test("rejects invalid JSON like JSON.parse", () => {
+    expect(() => pyJsonLoads("{nope")).toThrow(SyntaxError);
+    expect(() => pyJsonLoads("[Nan]")).toThrow(SyntaxError);
   });
 });

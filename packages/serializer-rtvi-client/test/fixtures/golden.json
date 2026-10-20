@@ -1,0 +1,352 @@
+{
+  "serialize": [
+    {
+      "input": {
+        "kind": "message",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "client-ready",
+          "id": "c1",
+          "data": {
+            "version": "1.0.0",
+            "about": {
+              "library": "pipecat"
+            }
+          }
+        }
+      },
+      "out": "{\"label\": \"rtvi-ai\", \"type\": \"client-ready\", \"id\": \"c1\", \"data\": {\"version\": \"1.0.0\", \"about\": {\"library\": \"pipecat\"}}}"
+    },
+    {
+      "input": {
+        "kind": "message_urgent",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "send-text",
+          "id": "c2",
+          "data": {
+            "content": "héllo 🌍",
+            "options": {
+              "run_immediately": true,
+              "audio_response": false
+            }
+          }
+        }
+      },
+      "out": "{\"label\": \"rtvi-ai\", \"type\": \"send-text\", \"id\": \"c2\", \"data\": {\"content\": \"h\\u00e9llo \\ud83c\\udf0d\", \"options\": {\"run_immediately\": true, \"audio_response\": false}}}"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "message": {
+          "label": "rtvi-ai",
+          "type": "client-message",
+          "id": "c3",
+          "data": {
+            "t": "x",
+            "d": {
+              "f": 0.1,
+              "n": null,
+              "l": [1, 2.5]
+            }
+          }
+        }
+      },
+      "out": "{\"label\": \"rtvi-ai\", \"type\": \"client-message\", \"id\": \"c3\", \"data\": {\"t\": \"x\", \"d\": {\"f\": 0.1, \"n\": null, \"l\": [1, 2.5]}}}"
+    },
+    {
+      "input": {
+        "kind": "message",
+        "message": {
+          "label": "other",
+          "type": "client-ready"
+        }
+      },
+      "out": null
+    },
+    {
+      "input": {
+        "kind": "message",
+        "message": ["label", "rtvi-ai"]
+      },
+      "out": null
+    },
+    {
+      "input": {
+        "kind": "audio",
+        "audio": "00004f0b9214341a721b85188f12570bd604c1001f000b03ad08710f6415b0180d181113510a3fffd7f330eafce32de2bbe4a8ea46f298f9cdfeb100f4fe3bfaf8f310ee67ea67eaa8eec7f67a01d60cc316721dc71f9c1dc117cd0fbc07740154fee1feaa026208360e3a12e512710f0f08defdb1f29ee88ae1b9de81e03ee675ee32f77cfecd026d03990073fbbbf55ef102f098f224f9b1028e0da8170a1f4c22e820561bf0129e096601f2fb2bfa0afc97002e06e00af20c480bab05dffc75f272e8d8e031dd2fde88e308ecd5f5e3fe68054b0860076f0300fefcf831f6e4f67dfb6b03440d1217cd1ecf223922261da314760aae002ef93cf538f58bf8ccfd1e03a306f0066d0376fc4cf3cee907e2b5dde1dda0e20deb7df5e3ff4508350d200e6c0b5d06c20085fc30fb8ffd7a03da0bee14ad1c44218421271de914",
+        "sample_rate": 16000,
+        "num_channels": 1
+      },
+      "out": "{\"label\": \"rtvi-ai\", \"type\": \"raw-audio\", \"id\": \"1\", \"data\": {\"base64Audio\": \"AABPC5IUNBpyG4UYjxJXC9YEwQAfAAsDrQhxD2QVsBgNGBETUQo//9fzMOr84y3iu+So6kbymPnN/rEA9P47+vjzEO5n6mfqqO7H9noB1gzDFnIdxx+cHcEXzQ+8B3QBVP7h/qoCYgg2DjoS5RJxDw8I3v2x8p7oiuG53oHgPuZ17jL3fP7NAm0DmQBz+7v1XvEC8JjyJPmxAo4NqBcKH0wi6CBWG/ASnglmAfL7K/oK/JcALgbgCvIMSAurBd/8dfJy6NjgMd0v3ojjCOzV9eP+aAVLCGAHbwMA/vz4Mfbk9n37awNEDRIXzR7PIjkiJh2jFHYKrgAu+Tz1OPWL+Mz9HgOjBvAGbQN2/EzzzukH4rXd4d2g4g3rffXj/0UINQ0gDmwLXQbCAIX8MPuP/XoD2gvuFK0cRCGEIScd6RQ=\", \"sampleRate\": 16000, \"numChannels\": 1}}"
+    },
+    {
+      "input": {
+        "kind": "audio",
+        "audio": "0001ff7f",
+        "sample_rate": 24000,
+        "num_channels": 2
+      },
+      "out": "{\"label\": \"rtvi-ai\", \"type\": \"raw-audio\", \"id\": \"2\", \"data\": {\"base64Audio\": \"AAH/fw==\", \"sampleRate\": 24000, \"numChannels\": 2}}"
+    },
+    {
+      "input": {
+        "kind": "text",
+        "text": "ignored"
+      },
+      "out": null
+    }
+  ],
+  "deserialize": [
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-started\", \"id\": \"x\"}",
+      "frame": {
+        "type": "LLMFullResponseStartFrame"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-text\", \"id\": \"x\", \"data\": {\"text\": \"Hi \\ud83d\\udc4b\"}}",
+      "frame": {
+        "type": "LLMTextFrame",
+        "text": "Hi 👋"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-text\", \"id\": \"x\", \"data\": {}}",
+      "frame": {
+        "type": "LLMTextFrame",
+        "text": ""
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-marker\", \"id\": \"x\", \"data\": {\"raw\": \"<x/>\", \"text\": \"x\", \"kind\": \"complete\", \"markers\": [\"a\", \"b\"]}}",
+      "frame": {
+        "type": "LLMMarkerResponseFrame",
+        "raw": "<x/>",
+        "marker": "x",
+        "kind": "complete",
+        "markers": ["a", "b"]
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-marker\", \"id\": \"x\", \"data\": {\"raw\": \"r\", \"text\": \"\", \"markers\": null}}",
+      "frame": {
+        "type": "LLMMarkerResponseFrame",
+        "raw": "r",
+        "marker": null,
+        "kind": null,
+        "markers": []
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-stopped\", \"id\": \"x\"}",
+      "frame": {
+        "type": "LLMFullResponseEndFrame"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-tts-text\", \"id\": \"x\", \"data\": {\"text\": \"Spoken \\u00fc\"}}",
+      "frame": {
+        "type": "TTSTextFrame",
+        "text": "Spoken ü",
+        "text_type": "sentence"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-started-speaking\", \"id\": \"x\"}",
+      "frame": {
+        "type": "BotStartedSpeakingFrame"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-stopped-speaking\", \"id\": \"x\"}",
+      "frame": {
+        "type": "BotStoppedSpeakingFrame"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-interrupted\", \"id\": \"x\"}",
+      "frame": {
+        "type": "InterruptionFrame"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"llm-function-call-in-progress\", \"id\": \"x\", \"data\": {\"function_name\": \"get_weather\", \"tool_call_id\": \"t1\", \"arguments\": {\"city\": \"Z\\u00fcrich\", \"n\": 1.5}}}",
+      "frame": {
+        "type": "FunctionCallInProgressFrame",
+        "function_name": "get_weather",
+        "tool_call_id": "t1",
+        "arguments": {
+          "city": "Zürich",
+          "n": 1.5
+        }
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"llm-function-call-in-progress\", \"id\": \"x\", \"data\": {\"tool_call_id\": \"t2\"}}",
+      "frame": {
+        "type": "FunctionCallInProgressFrame",
+        "function_name": "",
+        "tool_call_id": "t2",
+        "arguments": {}
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"llm-function-call-stopped\", \"id\": \"x\", \"data\": {\"function_name\": \"f\", \"tool_call_id\": \"t3\", \"cancelled\": true}}",
+      "frame": {
+        "type": "FunctionCallCancelFrame",
+        "function_name": "f",
+        "tool_call_id": "t3"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"llm-function-call-stopped\", \"id\": \"x\", \"data\": {\"function_name\": \"f\", \"tool_call_id\": \"t4\", \"cancelled\": false, \"result\": {\"ok\": [1, 2]}}}",
+      "frame": {
+        "type": "FunctionCallResultFrame",
+        "function_name": "f",
+        "tool_call_id": "t4",
+        "arguments": {},
+        "result": {
+          "ok": [1, 2]
+        }
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"llm-function-call-stopped\", \"id\": \"x\", \"data\": {\"tool_call_id\": \"t5\"}}",
+      "frame": {
+        "type": "FunctionCallResultFrame",
+        "function_name": "",
+        "tool_call_id": "t5",
+        "arguments": {},
+        "result": null
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"user-transcription\", \"id\": \"x\", \"data\": {\"text\": \"hola qu\\u00e9 tal\", \"user_id\": \"u\", \"timestamp\": \"2026\", \"final\": true}}",
+      "frame": {
+        "type": "TranscriptionFrame",
+        "text": "hola qué tal",
+        "user_id": "u",
+        "timestamp": "2026"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"user-transcription\", \"id\": \"x\", \"data\": {\"text\": \"hol\", \"user_id\": \"u\", \"timestamp\": \"2026\", \"final\": false}}",
+      "frame": {
+        "type": "InterimTranscriptionFrame",
+        "text": "hol",
+        "user_id": "u",
+        "timestamp": "2026"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"user-transcription\", \"id\": \"x\", \"data\": {\"text\": \"x\"}}",
+      "frame": {
+        "type": "TranscriptionFrame",
+        "text": "x",
+        "user_id": "",
+        "timestamp": ""
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-ready\", \"id\": \"x\", \"data\": {\"version\": \"1.0.0\"}}",
+      "frame": null
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"metrics\", \"id\": \"x\", \"data\": {\"processing\": []}}",
+      "frame": null
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-started\", \"id\": \"x\", \"data\": \"not a dict\"}",
+      "frame": {
+        "type": "LLMFullResponseStartFrame"
+      }
+    },
+    {
+      "input": "{\"label\": \"other\", \"type\": \"bot-llm-started\"}",
+      "frame": null
+    },
+    {
+      "input": "[1, 2]",
+      "frame": null
+    },
+    {
+      "input": "not json",
+      "frame": null
+    },
+    {
+      "input": "{\"type\": \"bot-llm-text\"}",
+      "frame": null
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-text\", \"id\": \"x\", \"data\": \"a string payload\"}",
+      "error": "AttributeError"
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-text\", \"id\": \"x\", \"data\": []}",
+      "frame": {
+        "type": "LLMTextFrame",
+        "text": ""
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-marker\", \"id\": \"x\", \"data\": {\"raw\": \"r\", \"markers\": {\"k1\": 1, \"k2\": 2}}}",
+      "frame": {
+        "type": "LLMMarkerResponseFrame",
+        "raw": "r",
+        "marker": null,
+        "kind": null,
+        "markers": ["k1", "k2"]
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-marker\", \"id\": \"x\", \"data\": {\"raw\": \"r\", \"markers\": \"ab\"}}",
+      "frame": {
+        "type": "LLMMarkerResponseFrame",
+        "raw": "r",
+        "marker": null,
+        "kind": null,
+        "markers": ["a", "b"]
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"bot-llm-marker\", \"id\": \"x\", \"data\": {\"raw\": \"r\", \"markers\": 5}}",
+      "error": "TypeError"
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"user-transcription\", \"id\": \"x\", \"data\": {\"text\": \"t\", \"final\": 0}}",
+      "frame": {
+        "type": "InterimTranscriptionFrame",
+        "text": "t",
+        "user_id": "",
+        "timestamp": ""
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"user-transcription\", \"id\": \"x\", \"data\": {\"text\": \"t\", \"final\": null}}",
+      "frame": {
+        "type": "InterimTranscriptionFrame",
+        "text": "t",
+        "user_id": "",
+        "timestamp": ""
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"llm-function-call-stopped\", \"id\": \"x\", \"data\": {\"tool_call_id\": \"t6\", \"cancelled\": \"yes\"}}",
+      "frame": {
+        "type": "FunctionCallCancelFrame",
+        "function_name": "",
+        "tool_call_id": "t6"
+      }
+    },
+    {
+      "input": "{\"label\": \"rtvi-ai\", \"type\": \"llm-function-call-in-progress\", \"id\": \"x\", \"data\": {\"tool_call_id\": \"t7\", \"arguments\": []}}",
+      "frame": {
+        "type": "FunctionCallInProgressFrame",
+        "function_name": "",
+        "tool_call_id": "t7",
+        "arguments": {}
+      }
+    }
+  ]
+}

@@ -672,6 +672,15 @@ export interface GoogleSTTServiceOptions extends STTServiceOptions {
    * the client's `getProjectId()`.
    */
   client?: GoogleSTTClient | null;
+  /**
+   * Extra options for the `@google-cloud/speech` v2 `SpeechClient` (e.g.
+   * `apiEndpoint`, `port`, `sslCreds`, `fallback`), merged over the ones the
+   * service derives from `location` and the credentials.
+   *
+   * DIVERGENCE: pipedog-only. Upstream builds its client from `location` and
+   * the credentials alone.
+   */
+  clientOptions?: Record<string, unknown> | null;
 }
 
 /**
@@ -729,6 +738,7 @@ export class GoogleSTTService extends STTService {
     return (this.constructor as typeof GoogleSTTService).STREAMING_LIMIT;
   }
   #credentialsPath: string | null = null;
+  #clientOptions: Record<string, unknown> | null = null;
 
   /**
    * Initialize the Google STT service.
@@ -748,7 +758,8 @@ export class GoogleSTTService extends STTService {
    *   Other options are passed to STTService.
    */
   constructor(options: GoogleSTTServiceOptions = {}) {
-    const { credentials, credentialsPath, location, client, settings, ...rest } = options;
+    const { credentials, credentialsPath, location, client, clientOptions, settings, ...rest } =
+      options;
 
     // 1. Initialize default_settings with hardcoded defaults
     const defaultSettings = new GoogleSTTSettings({
@@ -789,6 +800,7 @@ export class GoogleSTTService extends STTService {
 
     this._location = location ?? "global";
     this._client = client ?? null;
+    this.#clientOptions = clientOptions ?? null;
 
     // Extract project ID. With a credentials file or default credentials the
     // client (and the project ID) are resolved on first connect.
@@ -969,6 +981,7 @@ export class GoogleSTTService extends STTService {
       } else {
         clientOptions.scopes = ["https://www.googleapis.com/auth/cloud-platform"];
       }
+      Object.assign(clientOptions, this.#clientOptions);
 
       let speech: NodeSpeechModuleLike;
       try {

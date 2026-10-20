@@ -28,7 +28,12 @@
     "@pipedog/core": "workspace:*"
   },
   "pipecat": {
-    "runtimes": [],
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
     "upstream": [
       "src/pipecat/serializers/rtvi_client.py"
     ]

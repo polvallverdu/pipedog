@@ -29,7 +29,12 @@
     "@pipedog/core": "workspace:*"
   },
   "pipecat": {
-    "runtimes": [],
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
     "upstream": [
       "src/pipecat/serializers/telnyx.py"
     ]

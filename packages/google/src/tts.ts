@@ -183,20 +183,32 @@ export interface GoogleCloudTTSClientOptions {
   keyFilename?: string | null;
   /** Regional API endpoint, e.g. `us-central1-texttospeech.googleapis.com`. */
   apiEndpoint?: string | null;
+  /**
+   * Extra options for the SDK's `TextToSpeechClient` (e.g. `apiEndpoint`,
+   * `port`, `sslCreds`), merged over the ones above.
+   */
+  clientOptions?: Record<string, unknown> | null;
 }
 
 // A variable specifier keeps the Node-only SDK out of bundles and static
 // import graphs (Workers); it is only loaded when a Cloud TTS request runs.
 const TEXT_TO_SPEECH_SDK = "@google-cloud/text-to-speech";
 
+interface NodeTextToSpeechStream extends AsyncIterable<GoogleAudioResponse> {
+  write(request: unknown): boolean;
+  end(): void;
+  cancel?(): void;
+  destroy?(error?: Error): void;
+  once?(event: "close", listener: () => void): unknown;
+}
+
 interface NodeTextToSpeechClient {
   synthesizeSpeech(request: unknown): Promise<[GoogleAudioResponse, ...unknown[]]>;
-  streamingSynthesize(): {
-    write(request: unknown): boolean;
-    end(): void;
-    cancel?(): void;
-    destroy?(error?: Error): void;
-  } & AsyncIterable<GoogleAudioResponse>;
+  streamingSynthesize(): NodeTextToSpeechStream;
+}
+
+interface NodeTextToSpeechModule {
+  v1: { TextToSpeechClient: new (opts: object) => NodeTextToSpeechClient };
 }
 
 /**
@@ -210,10 +222,17 @@ export function createGoogleCloudTTSClient(
 
   const getClient = (): Promise<NodeTextToSpeechClient> => {
     client ??= (async () => {
-      let sdk: { v1: { TextToSpeechClient: new (opts: object) => NodeTextToSpeechClient } };
+      let sdk: NodeTextToSpeechModule;
       try {
-        sdk = await import(/* @vite-ignore */ TEXT_TO_SPEECH_SDK);
+        const mod = (await import(
+          /* @vite-ignore */ TEXT_TO_SPEECH_SDK
+        )) as NodeTextToSpeechModule & {
+          default?: NodeTextToSpeechModule;
+        };
+        // A CommonJS package: its exports may only be reachable as `default`.
+        sdk = mod.v1 ? mod : (mod.default as NodeTextToSpeechModule);
       } catch (e) {
+        rethrowIfCancelled(e);
         logger.error(`Exception: ${errorMessage(e)}`);
         logger.error(
           "In order to use Google Cloud Text-to-Speech, you need to install " +
@@ -227,6 +246,7 @@ export function createGoogleCloudTTSClient(
       if (options.credentials) clientOptions.credentials = options.credentials;
       if (options.keyFilename) clientOptions.keyFilename = options.keyFilename;
       if (options.apiEndpoint) clientOptions.apiEndpoint = options.apiEndpoint;
+      Object.assign(clientOptions, options.clientOptions);
       return new sdk.v1.TextToSpeechClient(clientOptions);
     })();
     // Retry the import / construction on the next request if it failed.
@@ -245,17 +265,24 @@ export function createGoogleCloudTTSClient(
     async streamingSynthesize(requests) {
       const c = await abortable(getClient());
       const stream = c.streamingSynthesize();
-      // Feed the requests as the upstream request generator does.
-      (async () => {
-        try {
-          for await (const request of requests) stream.write(request);
-          stream.end();
-        } catch (e) {
-          stream.destroy?.(e instanceof Error ? e : new Error(String(e)));
-        }
-      })();
+      // Cancelling the task that reads the responses cancels the call. The
+      // listener goes away with the call, so a long-lived task (the
+      // service's) doesn't collect one per utterance.
       const signal = currentSignal();
-      signal.addEventListener("abort", () => stream.cancel?.(), { once: true });
+      const onAbort = () => stream.cancel?.();
+      signal.addEventListener("abort", onAbort, { once: true });
+      stream.once?.("close", () => signal.removeEventListener("abort", onAbort));
+      // Feed the requests as gRPC consumes the request iterator upstream. This
+      // never rejects: a failing iterator fails the call instead.
+      // (Any error, cancellation included, just fails the call, so this is a
+      // rejection handler rather than a catch that would have to re-raise.)
+      const pump = async () => {
+        for await (const request of requests) stream.write(request);
+        stream.end();
+      };
+      void pump().then(undefined, (e: unknown) => {
+        stream.destroy?.(e instanceof Error ? e : new Error(String(e)));
+      });
       return stream;
     },
   };
@@ -806,8 +833,9 @@ function cloudTTSClientOptions(
   credentials: string | null,
   credentialsPath: string | null,
   location: string | null,
+  clientOptions: Record<string, unknown> | null = null,
 ): GoogleCloudTTSClientOptions {
-  const options: GoogleCloudTTSClientOptions = {};
+  const options: GoogleCloudTTSClientOptions = { clientOptions };
 
   if (credentials) {
     // Use provided credentials JSON string
@@ -836,6 +864,15 @@ export interface GoogleHttpTTSServiceOptions extends TTSServiceOptions {
   credentialsPath?: string | null;
   /** Google Cloud location for regional endpoint (e.g., "us-central1"). */
   location?: string | null;
+  /**
+   * Extra options for the `@google-cloud/text-to-speech` `TextToSpeechClient`
+   * (e.g. `apiEndpoint`, `port`, `sslCreds`), merged over the ones derived
+   * from `location` and the credentials.
+   *
+   * DIVERGENCE: pipedog-only. Upstream builds its client from `location` and
+   * the credentials alone.
+   */
+  clientOptions?: Record<string, unknown> | null;
   /** Runtime-updatable settings. */
   settings?: GoogleHttpTTSSettings | null;
 }
@@ -862,6 +899,7 @@ export class GoogleHttpTTSService extends TTSService {
   }
 
   protected _location: string | null;
+  protected _clientOptions: Record<string, unknown> | null = null;
   protected _client: GoogleCloudTTSClient;
 
   /**
@@ -906,6 +944,7 @@ export class GoogleHttpTTSService extends TTSService {
     });
 
     this._location = options.location ?? null;
+    this._clientOptions = options.clientOptions ?? null;
     this._client = this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
   }
 
@@ -921,7 +960,7 @@ export class GoogleHttpTTSService extends TTSService {
     credentialsPath: string | null,
   ): GoogleCloudTTSClient {
     return createGoogleCloudTTSClient(
-      cloudTTSClientOptions(credentials, credentialsPath, this._location),
+      cloudTTSClientOptions(credentials, credentialsPath, this._location, this._clientOptions),
     );
   }
 
@@ -1106,6 +1145,7 @@ export class GoogleHttpTTSService extends TTSService {
  */
 export abstract class GoogleBaseTTSService extends TTSService {
   protected _location: string | null = null;
+  protected _clientOptions: Record<string, unknown> | null = null;
 
   // Subclasses build the client in their constructor. Gemini can run against
   // the GenAI API instead of GCP, so each backend's code path casts to the
@@ -1124,7 +1164,7 @@ export abstract class GoogleBaseTTSService extends TTSService {
     credentialsPath: string | null,
   ): GoogleCloudTTSClient | GoogleGenAI {
     return createGoogleCloudTTSClient(
-      cloudTTSClientOptions(credentials, credentialsPath, this._location),
+      cloudTTSClientOptions(credentials, credentialsPath, this._location, this._clientOptions),
     );
   }
 
@@ -1232,6 +1272,15 @@ export interface GoogleTTSServiceOptions extends TTSServiceOptions {
   location?: string | null;
   /** The voice cloning key for Chirp 3 custom voices. */
   voiceCloningKey?: string | null;
+  /**
+   * Extra options for the `@google-cloud/text-to-speech` `TextToSpeechClient`
+   * (e.g. `apiEndpoint`, `port`, `sslCreds`), merged over the ones derived
+   * from `location` and the credentials.
+   *
+   * DIVERGENCE: pipedog-only. Upstream builds its client from `location` and
+   * the credentials alone.
+   */
+  clientOptions?: Record<string, unknown> | null;
   /** Runtime-updatable settings. */
   settings?: GoogleTTSSettings | null;
 }
@@ -1305,6 +1354,7 @@ export class GoogleTTSService extends GoogleBaseTTSService {
     });
 
     this._location = options.location ?? null;
+    this._clientOptions = options.clientOptions ?? null;
     this._voiceCloningKey = options.voiceCloningKey ?? null;
     this._client = this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
   }
@@ -1386,6 +1436,15 @@ export interface GeminiTTSServiceOptions extends TTSServiceOptions {
   credentialsPath?: string | null;
   /** Google Cloud location for regional endpoint (e.g., "us-central1"). */
   location?: string | null;
+  /**
+   * Extra options for the `@google-cloud/text-to-speech` `TextToSpeechClient`
+   * (e.g. `apiEndpoint`, `port`, `sslCreds`), merged over the ones derived
+   * from `location` and the credentials.
+   *
+   * DIVERGENCE: pipedog-only. Upstream builds its client from `location` and
+   * the credentials alone.
+   */
+  clientOptions?: Record<string, unknown> | null;
   /** Runtime-updatable settings. */
   settings?: GeminiTTSSettings | null;
   /** Force use of the google-genai client if true. */
@@ -1561,6 +1620,7 @@ export class GeminiTTSService extends GoogleBaseTTSService {
     this._httpOptions = options.httpOptions ?? null;
 
     this._location = options.location ?? null;
+    this._clientOptions = options.clientOptions ?? null;
     this._client = this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
 
     // Warn once now about settings the GenAI backend ignores, rather than on
