@@ -49,11 +49,11 @@
     },
     "packages/asyncio": {
       "name": "@pipedog/asyncio",
-      "version": "0.1.0",
+      "version": "0.2.0",
     },
     "packages/audio-silero": {
       "name": "@pipedog/audio-silero",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -62,7 +62,7 @@
     },
     "packages/audio-smart-turn": {
       "name": "@pipedog/audio-smart-turn",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@pipedog/core": "workspace:*",
         "@pipedog/onnx": "workspace:*",
@@ -70,7 +70,7 @@
     },
     "packages/core": {
       "name": "@pipedog/core",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/resampler-wasm": "workspace:*",
@@ -91,7 +91,7 @@
     },
     "packages/onnx": {
       "name": "@pipedog/onnx",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@pipedog/core": "workspace:*",
       },
@@ -110,18 +110,18 @@
     },
     "packages/resampler-wasm": {
       "name": "@pipedog/resampler-wasm",
-      "version": "0.1.0",
+      "version": "0.2.0",
     },
     "packages/sentencex-wasm": {
       "name": "@pipedog/sentencex-wasm",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "devDependencies": {
         "sentencex": "1.0.32",
       },
     },
     "packages/tracing": {
       "name": "@pipedog/tracing",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@opentelemetry/exporter-trace-otlp-http": "0.222.0",
         "@opentelemetry/resources": "2.11.0",

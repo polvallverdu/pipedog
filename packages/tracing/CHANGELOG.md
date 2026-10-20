@@ -1,0 +1,16 @@
+# @pipedog/tracing
+
+## 0.2.0
+
+### Minor Changes
+
+- [#6](https://github.com/polvallverdu/pipedog/pull/6) [`72b8cb8`](https://github.com/polvallverdu/pipedog/commit/72b8cb82b807d7b194f525872bc0ac662a9df3dc) Thanks [@polvallverdu](https://github.com/polvallverdu)! - OpenTelemetry tracing, as in Pipecat's `pipecat-ai[tracing]` extra, on Bun, Node, Deno and Cloudflare Workers.
+  
+  `@pipedog/core`: `@opentelemetry/api` is now an optional peer dependency. When it is installed, core imports it on its own (a dynamic `import()` started when `utils/tracing/setup` loads, with no top-level await), and `isTracingAvailable()` turns true, like upstream's `is_tracing_available()`. Without it, core runs as before and tracing stays a no-op. `PipelineWorker` awaits that import in its async setup before deciding whether to trace, so construction order does not matter (a worker built at module top level traces too); `loadOpenTelemetry()` exposes the same wait. `registerOpenTelemetry()` still registers the modules explicitly and now wins over the automatic import. The structural OpenTelemetry types accept the real `@opentelemetry/api` and `@opentelemetry/sdk-trace-base` modules (array attribute values may hold `null`/`undefined`, as in OpenTelemetry). Span names, attributes and hierarchy are unchanged and match upstream's.
+  
+  `@pipedog/tracing` (new): `setupTracing({ serviceName, exporter, consoleExport })`, matching upstream's `setup_tracing()`: it registers `@opentelemetry/api`, `@opentelemetry/sdk-trace-base` and `@opentelemetry/resources` with core and installs a global tracer provider with batch span processors for the given exporter and, optionally, the console. It re-exports `OTLPTraceExporter` (OTLP/HTTP JSON, from `@opentelemetry/exporter-trace-otlp-http`), `ConsoleSpanExporter`, `InMemorySpanExporter` and the span processors. `forceFlushTracing()` and `shutdownTracing()` export what the batch processors still hold, e.g. `ctx.waitUntil(forceFlushTracing())` on Cloudflare Workers. `@opentelemetry/api` is a peer dependency.
+
+### Patch Changes
+
+- Updated dependencies [[`122b72f`](https://github.com/polvallverdu/pipedog/commit/122b72fb4167cf2b12112d83de5ed255c9e0d897), [`f59cf26`](https://github.com/polvallverdu/pipedog/commit/f59cf264cc2a81482df319ebb2363a9d5b4a6dd3), [`f59cf26`](https://github.com/polvallverdu/pipedog/commit/f59cf264cc2a81482df319ebb2363a9d5b4a6dd3), [`f59cf26`](https://github.com/polvallverdu/pipedog/commit/f59cf264cc2a81482df319ebb2363a9d5b4a6dd3), [`72b8cb8`](https://github.com/polvallverdu/pipedog/commit/72b8cb82b807d7b194f525872bc0ac662a9df3dc), [`72b8cb8`](https://github.com/polvallverdu/pipedog/commit/72b8cb82b807d7b194f525872bc0ac662a9df3dc)]:
+  - @pipedog/core@0.2.0
