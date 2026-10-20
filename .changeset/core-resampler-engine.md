@@ -1,6 +1,6 @@
 ---
 "@pipedog/core": minor
-"@pipedog/resampler-wasm": patch
+"@pipedog/resampler-wasm": minor
 ---
 
 `SOXRAudioResampler` and `SOXRStreamAudioResampler` now resample instead of throwing "not ported yet" when the rates differ. This also fixes `createFileResampler()`, `createStreamResampler()`, the μ-law/A-law helpers at other rates, `loadDtmfAudio()` at rates other than 8 kHz, `LocalSmartTurnAnalyzerV3` at rates other than 16 kHz, and output transports and TTS services whose rates differ. The resampling goes through a small engine interface in `@pipedog/core/audio/resamplers/engine`:
@@ -12,3 +12,5 @@
 The quality presets (VHQ by default, then HQ, MQ, LQ and QQ), clearing after inactivity, `flush()` and `reset()` behave as before. Equal rates still return the input unchanged.
 
 `@pipedog/resampler-wasm`: `initResampler()` falls back to an embedded copy of the module (`src/wasm_bytes.ts`) when the `.wasm` file next to the package cannot be read, for example after bundling.
+
+`@pipedog/resampler-wasm`: the quality presets now follow libsoxr's quality table. The stopband starts at the Nyquist frequency of the lower rate. MQ, HQ and VHQ are flat to about 0.91 of it and differ mainly in attenuation: about 111, 138 and at least 157 dB. LQ (about 112 dB) and QQ (about 75 dB) have earlier roll-offs. The filter is stretched when downsampling, so it no longer leaks aliases at large ratios: a 5 kHz tone resampled from 48 kHz to 8 kHz is now 87 to 163 dB down, depending on the preset. Processing is now done in f64. Output samples, filter delays (about 8.5 ms at VHQ) and `qualityInfo()` values change; the output lengths do not.

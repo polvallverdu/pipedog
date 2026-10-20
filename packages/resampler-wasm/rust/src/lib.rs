@@ -15,6 +15,8 @@
 //   m = rs_stream_flush(h)           // drain the filter tail, then reset
 //
 // The `_f32` variants do the same with float samples in [-1, 1] (unclipped).
+// Internally everything runs in f64, so the arithmetic noise floor stays
+// below the VHQ preset's stopband (f32 accumulation sits near -125 dB).
 //
 // Streams accept any number of samples per call. rubato's `Async` resampler
 // processes fixed-size input chunks, so a call is split into pieces of at most
@@ -39,38 +41,68 @@ use rubato::{
 const MAX_CHUNK: usize = 1024;
 
 /// Quality presets, in the same order as libsoxr's (QQ=0 .. VHQ=4).
+///
+/// Designed after libsoxr's quality table: the stopband starts at the
+/// Nyquist frequency of the *lower* of the two rates, whichever way the
+/// conversion goes, and
+///
+/// | preset | libsoxr: passband end, rejection | here: flat (0.01 dB) to, stopband |
+/// |--------|----------------------------------|-----------------------------|
+/// | QQ     | cubic interpolation, no filter   | 0.665, >= 75 dB             |
+/// | LQ     | 0.676, 96 dB                     | 0.74, >= 112 dB             |
+/// | MQ     | 0.915, 96 dB                     | 0.91, >= 111 dB             |
+/// | HQ     | 0.913, 120 dB                    | 0.905, >= 138 dB            |
+/// | VHQ    | 0.911, 169 dB                    | 0.91, >= 157 dB             |
+///
+/// Lengths and the cutoff are given at the lower rate. rubato measures
+/// `sinc_len` in input samples and only scales the cutoff when downsampling,
+/// so `sinc_params` stretches the filter by the downsampling factor to keep
+/// the same response at every ratio.
 #[derive(Clone, Copy)]
 pub struct Preset {
-    pub sinc_len: usize,
+    /// Filter length in samples of the lower rate.
+    pub len: usize,
+    /// Sinc table points per sample of the lower rate.
     pub oversampling: usize,
     pub window: WindowFunction,
     pub interpolation: SincInterpolationType,
+    /// -6 dB cutoff relative to the lower Nyquist frequency.
+    pub cutoff: f32,
 }
 
-/// The anti-aliasing cutoff is left automatic (`f_cutoff: None`): rubato's
-/// `calculate_cutoff` picks the highest cutoff that keeps aliasing below the
-/// window's sidelobe level for that filter length, so it rises with sinc_len.
 pub fn preset(quality: u32) -> Option<Preset> {
     use SincInterpolationType::*;
     use WindowFunction::*;
-    let p = |sinc_len, oversampling, window, interpolation| Preset {
-        sinc_len,
+    let p = |len, oversampling, window, interpolation, cutoff| Preset {
+        len,
         oversampling,
         window,
         interpolation,
+        cutoff,
     };
     Some(match quality {
-        0 => p(16, 32, Hann2, Linear),            // QQ
-        1 => p(32, 64, Blackman2, Linear),        // LQ
-        2 => p(64, 128, Blackman2, Quadratic),    // MQ
-        3 => p(128, 256, BlackmanHarris2, Cubic), // HQ
-        4 => p(256, 256, BlackmanHarris2, Cubic), // VHQ
+        0 => p(32, 32, Blackman, Linear, 0.82),          // QQ
+        1 => p(64, 64, BlackmanHarris, Cubic, 0.84),     // LQ
+        2 => p(160, 128, BlackmanHarris, Cubic, 0.95),   // MQ
+        3 => p(240, 128, BlackmanHarris2, Cubic, 0.945), // HQ
+        4 => p(272, 256, BlackmanHarris2, Cubic, 0.945), // VHQ
         _ => return None,
     })
 }
 
+/// The rubato parameters of a preset for a given ratio (out/in):
+/// `(sinc_len, oversampling, f_cutoff)`.
+fn sinc_params(p: &Preset, ratio: f64) -> (usize, usize, f32) {
+    let down = ratio.min(1.0);
+    let sinc_len = ((p.len as f64 / down).ceil() as usize).next_multiple_of(8);
+    // The stretched sinc varies `1/down` times more slowly per input sample,
+    // so the table needs proportionally fewer points per input sample.
+    let oversampling = ((p.oversampling as f64 * down).ceil() as usize).max(8);
+    (sinc_len, oversampling, p.cutoff)
+}
+
 pub struct Stream {
-    resampler: Async<f32>,
+    resampler: Async<f64>,
     channels: usize,
     ratio: f64,
     cutoff: f32,
@@ -88,16 +120,17 @@ pub struct Stream {
     /// Output frames emitted since the stream started (or was last reset).
     total_out: u64,
     /// Samples (< channels) left over from the previous call.
-    carry: Vec<f32>,
+    carry: Vec<f64>,
     /// Staging areas JS writes input into.
     input_i16: Vec<i16>,
     input_f32: Vec<f32>,
     /// Interleaved float input (carry + input).
-    in_f: Vec<f32>,
+    in_f: Vec<f64>,
     /// One rubato output chunk.
-    out_f: Vec<f32>,
+    out_f: Vec<f64>,
     /// The result of the last process/flush call.
-    res: Vec<f32>,
+    res: Vec<f64>,
+    output_f32: Vec<f32>,
     output_i16: Vec<i16>,
 }
 
@@ -108,10 +141,12 @@ impl Stream {
         }
         let p = preset(quality)?;
         let ratio = out_rate as f64 / in_rate as f64;
-        let params = SincInterpolationParameters::new(p.sinc_len, p.window)
-            .oversampling_factor(p.oversampling)
-            .interpolation(p.interpolation);
-        let resampler = Async::<f32>::new_sinc(
+        let (sinc_len, oversampling, f_cutoff) = sinc_params(&p, ratio);
+        let params = SincInterpolationParameters::new(sinc_len, p.window)
+            .oversampling_factor(oversampling)
+            .interpolation(p.interpolation)
+            .f_cutoff(f_cutoff);
+        let resampler = Async::<f64>::new_sinc(
             ratio,
             1.0,
             &params,
@@ -122,7 +157,7 @@ impl Stream {
         .ok()?;
         let cutoff = resampler.cutoff().unwrap_or(0.0);
         let out_cap = resampler.output_frames_max() * channels as usize;
-        let (prime, delay) = alignment(in_rate, out_rate, p.sinc_len);
+        let (prime, delay) = alignment(in_rate, out_rate, sinc_len);
         Some(Stream {
             resampler,
             channels: channels as usize,
@@ -141,6 +176,7 @@ impl Stream {
             out_f: vec![0.0; out_cap],
             res: Vec::new(),
             output_i16: Vec::new(),
+            output_f32: Vec::new(),
         })
     }
 
@@ -193,7 +229,7 @@ impl Stream {
     }
 
     /// Resample `samples` (interleaved, float). The result is left in `res`.
-    fn process(&mut self, samples: impl Iterator<Item = f32>) -> bool {
+    fn process(&mut self, samples: impl Iterator<Item = f64>) -> bool {
         let ch = self.channels;
         self.res.clear();
         self.in_f.clear();
@@ -252,12 +288,13 @@ impl Stream {
         self.output_i16.len() as i32
     }
 
-    fn result_f32(&self, ok: bool) -> i32 {
-        if ok {
-            self.res.len() as i32
-        } else {
-            -1
+    fn result_f32(&mut self, ok: bool) -> i32 {
+        self.output_f32.clear();
+        if !ok {
+            return -1;
         }
+        self.output_f32.extend(self.res.iter().map(|&v| v as f32));
+        self.output_f32.len() as i32
     }
 }
 
@@ -301,7 +338,7 @@ fn gcd(mut a: u64, mut b: u64) -> u64 {
 }
 
 #[inline]
-fn to_i16(v: f32) -> i16 {
+fn to_i16(v: f64) -> i16 {
     let s = (v * 32768.0).round();
     if s >= 32767.0 {
         32767
@@ -384,7 +421,7 @@ pub unsafe extern "C" fn rs_stream_process(h: *mut Stream, n: usize) -> i32 {
     let s = &mut *h;
     let input = core::mem::take(&mut s.input_i16);
     let n = n.min(input.len());
-    let ok = s.process(input[..n].iter().map(|&v| v as f32 / 32768.0));
+    let ok = s.process(input[..n].iter().map(|&v| v as f64 / 32768.0));
     s.input_i16 = input;
     s.result_i16(ok)
 }
@@ -431,7 +468,7 @@ pub unsafe extern "C" fn rs_stream_process_f32(h: *mut Stream, n: usize) -> i32 
     let s = &mut *h;
     let input = core::mem::take(&mut s.input_f32);
     let n = n.min(input.len());
-    let ok = s.process(input[..n].iter().copied());
+    let ok = s.process(input[..n].iter().map(|&v| v as f64));
     s.input_f32 = input;
     s.result_f32(ok)
 }
@@ -453,7 +490,7 @@ pub unsafe extern "C" fn rs_stream_flush_f32(h: *mut Stream) -> i32 {
 /// `h` must be a live handle from `rs_stream_new`.
 #[no_mangle]
 pub unsafe extern "C" fn rs_stream_output_f32(h: *mut Stream) -> *const f32 {
-    (*h).res.as_ptr()
+    (*h).output_f32.as_ptr()
 }
 
 /// Discard all state (filter history, pending samples, counters).
@@ -483,13 +520,13 @@ pub unsafe extern "C" fn rs_stream_cutoff(h: *mut Stream) -> f32 {
     (*h).cutoff
 }
 
-/// Sinc filter length of a quality preset (0 if unknown).
+/// Sinc filter length of a quality preset, in samples of the lower rate (0 if unknown).
 #[no_mangle]
 pub extern "C" fn rs_quality_sinc_len(quality: u32) -> u32 {
-    preset(quality).map(|p| p.sinc_len as u32).unwrap_or(0)
+    preset(quality).map(|p| p.len as u32).unwrap_or(0)
 }
 
-/// Oversampling factor of a quality preset (0 if unknown).
+/// Sinc table points per sample of the lower rate for a quality preset (0 if unknown).
 #[no_mangle]
 pub extern "C" fn rs_quality_oversampling(quality: u32) -> u32 {
     preset(quality).map(|p| p.oversampling as u32).unwrap_or(0)

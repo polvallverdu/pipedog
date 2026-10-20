@@ -114,12 +114,7 @@ describe("test_local_smart_turn_v3_resample", () => {
     setResamplerEngine(null);
   });
 
-  // DIVERGENCE: with the default engine (@pipedog/resampler-wasm) the HQ and
-  // VHQ presets have different cutoffs (0.895 vs 0.947 x Nyquist; soxr keeps
-  // the passband and varies the attenuation), so the chirp's top end, which
-  // reaches ~7.8 kHz, comes out differently: RMS ~0.037, above the bound.
-  // The same assertions pass with core's TypeScript engine, below.
-  test.skip("test_resample_48k_to_16k_close_to_vhq", () => {
+  test("test_resample_48k_to_16k_close_to_vhq", () => {
     // Dropping to HQ should produce a near-identical 16 kHz waveform to VHQ.
     const { rms, peak } = hqVsVhq(_synthesize48kSpeechlike());
 
