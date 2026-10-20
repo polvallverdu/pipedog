@@ -4,14 +4,16 @@
 //
 // Ported from pipecat: tests/test_version_banner.py
 
-/** The import-time version banner is suppressed for the pipecat/pc CLI. */
+/**
+ * The import-time version banner is suppressed for the pipecat/pc CLI.
+ *
+ * Python's `sys.argv[0]` is the script; in JS `process.argv[0]` is the
+ * runtime and `process.argv[1]` is the script, so the program goes in slot 1.
+ */
 
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import * as pipecat from "../src/index.ts";
 
-import { _shouldLogVersionBanner } from "../src/index.ts";
-
-// Python's `sys.argv[0]` (the program) is `process.argv[1]` in JS;
-// `process.argv[0]` is the runtime executable.
 let savedArgv: string[];
 
 beforeEach(() => {
@@ -29,13 +31,13 @@ function setProgram(prog: string): void {
 test("test_banner_suppressed_for_cli_programs", () => {
   for (const prog of ["pipecat", "pc", "/usr/local/bin/pipecat", "pipecat.exe"]) {
     setProgram(prog);
-    expect(_shouldLogVersionBanner()).toBe(false);
+    expect(pipecat._shouldLogVersionBanner()).toBe(false);
   }
 });
 
 test("test_banner_shown_for_bots_and_library_use", () => {
   for (const prog of ["bot.py", "python", "-c", "pytest", "/path/to/myapp"]) {
     setProgram(prog);
-    expect(_shouldLogVersionBanner()).toBe(true);
+    expect(pipecat._shouldLogVersionBanner()).toBe(true);
   }
 });

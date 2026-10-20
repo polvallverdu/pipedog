@@ -1,7 +1,18 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/dist", "!**/rust/target", "!.upstream", "!porting", "!.claude"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/rust/target",
+      "!.upstream",
+      "!porting",
+      "!.claude",
+      "!**/.next",
+      "!**/.source",
+      "!apps/docs/next-env.d.ts"
+    ]
   },
   "formatter": {
     "indentStyle": "space",

@@ -1,0 +1,17 @@
+{
+  "title": "pipecat-ts",
+  "pages": [
+    "index",
+    "installation",
+    "quickstart",
+    "---Concepts---",
+    "...concepts",
+    "---Guides---",
+    "runtimes",
+    "coming-from-pipecat",
+    "---Contributing---",
+    "...contributing",
+    "---API reference---",
+    "...api"
+  ]
+}

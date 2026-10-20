@@ -1,0 +1,163 @@
+---
+title: Frames
+description: Frame categories, processing order, interruption behavior and custom frames.
+---
+
+Frames are the fundamental units of data in pipecat-ts. Every piece of information that moves
+through a pipeline (audio, text, images, control signals) is wrapped in a frame. Frame
+processors receive frames, act on them, and push new or modified frames to the next processor.
+
+All frames extend the base `Frame` class from `@pipecat-ts/core/frames/frames`, the port of
+Pipecat's `pipecat.frames.frames`. Where Pipecat frames are Python dataclasses, pipecat-ts frames
+are classes whose constructor takes **one options object**:
+
+```ts twoslash
+import { TextFrame, TranscriptionFrame } from "@pipecat-ts/core/frames/frames";
+
+const text = new TextFrame({ text: "hello" });
+const transcription = new TranscriptionFrame({
+  text: "hi there",
+  userId: "user-1",
+  timestamp: new Date().toISOString(),
+});
+```
+
+This is true even where upstream tests pass positional arguments: `TextFrame("hi")` is always
+`new TextFrame({ text: "hi" })`.
+
+## Frame categories
+
+There are three base frame types, each with different processing behavior:
+
+| Base type | Processing | Interruption behavior |
+|---|---|---|
+| `DataFrame` | Queued, processed in order with other non-system frames | Dropped on user interruption |
+| `ControlFrame` | Queued, processed in order with other non-system frames | Dropped on user interruption |
+| `SystemFrame` | Higher priority, processed in order with other system frames | **Never** dropped on user interruption |
+
+### DataFrame
+
+Data frames carry the main content flowing through a pipeline: audio chunks, text, images and
+LLM messages. They are queued and processed in order with other data and control frames. If the
+user interrupts (starts speaking while the bot is responding), pending data frames are discarded
+so the new input can be handled immediately.
+
+Examples: `TextFrame`, `OutputAudioRawFrame`, `LLMMessagesAppendFrame`, `TTSSpeakFrame`.
+
+### ControlFrame
+
+Control frames signal processing boundaries and configuration changes: response start/end
+markers, settings updates and state transitions. They are processed in order alongside data
+frames and, like them, are discarded on interruption unless their `interruptible` field is
+`false`.
+
+Examples: `EndFrame`, `LLMFullResponseStartFrame`, `TTSStartedFrame`.
+
+### SystemFrame
+
+System frames are high-priority signals that must always be delivered: interruptions, user
+input, errors and pipeline lifecycle. They are processed in order with other system frames, ahead
+of any queued data or control frame, and are never discarded by an interruption.
+
+Examples: `StartFrame`, `CancelFrame`, `InterruptionFrame`, `UserStartedSpeakingFrame`,
+`InputAudioRawFrame`, `ErrorFrame`, `MetricsFrame`.
+
+<include cwd>snippets/frames.ts#categories</include>
+
+### Processing order
+
+Frames are processed in a guaranteed order **within their lane**. Each processor has a priority
+input queue: the `StartFrame` first, then system frames, then data and control frames, each tier
+in arrival order. System frames are handled as they arrive; data and control frames go to a second
+queue processed one at a time, so the work for one finishes before the next starts. That is what
+makes this reliable: speak first, then end the pipeline once the goodbye is flushed.
+
+```ts
+await worker.queueFrames([new TTSSpeakFrame({ text: "Goodbye!" }), new EndFrame()]);
+```
+
+## Frame properties
+
+Every frame has these fields, set automatically (see the [Frames API](/docs/api/frames)):
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `number` | Unique identifier for the frame instance. |
+| `name` | `string` | Class name and instance count, e.g. `TextFrame#3`. Handy for debugging. |
+| `pts` | `number \| null` | Presentation timestamp in **nanoseconds**, for audio/video sync. |
+| `broadcastSiblingId` | `number \| null` | ID of the paired frame when broadcast in both directions. |
+| `metadata` | `Record<string, unknown>` | Arbitrary frame metadata. |
+| `transportSource` | `string \| null` | Name of the transport source that created the frame. |
+| `transportDestination` | `string \| null` | Name of the transport destination (multi-track output). |
+| `interruptible` | `boolean` | Whether an interruption may drop or cancel this frame. `true` by default. |
+
+## Interruptible frames
+
+Occasionally a data or control frame is too important to lose when the user interrupts. A frame
+class that must survive interruptions overrides the `interruptible` field. In Python that is
+`interruptible: bool = field(default=False, init=False)`; in TypeScript:
+
+<include cwd>snippets/frames.ts#uninterruptible-frame</include>
+
+You can also set it on a single frame before pushing it:
+
+<include cwd>snippets/frames.ts#per-frame-interruptible</include>
+
+Uninterruptible frames include `EndFrame`, `StopFrame`, `EndWorkerFrame`, `StopWorkerFrame` and
+`FunctionCallResultFrame`: terminal frames must survive interruption so the pipeline still shuts
+down properly. The deprecated `UninterruptibleFrame` mixin is not ported; use the field.
+
+## Media mixins
+
+Pipecat shares audio, image and file fields between frames through dataclass mixins. pipecat-ts
+ports them as class-factory mixins (`defineMixin`), so `instanceof` keeps working:
+
+- `AudioRawFrame`: `audio` (`Uint8Array`, 16-bit little-endian PCM, never `Buffer`),
+  `sampleRate`, `numChannels`, and the computed `numFrames`.
+- `ImageRawFrame`: `image` (`Uint8Array`), `size` (`[width, height]`), `format`.
+- `FileRawFrame`: `file`, `type` (`"bytes"` or `"url"`), `filename`, `format`.
+
+```ts twoslash
+import { AudioRawFrame, InputAudioRawFrame } from "@pipecat-ts/core/frames/frames";
+
+const frame = new InputAudioRawFrame({
+  audio: new Uint8Array(320),
+  sampleRate: 16000,
+  numChannels: 1,
+});
+console.log(frame instanceof AudioRawFrame, frame.numFrames); // true 160
+```
+
+## Creating a custom frame
+
+Subclass one of the three base categories, picking it by how the frame should be handled:
+
+- `DataFrame` for ordered data such as text, audio or your own payload. Dropped by interruptions.
+- `ControlFrame` for ordered control signals that flush in line with the data.
+- `SystemFrame` for high-priority signals that skip the queue and are not affected by
+  interruptions.
+
+<include cwd>snippets/frames.ts#custom-frame</include>
+
+Name the options interface `<Class>Options` and pass the whole object to `super(options)`, as
+every built-in frame does.
+
+## Common patterns
+
+pipecat-ts, like Pipecat, prefers pushing frames over calling methods between processors.
+Routing data through the pipeline as frames keeps processing in order, which real-time use cases
+depend on.
+
+- **End a conversation**: push `EndWorkerFrame` **downstream**, so frames queued ahead of it
+  (a goodbye `TTSSpeakFrame`, say) are flushed before the pipeline ends.
+- **Interrupt the bot yourself**: from a processor, `await this.broadcastInterruption()`; from code
+  holding the worker, `await worker.queueFrame(new InterruptionWorkerFrame())`.
+- **React to LLM response boundaries**: watch for `LLMFullResponseStartFrame` and
+  `LLMFullResponseEndFrame` in a custom processor (see
+  [Frame processors](/docs/concepts/frame-processors#example-response-logger)).
+
+<Callout title="Coming soon">
+  Patterns that need services (injecting prompts with `LLMMessagesAppendFrame`, updating tools
+  with `LLMSetToolsFrame`, changing settings at runtime) will be documented with the provider
+  packages. The frames themselves already exist in `@pipecat-ts/core/frames/frames`.
+</Callout>

@@ -1,0 +1,70 @@
+---
+title: "@pipecat-ts/asyncio"
+description: Tasks, cooperative cancellation, timeouts, queues and events with Python asyncio semantics.
+---
+
+```ts
+import { createTask, Event, Queue, sleep, Task, waitFor } from "@pipecat-ts/asyncio";
+```
+
+See [Interruptions & cancellation](/docs/concepts/interruptions-and-cancellation) for how
+cancellation points work.
+
+## Task
+
+A unit of concurrent work, like `asyncio.Task`. Created with `createTask()`. Awaiting a task (it
+is thenable) is a cancellation point, and cancelling the awaiting task also cancels the awaited
+one.
+
+<auto-type-table cwd path="../../packages/asyncio/src/task.ts" name="Task" />
+
+## Task functions
+
+<auto-type-table
+  cwd
+  path="../../packages/asyncio/src/task.ts"
+  name="TaskFunctions"
+  type="{ createTask: typeof createTask; currentTask: typeof currentTask; currentSignal: typeof currentSignal; abortable: typeof abortable; checkCancelled: typeof checkCancelled; suspend: typeof suspend; rethrowIfCancelled: typeof rethrowIfCancelled; isCancelledError: typeof isCancelledError }"
+/>
+
+## Timeouts and composition
+
+<auto-type-table
+  cwd
+  path="../../packages/asyncio/src/primitives.ts"
+  name="Functions"
+  type="{ sleep: typeof sleep; waitFor: typeof waitFor; timeout: typeof timeout; gather: typeof gather; gatherSettled: typeof gatherSettled; wait: typeof wait; shield: typeof shield; time: typeof time; monotonic: typeof monotonic; monotonicNs: typeof monotonicNs }"
+/>
+
+`waitFor(aw, timeout)` takes an `Awaitable`: pass a **function** so it runs as a child task that
+is cancelled on timeout, raising `TimeoutError`. `timeout` is in seconds; `null` waits forever.
+
+## Queue
+
+`asyncio.Queue`. `LifoQueue` and `PriorityQueue` subclass it by overriding the storage hooks.
+`get()` and `put()` are cancellation points.
+
+<auto-type-table cwd path="../../packages/asyncio/src/primitives.ts" name="Queue" />
+
+## Event
+
+`asyncio.Event`. `wait()` is a cancellation point.
+
+<auto-type-table cwd path="../../packages/asyncio/src/primitives.ts" name="Event" />
+
+## Lock and Semaphore
+
+`async with lock:` is `await lock.run(async () => { ... })`.
+
+<auto-type-table cwd path="../../packages/asyncio/src/primitives.ts" name="Lock" />
+
+<auto-type-table cwd path="../../packages/asyncio/src/primitives.ts" name="Semaphore" />
+
+## Errors
+
+| Class | Python |
+|---|---|
+| `CancelledError` | `asyncio.CancelledError` |
+| `TimeoutError` | `asyncio.TimeoutError` / `TimeoutError` |
+| `InvalidStateError` | `asyncio.InvalidStateError` |
+| `QueueEmpty`, `QueueFull`, `QueueShutDown` | `asyncio.QueueEmpty`, `QueueFull`, `QueueShutDown` |

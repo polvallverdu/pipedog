@@ -1,0 +1,151 @@
+---
+title: Interruptions & cancellation
+description: How the bot stops when the user speaks, and how @pipecat-ts/asyncio gives JavaScript Python's asyncio cancellation.
+---
+
+Interruptions (barge-in) let the user talk over the bot: the bot stops right away, in-flight work
+is cancelled, and the pipeline is ready for the new input. Making that work in JavaScript needs
+Python's `asyncio` cancellation semantics, which is what `@pipecat-ts/asyncio` provides.
+
+## What happens on an interruption
+
+When a user turn starts with interruptions enabled, the user aggregator **broadcasts an
+`InterruptionFrame`** upstream and downstream. Then:
+
+<Steps>
+  <Step>
+    **Every processor cancels its current work.** `InterruptionFrame` is a system frame, so each
+    processor handles it immediately instead of waiting behind queued frames. The processor
+    cancels the task processing its current data/control frame and discards queued ones. Frames
+    with `interruptible = false` (like `FunctionCallResultFrame` and `EndFrame`) are kept and
+    still processed.
+  </Step>
+  <Step>
+    **The LLM stops generating**: the in-flight completion is cancelled mid-stream.
+  </Step>
+  <Step>
+    **TTS clears its buffers** and drops pending output.
+  </Step>
+  <Step>
+    **The transport flushes unplayed audio**, so the bot goes silent within about one audio
+    write.
+  </Step>
+</Steps>
+
+Only the words actually spoken end up in the LLM context: the output transport pushes
+`TTSTextFrame`s in sync with playback, and the assistant aggregator commits the spoken-so-far text
+when interrupted.
+
+### Triggering an interruption yourself
+
+From inside a custom processor:
+
+```ts
+await this.broadcastInterruption();
+```
+
+From code holding the worker, queue an `InterruptionWorkerFrame`; the worker turns it into an
+`InterruptionFrame` sent through the whole pipeline:
+
+```ts
+await worker.queueFrame(new InterruptionWorkerFrame());
+```
+
+A processor sees the interruption in `processFrame()` (after `super.processFrame()` has already
+cancelled the work in progress), and can override `protected async _startInterruption()` (calling `super._startInterruption()`
+first) for cleanup that must happen at that moment.
+
+<Callout title="Coming soon">
+  Turn strategies, user muting and interruption configuration (`enableInterruptions`, minimum
+  words, ...) are documented with the turn and aggregator modules as they land.
+</Callout>
+
+## Why JavaScript needs help
+
+Python delivers `CancelledError` **into** a coroutine, at the `await` it is suspended on. That is
+how an interruption stops a processor mid-work: its processing task is cancelled, and whatever it
+was awaiting raises.
+
+JavaScript has no such thing. A promise cannot be interrupted from outside, and `catch (e)`
+catches everything, including what Python would consider a cancellation. `@pipecat-ts/asyncio`
+emulates asyncio on top of promises and `AsyncLocalStorage`, which Bun, Node, Deno and Cloudflare
+Workers (`nodejs_compat`) all provide:
+
+| Python | `@pipecat-ts/asyncio` |
+|---|---|
+| `asyncio.create_task(coro())` | `createTask(() => coro())` |
+| `task.cancel()` / `await task` | `task.cancel()` / `await task` (a `Task` is thenable) |
+| `asyncio.sleep(s)` | `sleep(s)` (seconds) |
+| `asyncio.wait_for(coro(), timeout=t)` | `waitFor(() => coro(), t)` |
+| `asyncio.gather(a(), b())` | `gather(() => a(), () => b())` |
+| `asyncio.Event`, `Queue`, `PriorityQueue`, `Lock`, `Semaphore` | same names |
+| `asyncio.CancelledError`, `asyncio.TimeoutError` | `CancelledError`, `TimeoutError` |
+| `asyncio.current_task()` | `currentTask()` |
+| `async with lock:` | `await lock.run(async () => { ... })` |
+
+<include cwd>snippets/cancellation.ts#tasks</include>
+
+## Cancellation points
+
+When a task is cancelled:
+
+- if it is **suspended on a cancellation point**, that await rejects with `CancelledError` right
+  away (the request is consumed, as in asyncio);
+- otherwise the request stays pending, and the **next cancellation point** the task reaches
+  throws it;
+- `task.signal`, an `AbortSignal`, is aborted.
+
+The cancellation points are the awaits on this package's primitives: `sleep()`, `Event.wait()`,
+`Queue.get()` / `Queue.put()`, `waitFor()`, `gather()`, `wait()`, `abortable()`, and awaiting a
+`Task`. Cancelling a task that awaits another task cancels the awaited one too, as in asyncio.
+
+<include cwd>snippets/cancellation.ts#wait-for</include>
+
+Always pass `waitFor()` a **function** rather than a promise, so it can run as a child task and
+be cancelled on timeout. Queues and events behave like their asyncio counterparts:
+
+<include cwd>snippets/cancellation.ts#queue-event</include>
+
+## rethrowIfCancelled
+
+Python's `except Exception:` does **not** catch `CancelledError` (it derives from `BaseException`).
+JavaScript's `catch (e)` does. A ported `except Exception:` that swallowed a cancellation would
+keep a cancelled task running, so **every broad `catch` starts with `rethrowIfCancelled(e)`**:
+
+<include cwd>snippets/cancellation.ts#rethrow</include>
+
+Catching the cancellation on purpose (Python's `except asyncio.CancelledError:`) looks like
+`if (e instanceof CancelledError) { cleanup(); throw e; }`.
+
+## Foreign awaits: fetch, WebSockets, SDKs
+
+`fetch`, a WebSocket, or a provider SDK is **not** a cancellation point: a task cancelled while
+awaiting one keeps waiting until it settles. Two tools fix that:
+
+- **Pass `currentSignal()`** (the current task's `AbortSignal`, or a never-aborting one outside
+  tasks) to anything that accepts a signal, such as `fetch(url, { signal: currentSignal() })`, as
+  in the sample above. Cancelling the task then aborts the request itself.
+- **Wrap the await in `abortable(promise)`** to make it a cancellation point. The foreign operation
+  keeps running in the background unless it was also given the signal.
+
+<include cwd>snippets/cancellation.ts#abortable</include>
+
+## Tasks in processors
+
+Processors (and every `BaseObject`) create tasks through their task manager with
+`this.createTask(fn, name)`, and cancel them with `await this.cancelTask(task)` (which waits up to
+1 second for the task to finish). Tasks created this way are tracked and cancelled when the
+pipeline cleans up, so nothing is left floating. Never fire and forget a bare promise.
+
+<include cwd meta="twoslash">snippets/processor_tasks.ts#processor-task</include>
+
+## Rules of thumb
+
+1. Every broad `catch` begins with `rethrowIfCancelled(e)`.
+2. Use `sleep(seconds)` from `@pipecat-ts/asyncio`, never a raw `setTimeout`.
+3. Pass `currentSignal()` to `fetch` and other APIs that take an `AbortSignal`; wrap the rest in
+   `abortable()`.
+4. Never leave a promise floating: use `this.createTask()` in processors, `createTask()` elsewhere.
+5. Never `return` a `Task` (or any thenable) from an async function unless you mean to await it.
+
+The [asyncio API reference](/docs/api/asyncio) lists every export.

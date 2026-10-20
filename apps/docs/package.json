@@ -1,0 +1,37 @@
+{
+  "name": "@pipecat-ts/docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "bun run snippets:check && next build",
+    "start": "next start",
+    "snippets:check": "bun scripts/check-snippets.ts",
+    "snippets:run": "bun snippets/quickstart.ts"
+  },
+  "dependencies": {
+    "@pipecat-ts/asyncio": "workspace:*",
+    "@pipecat-ts/core": "workspace:*",
+    "cn": "0.4.0",
+    "fumadocs-core": "16.16.2",
+    "fumadocs-mdx": "15.4.6",
+    "fumadocs-twoslash": "4.0.1",
+    "fumadocs-typescript": "5.4.1",
+    "fumadocs-ui": "16.16.2",
+    "lucide-react": "1.51.0",
+    "next": "16.3.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/mdx": "2.0.14",
+    "@types/node": "24.19.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "postcss": "8.5.28",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2"
+  }
+}

@@ -1,0 +1,87 @@
+---
+title: Metrics & tracing
+description: Performance and usage metrics as MetricsFrames, and the state of OpenTelemetry tracing.
+---
+
+When building real-time AI applications two things matter to monitor: **performance** (latency),
+which shapes the user experience, and **usage** (LLM tokens, TTS characters), which drives cost.
+pipecat-ts ports Pipecat's built-in metrics for both.
+
+## Enabling metrics
+
+Metrics are switched on through `PipelineParams` when creating the worker:
+
+<include cwd>snippets/metrics.ts#enable</include>
+
+With `enableMetrics`, services report:
+
+| Metric | Description |
+|---|---|
+| TTFB | Time to first byte, in seconds. |
+| TTFA | Time to first audio, in seconds (TTS services). |
+| TTFAT | Time to first answer token, in seconds (LLM services). |
+| Processing time | Time the service took to respond, in seconds. |
+| Text aggregation | Time from the first LLM token to the first complete sentence (TTS services). |
+
+With `enableUsageMetrics`, services report LLM prompt/completion tokens and TTS characters. Usage
+metrics are per interaction, not running totals.
+
+- `reportOnlyInitialTtfb: true` reports only the first TTFB measurement of each service.
+- By default the worker sends an initial `MetricsFrame` with zero values for every service when
+  the pipeline starts; `sendInitialEmptyMetrics: false` turns that off.
+
+## Capturing metrics data
+
+Every measurement travels as a `MetricsFrame` (a system frame) whose `data` is a list of
+`MetricsData` objects from `@pipecat-ts/core/metrics/metrics`:
+
+- `TTFBMetricsData`, `TTFAMetricsData`, `TTFATMetricsData`
+- `ProcessingMetricsData`, `TextAggregationMetricsData`
+- `LLMUsageMetricsData` (its `value` is an `LLMTokenUsage`: `promptTokens`, `completionTokens`,
+  `totalTokens`, cache and reasoning token counts)
+- `STTUsageMetricsData`, `TTSUsageMetricsData`
+- `TurnMetricsData`
+
+All of them have `processor` (the name of the processor that produced the metric) and an
+optional `model`. Read them with an **observer** such as `MetricsLogObserver` (above), or with a
+custom processor placed after the services:
+
+<include cwd>snippets/metrics.ts#capture</include>
+
+Processors that generate metrics use the helpers on `FrameProcessor`: `startTtfbMetrics()` /
+`stopTtfbMetrics()`, `startProcessingMetrics()` / `stopProcessingMetrics()`,
+`startLlmUsageMetrics(tokens)`, `startTtsUsageMetrics(text)` and so on. They only report when
+metrics are enabled, and `canGenerateMetrics()` tells the worker which processors to include in
+the initial empty metrics.
+
+## Tracing (OpenTelemetry)
+
+Pipecat can trace conversations, turns and service calls with OpenTelemetry. In pipecat-ts the
+tracing utilities are ported in core (`@pipecat-ts/core/utils/tracing/*`), but core takes no
+third-party dependencies, so the OpenTelemetry JS modules are handed in once at startup with
+`registerOpenTelemetry()`, then configured with `setupTracing()`. Until then
+`isTracingAvailable()` is false and every tracing helper is a no-op, as upstream behaves without
+OpenTelemetry installed:
+
+```ts
+import * as api from "@opentelemetry/api";
+import * as sdk from "@opentelemetry/sdk-trace-base";
+import * as resources from "@opentelemetry/resources";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { registerOpenTelemetry, setupTracing } from "@pipecat-ts/core/utils/tracing/setup";
+
+registerOpenTelemetry({ api, sdk, resources });
+setupTracing({
+  serviceName: "my-bot",
+  exporter: new OTLPTraceExporter({ url: "http://localhost:4318/v1/traces" }),
+});
+```
+
+Then enable it per worker with `new PipelineWorker(pipeline, { enableTracing: true })`, and add
+attributes to the conversation span with `additionalSpanAttributes`.
+
+<Callout title="Planned: an OpenTelemetry package">
+  A dedicated tracing package that wires up the OpenTelemetry SDK, exporters and the service span
+  decorators for you, on every runtime including Cloudflare Workers, is planned. Until it lands,
+  the setup above is manual, and service spans only appear for services that have been ported.
+</Callout>

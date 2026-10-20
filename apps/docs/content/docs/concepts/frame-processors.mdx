@@ -1,0 +1,175 @@
+---
+title: Frame processors
+description: Write a custom FrameProcessor - handle frames, push them on, pick a direction, set up resources and listen to events.
+---
+
+Frame processors are the workers of a pipeline. Each has a specific job (transcribe audio,
+generate text, play audio, log metrics...). They:
+
+- **receive frames** from the previous processor,
+- **process the data**,
+- **create new frames** with their output,
+- **pass frames along** to the next processor.
+
+pipecat-ts ports Pipecat's built-in processors (aggregators, filters, observers, and services as
+their packages land). Most applications also need some custom frame processing logic; this page
+shows how to write it.
+
+## Example: MetricsFrame logger
+
+This custom processor formats and logs every `MetricsFrame`:
+
+<include cwd>snippets/frame_processors.ts#metrics-logger</include>
+
+Add it to a pipeline wherever it should see the frames, for example at the very end so it
+receives every `MetricsFrame` the services produce:
+
+```ts
+const pipeline = new Pipeline([
+  transportInput,
+  stt,
+  userAggregator,
+  llm,
+  tts,
+  transportOutput,
+  assistantAggregator,
+  new MetricsFrameLogger(), // our custom processor
+]);
+```
+
+## Key requirements
+
+Custom processors extend `FrameProcessor` from `@pipecat-ts/core/processors/frame_processor`.
+The base class handles `StartFrame`, `CancelFrame`, `InterruptionFrame` and pause /
+resume frames for you, and provides `processFrame()` and `pushFrame()`:
+
+- **`processFrame(frame, direction)`** receives every frame and is where your conditional logic
+  goes.
+- **`pushFrame(frame, direction?)`** sends a frame on. Normally downstream, but you can push
+  upstream, or both ways.
+
+Two calls are essential:
+
+1. **`super(options)`** in the constructor, passing the whole options object (that is how
+   Python's `**kwargs` flows to the base class).
+2. **`await super.processFrame(frame, direction)`** first thing in `processFrame()`.
+
+<include cwd>snippets/frame_processors.ts#skeleton</include>
+
+Constructor options extend `FrameProcessorOptions` (see the
+[FrameProcessor API](/docs/api/frame-processor)): `name`, `enableDirectMode` (skip the internal
+queues and process frames right away) and `metrics`.
+
+## Critical responsibility: frame forwarding
+
+Processors receive **all** frames pushed through the pipeline, which gives them a lot of power and
+a great responsibility: they must push every frame on. A processor that drops frames it doesn't
+care about blocks the pipeline, and your application stops working in confusing ways. Note the
+unconditional `await this.pushFrame(frame, direction)` at the end of every example here.
+
+## Frame direction
+
+Frames flow in one of two directions:
+
+```ts
+export const FrameDirection = { DOWNSTREAM: 1, UPSTREAM: 2 } as const;
+```
+
+**Downstream** (the default) goes from input to output: audio enters at the transport input, gets
+transcribed, runs through the LLM, turns into speech and reaches the transport output.
+**Upstream** sends information back towards the start: errors travel upstream, and the assistant
+context aggregator at the end pushes context frames upstream to the LLM.
+
+<include cwd>snippets/frame_processors.ts#directions</include>
+
+Prefer `broadcastFrame(FrameClass, options)` when you create the frame; use
+`broadcastFrameInstance(frame)` for a frame you received, which copies every field except `id`
+and `name`.
+
+## Setup and cleanup
+
+A processor is set up before any frame reaches it, and cleaned up when the pipeline tears down.
+That is where a processor that needs a connection, a client, or the pipeline's audio
+configuration gets it:
+
+<include cwd>snippets/frame_processors.ts#setup-cleanup</include>
+
+`FrameProcessorSetup` carries `clock`, `taskManager`, `pipelineWorker`, `audioInSampleRate`
+(default 16000), `audioOutSampleRate` (default 24000), `enableMetrics`, `enableTracing`,
+`enableUsageMetrics`, `observer`, `reportOnlyInitialTtfb` and `tracingContext`. The processor also
+exposes `metricsEnabled`, `usageMetricsEnabled`, `reportOnlyInitialTtfb` and, once set up,
+`processorSetup`. Don't read this configuration off the `StartFrame`: upstream deprecated those
+`StartFrame` fields and pipecat-ts doesn't have them.
+
+Processors are set up **concurrently**. A processor that throws while setting up pushes an
+`ErrorFrame` upstream, so the application learns its pipeline came up degraded; one that throws
+while being cleaned up is logged and doesn't stop the others from being released.
+
+### Holding frames until a condition is met
+
+A processor that connects during setup may receive frames before it is ready.
+`pauseProcessingAllFramesUntil(ready, { timeout })` holds everything arriving until `ready()`
+resolves, then delivers it in order. The pause takes hold from the frame *after* the one being
+processed, and is always lifted: when `ready` resolves, when `timeout` seconds (default 5) elapse,
+or at cleanup.
+
+<include cwd>snippets/frame_processors.ts#pause-until</include>
+
+## Errors
+
+Report errors with `pushError()`, which builds an `ErrorFrame`, classifies it, fires `on_error`
+and pushes it upstream. An error that can't be recovered from (a rejected API key, say) makes the
+processor unusable (`isUsable` becomes `false`) and the worker applies its
+`processorUnusablePolicy`.
+
+<include cwd>snippets/frame_processors.ts#push-error</include>
+
+Every broad `catch` in a processor should start with `rethrowIfCancelled(e)`; see
+[Interruptions & cancellation](/docs/concepts/interruptions-and-cancellation#rethrowifcancelled).
+
+## Event handlers
+
+Every frame processor, including services and transport inputs/outputs, emits these events.
+Event names are the same strings as in Pipecat. Python's `@obj.event_handler("on_x")` decorator
+becomes `obj.eventHandler("on_x", handler)` (which returns the handler) or
+`obj.addEventHandler("on_x", handler)`. The first argument of every handler is the processor.
+
+| Event | Arguments | Description |
+|---|---|---|
+| `on_error` | `(processor, error: ErrorFrame)` | An error occurred in this processor, before its `ErrorFrame` is pushed upstream. |
+| `on_usable_changed` | `(processor, isUsable: boolean)` | The processor stopped (or started again) being able to do its job. |
+| `on_before_process_frame` | `(processor, frame)` | A frame is about to be processed. |
+| `on_after_process_frame` | `(processor, frame)` | A frame has just been processed. |
+| `on_before_push_frame` | `(processor, frame)` | A frame is about to be pushed. |
+| `on_after_push_frame` | `(processor, frame)` | A frame has just been pushed. |
+
+<include cwd>snippets/frame_processors.ts#event-handlers</include>
+
+<Callout type="warn">
+  All of these except `on_usable_changed` are **synchronous**: handlers run inline and block the
+  pipeline until they complete. Use them for fast work like logging, counting or setting flags,
+  not for I/O. `on_usable_changed` runs in its own task.
+</Callout>
+
+## Example: response logger
+
+Watching for frames that bracket a piece of work is a common pattern. `LLMFullResponseStartFrame`
+and `LLMFullResponseEndFrame` bracket every LLM response:
+
+<include cwd>snippets/frame_processors.ts#response-logger</include>
+
+## Testing a processor
+
+`runTest()` from `@pipecat-ts/core/tests/utils` (the port of `pipecat.tests.utils.run_test`) runs
+a processor in a real pipeline, sends frames, and checks the frame types that come out:
+
+<include cwd>snippets/testing.ts#run-test</include>
+
+## Best practices
+
+1. **Always call the parent**: `super(options)` and `await super.processFrame(frame, direction)`.
+2. **Forward all frames** with `await this.pushFrame(frame, direction)`.
+3. **Handle frames conditionally** with `instanceof` checks.
+4. **Handle errors properly**: `rethrowIfCancelled(e)` first in every `catch`, then `pushError()`.
+5. **Position carefully**: put the processor where it receives the frames it needs.
+6. **Track your tasks**: start background work with `this.createTask()`, never a floating promise.

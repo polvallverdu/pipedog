@@ -1,5 +1,8 @@
+// Copyright (c) 2024-2026, Daily
 // Copyright (c) 2026, pipecat-ts contributors
 // SPDX-License-Identifier: BSD-2-Clause
+//
+// Ported from pipecat: tests/test_rtvi_observer_cleanup.py
 
 /** Tests for RTVIObserver cleanup. */
 
@@ -27,7 +30,7 @@ describe("TestRTVIObserverCleanup", () => {
 
     // loguru's `logger.remove(sink_id)` raising ValueError means the sink is
     // gone; here, the sink no longer receives records.
-    logger.info("after cleanup");
+    logger.error("after cleanup");
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sinkSpy).not.toHaveBeenCalled();
     sinkSpy.mockRestore();

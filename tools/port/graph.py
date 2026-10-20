@@ -286,7 +286,7 @@ def main():
         non_core = sorted(p for p in pkgs if p != "@pipecat-ts/core")
         pkg = non_core[0] if non_core else "@pipecat-ts/core"
         needs = sorted(closure(graph, imported))
-        prev = old_tests.get(f, {})
+        prev = old_tests.get(f"tests/{f}", {})
         tests.append({
             "file": f"tests/{f}",
             "lines": sum(1 for _ in open(os.path.join(tests_dir, f))),

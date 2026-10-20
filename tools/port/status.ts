@@ -51,6 +51,31 @@ if (args[0] === "--set") {
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
+// --sync-tests: run every ported test file and record its real status.
+if (args[0] === "--sync-tests") {
+  for (const t of manifest.tests) {
+    if (!existsSync(t.ts)) continue;
+    const proc = Bun.spawnSync(["bun", "test", t.ts], { stdout: "pipe", stderr: "pipe" });
+    const out = `${proc.stdout.toString()}${proc.stderr.toString()}`;
+    const count = (k: string) => Number(new RegExp(`(\\d+) ${k}`).exec(out)?.[1] ?? 0);
+    const [pass, fail, skip, todo] = [count("pass"), count("fail"), count("skip"), count("todo")];
+    // Failures: re-port. Todos: blocked on an unported module. Only skips: skipped upstream/deprecated.
+    t.status =
+      fail > 0 || pass + skip + todo === 0
+        ? "in_progress"
+        : todo > 0
+          ? "ported"
+          : pass === 0
+            ? "skipped"
+            : skip > 0
+              ? "ported"
+              : "tested";
+    t.notes = `${pass} pass, ${fail} fail, ${skip} skip, ${todo} todo`;
+    console.log(`${t.status.padEnd(12)} ${t.ts} (${t.notes})`);
+  }
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
 const done = (s: Status) => s === "ported" || s === "tested" || s === "skipped";
 const pct = (a: number, b: number) => (b ? `${Math.round((100 * a) / b)}%` : "–");
 

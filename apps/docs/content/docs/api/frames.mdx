@@ -1,0 +1,53 @@
+---
+title: Frames
+description: The Frame base class, frame categories and common frame options, from @pipecat-ts/core/frames/frames.
+---
+
+```ts
+import { ControlFrame, DataFrame, Frame, SystemFrame } from "@pipecat-ts/core/frames/frames";
+```
+
+See [Frames](/docs/concepts/frames) for how the categories are processed.
+
+## Frame
+
+The base class of every frame. Its fields are set automatically.
+
+<auto-type-table cwd path="../../packages/core/src/frames/frames.ts" name="Frame" />
+
+## SystemFrame, DataFrame, ControlFrame
+
+The three base categories add no fields: they only decide how frames are queued and whether
+interruptions drop them. `SystemFrame`s are processed with high priority and never dropped;
+`DataFrame`s and `ControlFrame`s are processed in order and dropped on interruption unless
+`interruptible` is `false`.
+
+## TextFrame
+
+<auto-type-table cwd path="../../packages/core/src/frames/frames.ts" name="TextFrame" />
+
+Constructor options:
+
+<auto-type-table cwd path="../../packages/core/src/frames/frames.ts" name="TextFrameOptions" />
+
+## Audio frames
+
+`InputAudioRawFrame` (a system frame) and `OutputAudioRawFrame` (a data frame) share the
+`AudioRawFrame` mixin. Their options:
+
+<auto-type-table cwd path="../../packages/core/src/frames/frames.ts" name="AudioRawFrameOptions" />
+
+## Lifecycle frames
+
+`StartFrame` starts the pipeline. `EndFrame` (control, uninterruptible) ends it gracefully,
+`CancelFrame` (system) stops it immediately; both take an optional `reason`:
+
+<auto-type-table cwd path="../../packages/core/src/frames/frames.ts" name="EndFrameOptions" />
+
+## ErrorFrame
+
+<auto-type-table cwd path="../../packages/core/src/frames/frames.ts" name="ErrorFrameOptions" />
+
+## MetricsFrame
+
+<auto-type-table cwd path="../../packages/core/src/frames/frames.ts" name="MetricsFrameOptions" />

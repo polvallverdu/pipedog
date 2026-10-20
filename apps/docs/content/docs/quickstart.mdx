@@ -1,0 +1,87 @@
+---
+title: Quickstart
+description: Build and run your first pipecat-ts pipeline with a custom frame processor.
+---
+
+This quickstart builds the smallest useful pipecat-ts program: a pipeline of two custom frame
+processors, run by a `PipelineWorker` inside a `WorkerRunner`. No API keys, no network.
+
+<Callout title="Voice bot quickstart: coming soon">
+  Pipecat's quickstart builds a voice bot from a transport plus STT, LLM and TTS services. Those
+  provider packages (`@pipecat-ts/deepgram`, `@pipecat-ts/openai`, `@pipecat-ts/cartesia`, ...)
+  are not ported yet; see the [porting status](/docs/contributing/status). This page will grow a
+  voice bot quickstart as soon as they land.
+</Callout>
+
+<Steps>
+<Step>
+
+### Set up a project
+
+Follow [Installation](/docs/installation) to get `@pipecat-ts/core` and `@pipecat-ts/asyncio`
+into a project. Any of Bun, Node, Deno or Cloudflare Workers works; this page uses Bun.
+
+</Step>
+<Step>
+
+### Write the bot
+
+Create `quickstart.ts`. It defines two processors: one upper-cases every `TextFrame`, the other
+prints the text frames that reach it. Both pass every other frame through untouched.
+
+<include cwd meta='twoslash title="quickstart.ts"'>snippets/quickstart.ts#bot</include>
+
+Hover over the code to see the types: this sample is type-checked against the real
+`@pipecat-ts/core` sources when the docs are built.
+
+</Step>
+<Step>
+
+### Run it
+
+```bash
+bun quickstart.ts
+```
+
+Among the debug logs you will see:
+
+```text
+PrintProcessor#0: HELLO
+PrintProcessor#0: FROM PIPECAT-TS
+pipeline finished with EndFrame#0
+```
+
+</Step>
+</Steps>
+
+## What just happened
+
+1. `new Pipeline([...])` linked the processors in order, between a source and a sink.
+2. `new PipelineWorker(pipeline, ...)` wrapped the pipeline with lifecycle management. When the
+   runner started it, it pushed a `StartFrame` through the pipeline; once that reached the end,
+   `on_pipeline_started` fired.
+3. The handler queued two `TextFrame`s and an `EndFrame`. The `EndFrame` is a control frame, so
+   it is processed in order, after the text frames, and ends the pipeline gracefully once
+   everything ahead of it is flushed.
+4. `runner.run()` returned once its only worker finished.
+
+`enableRtvi: false` turns off the RTVI processor the worker adds by default, since this bot has no
+client. `handleSigint: false` keeps the runner from installing a Ctrl-C handler; leave it at its
+default (`true`) in a real bot.
+
+## Next steps
+
+<Cards>
+  <Card title="Frames" href="/docs/concepts/frames">
+    System, data and control frames, and how interruptions treat them.
+  </Card>
+  <Card title="Frame processors" href="/docs/concepts/frame-processors">
+    `processFrame`, `pushFrame`, directions, setup and event handlers.
+  </Card>
+  <Card title="Pipelines & workers" href="/docs/concepts/pipelines-and-workers">
+    `PipelineParams`, worker events, ending and cancelling.
+  </Card>
+  <Card title="Interruptions & cancellation" href="/docs/concepts/interruptions-and-cancellation">
+    How `@pipecat-ts/asyncio` gives JavaScript asyncio's cancellation.
+  </Card>
+</Cards>

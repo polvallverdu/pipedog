@@ -1,0 +1,138 @@
+---
+title: Pipelines & workers
+description: How a Pipeline links processors, how a PipelineWorker runs it, and how a WorkerRunner runs workers.
+---
+
+Three classes take a pipeline from a list of processors to a running bot:
+
+| Class | Module | Job |
+|---|---|---|
+| `Pipeline` | `@pipecat-ts/core/pipeline/pipeline` | Links frame processors in sequence. It is itself a processor, so pipelines nest. |
+| `PipelineWorker` | `@pipecat-ts/core/pipeline/worker` | Runs one pipeline: start, frame queueing, lifecycle events, idle and heartbeat monitoring, observers, RTVI. |
+| `WorkerRunner` | `@pipecat-ts/core/workers/runner` | Runs workers to completion: signal handling, the shared bus, the worker registry. |
+
+<Callout>
+  `PipelineTask` and `PipelineRunner` are deprecated aliases upstream (of `PipelineWorker` and
+  `WorkerRunner`) and are not ported. Use the `Worker` names.
+</Callout>
+
+## Pipeline
+
+A `Pipeline` takes an array of processors and connects them in order, adding a source before the
+first and a sink after the last:
+
+<include cwd>snippets/workers.ts#pipeline</include>
+
+A typical voice pipeline (once the service packages are ported) looks exactly like Pipecat's:
+
+```ts
+const pipeline = new Pipeline([
+  transport.input(), // receives user audio
+  stt, // speech to text
+  userAggregator, // collects user turns into the context
+  llm, // generates responses
+  tts, // text to speech
+  transport.output(), // sends audio to the user
+  assistantAggregator, // collects assistant turns
+]);
+```
+
+**Order matters**: each processor must sit after the processors that produce the frames it needs.
+And **processors push frames on** rather than consuming them, so several processors can use the
+same audio or text without interfering.
+
+### Parallel pipelines
+
+`ParallelPipeline` creates branches that each receive every frame; their output is merged back.
+Branches are usually paired with filters so each handles only some frames. Like Python, each
+branch is a separate array argument:
+
+<include cwd>snippets/workers.ts#parallel</include>
+
+## PipelineWorker
+
+`PipelineWorker` runs a pipeline. It takes the pipeline and an options object
+(`PipelineWorkerOptions`), including the pipeline-wide `PipelineParams`:
+
+<include cwd>snippets/workers.ts#worker</include>
+
+`PipelineParams` is passed to every processor through `FrameProcessorSetup`. Its fields (see the
+[PipelineWorker API](/docs/api/pipeline-worker)):
+
+| Field | Default | Description |
+|---|---|---|
+| `audioInSampleRate` | `16000` | Input audio sample rate in Hz. |
+| `audioOutSampleRate` | `24000` | Output audio sample rate in Hz. |
+| `enableMetrics` | `false` | Collect performance metrics (TTFB, processing time). |
+| `enableUsageMetrics` | `false` | Collect usage metrics (LLM tokens, TTS characters). |
+| `reportOnlyInitialTtfb` | `false` | Report only the first TTFB per service. |
+| `sendInitialEmptyMetrics` | `true` | Send a zeroed `MetricsFrame` when the pipeline starts. |
+| `enableHeartbeats` | `false` | Push `HeartbeatFrame`s to detect a stalled pipeline. |
+| `heartbeatsPeriodSecs` | `1.0` | Seconds between heartbeats. |
+| `heartbeatsMonitorSecs` | `10.0` | Seconds without a heartbeat before `on_heartbeat_timeout`. |
+| `startMetadata` | `{}` | Extra metadata for pipeline start. |
+
+Other worker behavior is set on the worker options: `idleTimeoutSecs` (default 300) and
+`idleTimeoutFrames`, `cancelOnIdleTimeout`, `cancelTimeoutSecs`, `setupTimeoutSecs` and
+`startTimeoutSecs` (20 s each), `observers`, `enableRtvi`, `enableTurnTracking`, `enableTracing`,
+`conversationId`, `appResources`, `processorUnusablePolicy`, `bridged` and more.
+
+### Event handlers
+
+| Event | Arguments | Fires when |
+|---|---|---|
+| `on_pipeline_started` | `(worker, frame: StartFrame)` | The `StartFrame` reached the end of the pipeline. |
+| `on_pipeline_finished` | `(worker, frame)` | The pipeline reached a terminal state: `StopFrame`, `EndFrame` or `CancelFrame`. |
+| `on_pipeline_error` | `(worker, frame: ErrorFrame)` | An `ErrorFrame` reached the source. Check `frame.processor.isUsable`. |
+| `on_pipeline_timeout` | `(worker, frame)` | A frame the worker waited on (a `StartFrame` or `CancelFrame`) never reached the end. |
+| `on_setup_timeout` | `(worker)` | Setting the processors up took longer than `setupTimeoutSecs`. |
+| `on_idle_timeout` | `(worker)` | None of `idleTimeoutFrames` arrived within `idleTimeoutSecs`. |
+| `on_heartbeat_timeout` | `(worker)` | No heartbeat within `heartbeatsMonitorSecs` (repeats while stalled). |
+| `on_frame_reached_upstream` | `(worker, frame)` | A frame matching the upstream filter reached the source. |
+| `on_frame_reached_downstream` | `(worker, frame)` | A frame matching the downstream filter reached the sink. |
+
+<include cwd>snippets/workers.ts#worker-events</include>
+
+Set the frame types `on_frame_reached_*` fire for with `setReachedUpstreamFilter([...])` /
+`addReachedDownstreamFilter([...])`.
+
+### Queueing frames
+
+Frames queued on the worker enter at the start of the pipeline (or, upstream, at the end). They
+are processed in order within their lane, so a goodbye is spoken before the `EndFrame` ends the
+pipeline:
+
+<include cwd>snippets/workers.ts#queue-frames</include>
+
+## Ending a pipeline
+
+| Frame | Job | How to push it |
+|---|---|---|
+| `EndFrame` | Graceful shutdown, after pending frames are processed. | From outside: `worker.queueFrame(new EndFrame())`, or `worker.stopWhenDone()`. |
+| `CancelFrame` | Immediate shutdown, discarding pending frames. | `worker.cancel()`. |
+| `EndWorkerFrame` | Graceful shutdown requested from inside the pipeline. | `this.pushFrame(new EndWorkerFrame(), FrameDirection.DOWNSTREAM)`. |
+| `CancelWorkerFrame` | Immediate shutdown requested from inside the pipeline. | `this.pushFrame(new CancelWorkerFrame())`. |
+
+<include cwd>snippets/workers.ts#ending</include>
+
+From inside a processor, push the worker frames. Push `EndWorkerFrame` **downstream**, so it
+queues behind the work ahead of it instead of jumping past it:
+
+<include cwd>snippets/workers.ts#end-from-inside</include>
+
+## WorkerRunner
+
+`WorkerRunner` runs workers until they finish. For a single-pipeline bot, add the worker and run:
+
+<include cwd>snippets/workers.ts#runner</include>
+
+- `run()` resolves once every root worker has finished, so a one-pipeline bot ends when its
+  pipeline does. Pass `run({ autoEnd: false })` for a long-lived host (an HTTP server, say) that
+  adds and removes workers over many sessions; it then runs until `runner.end()` or
+  `runner.cancel()`.
+- With `handleSigint` (default `true`) and `handleSigterm` (default `false`) the runner cancels
+  itself on those signals, on runtimes with process signals (Bun, Node, Deno). On Cloudflare
+  Workers there are none, and it is a no-op.
+- `runner.end(reason)` ends every worker gracefully; `runner.cancel(reason)` cancels them.
+- Multi-worker bots add several workers with `addWorkers(a, b, ...)`; they talk over the runner's
+  `bus` (an in-process `AsyncQueueBus` by default) and are found with `runner.getWorker(name)`.

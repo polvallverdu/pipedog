@@ -7,9 +7,11 @@
 /** Tests for the given / not-given helpers in utils/types. */
 
 import { expect, test } from "bun:test";
+
 import { assertGiven, NOT_GIVEN, requireGiven } from "../src/utils/types.ts";
 
-// Upstream raises RuntimeError / ValueError; the port throws plain Error for both.
+// Upstream raises RuntimeError / ValueError; the TS port throws plain `Error`
+// for both, so the message is checked as well to tell them apart.
 
 test("test_assert_given_returns_the_value_including_none", () => {
   expect(assertGiven("voice")).toBe("voice");
@@ -18,6 +20,7 @@ test("test_assert_given_returns_the_value_including_none", () => {
 
 test("test_assert_given_rejects_not_given", () => {
   expect(() => assertGiven(NOT_GIVEN)).toThrow(Error);
+  expect(() => assertGiven(NOT_GIVEN)).toThrow("Expected a value, got NOT_GIVEN");
 });
 
 test("test_require_given_returns_a_value", () => {
@@ -26,6 +29,9 @@ test("test_require_given_returns_a_value", () => {
 
 test("test_require_given_rejects_not_given", () => {
   expect(() => requireGiven(NOT_GIVEN, "Piper TTS voice")).toThrow(Error);
+  expect(() => requireGiven(NOT_GIVEN, "Piper TTS voice")).toThrow(
+    "Expected a value, got NOT_GIVEN",
+  );
 });
 
 test.each([

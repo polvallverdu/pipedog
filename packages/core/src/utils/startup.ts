@@ -51,19 +51,36 @@ function pathSeparator(): string {
   return proc()?.platform === "win32" ? ";" : ":";
 }
 
-/** Resolve a setup file path to an absolute `file:` URL. */
+/** Resolve a setup file path to an absolute path (URLs are kept as-is). */
 function resolvePath(path: string): string {
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path)) return new URL(path).href;
   const isWindowsAbsolute = /^[a-zA-Z]:[\\/]/.test(path);
   if (path.startsWith("/") || isWindowsAbsolute) {
-    return new URL(`file://${isWindowsAbsolute ? "/" : ""}${path.replaceAll("\\", "/")}`).href;
+    return fileUrlToPath(
+      new URL(`file://${isWindowsAbsolute ? "/" : ""}${path.replaceAll("\\", "/")}`),
+    );
   }
   const cwd = (proc()?.cwd?.() ?? "/").replaceAll("\\", "/");
   const base = cwd.startsWith("/") ? `file://${cwd}/` : `file:///${cwd}/`;
-  return new URL(path.replaceAll("\\", "/"), base).href;
+  return fileUrlToPath(new URL(path.replaceAll("\\", "/"), base));
 }
 
-function setupFilePaths(): string[] {
+/** Convert a normalized `file:` URL back to a file system path. */
+function fileUrlToPath(url: URL): string {
+  const path = decodeURIComponent(url.pathname);
+  return /^\/[a-zA-Z]:\//.test(path) ? path.slice(1) : path;
+}
+
+/** Convert a resolved setup file path to a URL usable with `import()`. */
+function importUrl(path: string): string {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path)) return path;
+  const url = new URL("file://");
+  url.pathname = path.startsWith("/") ? path : `/${path}`;
+  return url.href;
+}
+
+/** Absolute paths of the files listed in `PIPECAT_SETUP_FILES`. */
+export function _setupFilePaths(): string[] {
   return (proc()?.env?.PIPECAT_SETUP_FILES ?? "")
     .split(pathSeparator())
     .filter((f) => f)
@@ -78,7 +95,7 @@ async function loadModule(path: string): Promise<SetupModule | null> {
 
   let module: SetupModule;
   try {
-    module = (await import(/* @vite-ignore */ path)) as SetupModule;
+    module = (await import(/* @vite-ignore */ importUrl(path))) as SetupModule;
   } catch (e) {
     rethrowIfCancelled(e);
     logger.error(`error loading setup file ${path}: ${e instanceof Error ? e.message : e}`);
@@ -109,7 +126,7 @@ export interface RunSetupHookOptions {
  */
 export async function runSetupHook(options: RunSetupHookOptions): Promise<void> {
   const { target, functionName } = options;
-  for (const path of setupFilePaths()) {
+  for (const path of _setupFilePaths()) {
     const module = await loadModule(path);
     if (module === null) {
       continue;

@@ -1,0 +1,44 @@
+---
+title: FrameProcessor
+description: FrameProcessor options, FrameProcessorSetup and the FrameProcessor class, from @pipecat-ts/core/processors/frame_processor.
+---
+
+```ts
+import {
+  FrameDirection,
+  FrameProcessor,
+  type FrameProcessorOptions,
+  FrameProcessorSetup,
+} from "@pipecat-ts/core/processors/frame_processor";
+```
+
+See [Frame processors](/docs/concepts/frame-processors) for a guide.
+
+## FrameProcessorOptions
+
+The options object every processor constructor accepts (and passes to `super(options)`).
+
+<auto-type-table cwd path="../../packages/core/src/processors/frame_processor.ts" name="FrameProcessorOptions" />
+
+It extends `BaseObjectOptions` from `@pipecat-ts/core/utils/base_object`:
+
+<auto-type-table cwd path="../../packages/core/src/utils/base_object.ts" name="BaseObjectOptions" />
+
+## FrameDirection
+
+```ts
+export const FrameDirection = { DOWNSTREAM: 1, UPSTREAM: 2 } as const;
+export type FrameDirection = (typeof FrameDirection)[keyof typeof FrameDirection];
+```
+
+## FrameProcessorSetup
+
+Passed to `setup()` by the pipeline before any frame flows. Built from these options:
+
+<auto-type-table cwd path="../../packages/core/src/processors/frame_processor.ts" name="FrameProcessorSetupOptions" />
+
+## FrameProcessor
+
+The public members of the class (including those inherited from `BaseObject`):
+
+<auto-type-table cwd path="../../packages/core/src/processors/frame_processor.ts" name="FrameProcessor" />

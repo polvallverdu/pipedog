@@ -1,0 +1,87 @@
+---
+title: Runtimes & compatibility
+description: Running pipecat-ts on Bun, Node, Deno and Cloudflare Workers, and which packages are verified where.
+---
+
+`@pipecat-ts/core` and `@pipecat-ts/asyncio` are runtime-agnostic: they run unchanged on **Bun**,
+**Node.js** (22 or later), **Deno** and **Cloudflare Workers** (workerd). Code that only works on
+some runtimes lives in its own package, and every package records where it is verified.
+
+## Compatibility table
+
+Generated at build time from the `pipecat.runtimes` field of each `packages/*/package.json`:
+
+<CompatTable />
+
+`runtimes` lists only what is verified: the compat harness runs each package's smoke test (its
+`compat/smoke.ts`, or a default that imports every public entry) on each runtime, and
+`bun run compat --write` records the runtimes that passed. It is never edited by hand. An empty
+row means the package has not been run through the harness yet.
+
+## What core avoids
+
+To stay portable, `@pipecat-ts/core` and `@pipecat-ts/asyncio`:
+
+- import no `node:*` modules except `node:async_hooks` (for `AsyncLocalStorage`, in asyncio);
+- use `Uint8Array` for bytes, never `Buffer` (PCM is 16-bit little-endian);
+- use no Bun- or Deno-specific APIs;
+- use the global `fetch` and `WebSocket` for network I/O;
+- treat process signals as optional (`WorkerRunner` handles SIGINT/SIGTERM only where the runtime
+  has them).
+
+## Bun, Node and Deno
+
+These run the TypeScript sources directly. `WorkerRunner` installs a SIGINT handler by default, so
+Ctrl-C cancels the bot cleanly. Node needs version 22 or later.
+
+## Cloudflare Workers
+
+Workers are a good fit for pipecat-ts bots that talk to clients over WebSockets, with a few
+constraints:
+
+- **Enable `nodejs_compat`.** Task tracking uses `AsyncLocalStorage` from `node:async_hooks`,
+  which workerd provides under the `nodejs_compat` compatibility flag.
+
+  ```jsonc title="wrangler.jsonc"
+  {
+    "compatibility_flags": ["nodejs_compat"]
+  }
+  ```
+
+- **No WebRTC.** Workers can't run WebRTC, so the WebRTC-based transports (Daily, SmallWebRTC,
+  LiveKit) don't work there. Use a **WebSocket transport** instead; WebSocket-based transports and
+  serializers must work on Workers. Pipecat clients can connect over WebSocket with RTVI as usual.
+- **WASM is imported as a module.** workerd refuses to compile WebAssembly from bytes at runtime
+  (`WebAssembly.compile(buffer)`), so a `.wasm` file must be imported. Packages with WASM ship two
+  entries selected by the **`workerd` export condition**, which wrangler resolves automatically:
+
+  ```json title="package.json"
+  {
+    "exports": {
+      ".": {
+        "types": "./src/index.ts",
+        "workerd": "./src/workerd.ts",
+        "default": "./src/index.ts"
+      }
+    }
+  }
+  ```
+
+  The `workerd` entry does `import wasm from "../wasm/x.wasm"` and instantiates that
+  `WebAssembly.Module`; the default entry loads the bytes (a `fetch` of
+  `new URL(..., import.meta.url)`). Both accept an explicit `WebAssembly.Module | BufferSource` so
+  apps can supply their own. `@pipecat-ts/resampler-wasm` is built this way.
+- **Models are never bundled.** Packages that need a model (Silero VAD, Smart Turn) load it from a
+  path or URL you give them, with the upstream file name as the default. On Workers, serve it from
+  R2, KV, static assets or a `fetch`.
+- **No threads, limited CPU.** Upstream work done in a thread pool (`run_in_executor`) runs inline
+  or in an injected runner. Keep per-call CPU low: Workers have CPU-time limits.
+- **No process signals.** `handleSigint` is a no-op; end the runner from your Worker code (for
+  example when the WebSocket closes) with `runner.end()` or `runner.cancel()`.
+
+## Native and ML dependencies
+
+Where Pipecat uses native modules (onnxruntime, Krisp, Koala, soxr), the pipecat-ts package takes
+the model as an external file or URL and accepts an injected runtime: `onnxruntime-node` on
+Bun/Node, `onnxruntime-web` (WASM) on Workers. Pure-algorithm fallbacks, such as a linear
+resampler, may live in core.

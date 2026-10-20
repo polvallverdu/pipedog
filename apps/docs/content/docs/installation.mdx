@@ -1,0 +1,98 @@
+---
+title: Installation
+description: Add pipecat-ts to a Bun, Node, Deno or Cloudflare Workers project.
+---
+
+pipecat-ts is split into packages, like Pipecat's optional extras:
+
+| Package | What |
+|---|---|
+| `@pipecat-ts/asyncio` | asyncio semantics for JavaScript: tasks, cooperative cancellation, queues, events |
+| `@pipecat-ts/core` | frames, processors, pipelines, workers, bus, observers, RTVI, base services and transports |
+| `@pipecat-ts/<provider>` | one package per service provider, transport, serializer or audio model (being ported) |
+
+Where Python installs `pipecat-ai[deepgram,openai]`, you will add `@pipecat-ts/core` plus
+`@pipecat-ts/deepgram` and `@pipecat-ts/openai`.
+
+<Callout type="warn" title="Not on npm yet">
+  The packages are not published yet (they are at version `0.0.0`). Until they are, use them from
+  a checkout of the repository, as shown under [From source](#from-source). The commands below are
+  what installing will look like once they are published.
+</Callout>
+
+## Package managers
+
+<Tabs items={["bun", "npm", "pnpm", "deno"]}>
+  <Tab value="bun">
+    ```bash
+    bun add @pipecat-ts/core @pipecat-ts/asyncio
+    ```
+  </Tab>
+  <Tab value="npm">
+    ```bash
+    npm install @pipecat-ts/core @pipecat-ts/asyncio
+    ```
+  </Tab>
+  <Tab value="pnpm">
+    ```bash
+    pnpm add @pipecat-ts/core @pipecat-ts/asyncio
+    ```
+  </Tab>
+  <Tab value="deno">
+    ```bash
+    deno add npm:@pipecat-ts/core npm:@pipecat-ts/asyncio
+    ```
+  </Tab>
+</Tabs>
+
+## Requirements
+
+- **Bun**, **Node.js** 22 or later, **Deno**, or **Cloudflare Workers** (with the
+  `nodejs_compat` compatibility flag, which provides `AsyncLocalStorage`).
+- The sources are TypeScript written with erasable syntax only (no `enum`, `namespace` or
+  parameter properties), so Bun and Deno run them directly, Node runs them with its built-in type
+  stripping (in a workspace; Node does not strip types under `node_modules`), and bundlers such as
+  wrangler or esbuild compile them without extra configuration.
+- If you type-check with `tsc`, use `"moduleResolution": "Bundler"` (or `"NodeNext"`) and
+  `"allowImportingTsExtensions": true`.
+
+## Imports
+
+Modules are imported by their upstream path, so a Pipecat import translates directly:
+
+```python
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker
+from pipecat.workers.runner import WorkerRunner
+```
+
+```ts
+import { Pipeline } from "@pipecat-ts/core/pipeline/pipeline";
+import { PipelineParams, PipelineWorker } from "@pipecat-ts/core/pipeline/worker";
+import { WorkerRunner } from "@pipecat-ts/core/workers/runner";
+```
+
+## From source
+
+pipecat-ts is a Bun monorepo. Clone it, install, and add your app as a workspace (for example
+under `examples/`), depending on the packages with `workspace:*`:
+
+```bash
+bun install
+bun test            # the ported upstream test suite
+bun run typecheck   # tsc over every package
+```
+
+```json title="examples/my-bot/package.json"
+{
+  "name": "my-bot",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@pipecat-ts/asyncio": "workspace:*",
+    "@pipecat-ts/core": "workspace:*"
+  }
+}
+```
+
+Then continue with the [Quickstart](/docs/quickstart).

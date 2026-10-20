@@ -1,0 +1,13 @@
+{
+  "//": "Used by fumadocs-typescript (AutoTypeTable) and Twoslash to read the pipecat-ts sources.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": []
+  },
+  "include": ["../../packages/asyncio/src", "../../packages/core/src"]
+}

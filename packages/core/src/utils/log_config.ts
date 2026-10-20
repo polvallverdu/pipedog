@@ -21,7 +21,7 @@
 
 import { getEnv, InvalidEnvVarValueError } from "./env.ts";
 
-const LLM_CONTEXT_LOG_ENV_VAR = "PIPECAT_LOG_LLM_CONTEXT";
+export const _LLM_CONTEXT_LOG_ENV_VAR = "PIPECAT_LOG_LLM_CONTEXT";
 
 /**
  * How much of the context LLM services include in their DEBUG log lines.
@@ -67,7 +67,7 @@ export function _resetLlmContextLogMode(): void {
 }
 
 export function _llmContextLogModeFromEnv(): _LLMContextLogMode {
-  const raw = getEnv(LLM_CONTEXT_LOG_ENV_VAR);
+  const raw = getEnv(_LLM_CONTEXT_LOG_ENV_VAR);
   if (raw === undefined || !raw.trim()) {
     return _LLMContextLogMode.FULL;
   }
@@ -77,7 +77,7 @@ export function _llmContextLogModeFromEnv(): _LLMContextLogMode {
     return value as _LLMContextLogMode;
   }
   throw new InvalidEnvVarValueError({
-    name: LLM_CONTEXT_LOG_ENV_VAR,
+    name: _LLM_CONTEXT_LOG_ENV_VAR,
     value: raw,
     expected: modes.join(" or "),
   });

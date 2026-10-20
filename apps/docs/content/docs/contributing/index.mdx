@@ -1,0 +1,134 @@
+---
+title: Porting workflow
+description: How pipecat-ts tracks upstream Pipecat, picks the next work, ports modules and tests, and moves to a new upstream commit.
+---
+
+pipecat-ts is ported from a **pinned upstream commit** of Pipecat, module by module and test by
+test. Everything about that process is tracked in the repository so humans and porting agents can
+share the work.
+
+<Callout>
+  Read `docs/CONVENTIONS.md` before porting or reviewing anything. The
+  [Coming from Pipecat](/docs/coming-from-pipecat) page summarizes it.
+</Callout>
+
+## The pieces
+
+| Path | What |
+|---|---|
+| `upstream.json` | The upstream repository and pinned commit. |
+| `.upstream/pipecat` | A checkout of that commit (`bun run upstream` restores it). |
+| `porting/manifest.json` | Every upstream module and test: target package and TS path, dependencies, layer, status, notes. |
+| `porting/STATUS.md` | Generated progress report ([rendered here](/docs/contributing/status)). Never edited by hand. |
+| `tools/port/graph.py` | Builds the manifest from the upstream checkout. |
+| `tools/port/next.ts` | Selects the next work and packs it into work units. |
+| `tools/port/status.ts` | Changes a status and regenerates `STATUS.md`. |
+| `tools/port/check-headers.ts` | Checks license headers (part of `bun run lint`). |
+| `tools/compat/` | Runtime compatibility harness (Bun, Node, Deno, workerd). |
+| `.claude/workflows/port.js` | The `port` workflow: batch porting with agents. |
+
+## The manifest
+
+`bun run port:plan` (`python3 -I tools/port/graph.py`) walks the upstream checkout and writes
+`porting/manifest.json`. For every upstream module it records:
+
+- `upstream` (e.g. `src/pipecat/processors/frame_processor.py`), `package` and `ts` (the target
+  file, at the same path with the same snake_case name);
+- `deps`, its pipecat imports, and a topological `layer`: modules in the same layer can be ported
+  in parallel;
+- the upstream `tests` that exercise it and its third-party imports, which decide whether it can
+  live in core or needs its own package;
+- `status` (`todo`, `in_progress`, `ported`, `tested`, `skipped`), `portedAt` (the upstream commit
+  it was ported from) and `notes` (deprecated APIs dropped, divergences, missing dependencies).
+
+Existing statuses and notes are preserved, so re-running after an upstream bump only refreshes the
+analysis. Change a status with the status tool, never by hand-editing:
+
+```bash
+bun tools/port/status.ts --set <module|test file> <status> [notes]
+bun run port:status   # regenerate porting/STATUS.md
+```
+
+## Picking the next work
+
+`tools/port/next.ts` prints JSON work units:
+
+```bash
+# Modules, packed into units of related files (same directory first) up to --max-lines of Python
+bun tools/port/next.ts modules --mvp
+bun tools/port/next.ts modules --package @pipecat-ts/deepgram --max-lines 3500
+bun tools/port/next.ts modules --modules pipecat.services.deepgram.stt
+
+# Upstream test files whose imported modules (and their dependencies) are all ported
+bun tools/port/next.ts tests --package @pipecat-ts/core --limit 40
+```
+
+## The `port` workflow
+
+`.claude/workflows/port.js` runs a whole batch with Claude Code agents. Its phases:
+
+1. **Plan**: pack pending modules into work units (`tools/port/next.ts`).
+2. **Port**: one porter per unit, Python to TypeScript per `docs/CONVENTIONS.md`. Porters import
+   modules other agents are porting concurrently by their deterministic TS path, and read the
+   Python source of a dependency to learn its API rather than inventing one.
+3. **Review**: an adversarial parity review of each unit against upstream, fixing divergences.
+4. **Integrate**: typecheck and lint the package, fixing cross-unit mismatches.
+5. **Tests**: port the upstream tests that are now ready, 1:1, and make them pass.
+6. **Record**: update `porting/manifest.json` and `STATUS.md`.
+
+Arguments select the work, for example `{ "select": "--package @pipecat-ts/deepgram" }`, or
+`{ "select": "--mvp" }` (the default). Other options are `maxLines`, `review`, `tests`,
+`testLimit` and `testsOnly`.
+
+## Porting by hand
+
+1. Pick a module (`bun tools/port/next.ts modules ...`) and mark it `in_progress`.
+2. Create the TS file at its manifest `ts` path, starting with the license header:
+
+   ```ts
+   // Copyright (c) 2024-2026, Daily
+   // Copyright (c) 2026, pipecat-ts contributors
+   // SPDX-License-Identifier: BSD-2-Clause
+   //
+   // Ported from pipecat: src/pipecat/<path>.py
+   ```
+
+   Files with no upstream counterpart omit the Daily and "Ported from" lines.
+3. Port the code following the conventions. Use the hand-ported reference files as models:
+   `packages/asyncio/src/*`, `packages/core/src/processors/frame_processor.ts`,
+   `packages/core/src/utils/base_object.ts`, the top of `packages/core/src/frames/frames.ts`, and
+   `packages/core/src/utils/frame_queue.ts`.
+4. Port its upstream tests 1:1 (`tests/test_x.py` to `packages/<pkg>/test/test_x.test.ts`). A test
+   blocked by an unported dependency is `test.todo` naming the missing module; a deliberate
+   behavior difference is `test.skip` with a `// DIVERGENCE:` comment. Never weaken an assertion.
+5. Run the checks, then set the status to `ported` (or `tested`) with notes.
+
+```bash
+bun test
+bun run typecheck
+bun run lint        # biome + license headers
+bun run compat      # smoke tests on bun, node, deno and workerd; --write records the results
+```
+
+## Moving to a new upstream commit
+
+```bash
+bun run upstream bump            # to origin/main
+bun run upstream bump <ref>      # or to a tag / commit
+```
+
+This moves the pin in `upstream.json`, checks out the new commit, and lists the ported modules and
+tests whose upstream source changed. Those are reset to `todo` with a note, so the next `port`
+workflow run picks them up again. It then re-runs `tools/port/graph.py` to refresh the dependency
+analysis; run `bun run port:status` afterwards to regenerate `STATUS.md`.
+
+## Documentation
+
+These docs live in `apps/docs` (Fumadocs on Next.js). Code samples live in `apps/docs/snippets` and
+are type-checked against the real sources on every docs build; API tables are generated from the
+sources with AutoTypeTable.
+
+```bash
+bun run docs:dev     # http://localhost:3000
+bun run docs:build
+```
