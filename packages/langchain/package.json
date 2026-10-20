@@ -37,7 +37,12 @@
     "zod": "4.6.5"
   },
   "pipecat": {
-    "runtimes": [],
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
     "upstream": [
       "src/pipecat/processors/frameworks/langchain.py"
     ]
