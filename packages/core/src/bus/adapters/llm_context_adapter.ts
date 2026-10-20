@@ -6,8 +6,6 @@
 
 /** Type adapter for LLMContext serialization. */
 
-import { type DeserializeFunc, type SerializeFunc, TypeAdapter } from "./base.ts";
-import { ToolsSchemaAdapter } from "./tools_schema_adapter.ts";
 import type { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
 import {
   LLMContext,
@@ -18,6 +16,8 @@ import {
 } from "../../processors/aggregators/llm_context.ts";
 import type { Ctor } from "../../utils/mixin.ts";
 import { isGiven } from "../../utils/types.ts";
+import { type DeserializeFunc, type SerializeFunc, TypeAdapter } from "./base.ts";
+import { ToolsSchemaAdapter } from "./tools_schema_adapter.ts";
 
 function isDict(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
