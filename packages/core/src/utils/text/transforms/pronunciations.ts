@@ -129,7 +129,8 @@ export function pronunciationTransform(
 
   let pattern: RegExp | null = null;
   if (phonemes.size > 0) {
-    const words = [...phonemes.keys()].sort((a, b) => b.length - a.length);
+    // Python's `len` counts code points, not UTF-16 units.
+    const words = [...phonemes.keys()].sort((a, b) => [...b].length - [...a].length);
     // Python's Unicode `\w` is letters, digits and underscore.
     pattern = new RegExp(
       `(?<![\\p{L}\\p{N}_-])(?:${words.map(escapeRegex).join("|")})(?![\\p{L}\\p{N}_-])`,

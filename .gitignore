@@ -8,3 +8,4 @@ coverage/
 .next/
 .source/
 next-env.d.ts
+.claude/worktrees/

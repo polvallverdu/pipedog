@@ -15577,9 +15577,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Re-exports the same names as upstream __all__ (pronunciationTransform is not re-exported, as upstream). | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.acronyms",
@@ -15597,9 +15597,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "normalizeAcronyms. Python's Unicode \\b is rebuilt with lookarounds on [\\p{L}\\p{N}_]. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.currency",
@@ -15619,9 +15619,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "expandCurrency, uses num2words-ts with bigint amounts. Unicode \\b is emulated with a lookahead. \\d is ASCII-only (Python's matches any Unicode digit). | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.dates",
@@ -15641,9 +15641,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "normalizeDates. Python's datetime() check is replaced by a local makeDate, which throws RangeError like ValueError for year 1..9999, month and day-in-month including leap years. Unicode \\b is emulated. \\d is ASCII-only. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.email",
@@ -15661,9 +15661,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "emailToSpeech. Same regex. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.numbers",
@@ -15683,9 +15683,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "expandNumbers(digitCutoff = 2025) returns an async transform. Whole numbers are bigint so long numbers keep exact precision. digitCutoff accepts number | bigint | null. Unicode \\b is emulated. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.percentages",
@@ -15705,9 +15705,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "expandPercentages. Python's float(value) becomes asFloat(parseFloat(value)) so num2words treats it as a float. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.phone",
@@ -15725,9 +15725,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "expandPhoneNumbers. Same regex. \\d is ASCII-only. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.pronunciations",
@@ -15745,9 +15745,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Already fully ported, with no PORTING marker. Left unchanged. PronunciationTransform is a callable instance. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.replacements",
@@ -15765,9 +15765,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: patterns are JS regexes (a RegExp, or a string compiled with new RegExp(p, 'g')), and replacements use JS syntax ($1, $<name>) instead of Python's (\\1, \\g<name>). Every match is replaced, as with re.sub, even when the RegExp has no g flag. An invalid pattern throws SyntaxError at construction (re.error upstream). Exports the TextReplacement type. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.strip_markdown",
@@ -15785,9 +15785,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "stripMarkdown. Python's '.' becomes [^\\n]. MULTILINE ^ and $ become (?<![^\\n]) and (?![^\\n]), so only \\n breaks lines, as in Python. \\b next to '_' becomes a Unicode \\w lookaround. Function replacers are used instead of '\\1'. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.units",
@@ -15805,9 +15805,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "expandUnits. Regexes use flags 'giu' (IGNORECASE). The trailing \\b becomes a Unicode \\w lookahead. Sorting is stable longest-first, like Python's sorted. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.transforms.voice_formatter",
@@ -15835,9 +15835,9 @@
       "tests": [
         "test_voice_formatting.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "VoiceFormatter takes a VoiceFormatterOptions object with the same defaults. Instances are callable (same pattern as PronunciationTransform), so they work directly in textTransforms, and instanceof still works. The apply step is the transform() method. Upstream's lazy imports become static imports. customReplacements is applied only when non-empty, as upstream. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.utils.text.word_timestamp_utils",
@@ -16304,9 +16304,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Re-exports WebSocketProxyClient and WebSocketProxyServer from ./websocket/index.ts. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.workers.proxy.websocket",
@@ -16323,9 +16323,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Re-exports ./client.ts and ./server.ts. The only tsc error is TS2307 for ./server.ts (workers/proxy/websocket/server.py), which is another unit's module and not written yet. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.workers.proxy.websocket.client",
@@ -16350,9 +16350,9 @@
       "tests": [
         "test_websocket_proxy.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "WebSocketProxyClient(options: {name, url, remoteWorkerName, localWorkerName, forwardMessages?, headers?, serializer?, active? = false}). The `websockets` connect is replaced by websocketConnect / WebsocketClientConnection / ConnectionClosed from services/websocket_service.ts (additionalHeaders support depends on the runtime, as noted there). forwardMessages is an array of BusMessage classes, checked with instanceof. DIVERGENCE: the receive loop rethrows CancelledError, which upstream swallows with `pass`. Inner broad catch calls rethrowIfCancelled and then logger.error. Registry workers are logged with JSON.stringify. Python's assert becomes a thrown Error. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
     },
     {
       "module": "pipecat.workers.proxy.websocket.server",
@@ -19601,8 +19601,8 @@
         "pipecat.workers.runner"
       ],
       "needsModules": 131,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "51 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_pipeline_worker_ui_bridge.py",
@@ -19699,8 +19699,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_producer_consumer.py",
@@ -20315,8 +20315,8 @@
         "pipecat.utils.text.simple_text_aggregator"
       ],
       "needsModules": 127,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "21 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_sentencex_tokenizer.py",
@@ -20375,8 +20375,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 128,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "28 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_service_metrics_observer.py",
@@ -20411,8 +20411,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 117,
-      "status": "tested",
-      "notes": "passes; timing-sensitive under heavy load (failed once in a loaded sync run, 0/15 isolated runs)"
+      "status": "in_progress",
+      "notes": "46 pass, 1 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_settings.py",
@@ -20855,8 +20855,8 @@
         "pipecat.utils.text.base_text_aggregator"
       ],
       "needsModules": 126,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "3 pass, 0 fail, 13 skip, 0 todo"
     },
     {
       "file": "tests/test_together_tts.py",
@@ -20955,8 +20955,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 127,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_tts_frame_ordering.py",
@@ -20976,8 +20976,8 @@
         "pipecat.utils.text.skip_tags_aggregator"
       ],
       "needsModules": 142,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "77 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_tts_interruptible_service.py",
@@ -20991,8 +20991,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 127,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_tts_processing_metrics.py",
@@ -21045,8 +21045,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 128,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_tts_sample_alignment.py",
@@ -21061,8 +21061,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 127,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_tts_zero_audio_contexts.py",
@@ -21075,8 +21075,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 127,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_turn_start_vad_state.py",
@@ -21518,8 +21518,8 @@
         "pipecat.utils.text.transforms.voice_formatter"
       ],
       "needsModules": 126,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "82 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_voicemail_detector.py",
@@ -21636,8 +21636,8 @@
         "pipecat.services.websocket_service"
       ],
       "needsModules": 113,
-      "status": "tested",
-      "notes": "passes; timing-sensitive under heavy load (failed once in a loaded sync run, 0/15 isolated runs)"
+      "status": "in_progress",
+      "notes": "18 pass, 1 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_websocket_service_usable.py",
@@ -21651,8 +21651,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 113,
-      "status": "tested",
-      "notes": "passes; timing-sensitive under heavy load (failed once in a loaded sync run, 0/15 isolated runs)"
+      "status": "in_progress",
+      "notes": "11 pass, 1 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_websocket_stt_connect_failure.py",
@@ -21668,8 +21668,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 116,
-      "status": "tested",
-      "notes": "passes; timing-sensitive under heavy load (failed once in a loaded sync run, 0/15 isolated runs)"
+      "status": "in_progress",
+      "notes": "5 pass, 1 fail, 0 skip, 8 todo"
     },
     {
       "file": "tests/test_websocket_stt_reconnect.py",
@@ -21707,8 +21707,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 126,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_whisper_stt_language.py",
