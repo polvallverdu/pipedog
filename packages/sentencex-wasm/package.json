@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/sentencex-wasm",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Wikimedia sentencex sentence segmentation (the Rust core, compiled to WebAssembly) for pipedog: synchronous segment() and getSentenceBoundaries() on Bun, Node, Deno and Cloudflare Workers.",
   "license": "BSD-2-Clause AND MIT",
   "repository": {

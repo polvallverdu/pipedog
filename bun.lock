@@ -43,11 +43,11 @@
     },
     "packages/asyncio": {
       "name": "@pipedog/asyncio",
-      "version": "0.0.0",
+      "version": "0.1.0",
     },
     "packages/core": {
       "name": "@pipedog/core",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/sentencex-wasm": "workspace:*",
@@ -55,11 +55,11 @@
     },
     "packages/resampler-wasm": {
       "name": "@pipedog/resampler-wasm",
-      "version": "0.0.0",
+      "version": "0.1.0",
     },
     "packages/sentencex-wasm": {
       "name": "@pipedog/sentencex-wasm",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "devDependencies": {
         "sentencex": "1.0.32",
       },

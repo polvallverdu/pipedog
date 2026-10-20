@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/asyncio",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "asyncio-style tasks, cancellation, queues and events for JavaScript runtimes (Bun, Node, Workers).",
   "license": "BSD-2-Clause",
   "repository": {
