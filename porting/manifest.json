@@ -15621,7 +15621,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "expandCurrency, uses num2words-ts with bigint amounts. Unicode \\b is emulated with a lookahead. \\d is ASCII-only (Python's matches any Unicode digit). | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
+      "notes": "Unicode digits as upstream: \\p{Nd} for Python's \\d, toAsciiDigits() before BigInt/Number (utils/text/unicode_digits.ts, generated from Python unicodedata). Verified against upstream output in test/unicode_digits.test.ts."
     },
     {
       "module": "pipecat.utils.text.transforms.dates",
@@ -15643,7 +15643,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "normalizeDates. Python's datetime() check is replaced by a local makeDate, which throws RangeError like ValueError for year 1..9999, month and day-in-month including leap years. Unicode \\b is emulated. \\d is ASCII-only. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
+      "notes": "Unicode digits as upstream: \\p{Nd} for Python's \\d, toAsciiDigits() before BigInt/Number (utils/text/unicode_digits.ts, generated from Python unicodedata). Verified against upstream output in test/unicode_digits.test.ts."
     },
     {
       "module": "pipecat.utils.text.transforms.email",
@@ -15685,7 +15685,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "expandNumbers(digitCutoff = 2025) returns an async transform. Whole numbers are bigint so long numbers keep exact precision. digitCutoff accepts number | bigint | null. Unicode \\b is emulated. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
+      "notes": "Unicode digits as upstream: \\p{Nd} for Python's \\d, toAsciiDigits() before BigInt/Number (utils/text/unicode_digits.ts, generated from Python unicodedata). Verified against upstream output in test/unicode_digits.test.ts."
     },
     {
       "module": "pipecat.utils.text.transforms.percentages",
@@ -15707,7 +15707,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "expandPercentages. Python's float(value) becomes asFloat(parseFloat(value)) so num2words treats it as a float. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
+      "notes": "Unicode digits as upstream: \\p{Nd} for Python's \\d, toAsciiDigits() before BigInt/Number (utils/text/unicode_digits.ts, generated from Python unicodedata). Verified against upstream output in test/unicode_digits.test.ts."
     },
     {
       "module": "pipecat.utils.text.transforms.phone",
@@ -15727,7 +15727,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "expandPhoneNumbers. Same regex. \\d is ASCII-only. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
+      "notes": "Unicode digits as upstream: \\p{Nd} for Python's \\d, toAsciiDigits() before BigInt/Number (utils/text/unicode_digits.ts, generated from Python unicodedata). Verified against upstream output in test/unicode_digits.test.ts."
     },
     {
       "module": "pipecat.utils.text.transforms.pronunciations",
@@ -15807,7 +15807,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "expandUnits. Regexes use flags 'giu' (IGNORECASE). The trailing \\b becomes a Unicode \\w lookahead. Sorting is stable longest-first, like Python's sorted. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
+      "notes": "Unicode digits as upstream: \\p{Nd} for Python's \\d, toAsciiDigits() before BigInt/Number (utils/text/unicode_digits.ts, generated from Python unicodedata). Verified against upstream output in test/unicode_digits.test.ts."
     },
     {
       "module": "pipecat.utils.text.transforms.voice_formatter",
@@ -16352,7 +16352,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "WebSocketProxyClient(options: {name, url, remoteWorkerName, localWorkerName, forwardMessages?, headers?, serializer?, active? = false}). The `websockets` connect is replaced by websocketConnect / WebsocketClientConnection / ConnectionClosed from services/websocket_service.ts (additionalHeaders support depends on the runtime, as noted there). forwardMessages is an array of BusMessage classes, checked with instanceof. DIVERGENCE: the receive loop rethrows CancelledError, which upstream swallows with `pass`. Inner broad catch calls rethrowIfCancelled and then logger.error. Registry workers are logged with JSON.stringify. Python's assert becomes a thrown Error. | UNRESOLVED: All transforms (currency, dates, numbers, percentages, phone, units): Python's `\\d` in str patterns matches any Unicode decimal digit, and int()/float() accept those digits. The TS ports use ASCII-only `\\d` with Number/BigInt. So text like Arabic-Indic '٥٠%' is expanded upstream but left alone in pedog. This is an edge case and fixing it needs digit normalization in 6 files, so I left it alone instead of widening scope. | UNRESOLVED: packages/core/src/workers/proxy/websocket/client.ts: upstream's _receive_loop swallows CancelledError, so the task ends normally. The port rethrows it, which follows the conventions, and says so in the file's porting notes. Every other part of the client matches upstream line by line: events, defaults, forward-message filtering, ConnectionClosed handling and rethrowIfCancelled in the broad catch. server.ts is not ported yet, so the WebSocketProxyServer re-export in websocket/index.ts will fail to resolve until it is."
+      "notes": "WebSocketProxyClient(options: {name, url, remoteWorkerName, localWorkerName, forwardMessages?, headers?, serializer?, active? = false}); websockets client replaced by websocketConnect from services/websocket_service.ts. Cancellation handled as upstream (receive loop swallows CancelledError)."
     },
     {
       "module": "pipecat.workers.proxy.websocket.server",

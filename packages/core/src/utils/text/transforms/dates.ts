@@ -8,13 +8,18 @@
 
 import { num2words } from "num2words-ts";
 import type { TextType } from "../../../frames/frames.ts";
+import { toAsciiDigits } from "../unicode_digits.ts";
+
+const pyInt = (digits: string): number => Number(toAsciiDigits(digits));
 
 // Python's `\b` (next to a digit here) is Unicode-aware; the lookarounds
 // rebuild it with Unicode `\w` (letters, digits and underscore).
 // ISO dates: 2023-05-10
-const ISO_DATE_RE = /(?<![\p{L}\p{N}_])(\d{4})-(\d{2})-(\d{2})(?![\p{L}\p{N}_])/gu;
+// `\p{Nd}` is Python's Unicode `\d`; toAsciiDigits() lets BigInt/Number parse what int()/float() accept.
+const ISO_DATE_RE = /(?<![\p{L}\p{N}_])(\p{Nd}{4})-(\p{Nd}{2})-(\p{Nd}{2})(?![\p{L}\p{N}_])/gu;
 // US dates: 05/10/2023 or 05-10-2023 (not matched by ISO because ISO has 4-digit year first)
-const US_DATE_RE = /(?<![\p{L}\p{N}_])(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?![\p{L}\p{N}_])/gu;
+const US_DATE_RE =
+  /(?<![\p{L}\p{N}_])(\p{Nd}{1,2})[/-](\p{Nd}{1,2})[/-](\p{Nd}{4})(?![\p{L}\p{N}_])/gu;
 
 const ORDINAL_SUFFIXES: Readonly<Record<number, string>> = { 1: "st", 2: "nd", 3: "rd" };
 
@@ -72,7 +77,7 @@ function dateToSpoken(dt: SimpleDate): string {
 
 function isoReplace(match: string, year: string, month: string, day: string): string {
   try {
-    return dateToSpoken(makeDate(Number(year), Number(month), Number(day)));
+    return dateToSpoken(makeDate(pyInt(year), pyInt(month), pyInt(day)));
   } catch (e) {
     if (e instanceof RangeError) return match;
     throw e;
@@ -81,7 +86,7 @@ function isoReplace(match: string, year: string, month: string, day: string): st
 
 function usReplace(match: string, month: string, day: string, year: string): string {
   try {
-    return dateToSpoken(makeDate(Number(year), Number(month), Number(day)));
+    return dateToSpoken(makeDate(pyInt(year), pyInt(month), pyInt(day)));
   } catch (e) {
     if (e instanceof RangeError) return match;
     throw e;

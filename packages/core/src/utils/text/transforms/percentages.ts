@@ -8,12 +8,14 @@
 
 import { asFloat, num2words } from "num2words-ts";
 import type { TextType } from "../../../frames/frames.ts";
+import { toAsciiDigits } from "../unicode_digits.ts";
 
-const PERCENT_RE = /(\d+(?:\.\d+)?)\s*%/g;
+// `\p{Nd}` is Python's Unicode `\d`; toAsciiDigits() lets BigInt/Number parse what int()/float() accept.
+const PERCENT_RE = /(\p{Nd}+(?:\.\p{Nd}+)?)\s*%/gu;
 
 function percentToWords(value: string): string {
   // Upstream converts with `float(value)`, so "50" reads as the float 50.0.
-  const numberStr = num2words(asFloat(Number.parseFloat(value)), { lang: "en" });
+  const numberStr = num2words(asFloat(Number.parseFloat(toAsciiDigits(value))), { lang: "en" });
   return `${numberStr} percent`;
 }
 

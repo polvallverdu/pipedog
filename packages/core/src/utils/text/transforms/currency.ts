@@ -8,6 +8,7 @@
 
 import { num2words } from "num2words-ts";
 import type { TextType } from "../../../frames/frames.ts";
+import { toAsciiDigits } from "../unicode_digits.ts";
 
 /** Maps currency symbol to (singular, plural, cents_singular, cents_plural). */
 const CURRENCY_MAP: Readonly<
@@ -22,7 +23,9 @@ const CURRENCY_MAP: Readonly<
 
 // Python's `\b` (after a digit here) is Unicode-aware; the lookahead rebuilds
 // it with Unicode `\w` (letters, digits and underscore).
-const CURRENCY_RE = /([€£¥₹$])\s*(\d{1,3}(?:,\d{3})*|\d+)(?![\p{L}\p{N}_])(?:\.(\d+))?/gu;
+// `\p{Nd}` is Python's Unicode `\d`; toAsciiDigits() lets BigInt/Number parse what int()/float() accept.
+const CURRENCY_RE =
+  /([€£¥₹$])\s*(\p{Nd}{1,3}(?:,\p{Nd}{3})*|\p{Nd}+)(?![\p{L}\p{N}_])(?:\.(\p{Nd}+))?/gu;
 
 function amountToWords(n: bigint, singular: string, plural: string): string {
   const words = num2words(n, { lang: "en" });
@@ -36,11 +39,11 @@ function currencyMatch(symbol: string, wholeMatch: string, fracStr: string | und
   const currency = CURRENCY_MAP[symbol] ?? (["unit", "units", "cent", "cents"] as const);
   const [singular, plural, cSingular, cPlural] = currency;
 
-  const whole = BigInt(wholeStr);
+  const whole = BigInt(toAsciiDigits(wholeStr));
   let result = amountToWords(whole, singular, plural);
 
   if (fracStr && cSingular && cPlural) {
-    const frac = BigInt(fracStr.slice(0, 2).padEnd(2, "0"));
+    const frac = BigInt(toAsciiDigits(fracStr.slice(0, 2).padEnd(2, "0")));
     if (frac > 0n) {
       result += ` and ${amountToWords(frac, cSingular, cPlural)}`;
     }

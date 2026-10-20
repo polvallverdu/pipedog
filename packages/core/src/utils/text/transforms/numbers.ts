@@ -8,11 +8,14 @@
 
 import { num2words } from "num2words-ts";
 import type { TextType } from "../../../frames/frames.ts";
+import { toAsciiDigits } from "../unicode_digits.ts";
 
 // Matches integers and decimals, with optional thousand separators.
 // Python's `\b` (next to a digit here) is Unicode-aware; the lookarounds
 // rebuild it with Unicode `\w` (letters, digits and underscore).
-const NUMBER_RE = /(?<![\p{L}\p{N}_])(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d+))?(?![\p{L}\p{N}_])/gu;
+// `\p{Nd}` is Python's Unicode `\d`; toAsciiDigits() lets BigInt/Number parse what int()/float() accept.
+const NUMBER_RE =
+  /(?<![\p{L}\p{N}_])(\p{Nd}{1,3}(?:,\p{Nd}{3})*|\p{Nd}+)(?:\.(\p{Nd}+))?(?![\p{L}\p{N}_])/gu;
 
 /**
  * Return a transform that expands numbers to their spoken form.
@@ -41,7 +44,7 @@ export function expandNumbers(
 ): (text: string, textType: string | TextType) => Promise<string> {
   const numToWords = (wholeMatch: string, fracStr: string | undefined): string => {
     const wholeStr = wholeMatch.replaceAll(",", "");
-    const whole = BigInt(wholeStr);
+    const whole = BigInt(toAsciiDigits(wholeStr));
 
     if (digitCutoff !== null && whole > digitCutoff) {
       let result = [...wholeStr].join(" ");
@@ -56,7 +59,7 @@ export function expandNumbers(
       // which also keeps a decimal agreeing with the plural unit expandUnits
       // picks for it ("1.0 kilometers").
       return `${num2words(whole, { lang: "en" })} point ${[...fracStr]
-        .map((digit) => num2words(Number(digit), { lang: "en" }))
+        .map((digit) => num2words(Number(toAsciiDigits(digit)), { lang: "en" }))
         .join(" ")}`;
     }
 

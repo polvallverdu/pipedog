@@ -55,11 +55,14 @@ const sortedAmbiguous = [...AMBIGUOUS_UNITS].sort((a, b) => b.length - a.length)
 const W = "[\\p{L}\\p{N}_]";
 
 // Unambiguous units allow optional whitespace between the number and the unit.
-const UNIT_RE = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${sortedUnambiguous.join("|")})(?!${W})`, "giu");
+const UNIT_RE = new RegExp(
+  `(\\p{Nd}+(?:\\.\\p{Nd}+)?)\\s*(${sortedUnambiguous.join("|")})(?!${W})`,
+  "giu",
+);
 
 // Ambiguous units require the unit to follow the digit with no space.
 const AMBIGUOUS_UNIT_RE = new RegExp(
-  `(\\d+(?:\\.\\d+)?)(${sortedAmbiguous.join("|")})(?!${W})`,
+  `(\\p{Nd}+(?:\\.\\p{Nd}+)?)(${sortedAmbiguous.join("|")})(?!${W})`,
   "giu",
 );
 

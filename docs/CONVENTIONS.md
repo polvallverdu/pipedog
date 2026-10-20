@@ -149,7 +149,9 @@ Python's `asyncio` semantics are kept by `@pipedog/asyncio`. Read its
 1. `except Exception:` does **not** catch `CancelledError` in Python, but
    `catch (e)` catches everything in JS. Every ported broad `catch` must start
    with `rethrowIfCancelled(e);`. Catching `CancelledError` deliberately
-   (`except asyncio.CancelledError:`) → `if (e instanceof CancelledError) { ...; throw e; }`.
+   (`except asyncio.CancelledError:`) → `if (e instanceof CancelledError) { ... }`, doing
+   exactly what upstream does there: re-raise if it re-raises, and swallow it if upstream
+   swallows it (`except asyncio.CancelledError: pass` ends the task normally, as in Python).
 2. Cancellation is delivered at **cancellation points**: awaits on the
    primitives above, and on Tasks. A foreign await (fetch, an SDK, a
    WebSocket) is not one. Pass `currentSignal()` (or `task.signal`) to APIs

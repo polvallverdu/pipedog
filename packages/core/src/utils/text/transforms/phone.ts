@@ -11,17 +11,17 @@ import type { TextType } from "../../../frames/frames.ts";
 // Matches common phone formats: (123) 456-7890, 123-456-7890, 123.456.7890,
 // +1 800 555 1234, etc.
 const PHONE_RE = new RegExp(
-  "(?<!\\d)" + // not preceded by a digit (no partial match inside a longer number)
+  "(?<!\\p{Nd})" + // not preceded by a digit (no partial match inside a longer number)
     "(\\+?1[\\s.\\-]?)?" + // optional country code
-    "(\\(?\\d{3}\\)?[\\s.\\-]?)" + // area code
-    "(\\d{3}[\\s.\\-]?)" + // exchange
-    "(\\d{4})" + // subscriber
-    "(?!\\d)", // not followed by a digit
-  "g",
+    "(\\(?\\p{Nd}{3}\\)?[\\s.\\-]?)" + // area code
+    "(\\p{Nd}{3}[\\s.\\-]?)" + // exchange
+    "(\\p{Nd}{4})" + // subscriber
+    "(?!\\p{Nd})", // not followed by a digit
+  "gu", // u: \p{Nd} is Python's Unicode \d
 );
 
 function spaceDigits(match: string): string {
-  const digits = match.replace(/\D/g, "");
+  const digits = match.replace(/\P{Nd}/gu, "");
   return [...digits].join(" ");
 }
 

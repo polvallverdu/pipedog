@@ -9,12 +9,10 @@
  *
  * Porting notes: upstream connects with the `websockets` library; this port
  * uses `websocketConnect` / `WebsocketClientConnection` from
- * `services/websocket_service.ts`, the stand-in for its asyncio client. The
- * receive loop rethrows `CancelledError` where upstream swallows it, so the
- * task ends as cancelled rather than normally.
+ * `services/websocket_service.ts`, the stand-in for its asyncio client.
  */
 
-import { rethrowIfCancelled, sleep, type Task } from "@pipedog/asyncio";
+import { CancelledError, rethrowIfCancelled, sleep, type Task } from "@pipedog/asyncio";
 import {
   BusLocalMessage,
   type BusMessage,
@@ -253,9 +251,9 @@ export class WebSocketProxyClient extends BaseWorker {
         const ws = this._ws;
         this._ws = null;
         await this._callEventHandler("on_disconnected", ws);
+      } else if (e instanceof CancelledError) {
+        // except asyncio.CancelledError: pass (upstream ends the loop quietly).
       } else {
-        // Upstream swallows `CancelledError` here; it is rethrown so the
-        // task ends as cancelled (see the porting notes).
         throw e;
       }
     }
