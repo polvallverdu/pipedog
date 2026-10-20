@@ -1138,9 +1138,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "No code: the model (smart-turn-v3.2-cpu.onnx) ships in packages/audio-smart-turn/data/; createLocalSmartTurnAnalyzerV3() (packages/audio-smart-turn/src/index.ts) loads it by default."
     },
     {
       "module": "pipecat.audio.turn.smart_turn.http_smart_turn",
@@ -1239,7 +1239,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "PARTIAL | There is no ONNX runtime in core. The runtime is injected through createSession(modelPath, sessionOptions), a new option. The default factory throws 'ONNX runtime is not ported yet'. The session is created asynchronously in the constructor and awaited on the first prediction. The model is not bundled; smartTurnModelPath defaults to the upstream file name. Resampling to 16 kHz uses the soxr stub, so only 16 kHz pipelines work. The PIPECAT_SMART_TURN_LOG_DATA WAV dump needs a filesystem and is a stub that logs a warning. Uses envTruthy from utils/env.ts. | UNRESOLVED: audio/resamplers/soxr_resampler.ts and soxr_stream_resampler.ts: soxrResample and SoxrResampleStream are stubs that throw. So createFileResampler/createStreamResampler, ulawToPcm/pcmToUlaw/alawToPcm/pcmToAlaw at different rates, loadDtmfAudio at any rate other than 8000, and LocalSmartTurnAnalyzerV3 at any rate other than 16 kHz all throw at runtime. This needs an injected libsoxr WASM build or a pure-TS resampler fallback in core, which is a design decision beyond a parity fix. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
+      "notes": "PARTIAL | There is no ONNX runtime in core. The runtime is injected through createSession(modelPath, sessionOptions), a new option. The default factory throws; createLocalSmartTurnAnalyzerV3() in @pipedog/audio-smart-turn wires it to @pipedog/onnx and the shipped model. The session is created asynchronously in the constructor and awaited on the first prediction. The model is not bundled; smartTurnModelPath defaults to the upstream file name. Resampling to 16 kHz uses the soxr stub, so only 16 kHz pipelines work. The PIPECAT_SMART_TURN_LOG_DATA WAV dump needs a filesystem and is a stub that logs a warning. Uses envTruthy from utils/env.ts. | UNRESOLVED: audio/resamplers/soxr_resampler.ts and soxr_stream_resampler.ts: soxrResample and SoxrResampleStream are stubs that throw. So createFileResampler/createStreamResampler, ulawToPcm/pcmToUlaw/alawToPcm/pcmToAlaw at different rates, loadDtmfAudio at any rate other than 8000, and LocalSmartTurnAnalyzerV3 at any rate other than 16 kHz all throw at runtime. This needs an injected libsoxr WASM build or a pure-TS resampler fallback in core, which is a design decision beyond a parity fix. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
     },
     {
       "module": "pipecat.audio.utils",
@@ -1373,9 +1373,9 @@
       "tests": [
         "test_silero_vad.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/audio-silero/src/silero.ts: SileroOnnxModel + SileroVADAnalyzer on @pipedog/onnx (onnxruntime-node or onnxruntime-web). Async model call/voiceConfidence (JS ONNX runtimes are async); upstream model shipped in data/ (default on Bun/Node/Deno, bytes required on workerd); load failure rejects analyzeAudio instead of throwing in the constructor; chunks are Float32Array or {data, dims}; cleanup() releases the session."
     },
     {
       "module": "pipecat.audio.vad.vad_analyzer",
@@ -1407,7 +1407,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "The ThreadPoolExecutor is gone and analysis runs inline (convention rule 5). cleanup() is a no-op. VADParams, a pydantic model, is a class with an options constructor and a pydantic-style toString for the log line. round() uses Python's half-to-even rule. | UNRESOLVED: audio/resamplers/soxr_resampler.ts and soxr_stream_resampler.ts: soxrResample and SoxrResampleStream are stubs that throw. So createFileResampler/createStreamResampler, ulawToPcm/pcmToUlaw/alawToPcm/pcmToAlaw at different rates, loadDtmfAudio at any rate other than 8000, and LocalSmartTurnAnalyzerV3 at any rate other than 16 kHz all throw at runtime. This needs an injected libsoxr WASM build or a pure-TS resampler fallback in core, which is a design decision beyond a parity fix. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
+      "notes": "The ThreadPoolExecutor is gone and analysis runs inline (convention rule 5). cleanup() is a no-op. VADParams, a pydantic model, is a class with an options constructor and a pydantic-style toString for the log line. round() uses Python's half-to-even rule. | UNRESOLVED: audio/resamplers/soxr_resampler.ts and soxr_stream_resampler.ts: soxrResample and SoxrResampleStream are stubs that throw. So createFileResampler/createStreamResampler, ulawToPcm/pcmToUlaw/alawToPcm/pcmToAlaw at different rates, loadDtmfAudio at any rate other than 8000, and LocalSmartTurnAnalyzerV3 at any rate other than 16 kHz all throw at runtime. This needs an injected libsoxr WASM build or a pure-TS resampler fallback in core, which is a design decision beyond a parity fix. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules. | voiceConfidence may return a Promise (JS ONNX runtimes are async); analyzeAudio then awaits it and serializes buffers like upstream's single-thread executor."
     },
     {
       "module": "pipecat.audio.vad.vad_controller",
@@ -4914,7 +4914,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "Dropped (deprecated): PipelineTask, PipelineTaskParams, the toolResources option, the FrameProcessorSetup tool_resources field, the ErrorFrame.fatal branch, the StartFrame config fields (now `new StartFrame()`), and the legacy setup_pipeline_task hook name. Signature is `new PipelineWorker(pipeline, options)`. ProcessorUnusablePolicy is an as-const object; PipelineParams is a class. Calling `BaseWorker.cancel(self)` directly became `BaseWorker.prototype.cancel.call(this, ...)`. Assumed API of the unwritten workers/base_worker.ts: _finishedEvent, _children, bus, sendBusMessage, start/stop/end/cancel/activateWorker/onBusMessage, _handleWorkerEnd/_handleWorkerCancel, _propagate*ToChildren, _printDanglingTasks. rtvi/index.ts and rtvi/frames.ts are also not written yet. Against temporary stubs of those three modules (in a scratch copy, since deleted), the file typechecks with zero errors."
+      "notes": "Tracing: `_enableTracing = enableTracing && isTracingAvailable()` as upstream, but rechecked in async _setup() after `await loadOpenTelemetry()` (core imports @opentelemetry/api asynchronously); if it became available, the tracing context and the latency/turn trace observers are created then (_createTracingObservers()) and added to the WorkerObserver before it starts, so a worker built at module top level still traces. Dropped (deprecated): PipelineTask, PipelineTaskParams, the toolResources option, the FrameProcessorSetup tool_resources field, the ErrorFrame.fatal branch, the StartFrame config fields (now `new StartFrame()`), and the legacy setup_pipeline_task hook name. Signature is `new PipelineWorker(pipeline, options)`. ProcessorUnusablePolicy is an as-const object; PipelineParams is a class. Calling `BaseWorker.cancel(self)` directly became `BaseWorker.prototype.cancel.call(this, ...)`. Assumed API of the unwritten workers/base_worker.ts: _finishedEvent, _children, bus, sendBusMessage, start/stop/end/cancel/activateWorker/onBusMessage, _handleWorkerEnd/_handleWorkerCancel, _propagate*ToChildren, _printDanglingTasks. rtvi/index.ts and rtvi/frames.ts are also not written yet. Against temporary stubs of those three modules (in a scratch copy, since deleted), the file typechecks with zero errors."
     },
     {
       "module": "pipecat.pipeline.worker_observer",
@@ -15961,7 +15961,7 @@
       "tests": [],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "DIVERGENCE: core cannot depend on OpenTelemetry, so the OTel JS modules are injected once with registerOpenTelemetry({ api, sdk, resources }), replacing upstream's try-import. isTracingAvailable() is true once they are registered. setupTracing({ serviceName, exporter, consoleExport }) uses the sdk-trace-base v2 API (BasicTracerProvider with spanProcessors, resourceFromAttributes, trace.setGlobalTracerProvider). The OTel types are structural interfaces (OtelSpan, OtelSpanContext, OtelContext, OtelTracer). Upstream's print() of setup errors is logger.error. | UNRESOLVED: packages/core/src/utils/security/redaction.ts: JS `\\w` and `\\b` only match ASCII, while Python's match Unicode. In the PAIR name lookbehind and in KNOWN_TOKENS (`\\b`, `github_pat_\\w{82,}`), a credential name or token right after a non-ASCII letter can be redacted in JS where Python would leave it. This only over-redacts and is harmless, so I left it unchanged. | UNRESOLVED: packages/core/src/workers/base_worker.ts checkWorkerNames: the TypeError message names JS types (\"number\") where Python names its own (\"int\"). It only affects the error text. | UNRESOLVED: packages/core/src/utils/string.ts: the default sentence splitter (Intl.Segmenter plus an abbreviation list) is a documented replacement for sentencex, so some sentence boundaries can differ from upstream. Install a sentencex-compatible splitter with setSentenceSegmenter() to get exact parity. This is a design gap, not a line-level porting bug."
+      "notes": "@opentelemetry/api is an optional peer of @pipedog/core (upstream's [tracing] extra). Upstream's import-time try-import becomes a dynamic import(\"@opentelemetry/api\") started when the module loads (no top-level await; a missing package is caught), so isTracingAvailable() turns true a moment after load; loadOpenTelemetry() awaits it. registerOpenTelemetry({ api, sdk, resources }) registers explicitly and synchronously and wins over the automatic import (@pipedog/tracing's setupTracing() does this). setupTracing({ serviceName, exporter, consoleExport }) needs sdk and resources registered and uses the sdk-trace-base v2 API (BasicTracerProvider with spanProcessors, resourceFromAttributes, trace.setGlobalTracerProvider). The OTel types are structural interfaces (OtelSpan, OtelSpanContext, OtelContext, OtelTracer), so the published types do not need the peer. Upstream's print() of setup errors is logger.error. | UNRESOLVED: packages/core/src/utils/security/redaction.ts: JS `\\w` and `\\b` only match ASCII, while Python's match Unicode. In the PAIR name lookbehind and in KNOWN_TOKENS (`\\b`, `github_pat_\\w{82,}`), a credential name or token right after a non-ASCII letter can be redacted in JS where Python would leave it. This only over-redacts and is harmless, so I left it unchanged. | UNRESOLVED: packages/core/src/workers/base_worker.ts checkWorkerNames: the TypeError message names JS types (\"number\") where Python names its own (\"int\"). It only affects the error text. | UNRESOLVED: packages/core/src/utils/string.ts: the default sentence splitter (Intl.Segmenter plus an abbreviation list) is a documented replacement for sentencex, so some sentence boundaries can differ from upstream. Install a sentencex-compatible splitter with setSentenceSegmenter() to get exact parity. This is a design gap, not a line-level porting bug."
     },
     {
       "module": "pipecat.utils.tracing.tracing_context",
@@ -16012,7 +16012,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "Constructor takes one options object ({ turnTracker, latencyTracker, conversationId, additionalSpanAttributes, tracingContext, ...BaseObserverOptions }). Python span.get_span_context() is JS span.spanContext(). The turn span's parent context goes as the third startSpan argument. Depends on observers/turn_tracking_observer.ts and observers/user_bot_latency_observer.ts (types only) and base_observer.ts. | UNRESOLVED: packages/core/src/utils/security/redaction.ts: JS `\\w` and `\\b` only match ASCII, while Python's match Unicode. In the PAIR name lookbehind and in KNOWN_TOKENS (`\\b`, `github_pat_\\w{82,}`), a credential name or token right after a non-ASCII letter can be redacted in JS where Python would leave it. This only over-redacts and is harmless, so I left it unchanged. | UNRESOLVED: packages/core/src/workers/base_worker.ts checkWorkerNames: the TypeError message names JS types (\"number\") where Python names its own (\"int\"). It only affects the error text. | UNRESOLVED: packages/core/src/utils/string.ts: the default sentence splitter (Intl.Segmenter plus an abbreviation list) is a documented replacement for sentencex, so some sentence boundaries can differ from upstream. Install a sentencex-compatible splitter with setSentenceSegmenter() to get exact parity. This is a design gap, not a line-level porting bug."
+      "notes": "The tracer is resolved on first use (_getTracer()) when OpenTelemetry was not available yet at construction (upstream gets it in __init__). Constructor takes one options object ({ turnTracker, latencyTracker, conversationId, additionalSpanAttributes, tracingContext, ...BaseObserverOptions }). Python span.get_span_context() is JS span.spanContext(). The turn span's parent context goes as the third startSpan argument. Depends on observers/turn_tracking_observer.ts and observers/user_bot_latency_observer.ts (types only) and base_observer.ts. | UNRESOLVED: packages/core/src/utils/security/redaction.ts: JS `\\w` and `\\b` only match ASCII, while Python's match Unicode. In the PAIR name lookbehind and in KNOWN_TOKENS (`\\b`, `github_pat_\\w{82,}`), a credential name or token right after a non-ASCII letter can be redacted in JS where Python would leave it. This only over-redacts and is harmless, so I left it unchanged. | UNRESOLVED: packages/core/src/workers/base_worker.ts checkWorkerNames: the TypeError message names JS types (\"number\") where Python names its own (\"int\"). It only affects the error text. | UNRESOLVED: packages/core/src/utils/string.ts: the default sentence splitter (Intl.Segmenter plus an abbreviation list) is a documented replacement for sentencex, so some sentence boundaries can differ from upstream. Install a sentencex-compatible splitter with setSentenceSegmenter() to get exact parity. This is a design gap, not a line-level porting bug."
     },
     {
       "module": "pipecat.utils.types",
@@ -18318,8 +18318,8 @@
         "pipecat.utils.tracing.service_decorators"
       ],
       "needsModules": 115,
-      "status": "skipped",
-      "notes": "0 pass, 0 fail, 7 skip, 0 todo"
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo (uses a stub service, not the unported Gemini Live provider; runs with the @opentelemetry devDependencies)"
     },
     {
       "file": "tests/test_gemini_live_user_audio.py",
@@ -19010,7 +19010,7 @@
       ],
       "needsModules": 7,
       "status": "ported",
-      "notes": "3 pass, 0 fail, 0 skip, 1 todo | test_predict_endpoint_on_48k_input_runs needs an ONNX runtime (none in core)."
+      "notes": "3 pass, 0 fail, 0 skip, 1 todo | test_predict_endpoint_on_48k_input_runs needs an ONNX runtime (none in core). | test_predict_endpoint_on_48k_input_runs runs in packages/audio-smart-turn/test/test_local_smart_turn_v3_resample.test.ts (1 pass) with @pipedog/onnx."
     },
     {
       "file": "tests/test_log_config.py",
@@ -20462,8 +20462,8 @@
         "pipecat.audio.vad.vad_analyzer"
       ],
       "needsModules": 7,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo (default backend onnxruntime-node; seeded RNG instead of numpy default_rng)"
     },
     {
       "file": "tests/test_simple_text_aggregator.py",
@@ -20880,8 +20880,8 @@
         "pipecat.utils.tracing.tracing_context"
       ],
       "needsModules": 2,
-      "status": "skipped",
-      "notes": "0 pass, 0 fail, 10 skip, 0 todo"
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo (runs with the @opentelemetry/api + sdk-trace-base devDependencies)"
     },
     {
       "file": "tests/test_tracing_system_instruction.py",
@@ -21118,8 +21118,8 @@
         "pipecat.utils.tracing.turn_trace_observer"
       ],
       "needsModules": 115,
-      "status": "skipped",
-      "notes": "0 pass, 0 fail, 12 skip, 0 todo"
+      "status": "tested",
+      "notes": "10 pass, 0 fail, 0 skip, 0 todo (runs with the @opentelemetry/api + sdk-trace-base devDependencies)"
     },
     {
       "file": "tests/test_turn_tracking_observer.py",

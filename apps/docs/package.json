@@ -11,8 +11,10 @@
     "snippets:run": "bun snippets/quickstart.ts"
   },
   "dependencies": {
+    "@opentelemetry/api": "1.9.1",
     "@pipedog/asyncio": "workspace:*",
     "@pipedog/core": "workspace:*",
+    "@pipedog/tracing": "workspace:*",
     "cn": "0.4.0",
     "fumadocs-core": "16.16.2",
     "fumadocs-mdx": "15.4.6",

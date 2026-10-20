@@ -141,6 +141,33 @@ export async function writeRuntimes(
   return runtimes;
 }
 
+/**
+ * Optional peer dependencies to hide while testing `pkg`: every optional peer
+ * declared by a workspace package (e.g. core's `@opentelemetry/api`), except
+ * those `pkg` itself requires (a dependency or a non-optional peer). This is
+ * what a consumer who never installed the optional peers sees.
+ */
+export function optionalPeersToHide(pkg: PackageInfo, all: PackageInfo[]): string[] {
+  const optional = new Set<string>();
+  for (const p of all) {
+    const meta = (p.pkgJson.peerDependenciesMeta ?? {}) as Record<string, { optional?: boolean }>;
+    for (const [name, m] of Object.entries(meta)) if (m?.optional) optional.add(name);
+  }
+  const own = pkg.pkgJson;
+  const ownMeta = (own.peerDependenciesMeta ?? {}) as Record<string, { optional?: boolean }>;
+  // Optional peers this package's users are expected to install (e.g. an ONNX
+  // runtime for the ONNX packages), declared in package.json as
+  // "pipecat": { "compat": { "usesOptionalPeers": [...] } }. Not hidden.
+  const uses = ((own.pipecat as { compat?: { usesOptionalPeers?: string[] } } | undefined)?.compat
+    ?.usesOptionalPeers ?? []) as string[];
+  const required = new Set<string>([
+    ...Object.keys(own.dependencies ?? {}),
+    ...Object.keys(own.peerDependencies ?? {}).filter((n) => !ownMeta[n]?.optional),
+    ...uses,
+  ]);
+  return [...optional].filter((n) => !required.has(n)).sort();
+}
+
 export function rel(p: string): string {
   return relative(ROOT, p);
 }

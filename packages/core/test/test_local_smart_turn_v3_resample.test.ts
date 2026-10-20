@@ -18,7 +18,8 @@
  *
  * Upstream skips the whole file when `soxr` or `onnxruntime` is missing. Here
  * soxr is replaced by the default resampler engine (`@pipedog/resampler-wasm`);
- * there is no ONNX runtime in core, so the test that needs one is `test.todo`.
+ * there is no ONNX runtime in core, so the test that needs one is `test.todo`
+ * here and runs in `@pipedog/audio-smart-turn`.
  */
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
@@ -142,5 +143,9 @@ describe("test_local_smart_turn_v3_resample", () => {
     expect(out).toBe(audio);
   });
 
-  test.todo("test_predict_endpoint_on_48k_input_runs (needs onnxruntime: no ONNX runtime in core)");
+  // Needs an ONNX runtime, which core does not have: ported in
+  // packages/audio-smart-turn/test/test_local_smart_turn_v3_resample.test.ts.
+  test.todo(
+    "test_predict_endpoint_on_48k_input_runs (needs onnxruntime: see @pipedog/audio-smart-turn)",
+  );
 });

@@ -26,9 +26,10 @@ import {
 import { TracingContext } from "../src/utils/tracing/tracing_context.ts";
 import { TurnTraceObserver } from "../src/utils/tracing/turn_trace_observer.ts";
 
-// Upstream skips the suite unless opentelemetry is installed. Core does not
-// depend on OpenTelemetry, so the modules are loaded optionally here.
-// Module names are held in variables so TypeScript does not require them.
+// Upstream skips the suite unless opentelemetry is installed. `@opentelemetry/api`
+// is an optional peer of core; it and `@opentelemetry/sdk-trace-base` are core
+// devDependencies, so the suite runs here. They are still loaded optionally, as
+// upstream does (module names in variables keep TypeScript from requiring them).
 const OTEL_API = "@opentelemetry/api";
 const OTEL_SDK = "@opentelemetry/sdk-trace-base";
 

@@ -7,8 +7,19 @@
 // workspace resolution never get in the way of what we want to measure: does
 // the code itself run there.
 
-import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import type { BunPlugin } from "bun";
 import { ROOT, type Runtime } from "./packages.ts";
 
@@ -20,10 +31,13 @@ export interface RunResult {
   detail: string;
   /** Extra observations (e.g. whether node type stripping works without a bundle). */
   notes: string[];
+  /** What the smoke function returned (JSON), if anything; used by tools/bench.ts. */
+  result?: unknown;
 }
 
 const OK_MARK = "__COMPAT_OK__";
 const FAIL_MARK = "__COMPAT_FAIL__";
+const RESULT_MARK = "__COMPAT_RESULT__";
 const TIMEOUT_MS = 60_000;
 /** A compatibility date workerd 1.20261005.1 supports. */
 const COMPATIBILITY_DATE = "2026-10-01";
@@ -31,13 +45,23 @@ const COMPATIBILITY_DATE = "2026-10-01";
 /** Scratch directory for bundles; node_modules is gitignored and excluded from biome. */
 export const OUT_ROOT = join(ROOT, "node_modules", ".cache", "pipedog-compat");
 
+/**
+ * What the smoke test can read about this run: `globalThis.__PIPEDOG_COMPAT__.hiddenModules`
+ * lists the optional peers made unresolvable (see `hideModulesPlugin`).
+ */
+function compatGlobal(hidden: string[]): string {
+  return `globalThis.__PIPEDOG_COMPAT__ = ${JSON.stringify({ hiddenModules: hidden })};`;
+}
+
 /** Process entry for bun/node/deno: runs the smoke test and prints a marker. */
-function processEntry(smoke: string): string {
+function processEntry(smoke: string, hidden: string[]): string {
   return [
     `import smoke from ${JSON.stringify(smoke)};`,
+    compatGlobal(hidden),
     "const exit = (c) => (globalThis.Deno ? globalThis.Deno.exit(c) : globalThis.process.exit(c));",
     "try {",
-    "  await smoke();",
+    "  const result = await smoke();",
+    `  if (result !== undefined) console.log(${JSON.stringify(RESULT_MARK)} + JSON.stringify(result));`,
     `  console.log(${JSON.stringify(OK_MARK)});`,
     "  exit(0);",
     "} catch (e) {",
@@ -49,14 +73,15 @@ function processEntry(smoke: string): string {
 }
 
 /** Worker module entry for workerd: the fetch handler runs the smoke test. */
-function workerEntry(smoke: string): string {
+function workerEntry(smoke: string, hidden: string[]): string {
   return [
     `import smoke from ${JSON.stringify(smoke)};`,
+    compatGlobal(hidden),
     "export default {",
     "  async fetch() {",
     "    try {",
-    "      await smoke();",
-    "      return Response.json({ ok: true });",
+    "      const result = await smoke();",
+    "      return Response.json({ ok: true, result });",
     "    } catch (e) {",
     "      return Response.json({ ok: false, error: e && e.stack ? e.stack : String(e) });",
     "    }",
@@ -108,7 +133,11 @@ async function exec(cmd: string[], cwd = ROOT): Promise<Exec> {
 function judge(r: Exec, notes: string[] = []): RunResult {
   const all = `${r.stderr}\n${r.stdout}`;
   if (r.timedOut) return fail(`timed out after ${TIMEOUT_MS / 1000}s`, all, notes);
-  if (r.code === 0 && r.stdout.includes(OK_MARK)) return { ok: true, error: "", detail: "", notes };
+  if (r.code === 0 && r.stdout.includes(OK_MARK)) {
+    const line = r.stdout.split("\n").find((l) => l.startsWith(RESULT_MARK));
+    const result = line ? JSON.parse(line.slice(RESULT_MARK.length)) : undefined;
+    return { ok: true, error: "", detail: "", notes, result };
+  }
   return fail(firstErrorLine(all) || `exit code ${r.code}`, all, notes);
 }
 
@@ -119,9 +148,87 @@ function freshDir(dir: string): string {
 }
 
 interface BundleOptions {
-  target: "node" | "browser";
+  target: "node" | "browser" | "bun";
   conditions?: string[];
   plugins?: BunPlugin[];
+  /** Bare specifiers to make unresolvable (optional peers a consumer did not install). */
+  hidden?: string[];
+}
+
+/**
+ * Resolves each hidden specifier (and its subpaths) to a module that throws
+ * "Cannot find module" when evaluated, so a static import fails and a dynamic
+ * `import()` rejects, as when the package is not installed. Resolving it to a
+ * virtual module (rather than leaving it external) keeps the runtime from
+ * finding the workspace copy in node_modules.
+ */
+function hideModulesPlugin(hidden: string[]): BunPlugin {
+  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+  const filter = new RegExp(`^(${hidden.map(escapeRegExp).join("|")})(/.*)?$`);
+  return {
+    name: "compat-hidden-modules",
+    setup(build) {
+      build.onResolve({ filter }, (args) => ({ path: args.path, namespace: "compat-hidden" }));
+      build.onLoad({ filter: /.*/, namespace: "compat-hidden" }, (args) => ({
+        contents: `throw new Error(${JSON.stringify(`Cannot find module '${args.path}' (hidden by tools/compat: optional peer not installed)`)});`,
+        loader: "js",
+      }));
+    },
+  };
+}
+
+/**
+ * Keeps each workspace module's own `import.meta.url` in a bundle, as an
+ * installed (unbundled) package has, so files shipped next to the sources
+ * (models, wasm) are found where they would be.
+ */
+function moduleUrlPlugin(): BunPlugin {
+  return {
+    name: "keep-import-meta-url",
+    setup(build) {
+      build.onLoad({ filter: /\/packages\/[^/]+\/src\/.*\.ts$/ }, (args) => {
+        const text = readFileSync(args.path, "utf8");
+        if (!text.includes("import.meta.url")) return undefined;
+        const url = JSON.stringify(pathToFileURL(args.path).href);
+        return { contents: text.replaceAll("import.meta.url", url), loader: "ts" };
+      });
+    },
+  };
+}
+
+/**
+ * Optional peer dependencies of workspace packages (e.g. onnxruntime-node),
+ * which packages import at runtime. Make them resolvable from the bundle in
+ * `dir`, as they are for a user who installed them: symlinks in
+ * `<dir>/node_modules` and a package.json listing them (Deno resolves bare
+ * specifiers through it). Only peers the bundle mentions are provided.
+ */
+function provideOptionalPeers(dir: string): void {
+  const code = readFileSync(join(dir, "bundle.mjs"), "utf8");
+  const deps: Record<string, string> = {};
+  for (const name of readdirSync(join(ROOT, "packages"))) {
+    const pkgDir = join(ROOT, "packages", name);
+    const file = join(pkgDir, "package.json");
+    if (!existsSync(file)) continue;
+    const pkg = JSON.parse(readFileSync(file, "utf8"));
+    for (const [peer, meta] of Object.entries(pkg.peerDependenciesMeta ?? {})) {
+      if (!(meta as { optional?: boolean }).optional || peer in deps) continue;
+      if (!code.includes(JSON.stringify(peer))) continue;
+      const installed = join(pkgDir, "node_modules", peer);
+      if (!existsSync(installed)) continue;
+      const target = realpathSync(installed);
+      const link = join(dir, "node_modules", peer);
+      mkdirSync(dirname(link), { recursive: true });
+      rmSync(link, { force: true, recursive: true });
+      symlinkSync(target, link, "dir");
+      deps[peer] = JSON.parse(readFileSync(join(target, "package.json"), "utf8")).version;
+    }
+  }
+  if (Object.keys(deps).length === 0) return;
+  writeFileSync(
+    join(dir, "package.json"),
+    `${JSON.stringify({ private: true, type: "module", dependencies: deps }, null, 2)}\n`,
+  );
 }
 
 /** Bundle `entry` to `<dir>/bundle.mjs`. Returns null on success, else the error text. */
@@ -135,7 +242,10 @@ async function bundle(entry: string, dir: string, opts: BundleOptions): Promise<
       format: "esm",
       conditions: opts.conditions,
       external: ["node:*", "cloudflare:*"],
-      plugins: opts.plugins,
+      plugins: [
+        ...(opts.hidden?.length ? [hideModulesPlugin(opts.hidden)] : []),
+        ...(opts.plugins ?? []),
+      ],
     });
     if (!out.success) return out.logs.map(formatBuildLog).join("\n") || "bundle failed";
     return null;
@@ -157,10 +267,16 @@ function formatBuildLog(log: unknown): string {
 // ---------------------------------------------------------------------------
 // bun
 
-async function runBun(smoke: string, dir: string): Promise<RunResult> {
+async function runBun(smoke: string, dir: string, hidden: string[]): Promise<RunResult> {
   const entry = join(dir, "entry.mjs");
-  await Bun.write(entry, processEntry(smoke));
-  return judge(await exec([process.execPath, "run", entry]));
+  await Bun.write(entry, processEntry(smoke, hidden));
+  if (!hidden.length) return judge(await exec([process.execPath, "run", entry]));
+  // Hiding modules needs the bundler's resolver; run the bundle instead of the sources.
+  const err = await bundle(entry, dir, { target: "bun", hidden, plugins: [moduleUrlPlugin()] });
+  if (err) return fail(`bundle: ${firstErrorLine(err)}`, err);
+  // Optional peers the package may use (not hidden) must resolve from the bundle's dir.
+  provideOptionalPeers(dir);
+  return judge(await exec([process.execPath, "run", join(dir, "bundle.mjs")]));
 }
 
 // ---------------------------------------------------------------------------
@@ -172,49 +288,63 @@ function nodeMajor(): number | null {
   return m ? Number(m[1]) : null;
 }
 
-async function runNode(smoke: string, dir: string): Promise<RunResult> {
+async function runNode(smoke: string, dir: string, hidden: string[]): Promise<RunResult> {
   const major = nodeMajor();
   if (major == null) return fail("node not found on PATH");
   if (major < 22) return fail(`node ${major} < 22`);
 
-  // Also report whether node can run the TypeScript sources directly.
+  // Also report whether node can run the TypeScript sources directly (it
+  // resolves from node_modules, so hidden modules are not hidden there).
   const notes: string[] = [];
   const stripEntry = join(dir, "entry-strip.mjs");
-  await Bun.write(stripEntry, processEntry(smoke));
+  await Bun.write(stripEntry, processEntry(smoke, []));
   const strip = judge(
     await exec(["node", "--experimental-strip-types", "--no-warnings", stripEntry]),
   );
   notes.push(strip.ok ? "type-stripping: ok" : `type-stripping: fails (${strip.error})`);
 
   const entry = join(dir, "entry.mjs");
-  await Bun.write(entry, processEntry(smoke));
-  const err = await bundle(entry, dir, { target: "node" });
+  await Bun.write(entry, processEntry(smoke, hidden));
+  const err = await bundle(entry, dir, { target: "node", hidden, plugins: [moduleUrlPlugin()] });
   if (err) return fail(`bundle: ${firstErrorLine(err)}`, err, notes);
+  provideOptionalPeers(dir);
   return judge(await exec(["node", join(dir, "bundle.mjs")]), notes);
 }
 
 // ---------------------------------------------------------------------------
 // deno
 
-async function runDeno(smoke: string, dir: string): Promise<RunResult> {
+async function runDeno(smoke: string, dir: string, hidden: string[]): Promise<RunResult> {
   const entry = join(dir, "entry.mjs");
-  await Bun.write(entry, processEntry(smoke));
-  const err = await bundle(entry, dir, { target: "browser", conditions: ["deno"] });
+  await Bun.write(entry, processEntry(smoke, hidden));
+  const err = await bundle(entry, dir, {
+    target: "browser",
+    conditions: ["deno"],
+    hidden,
+    plugins: [moduleUrlPlugin()],
+  });
   if (err) return fail(`bundle: ${firstErrorLine(err)}`, err);
+  provideOptionalPeers(dir);
+  // With optional peers, Deno must read the package.json written next to the bundle.
+  const configFlags = existsSync(join(dir, "package.json")) ? [] : ["--no-config"];
   return judge(
-    await exec(["deno", "run", "-A", "--no-config", "--no-lock", join(dir, "bundle.mjs")], dir),
+    await exec(["deno", "run", "-A", ...configFlags, "--no-lock", join(dir, "bundle.mjs")], dir),
   );
 }
 
 // ---------------------------------------------------------------------------
 // workerd
 
-/** Turns `.wasm` imports into external workerd Wasm modules copied next to the bundle. */
+/**
+ * Turns `.wasm` imports into external workerd Wasm modules copied next to the
+ * bundle, and `.onnx` imports into Data modules (an ArrayBuffer), the way a
+ * Worker can be handed model bytes (wrangler's `Data` rule).
+ */
 function wasmModulesPlugin(dir: string, modules: string[]): BunPlugin {
   return {
     name: "workerd-wasm-modules",
     setup(build) {
-      build.onResolve({ filter: /\.wasm(\?module)?$/ }, (args) => {
+      build.onResolve({ filter: /\.(wasm|onnx)(\?module)?$/ }, (args) => {
         const spec = args.path.replace(/\?module$/, "");
         const abs = Bun.resolveSync(spec, dirname(args.importer));
         const name = `wasm/${modules.length}-${basename(abs)}`;
@@ -230,7 +360,10 @@ function wasmModulesPlugin(dir: string, modules: string[]): BunPlugin {
 function workerdConfig(port: number, wasm: string[]): string {
   const modules = [
     '(name = "bundle.mjs", esModule = embed "bundle.mjs")',
-    ...wasm.map((w) => `(name = ${JSON.stringify(w)}, wasm = embed ${JSON.stringify(w)})`),
+    ...wasm.map(
+      (w) =>
+        `(name = ${JSON.stringify(w)}, ${w.endsWith(".wasm") ? "wasm" : "data"} = embed ${JSON.stringify(w)})`,
+    ),
   ];
   return `using Workerd = import "/workerd/workerd.capnp";
 
@@ -261,16 +394,17 @@ export function workerdBin(): string | null {
   return existsSync(bin) ? bin : null;
 }
 
-async function runWorkerd(smoke: string, dir: string): Promise<RunResult> {
+async function runWorkerd(smoke: string, dir: string, hidden: string[]): Promise<RunResult> {
   const bin = workerdBin();
   if (!bin) return fail("workerd not installed (bun install at the repo root)");
   const entry = join(dir, "entry.mjs");
-  await Bun.write(entry, workerEntry(smoke));
+  await Bun.write(entry, workerEntry(smoke, hidden));
   const wasm: string[] = [];
   const err = await bundle(entry, dir, {
     target: "browser",
     conditions: ["workerd", "worker", "browser"],
     plugins: [wasmModulesPlugin(dir, wasm)],
+    hidden,
   });
   if (err) return fail(`bundle: ${firstErrorLine(err)}`, err);
 
@@ -302,13 +436,13 @@ async function runWorkerd(smoke: string, dir: string): Promise<RunResult> {
         continue;
       }
       const body = await res.text();
-      let parsed: { ok?: boolean; error?: string } | null = null;
+      let parsed: { ok?: boolean; error?: string; result?: unknown } | null = null;
       try {
         parsed = JSON.parse(body);
       } catch {}
       proc.kill();
       const logs = await output;
-      if (parsed?.ok) return { ok: true, error: "", detail: "", notes: [] };
+      if (parsed?.ok) return { ok: true, error: "", detail: "", notes: [], result: parsed.result };
       if (parsed?.error) return fail(firstErrorLine(parsed.error), `${parsed.error}\n${logs}`);
       // The worker failed to load: workerd answers with an error page and logs why.
       return fail(firstErrorLine(logs) || `HTTP ${res.status}`, `${body}\n${logs}`);
@@ -323,21 +457,29 @@ async function runWorkerd(smoke: string, dir: string): Promise<RunResult> {
 
 // ---------------------------------------------------------------------------
 
-const RUNNERS: Record<Runtime, (smoke: string, dir: string) => Promise<RunResult>> = {
+const RUNNERS: Record<
+  Runtime,
+  (smoke: string, dir: string, hidden: string[]) => Promise<RunResult>
+> = {
   bun: runBun,
   node: runNode,
   deno: runDeno,
   workerd: runWorkerd,
 };
 
+/**
+ * Run `smoke` on `runtime`. `hidden` lists bare specifiers (optional peers)
+ * that must not resolve, as for a consumer who did not install them.
+ */
 export async function runSmoke(
   runtime: Runtime,
   smoke: string,
   pkgSlug: string,
+  hidden: string[] = [],
 ): Promise<RunResult> {
   const dir = freshDir(join(OUT_ROOT, pkgSlug, runtime));
   try {
-    return await RUNNERS[runtime](smoke, dir);
+    return await RUNNERS[runtime](smoke, dir, hidden);
   } catch (e) {
     return fail(`harness error: ${e instanceof Error ? e.message : String(e)}`, String(e));
   }
