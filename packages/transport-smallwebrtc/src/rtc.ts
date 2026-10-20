@@ -33,6 +33,7 @@ import {
   RTCRtpCodecParameters,
   RtpHeader,
   RtpPacket,
+  UdpTransport,
   useH264,
   useVP8,
   type RTCDataChannel as WeriftDataChannel,
@@ -75,6 +76,25 @@ import {
 const NodeBuffer = (globalThis as any).Buffer as {
   from(buffer: ArrayBufferLike, byteOffset?: number, length?: number): any;
 };
+
+// werift's ICE sockets have no "error" listener. A UDP socket reports ICMP
+// errors from earlier sends (e.g. `recvmsg ECONNREFUSED` on Linux under Bun,
+// for a STUN check to a candidate nobody listens on) as an "error" event, which
+// without a listener is an uncaught exception that kills the process. A failed
+// check is normal ICE: log it and carry on, as aiortc does.
+// `init` is private in werift's typings.
+const udpProto = UdpTransport.prototype as unknown as {
+  init: (this: UdpTransport) => Promise<void>;
+};
+const weriftUdpInit = udpProto.init;
+if (!(weriftUdpInit as { pipedogPatched?: boolean }).pipedogPatched) {
+  const init = async function (this: UdpTransport): Promise<void> {
+    this.socket.on("error", (e: Error) => logger.debug(`ICE UDP socket error: ${e.message}`));
+    return weriftUdpInit.call(this);
+  };
+  (init as { pipedogPatched?: boolean }).pipedogPatched = true;
+  udpProto.init = init;
+}
 
 // ---------------------------------------------------------------------------
 // Descriptions and candidates
