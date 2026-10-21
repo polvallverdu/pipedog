@@ -10,8 +10,8 @@ import { createRelativeLink } from "fumadocs-ui/mdx";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AttributionNotice } from "@/components/attribution";
-import { getMDXComponents } from "@/components/mdx";
-import { basePath, contentDir, markdownPath, repoUrl } from "@/lib/shared";
+import { FileLink, getMDXComponents } from "@/components/mdx";
+import { basePath, contentDir, markdownPath, repoUrl, siteUrl } from "@/lib/shared";
 import { pageUrls, source } from "@/lib/source";
 
 interface PageProps {
@@ -24,8 +24,10 @@ export default async function Page(props: PageProps) {
   if (!page) notFound();
 
   const MDX = page.data.body;
-  // fumadocs-ui prefixes a basePath only under Vite, so add Next's here.
-  const markdownUrl = `${basePath}${markdownPath(page.url)}`;
+  // The page actions prefix relative URLs with import.meta.env.BASE_URL, which the Next build
+  // also sets, so a basePath-prefixed path came out as /pipedog/pipedog/... An absolute URL is
+  // left alone. Locally there is no basePath and the plain path works.
+  const markdownUrl = basePath ? `${siteUrl}${markdownPath(page.url)}` : markdownPath(page.url);
 
   return (
     <DocsPage toc={page.data.toc} full={page.data.full}>
@@ -40,7 +42,7 @@ export default async function Page(props: PageProps) {
         />
       </div>
       <DocsBody>
-        <MDX components={getMDXComponents({ a: createRelativeLink(source, page) })} />
+        <MDX components={getMDXComponents({ a: createRelativeLink(source, page, FileLink) })} />
         <AttributionNotice />
       </DocsBody>
     </DocsPage>
