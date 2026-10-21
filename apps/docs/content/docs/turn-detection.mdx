@@ -72,5 +72,9 @@ the local models, which is over Cloudflare's 10 MB limit for a Worker.
 
 Speech-to-text services with their own turn detection:
 
-- `OpenAIRealtimeSTTService` with `turnDetection: { type: "server_vad" }`.
-- Deepgram Flux and Cartesia's turn detection, once their packages are ported.
+- `OpenAIRealtimeSTTService` (`@pipedog/openai/stt`) with `turnDetection: { type: "server_vad" }`.
+- `DeepgramFluxSTTService` (`@pipedog/deepgram/flux/stt`): Deepgram's turn-taking model.
+- `CartesiaTurnsSTTService` (`@pipedog/cartesia/turns/stt`).
+
+Each of these recommends its own turn strategies to the user aggregator, so passing no VAD analyzer is
+all it takes.

@@ -141,6 +141,14 @@
         "@pipedog/onnx": "workspace:*",
       },
     },
+    "packages/cartesia": {
+      "name": "@pipedog/cartesia",
+      "version": "0.3.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
     "packages/core": {
       "name": "@pipedog/core",
       "version": "0.3.0",
@@ -161,6 +169,22 @@
       "optionalPeers": [
         "@opentelemetry/api",
       ],
+    },
+    "packages/deepgram": {
+      "name": "@pipedog/deepgram",
+      "version": "0.3.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/elevenlabs": {
+      "name": "@pipedog/elevenlabs",
+      "version": "0.3.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
     },
     "packages/google": {
       "name": "@pipedog/google",
@@ -681,9 +705,15 @@
 
     "@pipedog/audio-smart-turn": ["@pipedog/audio-smart-turn@workspace:packages/audio-smart-turn"],
 
+    "@pipedog/cartesia": ["@pipedog/cartesia@workspace:packages/cartesia"],
+
     "@pipedog/core": ["@pipedog/core@workspace:packages/core"],
 
+    "@pipedog/deepgram": ["@pipedog/deepgram@workspace:packages/deepgram"],
+
     "@pipedog/docs": ["@pipedog/docs@workspace:apps/docs"],
+
+    "@pipedog/elevenlabs": ["@pipedog/elevenlabs@workspace:packages/elevenlabs"],
 
     "@pipedog/example-framework-snippets": ["@pipedog/example-framework-snippets@workspace:examples/framework-snippets"],
 

@@ -101,9 +101,21 @@ beforeAll(async () => {
   const started = await startWorker(mock.baseUrl, mock.realtimeUrl, observability);
   worker = started.proc;
   port = started.port;
+  // Load the Worker once before the sessions: the first request compiles it.
+  await fetch(`http://127.0.0.1:${port}/api/session/warmup`);
 }, STARTUP_TIMEOUT_MS + 30_000);
 
-afterAll(() => {
+afterAll(async () => {
+  // The Worker's own warnings and errors, for a failure on CI, where its log
+  // file isn't shown. (The error webhook test causes some on purpose.)
+  const log = Bun.file(join(LOG_DIR, "wrangler.log"));
+  if (await log.exists()) {
+    const problems = (await log.text())
+      .split("\n")
+      .filter((line) => /\b(ERROR|WARNING)\b/.test(line));
+    if (problems.length)
+      console.log(`Worker warnings and errors:\n${problems.slice(-40).join("\n")}`);
+  }
   worker?.kill();
   mock?.stop();
   observability?.stop();
@@ -112,7 +124,10 @@ afterAll(() => {
 test("two voice sessions run in parallel, each on its own Durable Object", async () => {
   const pcm = wavToPcm16k(readFileSync(QUESTION_WAV));
   const sessions = ["alice", "bob"].map((id) =>
-    runScriptedUser(`ws://127.0.0.1:${port}/api/session/${id}`, pcm, 15),
+    runScriptedUser(`ws://127.0.0.1:${port}/api/session/${id}`, pcm, {
+      listenSecs: 45,
+      until: () => mock.spoken.filter((s) => s === ANSWER).length >= 2,
+    }),
   );
   const [alice, bob] = await Promise.all(sessions);
 
@@ -145,7 +160,10 @@ test("a pipeline error is posted to the error webhook", async () => {
   mock.failChat = true;
   try {
     const pcm = wavToPcm16k(readFileSync(QUESTION_WAV));
-    await runScriptedUser(`ws://127.0.0.1:${port}/api/session/dave`, pcm, 10);
+    await runScriptedUser(`ws://127.0.0.1:${port}/api/session/dave`, pcm, {
+      listenSecs: 30,
+      until: () => observability.alerts.length > 0,
+    });
     for (let i = 0; i < 100 && observability.alerts.length === 0; i++) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -167,10 +185,13 @@ test("a client that reconnects to its session continues the conversation", async
   const url = `ws://127.0.0.1:${port}/api/session/erin`;
   const chatsBefore = mock.chats.length;
 
-  // First connection: greeted, asks, hangs up.
-  await runScriptedUser(url, pcm, 6);
+  const answers = () => mock.spoken.filter((s) => s === ANSWER).length;
+  // First connection: greeted, asks, hangs up once it's answered.
+  const answered = answers();
+  await runScriptedUser(url, pcm, { listenSecs: 30, until: () => answers() > answered });
   // Second connection to the same session: asks again.
-  await runScriptedUser(url, pcm, 6);
+  const answeredAgain = answers();
+  await runScriptedUser(url, pcm, { listenSecs: 30, until: () => answers() > answeredAgain });
 
   // Only the first connection asked the model for a greeting.
   const chats = mock.chats.slice(chatsBefore);
