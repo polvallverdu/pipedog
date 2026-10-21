@@ -172,6 +172,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/openai`](packages/openai) | OpenAI services: LLM, Responses, Realtime, STT, TTS, image. |
 | [`@pipedog/anthropic`](packages/anthropic) | Anthropic Claude LLM service. |
 | [`@pipedog/baseten`](packages/baseten), [`@pipedog/cerebras`](packages/cerebras), [`@pipedog/crusoe`](packages/crusoe), [`@pipedog/deepseek`](packages/deepseek), [`@pipedog/fireworks`](packages/fireworks), [`@pipedog/nebius`](packages/nebius), [`@pipedog/novita`](packages/novita), [`@pipedog/ollama`](packages/ollama), [`@pipedog/openrouter`](packages/openrouter), [`@pipedog/perplexity`](packages/perplexity), [`@pipedog/qwen`](packages/qwen), [`@pipedog/sambanova`](packages/sambanova) | OpenAI-compatible LLM services, one package per provider, each a small subclass of `OpenAILLMService`. |
+| [`@pipedog/groq`](packages/groq), [`@pipedog/mistral`](packages/mistral), [`@pipedog/together`](packages/together), [`@pipedog/xai`](packages/xai) | OpenAI-compatible LLM services with the provider's speech-to-text and text-to-speech. `@pipedog/grok` is the deprecated alias of `@pipedog/xai/llm`. |
 | [`@pipedog/google`](packages/google) | Google services: Gemini (LLM, Live), Cloud Speech-to-Text, Cloud Text-to-Speech. |
 | [`@pipedog/deepgram`](packages/deepgram) | Deepgram services: STT, TTS, Flux STT and TTS. |
 | [`@pipedog/cartesia`](packages/cartesia) | Cartesia services: STT, Ink-2 turn-based STT, WebSocket and HTTP TTS. |

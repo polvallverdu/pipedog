@@ -26,6 +26,8 @@ import {
 import { NOT_GIVEN } from "@pipedog/core/utils/types";
 import { BaseOpenAILLMService } from "@pipedog/openai/base_llm";
 import { OpenRouterLLMService } from "../../openrouter/src/llm.ts";
+import { TogetherLLMService } from "../../together/src/llm.ts";
+import { GrokLLMService } from "../../xai/src/llm.ts";
 import { DeepSeekLLMService } from "../src/llm.ts";
 
 function invocation(): OpenAILLMInvocationParams {
@@ -46,7 +48,11 @@ function construct<T>(serviceClass: { prototype: any }, build: () => T): T {
 }
 
 function buildParams(
-  serviceClass: typeof DeepSeekLLMService | typeof OpenRouterLLMService,
+  serviceClass:
+    | typeof DeepSeekLLMService
+    | typeof OpenRouterLLMService
+    | typeof TogetherLLMService
+    | typeof GrokLLMService,
   settings: unknown = null,
 ): Record<string, any> {
   const service = construct(
@@ -75,11 +81,45 @@ test("test_merge_extra_body_user_wins_and_is_not_modified", () => {
   expect(userExtraBody).toEqual({ a: "user", u: 1 });
 });
 
-test.todo("test_together_reasoning_unset_by_default: needs pipecat.services.together.llm");
-test.todo("test_together_reasoning_in_extra_body: needs pipecat.services.together.llm");
-test.todo("test_grok_reasoning_effort_unset_by_default: needs pipecat.services.xai.llm");
-test.todo("test_grok_reasoning_effort_is_top_level: needs pipecat.services.xai.llm");
-test.todo("test_grok_settings_extra_reasoning_effort_wins: needs pipecat.services.xai.llm");
+test("test_together_reasoning_unset_by_default", () => {
+  const params = buildParams(TogetherLLMService);
+  expect("extra_body" in params).toBe(false);
+});
+
+test("test_together_reasoning_in_extra_body", () => {
+  const params = buildParams(
+    TogetherLLMService,
+    new TogetherLLMService.Settings({
+      reasoning: { enabled: false },
+      extra: { extra_body: { user_field: 1 } },
+    }),
+  );
+  expect("reasoning" in params).toBe(false);
+  expect(params.extra_body).toEqual({ reasoning: { enabled: false }, user_field: 1 });
+});
+
+test("test_grok_reasoning_effort_unset_by_default", () => {
+  const params = buildParams(GrokLLMService);
+  expect("reasoning_effort" in params).toBe(false);
+  expect("extra_body" in params).toBe(false);
+});
+
+test("test_grok_reasoning_effort_is_top_level", () => {
+  const params = buildParams(
+    GrokLLMService,
+    new GrokLLMService.Settings({ reasoningEffort: "low" }),
+  );
+  expect(params.reasoning_effort).toBe("low");
+  expect("extra_body" in params).toBe(false);
+});
+
+test("test_grok_settings_extra_reasoning_effort_wins", () => {
+  const params = buildParams(
+    GrokLLMService,
+    new GrokLLMService.Settings({ reasoningEffort: "low", extra: { reasoning_effort: "high" } }),
+  );
+  expect(params.reasoning_effort).toBe("high");
+});
 
 test("test_deepseek_disables_thinking_by_default", () => {
   const params = buildParams(DeepSeekLLMService);

@@ -7,20 +7,20 @@
     "deepgram",
     "cartesia",
     "elevenlabs",
+    "groq",
+    "mistral",
+    "together",
+    "xai",
     "inworld",
     "aws",
     "---Coming soon---",
     "azure",
     "fish",
-    "groq",
     "hume",
-    "mistral",
     "nvidia",
     "rime",
     "sarvam",
     "soniox",
-    "speechmatics",
-    "together",
-    "xai"
+    "speechmatics"
   ]
 }

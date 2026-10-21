@@ -461,6 +461,137 @@ export const compatibleLlm: CompatibleLlmPage[] = [
       "SambaNova's tool calls may come without an index. The service skips tool calls whose arguments are empty, and runs function calls only when the last one has arguments.",
     ],
   },
+  {
+    slug: "groq",
+    name: "Groq",
+    pkg: "@pipedog/groq",
+    cls: "GroqLLMService",
+    settings: "GroqLLMSettings",
+    about: "Groq serves open models with fast inference on its LPUs.",
+    baseUrl: "https://api.groq.com/openai/v1",
+    model: "openai/gpt-oss-120b",
+    models: [],
+    env: "GROQ_API_KEY",
+    account: "A Groq account and an API key from the [Groq console](https://console.groq.com/).",
+    links: [
+      {
+        title: "Groq docs",
+        href: "https://console.groq.com/docs/api-reference#chat-create",
+        text: "The chat completions API reference.",
+      },
+    ],
+    developerRole: true,
+    settingsRows: [
+      '| `reasoningEffort` | `"none" \\| "default" \\| "low" \\| "medium" \\| "high" \\| null` | `null` | Sent as `reasoning_effort` when set. Which values a model accepts varies; the non-reasoning models reject it. |',
+    ],
+    usage: [
+      {
+        region: "reasoning",
+        intro:
+          'Keep a Qwen model\'s reasoning out of the spoken reply with `reasoningEffort: "none"`:',
+      },
+    ],
+    notes: [
+      "The same package has Groq's [speech-to-text](/docs/services/stt/groq) and [text-to-speech](/docs/services/tts/groq) services.",
+    ],
+  },
+  {
+    slug: "mistral",
+    name: "Mistral",
+    pkg: "@pipedog/mistral",
+    cls: "MistralLLMService",
+    settings: "MistralLLMSettings",
+    about: "Mistral AI's chat models.",
+    baseUrl: "https://api.mistral.ai/v1",
+    model: "mistral-small-latest",
+    models: ["mistral-large-latest"],
+    env: "MISTRAL_API_KEY",
+    account: "A Mistral account and an API key from [Mistral](https://docs.mistral.ai/api/).",
+    links: [
+      { title: "Mistral docs", href: "https://docs.mistral.ai/api/", text: "The API reference." },
+    ],
+    developerRole: false,
+    adapter: {
+      cls: "MistralLLMAdapter",
+      module: "mistral_adapter",
+      about:
+        "rewrites the history to Mistral's rules: an assistant message after every tool message, system messages only at the start, and `prefix: true` on a trailing assistant message",
+    },
+    notes: [
+      "`seed` is sent as Mistral's `random_seed`. `stream_options`, `max_completion_tokens` and `service_tier` are not sent.",
+      "Mistral detects function calls from the whole history, so calls that already have a tool result in the context are skipped instead of run twice. `on_function_calls_started` may still fire twice.",
+      "The same package has Mistral's [speech-to-text](/docs/services/stt/mistral) and [text-to-speech](/docs/services/tts/mistral) services.",
+    ],
+  },
+  {
+    slug: "together",
+    name: "Together AI",
+    pkg: "@pipedog/together",
+    cls: "TogetherLLMService",
+    settings: "TogetherLLMSettings",
+    about: "Together AI serves open models through an OpenAI-compatible API.",
+    baseUrl: "https://api.together.xyz/v1",
+    model: "zai-org/GLM-5.2",
+    models: [],
+    env: "TOGETHER_API_KEY",
+    account: "A Together AI account and an API key from [Together AI](https://together.ai/).",
+    links: [
+      {
+        title: "Together AI docs",
+        href: "https://docs.together.ai/reference/chat-completions-1",
+        text: "The chat completions API reference.",
+      },
+    ],
+    developerRole: false,
+    settingsRows: [
+      "| `reasoning` | `Record<string, unknown> \\| null` | `null` | Together's reasoning toggle, e.g. `{ enabled: false }`, sent as `reasoning` in the request body. `null` leaves it to the model. |",
+    ],
+    usage: [
+      {
+        region: "reasoning",
+        intro:
+          "Turn off a reasoning model's thinking pass, which otherwise delays the first spoken token:",
+      },
+    ],
+    notes: [
+      "The same package has Together's [speech-to-text](/docs/services/stt/together) and [text-to-speech](/docs/services/tts/together) services.",
+    ],
+  },
+  {
+    slug: "grok",
+    name: "xAI Grok",
+    pkg: "@pipedog/xai",
+    cls: "GrokLLMService",
+    settings: "GrokLLMSettings",
+    about: "xAI's Grok models.",
+    baseUrl: "https://api.x.ai/v1",
+    model: "grok-4.20-non-reasoning",
+    models: ["grok-4.6"],
+    env: "XAI_API_KEY",
+    account: "An xAI account and an API key from the [xAI console](https://console.x.ai/).",
+    links: [
+      {
+        title: "xAI docs",
+        href: "https://docs.x.ai/docs/api-reference#chat-completions",
+        text: "The chat completions API reference.",
+      },
+    ],
+    developerRole: true,
+    settingsRows: [
+      '| `reasoningEffort` | `"none" \\| "low" \\| "medium" \\| "high" \\| "xhigh" \\| null` | `null` | Sent as `reasoning_effort` when set, unless `extra` already has one. The non-reasoning models, including the default, reject it. |',
+    ],
+    usage: [
+      {
+        region: "reasoning",
+        intro: "A reasoning model, with its reasoning effort:",
+      },
+    ],
+    notes: [
+      "xAI reports reasoning tokens apart from `completion_tokens`, so they are added to the completion count in token usage metrics when the total says so.",
+      "`@pipedog/grok` re-exports `GrokLLMService` from `@pipedog/xai/llm`, as upstream's deprecated `pipecat.services.grok.llm` does. Import from `@pipedog/xai/llm`.",
+      "The same package has xAI's [speech-to-text](/docs/services/stt/xai) and [text-to-speech](/docs/services/tts/xai) services. The Grok realtime (speech-to-speech) service isn't ported yet.",
+    ],
+  },
 ];
 
 /** Ported pages (hand-written, except the OpenAI-compatible LLMs above), in sidebar order. */
@@ -509,12 +640,14 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/langchain",
       classes: ["LangchainProcessor"],
     },
-    ...compatibleLlm.map((page) => ({
-      slug: page.slug,
-      name: page.name,
-      pkg: page.pkg,
-      classes: [page.cls],
-    })),
+    ...[...compatibleLlm]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((page) => ({
+        slug: page.slug,
+        name: page.name,
+        pkg: page.pkg,
+        classes: [page.cls],
+      })),
   ],
   stt: [
     {
@@ -565,6 +698,15 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/whisper",
       classes: ["BaseWhisperSTTService"],
     },
+    { slug: "groq", name: "Groq", pkg: "@pipedog/groq", classes: ["GroqSTTService"] },
+    { slug: "mistral", name: "Mistral", pkg: "@pipedog/mistral", classes: ["MistralSTTService"] },
+    {
+      slug: "together",
+      name: "Together AI",
+      pkg: "@pipedog/together",
+      classes: ["TogetherSTTService"],
+    },
+    { slug: "xai", name: "xAI", pkg: "@pipedog/xai", classes: ["XAISTTService"] },
   ],
   tts: [
     { slug: "openai", name: "OpenAI", pkg: "@pipedog/openai", classes: ["OpenAITTSService"] },
@@ -591,6 +733,20 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "ElevenLabs",
       pkg: "@pipedog/elevenlabs",
       classes: ["ElevenLabsTTSService", "ElevenLabsHttpTTSService"],
+    },
+    { slug: "groq", name: "Groq", pkg: "@pipedog/groq", classes: ["GroqTTSService"] },
+    { slug: "mistral", name: "Mistral", pkg: "@pipedog/mistral", classes: ["MistralTTSService"] },
+    {
+      slug: "together",
+      name: "Together AI",
+      pkg: "@pipedog/together",
+      classes: ["TogetherTTSService"],
+    },
+    {
+      slug: "xai",
+      name: "xAI",
+      pkg: "@pipedog/xai",
+      classes: ["XAITTSService", "XAIHttpTTSService"],
     },
     {
       slug: "inworld",
@@ -749,38 +905,6 @@ export const upcoming: UpcomingPage[] = [
   },
   {
     section: "llm",
-    slug: "groq",
-    name: "Groq",
-    about: "Fast inference of open models on Groq's LPUs, with an OpenAI-compatible API.",
-    classes: ["GroqLLMService"],
-    modules: ["services/groq/llm.py"],
-  },
-  {
-    section: "llm",
-    slug: "together",
-    name: "Together AI",
-    about: "Open models served by Together AI, with an OpenAI-compatible API.",
-    classes: ["TogetherLLMService"],
-    modules: ["services/together/llm.py"],
-  },
-  {
-    section: "llm",
-    slug: "mistral",
-    name: "Mistral",
-    about: "Mistral AI's chat models.",
-    classes: ["MistralLLMService"],
-    modules: ["services/mistral/llm.py"],
-  },
-  {
-    section: "llm",
-    slug: "grok",
-    name: "xAI Grok",
-    about: "xAI's Grok models, with an OpenAI-compatible API.",
-    classes: ["GrokLLMService"],
-    modules: ["services/xai/llm.py"],
-  },
-  {
-    section: "llm",
     slug: "nvidia",
     name: "NVIDIA",
     about: "Models served by NVIDIA NIM.",
@@ -806,14 +930,6 @@ export const upcoming: UpcomingPage[] = [
   },
   {
     section: "stt",
-    slug: "groq",
-    name: "Groq",
-    about: "Whisper models served by Groq.",
-    classes: ["GroqSTTService"],
-    modules: ["services/groq/stt.py"],
-  },
-  {
-    section: "stt",
     slug: "assemblyai",
     name: "AssemblyAI",
     about: "AssemblyAI's streaming speech recognition, with turn detection.",
@@ -835,30 +951,6 @@ export const upcoming: UpcomingPage[] = [
     about: "Speechmatics' realtime speech recognition, with diarization.",
     classes: ["SpeechmaticsSTTService"],
     modules: ["services/speechmatics/stt.py"],
-  },
-  {
-    section: "stt",
-    slug: "together",
-    name: "Together AI",
-    about: "Speech recognition models served by Together AI.",
-    classes: ["TogetherSTTService"],
-    modules: ["services/together/stt.py"],
-  },
-  {
-    section: "stt",
-    slug: "mistral",
-    name: "Mistral",
-    about: "Mistral AI's Voxtral speech recognition.",
-    classes: ["MistralSTTService"],
-    modules: ["services/mistral/stt.py"],
-  },
-  {
-    section: "stt",
-    slug: "xai",
-    name: "xAI",
-    about: "xAI's speech recognition.",
-    classes: ["XAISTTService"],
-    modules: ["services/xai/stt.py"],
   },
   {
     section: "stt",
@@ -895,14 +987,6 @@ export const upcoming: UpcomingPage[] = [
   },
   {
     section: "tts",
-    slug: "groq",
-    name: "Groq",
-    about: "Speech synthesis served by Groq.",
-    classes: ["GroqTTSService"],
-    modules: ["services/groq/tts.py"],
-  },
-  {
-    section: "tts",
     slug: "speechmatics",
     name: "Speechmatics",
     about: "Speech synthesis from Speechmatics.",
@@ -916,30 +1000,6 @@ export const upcoming: UpcomingPage[] = [
     about: "Rime's expressive voices for conversational agents.",
     classes: ["RimeTTSService", "RimeHttpTTSService", "RimeNonJsonTTSService"],
     modules: ["services/rime/tts.py"],
-  },
-  {
-    section: "tts",
-    slug: "together",
-    name: "Together AI",
-    about: "Speech synthesis models served by Together AI.",
-    classes: ["TogetherTTSService"],
-    modules: ["services/together/tts.py"],
-  },
-  {
-    section: "tts",
-    slug: "mistral",
-    name: "Mistral",
-    about: "Speech synthesis from Mistral AI.",
-    classes: ["MistralTTSService"],
-    modules: ["services/mistral/tts.py"],
-  },
-  {
-    section: "tts",
-    slug: "xai",
-    name: "xAI",
-    about: "Speech synthesis from xAI.",
-    classes: ["XAITTSService", "XAIHttpTTSService"],
-    modules: ["services/xai/tts.py"],
   },
   {
     section: "tts",

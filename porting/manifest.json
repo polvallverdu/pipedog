@@ -448,9 +448,9 @@
         "openai"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/mistral/src/mistral_adapter.ts (copy.deepcopy -> structuredClone). No upstream test; covered through test/mistral_llm_client.test.ts."
     },
     {
       "module": "pipecat.adapters.services.open_ai_adapter",
@@ -9134,9 +9134,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/grok/src/llm.ts: re-exports @pipedog/xai/llm, marked @deprecated. DIVERGENCE: no import-time deprecation warning (the package is side-effect free)."
     },
     {
       "module": "pipecat.services.grok.realtime",
@@ -9229,9 +9229,9 @@
       "tests": [
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/groq/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
     },
     {
       "module": "pipecat.services.groq.stt",
@@ -9252,9 +9252,9 @@
         "test_openai_compatible_api_key.py",
         "test_openai_http_client.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/groq/src/stt.ts: BaseWhisperSTTService subclass; the upload is a File. Deprecated model/language/prompt/temperature options not ported."
     },
     {
       "module": "pipecat.services.groq.tts",
@@ -9280,9 +9280,9 @@
         "pydantic"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/groq/src/tts.ts: raw fetch to Groq's OpenAI-compatible /audio/speech instead of the groq SDK; whole WAV body parsed once (DIVERGENCE: upstream parses each chunk); deprecated InputParams/params/model_name/voice_id not ported. Tested against a Bun.serve fake."
     },
     {
       "module": "pipecat.services.heygen",
@@ -10029,9 +10029,9 @@
         "test_mistral_llm.py",
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/mistral/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
     },
     {
       "module": "pipecat.services.mistral.stt",
@@ -10058,9 +10058,9 @@
         "mistralai"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/mistral/src/stt.ts: Voxtral realtime WebSocket spoken directly via core websocketConnect instead of the mistralai SDK RealtimeConnection; baseUrl = SDK server_url; DIVERGENCE: _disconnect keeps the connection before cancelling the receive task so the socket is closed and on_disconnected fires. UNVERIFIED: the realtime wire format is from memory of Mistral's API, checked only against a local fake."
     },
     {
       "module": "pipecat.services.mistral.tts",
@@ -10083,9 +10083,9 @@
         "mistralai"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/mistral/src/tts.ts: raw fetch + SSE parsing of POST /v1/audio/speech (stream=true) instead of the mistralai SDK; new baseUrl option. UNVERIFIED: the SSE event shape is from memory of Mistral's API, checked only against a local fake."
     },
     {
       "module": "pipecat.services.moondream",
@@ -12111,9 +12111,9 @@
         "test_openai_compatible_api_key.py",
         "test_openai_compatible_extra_body.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/together/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
     },
     {
       "module": "pipecat.services.together.stt",
@@ -12139,9 +12139,9 @@
         "websockets"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/together/src/stt.ts: WebsocketSTTService over core websocketConnect (Authorization and OpenAI-Beta sent on the handshake). Tested against a Bun.serve WebSocket fake (test/together_ws_fake.test.ts)."
     },
     {
       "module": "pipecat.services.together.tts",
@@ -12168,9 +12168,9 @@
       "tests": [
         "test_together_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/together/src/tts.ts: WebsocketTTSService over core websocketConnect; query encoded like Python's urlencode(quote_via=quote, safe='/'). Tested by the port of tests/test_together_tts.py and a Bun.serve WebSocket fake."
     },
     {
       "module": "pipecat.services.tts_service",
@@ -12472,9 +12472,9 @@
         "test_openai_compatible_extra_body.py",
         "test_openai_compatible_token_usage.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/xai/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
     },
     {
       "module": "pipecat.services.xai.realtime",
@@ -12594,9 +12594,9 @@
       "tests": [
         "test_xai_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/xai/src/stt.ts: WebsocketSTTService over core websocketConnect (Bearer + User-Agent on handshake); session config in query params, reconnect on settings change."
     },
     {
       "module": "pipecat.services.xai.tts",
@@ -12624,9 +12624,9 @@
       "tests": [
         "test_xai_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/xai/src/tts.ts: XAIHttpTTSService over fetch (optional `fetch` replaces aiohttp_session; DIVERGENCE: the session-managing start/stop/cancel/cleanup overrides are not needed), XAITTSService over core websocketConnect with word timestamps."
     },
     {
       "module": "pipecat.services.xtts",
@@ -19131,8 +19131,8 @@
         "pipecat.services.mistral.llm"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "3 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_moonshine_stt.py",
@@ -19300,7 +19300,7 @@
       ],
       "needsModules": 126,
       "status": "ported",
-      "notes": "12 pass, 0 fail, 0 skip, 8 todo. todo: together and grok (not ported yet), inception and sarvam (not ported yet)."
+      "notes": "17 pass, 0 fail, 0 skip, 3 todo. todo: inception and sarvam, not ported yet."
     },
     {
       "file": "tests/test_openai_compatible_token_usage.py",
@@ -19320,7 +19320,7 @@
       ],
       "needsModules": 125,
       "status": "ported",
-      "notes": "35 pass, 0 fail, 0 skip, 2 todo. todo: grok (pipecat.services.xai.llm) and nvidia (pipecat.services.nvidia.llm), not ported yet."
+      "notes": "42 pass, 0 fail, 0 skip, 1 todo. todo: nvidia (pipecat.services.nvidia.llm), not ported yet."
     },
     {
       "file": "tests/test_openai_http_client.py",
@@ -19333,8 +19333,8 @@
         "pipecat.services.openai.tts"
       ],
       "needsModules": 136,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo. DIVERGENCE: fetch has no timeout object, so the timeout assertions are replaced by a check that requests go through the custom fetch."
     },
     {
       "file": "tests/test_openai_image_gen.py",
@@ -20868,8 +20868,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_tracing_context.py",
@@ -21845,8 +21845,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_xai_tts.py",
@@ -21859,8 +21859,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 130,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "10 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_xtts_tts_voice.py",
