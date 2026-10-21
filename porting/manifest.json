@@ -810,9 +810,9 @@
         "test_rnnoise_resampling.py",
         "test_soxr_resamplers.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "RNNoiseFilter in @pipedog/audio-rnnoise-filter; runs on Bun, Node, Deno and Workers (compat smoke). DIVERGENCE: pyrnnoise (native) replaced by RNNoise 0.2 as WebAssembly (wasm/rnnoise.wasm, extracted from @jitsi/rnnoise-wasm 0.2.1, Apache-2.0; workerd imports it as a module). The RNNoise class mirrors pyrnnoise denoise_chunk; the options rnnoise (factory) and protected _createResampler replace upstream's test monkeypatching. Python tests skipped without pyrnnoise run here for real."
     },
     {
       "module": "pipecat.audio.krisp_instance",
@@ -894,9 +894,9 @@
       "tests": [
         "test_soundfile_mixer.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "SoundfileMixer in @pipedog/audio-soundfile-mixer; runs on Bun, Node, Deno and Workers (compat smoke; a path needs a filesystem so not on Workers). DIVERGENCE: WAV only, parsed in pure TypeScript (PCM 8/16/24/32, float, A-law, mu-law; libsndfile's FLAC, Ogg, AIFF, AU, CAF, MP3 etc. are rejected with a clear error). Sounds can come from bytes, a URL or a path (lazy node:fs/promises or an injected fileSystem). Multi-channel files are accepted with a warning (interleaved, as upstream's flat view)."
     },
     {
       "module": "pipecat.audio.resamplers",
@@ -1160,9 +1160,9 @@
         "numpy"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "HttpSmartTurnAnalyzer on fetch (runs on Bun, Node, Deno, Workers). DIVERGENCE: aiohttp_session replaced by an optional injectable fetch option; the .npy body (np.save) is written by hand (serializeNpy). Like upstream, every failure incl. timeout returns an incomplete prediction. Upstream has no tests: packages/audio-smart-turn/test/test_http_smart_turn.test.ts is new (fake Bun.serve), plus compat smoke."
     },
     {
       "module": "pipecat.audio.turn.smart_turn.local_coreml_smart_turn",
@@ -1185,9 +1185,9 @@
         "transformers"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Superseded by local_smart_turn_v3 (ported), deprecated upstream; needs coremltools + torch (Apple-only, native)."
     },
     {
       "module": "pipecat.audio.turn.smart_turn.local_smart_turn_v2",
@@ -1209,9 +1209,9 @@
         "transformers"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Superseded by local_smart_turn_v3 (ported), deprecated upstream; needs torch + transformers (no JS equivalent)."
     },
     {
       "module": "pipecat.audio.turn.smart_turn.local_smart_turn_v3",
@@ -13291,9 +13291,9 @@
         "pyaudio"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Desktop GUI (Tkinter) transport; no JS equivalent."
     },
     {
       "module": "pipecat.transports.moq",
@@ -19917,8 +19917,8 @@
         "pipecat.frames.frames"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "Ported 1:1 (seeded PRNG in place of np.random; DFT scan in place of np.fft; the real WASM RNNoise runs, not skipped)."
     },
     {
       "file": "tests/test_rnnoise_filter.py",
@@ -19930,8 +19930,8 @@
         "pipecat.frames.frames"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "Ported 1:1 (seeded PRNG in place of np.random; DFT scan in place of np.fft; the real WASM RNNoise runs, not skipped)."
     },
     {
       "file": "tests/test_rnnoise_resampling.py",
@@ -19943,8 +19943,8 @@
         "pipecat.frames.frames"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "Ported 1:1 (seeded PRNG in place of np.random; DFT scan in place of np.fft; the real WASM RNNoise runs, not skipped)."
     },
     {
       "file": "tests/test_rtvi_client_serializer.py",
@@ -20595,8 +20595,8 @@
         "pipecat.frames.frames"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "Ported 1:1 (WAVs written with a small WAV writer into a temp dir instead of soundfile.write). Extra: sources_and_wav.test.ts for bytes, URLs, injected fs and the WAV reader."
     },
     {
       "file": "tests/test_soxr_resamplers.py",
@@ -20610,8 +20610,8 @@
         "pipecat.audio.resamplers.soxr_stream_resampler"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "Only test_rnnoise_default_resampler_quality_is_forwarded lives here (needs RNNoiseFilter); the other tests are in packages/core/test/test_soxr_resamplers.test.ts."
     },
     {
       "file": "tests/test_speaking_observer.py",

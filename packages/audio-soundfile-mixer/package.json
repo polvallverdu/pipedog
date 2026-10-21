@@ -1,0 +1,53 @@
+{
+  "name": "@pipedog/audio-soundfile-mixer",
+  "version": "0.6.1",
+  "description": "Soundfile mixer for pipedog: a port of Pipecat's SoundfileMixer that mixes WAV background sound (from bytes, a URL or a path) into outgoing audio, in pure TypeScript on Bun, Node, Deno and Cloudflare Workers.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "audio-mixer",
+    "background-sound",
+    "wav"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/audio-soundfile-mixer"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/audio-soundfile-mixer#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/audio/mixers/soundfile_mixer.py"
+    ]
+  }
+}
