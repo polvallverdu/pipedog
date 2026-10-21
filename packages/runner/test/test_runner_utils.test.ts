@@ -20,6 +20,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { TelnyxFrameSerializer } from "@pipedog/serializer-telnyx/telnyx";
 import { TwilioFrameSerializer } from "@pipedog/serializer-twilio/twilio";
+import { LiveKitParams, LiveKitTransport } from "@pipedog/transport-livekit/transport";
 import {
   FastAPIWebsocketParams,
   FastAPIWebsocketTransport,
@@ -397,13 +398,23 @@ describe("pipedog: createTransport", () => {
   test("unported transports fail clearly", async () => {
     for (const args of [
       new DailyRunnerArguments({ roomUrl: "https://x.daily.co/r" }),
-      new LiveKitRunnerArguments({ roomName: "r", url: "wss://x", token: "t" }),
       new VonageRunnerArguments({ applicationId: "a", vonageSessionId: "s", token: "t" }),
       new MOQRunnerArguments({ serve: true }),
     ]) {
       const any = { daily: () => ({}), livekit: () => ({}), vonage: () => ({}), moq: () => ({}) };
       await expect(createTransport(args, any)).rejects.toBeInstanceOf(TransportNotPortedError);
     }
+  });
+
+  test("LiveKitRunnerArguments build a LiveKitTransport", async () => {
+    const args = new LiveKitRunnerArguments({ roomName: "r", url: "wss://x", token: "t" });
+    const transport = await createTransport(args, {
+      livekit: () => new LiveKitParams({ audioInEnabled: true }),
+    });
+    expect(transport).toBeInstanceOf(LiveKitTransport);
+    const client = (transport as LiveKitTransport)._client;
+    expect([client._url, client._token, client._roomName]).toEqual(["wss://x", "t", "r"]);
+    expect(client._params.audioInEnabled).toBe(true);
   });
 
   test("MOQRunnerArguments needs a relay in client mode", () => {

@@ -164,6 +164,9 @@ export function optionalPeersToHide(pkg: PackageInfo, all: PackageInfo[]): strin
     ...Object.keys(own.dependencies ?? {}),
     ...Object.keys(own.peerDependencies ?? {}).filter((n) => !ownMeta[n]?.optional),
     ...uses,
+    // A package that is an optional peer of another (e.g. @pipedog/transport-livekit
+    // of the runner) is never hidden from its own smoke test.
+    own.name as string,
   ]);
   // A required dependency may itself depend on an optional peer (e.g.
   // @google/genai on `ws`): that module is installed for everyone, so keep it.

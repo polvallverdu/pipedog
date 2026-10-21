@@ -10,8 +10,9 @@
  * The root re-exports the runner arguments (`./types`) and `createTransport`
  * with the telephony helpers (`./utils`). The development server is
  * `@pipedog/runner/run` (`main`, `createRunnerApp`) and `@pipedog/runner/serve`,
- * as upstream's is `pipecat.runner.run`. The Daily, LiveKit, MOQ and Vonage
- * helper modules are not ported (their transports aren't).
+ * as upstream's is `pipecat.runner.run`. The LiveKit token helpers are
+ * `@pipedog/runner/livekit`. The Daily, MOQ and Vonage helper modules are not
+ * ported (their transports aren't).
  */
 
 export * from "./types.ts";

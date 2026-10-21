@@ -233,8 +233,8 @@ These differences apply everywhere, not to one module. They come from the portin
 - **The prebuilt client ships in the package.** Upstream installs it from the
   `pipecat-ai-prebuilt` wheel; `@pipedog/runner` bundles the same built client.
   `packages/runner/src/prebuilt.ts`
-- **Unported transports fail clearly.** Daily (with `--direct` and the dial-in webhook), LiveKit,
-  MOQ, the Vonage Video Connector and WhatsApp are recognized, and fail with a message naming
+- **Unported transports fail clearly.** Daily (with `--direct` and the dial-in webhook), MOQ,
+  the Vonage Video Connector and WhatsApp are recognized, and fail with a message naming
   them. An eval harness's `eval-connect` message is not detected. `packages/runner/src/run.ts`,
   `packages/runner/src/utils.ts`
 - **Hang-ups during the handshake are typed.** A caller who hangs up before the provider's `start`

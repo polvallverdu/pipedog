@@ -846,7 +846,14 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["AzureImageGenServiceREST"],
     },
   ],
-  video: [],
+  video: [
+    {
+      slug: "heygen",
+      name: "HeyGen",
+      pkg: "@pipedog/heygen",
+      classes: ["HeyGenVideoService", "HeyGenTransport"],
+    },
+  ],
   transports: [
     {
       slug: "websocket",
@@ -864,6 +871,12 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "SmallWebRTC",
       pkg: "@pipedog/transport-smallwebrtc",
       classes: ["SmallWebRTCTransport"],
+    },
+    {
+      slug: "livekit",
+      name: "LiveKit",
+      pkg: "@pipedog/transport-livekit",
+      classes: ["LiveKitTransport"],
     },
   ],
   serializers: [
@@ -1094,14 +1107,6 @@ export const upcoming: UpcomingPage[] = [
   },
   {
     section: "video",
-    slug: "heygen",
-    name: "HeyGen",
-    about: "HeyGen's interactive and LiveAvatar video avatars.",
-    classes: ["HeyGenVideoService", "HeyGenTransport"],
-    modules: ["services/heygen/video.py", "transports/heygen/transport.py"],
-  },
-  {
-    section: "video",
     slug: "simli",
     name: "Simli",
     about: "Simli's realtime lip-synced avatars.",
@@ -1124,14 +1129,6 @@ export const upcoming: UpcomingPage[] = [
     sources: [
       { title: "daily-js quickstart", href: "https://docs.daily.co/docs/daily-js/quickstart" },
     ],
-  },
-  {
-    section: "transports",
-    slug: "livekit",
-    name: "LiveKit",
-    about: "WebRTC rooms on LiveKit.",
-    classes: ["LiveKitTransport"],
-    modules: ["transports/livekit/transport.py"],
   },
   {
     section: "transports",

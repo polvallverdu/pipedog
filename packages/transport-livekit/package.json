@@ -1,0 +1,73 @@
+{
+  "name": "@pipedog/transport-livekit",
+  "version": "0.6.1",
+  "description": "LiveKit transport for pipedog: joins a LiveKit room (self-hosted or LiveKit Cloud) as a participant, with audio, video, data messages and SIP DTMF. Media runs on LiveKit's native Node SDK (@livekit/rtc-node).",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "livekit",
+    "webrtc",
+    "transport"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/transport-livekit"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/transport-livekit#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "livekit-server-sdk": "2.19.1"
+  },
+  "peerDependencies": {
+    "@livekit/rtc-node": "^1.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@livekit/rtc-node": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@livekit/rtc-node": "1.1.0"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno"
+    ],
+    "upstream": [
+      "src/pipecat/transports/livekit/transport.py",
+      "src/pipecat/transports/livekit/utils.py"
+    ],
+    "compat": {
+      "unsupportedRuntimes": [
+        "workerd"
+      ],
+      "usesOptionalPeers": [
+        "@livekit/rtc-node"
+      ]
+    }
+  }
+}

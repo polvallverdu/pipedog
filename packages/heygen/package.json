@@ -1,0 +1,73 @@
+{
+  "name": "@pipedog/heygen",
+  "version": "0.6.1",
+  "description": "HeyGen avatar services for pipedog: HeyGenVideoService with LiveAvatar and Interactive Avatar sessions. Control runs over HTTP and WebSocket; avatar media runs on LiveKit's native Node SDK (@livekit/rtc-node).",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "heygen",
+    "liveavatar",
+    "avatar",
+    "video"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/heygen"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/heygen#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/transport-livekit": "workspace:*"
+  },
+  "peerDependencies": {
+    "@livekit/rtc-node": "^1.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@livekit/rtc-node": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@livekit/rtc-node": "1.1.0"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno"
+    ],
+    "upstream": [
+      "src/pipecat/services/heygen"
+    ],
+    "compat": {
+      "unsupportedRuntimes": [
+        "workerd"
+      ],
+      "usesOptionalPeers": [
+        "@livekit/rtc-node"
+      ]
+    }
+  }
+}

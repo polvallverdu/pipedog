@@ -26,6 +26,9 @@
       "path": "../serializer-twilio"
     },
     {
+      "path": "../transport-livekit"
+    },
+    {
       "path": "../transport-smallwebrtc"
     },
     {

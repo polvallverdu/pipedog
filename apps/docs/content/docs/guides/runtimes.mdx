@@ -24,7 +24,9 @@ are expected to install go in `pipecat.compat.usesOptionalPeers`; all other opti
 unresolvable during the run, so a package that silently depends on one fails.
 
 Every package is verified on all four runtimes except `@pipedog/transport-smallwebrtc` (no UDP
-on Workers) and `@pipedog/mcp` (a stdio tool for Bun and Node). The harness checks that each
+on Workers), `@pipedog/transport-livekit`, `@pipedog/heygen` and `@pipedog/transport-heygen`
+(LiveKit's media SDK is a native addon, which Workers can't load) and `@pipedog/mcp` (a stdio tool
+for Bun and Node). The harness checks that each
 package loads and runs its smoke test; inside a verified package, a few entry points still need a
 server runtime:
 

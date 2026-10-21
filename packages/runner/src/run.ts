@@ -49,8 +49,11 @@
  * - Telephony: `bun bot.ts -t twilio -x your_username.ngrok.io`
  * - WebRTC only: `bun bot.ts -t webrtc`
  *
- * PARTIAL PORT: Daily, LiveKit, MOQ, Vonage (Video Connector), WhatsApp and
- * eval support need transports that are not ported yet. Their CLI choices and
+ * - LiveKit only: `bun bot.ts -t livekit` (needs `@pipedog/transport-livekit`
+ *   and `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`)
+ *
+ * PARTIAL PORT: Daily, MOQ, Vonage (Video Connector), WhatsApp and eval
+ * support need transports that are not ported yet. Their CLI choices and
  * `/start` transports are recognized and fail with a clear message.
  */
 
@@ -71,6 +74,7 @@ import {
   prebuiltAvailable,
 } from "./prebuilt.ts";
 import {
+  LiveKitRunnerArguments,
   type RunnerArguments,
   type RunnerWebSocket,
   SmallWebRTCRunnerArguments,
@@ -84,9 +88,9 @@ export { ArgumentParser } from "./argparse.ts";
 export const TELEPHONY_TRANSPORTS = ["twilio", "telnyx", "plivo", "exotel"] as const;
 
 /**
- * The packages each transport's routes need. Daily, LiveKit and MOQ name
- * pipedog packages that don't exist yet (those transports aren't ported), so
- * their routes stay disabled, as upstream's do when an extra isn't installed.
+ * The packages each transport's routes need. Daily and MOQ name pipedog
+ * packages that don't exist yet (those transports aren't ported), so their
+ * routes stay disabled, as upstream's do when an extra isn't installed.
  */
 export const TRANSPORT_ROUTE_DEPENDENCIES: Record<string, readonly string[]> = {
   daily: ["@pipedog/transport-daily"],
@@ -100,7 +104,7 @@ export const TRANSPORT_ROUTE_DEPENDENCIES: Record<string, readonly string[]> = {
 /** What to do when a transport's routes are disabled. */
 export const TRANSPORT_INSTALL_HINTS: Record<string, string> = {
   daily: "not ported to pipedog yet",
-  livekit: "not ported to pipedog yet",
+  livekit: "install @pipedog/transport-livekit",
   webrtc: "install @pipedog/transport-smallwebrtc",
   telephony: "install @pipedog/transport-websocket",
   websocket: "install @pipedog/transport-websocket",
@@ -110,7 +114,6 @@ export const TRANSPORT_INSTALL_HINTS: Record<string, string> = {
 /** Transports the runner recognizes but pipedog has not ported, with their upstream module. */
 export const UNPORTED_TRANSPORTS: Record<string, string> = {
   daily: "pipecat.transports.daily",
-  livekit: "pipecat.transports.livekit",
   moq: "pipecat.transports.moq",
   vonage: "pipecat.transports.vonage.video_connector",
   whatsapp: "pipecat.transports.whatsapp",
@@ -1188,7 +1191,7 @@ export function _setupUnifiedStartRoute(
   /**
    * Start a bot session.
    *
-   * Accepts `{"transport": "webrtc" | "twilio" | "telnyx" | "plivo" | "exotel" |
+   * Accepts `{"transport": "webrtc" | "livekit" | "twilio" | "telnyx" | "plivo" | "exotel" |
    * "websocket", "enableDefaultIceServers": false, "body": {...}}`.
    *
    * For WebRTC, `iceConfig` in the response carries the servers the runner was
@@ -1249,6 +1252,44 @@ export function _setupUnifiedStartRoute(
       return result;
     }
 
+    if (transport === "livekit") {
+      const { generateSessionTokens, livekitCredentials } = await import("./livekit.ts");
+
+      const [livekitUrl, apiKey, apiSecret] = livekitCredentials();
+
+      const body = requestData.body ?? {};
+      const roomName =
+        env("LIVEKIT_ROOM_NAME") || `pipecat-${crypto.randomUUID().replace(/-/g, "").slice(0, 8)}`;
+      const sessionId = crypto.randomUUID();
+      const [agentToken, userToken] = await generateSessionTokens(
+        roomName,
+        sessionId,
+        apiKey,
+        apiSecret,
+      );
+
+      const botModule = await runnerApp.getBotModule();
+      const runnerArgs = new LiveKitRunnerArguments({
+        fileStorage: await runnerApp.getFileStorage(),
+        roomName,
+        url: livekitUrl,
+        token: agentToken,
+        body,
+        sessionId,
+      });
+      runnerArgs.cliArgs = args;
+      activeSessions[sessionId] = body;
+      runnerApp.startBotSession(
+        () => _runBotSession(runnerApp, () => botModule.bot(runnerArgs), sessionId, activeSessions),
+        `runner::livekit::${sessionId}`,
+      );
+
+      const result: Record<string, unknown> = { url: livekitUrl, token: userToken, sessionId };
+      const uploadUrl = _advertisedFileUploadUrl(await runnerApp.getFileStorage(), sessionId);
+      if (uploadUrl) result.fileUploadUrl = uploadUrl;
+      return result;
+    }
+
     if ((TELEPHONY_TRANSPORTS as readonly string[]).includes(transport!)) {
       // Telephony: the bot starts when the provider connects to /ws.
       // Return the WebSocket URL so the caller knows where to point their provider.
@@ -1276,7 +1317,7 @@ export function _setupUnifiedStartRoute(
     }
 
     if (transport! in UNPORTED_TRANSPORTS) {
-      // DIVERGENCE: upstream starts Daily, LiveKit and MOQ sessions here.
+      // DIVERGENCE: upstream starts Daily and MOQ sessions here.
       throw new HTTPException(
         400,
         `Transport '${transport}' (${UNPORTED_TRANSPORTS[transport!]}) is not ported to pipedog yet.`,
@@ -2182,8 +2223,8 @@ export interface MainOptions {
  * - `--host`: Server host address (default: localhost)
  * - `--port`: Server port (default: 7860)
  * - `-t/--transport`: Restrict to a single transport and set as default for
- *   `/start` (webrtc, websocket, twilio, telnyx, plivo, exotel; daily,
- *   livekit, moq and vonage are recognized but not ported)
+ *   `/start` (webrtc, livekit, websocket, twilio, telnyx, plivo, exotel; daily,
+ *   moq and vonage are recognized but not ported)
  * - `-x/--proxy`: Public proxy hostname for telephony webhooks
  * - `-f/--downloads-folder`: Path to folder for files available for download
  * - `-u/--uploads-folder`: Path to folder for client uploads
@@ -2247,8 +2288,8 @@ export async function main(
     else return fail("--direct flag only works with Daily transport (-t daily)");
   }
 
-  // DIVERGENCE: upstream runs Daily (and --direct), LiveKit, MOQ and the Vonage
-  // Video Connector here; those transports are not ported.
+  // DIVERGENCE: upstream runs Daily (and --direct), MOQ and the Vonage Video
+  // Connector here; those transports are not ported.
   if (args.transport != null && args.transport in UNPORTED_TRANSPORTS) {
     return fail(
       `The ${args.transport} transport (${UNPORTED_TRANSPORTS[args.transport]}) is not ported to ` +
