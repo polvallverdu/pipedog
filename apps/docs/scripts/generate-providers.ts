@@ -325,15 +325,15 @@ function table(section: Section): string {
 
 function sectionMeta(section: Section, withIndex: boolean): string {
   const pages = byName(upcoming.filter((page) => page.section === section));
-  const soon = pages.filter((page) => !page.status).map((page) => page.slug);
-  const held = pages.filter((page) => page.status).map((page) => page.slug);
+  // Blocked and deferred pages stay under "Coming soon": @pipedog/mcp reads that group from
+  // llms.txt to tell which pages are not ported.
+  const soon = pages.map((page) => page.slug);
   return json({
     title: sections[section].title,
     pages: [
       ...(withIndex ? ["index"] : []),
       ...ported[section].map((page) => page.slug),
       ...(soon.length ? ["---Coming soon---", ...soon] : []),
-      ...(held.length ? ["---Blocked or deferred---", ...held] : []),
     ],
   });
 }
