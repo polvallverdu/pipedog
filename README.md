@@ -174,6 +174,8 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/deepgram`](packages/deepgram) | Deepgram services: STT, TTS, Flux STT and TTS. |
 | [`@pipedog/cartesia`](packages/cartesia) | Cartesia services: STT, Ink-2 turn-based STT, WebSocket and HTTP TTS. |
 | [`@pipedog/elevenlabs`](packages/elevenlabs) | ElevenLabs services: STT, Realtime STT, WebSocket and HTTP TTS. |
+| [`@pipedog/inworld`](packages/inworld) | Inworld services: Realtime speech-to-speech, WebSocket and HTTP TTS. |
+| [`@pipedog/ultravox`](packages/ultravox) | Ultravox realtime speech-to-speech service. |
 | [`@pipedog/whisper`](packages/whisper) | Base STT service for Whisper-compatible APIs, shared by the services that speak that protocol. |
 | [`@pipedog/langchain`](packages/langchain) | LangChain integration (`LangchainProcessor`). |
 | [`@pipedog/transport-smallwebrtc`](packages/transport-smallwebrtc) | Peer-to-peer WebRTC transport (werift, Opus via WASM) for the Pipecat browser SDK's `SmallWebRTCTransport`. |

@@ -427,9 +427,9 @@
         "test_function_calling_adapters.py",
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/inworld/src/inworld_realtime_adapter.ts. Packed history uses JSON.stringify(indent 2), like the OpenAI Realtime adapter port (integral floats print as ints)."
     },
     {
       "module": "pipecat.adapters.services.mistral_adapter",
@@ -9561,9 +9561,9 @@
       "tests": [
         "test_settings.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Empty upstream __init__ (5 header lines): export {}."
     },
     {
       "module": "pipecat.services.inworld.realtime.events",
@@ -9586,9 +9586,9 @@
       "tests": [
         "test_settings.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/inworld/src/realtime/events.ts. Pydantic models become classes on a small local BaseModel (same machinery as @pipedog/openai realtime events), with camelCase fields and snake_case wire keys; SessionProperties.providerData is dumped as providerData with byAlias (pydantic alias). Validation is reduced to required fields and server-event type literals. parseServerEvent returns null for unknown event types, as upstream."
     },
     {
       "module": "pipecat.services.inworld.realtime.llm",
@@ -9626,9 +9626,9 @@
         "test_realtime_tool_result_encoding.py",
         "test_settings.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/inworld/src/realtime/llm.ts. websocketConnect from core with the Authorization header (Basic or Bearer), so it runs on Workers too. DIVERGENCE: a failed response with non-string status_details renders it as JSON, not a Python dict repr. Nothing deprecated upstream."
     },
     {
       "module": "pipecat.services.inworld.tts",
@@ -9661,9 +9661,9 @@
         "test_inworld_tts_language.py",
         "test_tts_pronunciations.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Deprecated voice_id/model/params (InputParams) and aggregate_sentences not ported; websocket buffer settings (maxBufferDelayMs/bufferCharThreshold) always use their defaults since only params set them. DIVERGENCE: InworldHttpTTSService takes an optional fetch instead of a required aiohttp_session. User agent is pipecat/<pipedog version>. InworldTTSSettings.fromMapping resolves keys itself."
     },
     {
       "module": "pipecat.services.keenable",
@@ -12280,9 +12280,9 @@
       "tests": [
         "test_realtime_intermediate_results.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Pydantic params models are classes with options constructors; maxDuration is in seconds (timedelta), UUIDs are strings; pydantic range checks raise RangeError. Calls are created with fetch (aiohttp) and joined with core websocketConnect, so it runs on all runtimes. No deprecated APIs upstream."
     },
     {
       "module": "pipecat.services.vision_service",
@@ -18274,7 +18274,7 @@
       ],
       "needsModules": 124,
       "status": "todo",
-      "notes": ""
+      "notes": "Partial: test_inworld_realtime_adapter (1 pass) is in packages/inworld/test/test_function_calling_adapters.test.ts; the other adapters' cases are still to be ported."
     },
     {
       "file": "tests/test_gemini_live_interaction_status.py",
@@ -18395,7 +18395,7 @@
       ],
       "needsModules": 143,
       "status": "todo",
-      "notes": ""
+      "notes": "Partial: the Inworld sub-test of TestRealtimePackedHistoryKeepsNonAscii (1 pass) is in packages/inworld/test/test_get_llm_invocation_params.test.ts; the rest is still to be ported."
     },
     {
       "file": "tests/test_gladia_stt.py",
@@ -18584,8 +18584,8 @@
         "pipecat.services.inworld.realtime.llm"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "3 pass, 0 fail, 0 skip, 0 todo. The session-key test reads the URIs from a Bun.serve websocket server instead of patching websocket_connect."
     },
     {
       "file": "tests/test_inworld_tts_language.py",
@@ -18597,8 +18597,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 130,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "3 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_ivr_navigation.py",
@@ -19762,7 +19762,7 @@
       ],
       "needsModules": 139,
       "status": "todo",
-      "notes": ""
+      "notes": "Partial: the Inworld section (TestInworldRealtimeIntermediateResults, 4 pass) is in packages/inworld/test/test_realtime_intermediate_results.test.ts and the Ultravox section (TestUltravoxIntermediateResults, 5 pass) in packages/ultravox/test/test_realtime_intermediate_results.test.ts; the other providers' sections are still to be ported with their packages."
     },
     {
       "file": "tests/test_realtime_service_tool_sync.py",
@@ -19793,7 +19793,7 @@
       ],
       "needsModules": 134,
       "status": "todo",
-      "notes": ""
+      "notes": "Partial: the Inworld section (1 pass) is in packages/inworld/test/test_realtime_tool_result_encoding.test.ts; the other providers' sections are still to be ported."
     },
     {
       "file": "tests/test_realtime_tool_sync.py",
@@ -20438,7 +20438,7 @@
       ],
       "needsModules": 134,
       "status": "todo",
-      "notes": ""
+      "notes": "Partial: the Inworld Realtime sections (TestInworldRealtimeSettingsApplyUpdate, TestInworldRealtimeSettingsFromMapping, 13 pass) are in packages/inworld/test/test_settings.test.ts; the rest is still to be ported."
     },
     {
       "file": "tests/test_shared.py",
@@ -21029,7 +21029,7 @@
       ],
       "needsModules": 138,
       "status": "todo",
-      "notes": ""
+      "notes": "Partial: Inworld cases (TestInworldPronunciation, TestPronunciationTransforms.test_unusable_words_are_spoken_as_written) ported in packages/inworld/test/test_tts_pronunciations.test.ts: 5 pass, 0 fail. Remaining cases (phonemes, Cartesia, ElevenLabs, Deepgram, gating) not ported."
     },
     {
       "file": "tests/test_tts_reconnect.py",
@@ -21246,8 +21246,8 @@
         "pipecat.processors.aggregators.llm_context"
       ],
       "needsModules": 114,
-      "status": "ported",
-      "notes": "0 pass, 0 fail, 0 skip, 4 todo"
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo. Imports the service from ../../ultravox/src/llm.ts."
     },
     {
       "file": "tests/test_user_bot_latency_observer.py",
