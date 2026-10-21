@@ -74,6 +74,23 @@ Cloudflare limits a Worker to 10 MB compressed on paid plans and 3 MB on the fre
 models don't fit. They also load about 100 MB of runtime and models, close to a Durable Object's
 128 MB memory limit. See [Turn detection](/docs/turn-detection) for the modes.
 
+## Reconnection
+
+A client that drops and reconnects to the same session id within ten minutes continues the same
+conversation. The Durable Object saves the conversation to its storage when a socket closes, loads it
+when the next one opens, and skips the greeting. An alarm clears it once the ten minutes pass. If a
+reconnect arrives while the old socket still looks open, the new one wins: the object closes the old
+one and waits for its conversation to be saved first.
+
+Pipecat's WebSocket transport doesn't resume sessions; this is the example's own logic, in
+`src/voice_session.ts`.
+
+## Tracing and alerts
+
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` and `ERROR_WEBHOOK_URL` in the Worker's environment, as in the
+[voice bot guide](/docs/voice-bot#tracing-and-alerts). Spans are buffered, and a Worker doesn't export
+them by itself after a request ends, so the agent flushes them when each session ends.
+
 ## Fetch handlers
 
 pipedog's voice endpoints are fetch handlers: functions from a `Request` to a `Response`. That makes

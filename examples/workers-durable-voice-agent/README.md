@@ -39,7 +39,11 @@ microphone, and prints how much speech it received back:
 bun run --cwd examples/workers-durable-voice-agent client ws://127.0.0.1:8787/api/session/alice ../test-mocks/assets/capital_question.wav
 ```
 
-Run two clients with different session ids to see two agents running in parallel.
+Run two clients with different session ids to see two agents running in parallel. Run one again
+with the same id within ten minutes and it continues that conversation.
+
+Tracing and error alerts are off until you set `OTEL_EXPORTER_OTLP_ENDPOINT` and
+`ERROR_WEBHOOK_URL` (see `src/observability.ts`).
 
 ## Deploy it
 
@@ -61,7 +65,9 @@ the recorded question into two sessions at once and checks that each session get
 ## Files
 
 - `src/worker.ts`: the Worker. Routes each session to its Durable Object.
-- `src/voice_session.ts`: the Durable Object. Accepts the WebSocket and runs the agent for it.
+- `src/voice_session.ts`: the Durable Object. Accepts the WebSocket, runs the agent for it, and
+  keeps the conversation for ten minutes so a reconnecting client can resume it.
+- `src/observability.ts`: tracing and error alerts.
 - `src/bot.ts`: the pipeline, `runVoiceAgent(connection, env)`.
 - `client/`: the scripted user, and the WAV helper it uses.
 - `wrangler.jsonc`: the Durable Object binding.

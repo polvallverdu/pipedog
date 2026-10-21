@@ -24,6 +24,9 @@
     },
     {
       "path": "../test-mocks"
+    },
+    {
+      "path": "../../packages/tracing"
     }
   ]
 }

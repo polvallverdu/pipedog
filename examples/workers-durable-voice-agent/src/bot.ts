@@ -12,7 +12,10 @@
 import { LLMRunFrame } from "@pipedog/core/frames/frames";
 import { Pipeline } from "@pipedog/core/pipeline/pipeline";
 import { PipelineParams, PipelineWorker } from "@pipedog/core/pipeline/worker";
-import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
+import {
+  LLMContext,
+  type LLMContextMessage,
+} from "@pipedog/core/processors/aggregators/llm_context";
 import { LLMContextAggregatorPair } from "@pipedog/core/processors/aggregators/llm_response_universal";
 import { WorkerRunner } from "@pipedog/core/workers/runner";
 import { OpenAILLMSettings } from "@pipedog/openai/base_llm";
@@ -25,6 +28,7 @@ import {
   FastAPIWebsocketTransport,
 } from "@pipedog/transport-websocket/fastapi";
 import type { WebsocketConnection } from "@pipedog/transport-websocket/socket";
+import { flushTracing, reportErrors, startTracing } from "./observability.ts";
 import type { Env } from "./worker.ts";
 
 export const SYSTEM_INSTRUCTION =
@@ -34,8 +38,16 @@ export const SYSTEM_INSTRUCTION =
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
 
-/** Runs one voice agent over `connection` until the client disconnects. */
-export async function runVoiceAgent(connection: WebsocketConnection, env: Env): Promise<void> {
+/**
+ * Runs one voice agent over `connection` until the client disconnects, and
+ * returns the conversation. `history` is the conversation so far: a client that
+ * reconnects picks up where it left off, and is greeted only the first time.
+ */
+export async function runVoiceAgent(
+  connection: WebsocketConnection,
+  env: Env,
+  history: LLMContextMessage[] = [],
+): Promise<LLMContextMessage[]> {
   const apiKey = env.OPENAI_API_KEY;
   const baseUrl = env.OPENAI_BASE_URL ?? null;
 
@@ -56,7 +68,7 @@ export async function runVoiceAgent(connection: WebsocketConnection, env: Env): 
     turnDetection: { type: "server_vad" },
   });
 
-  const context = new LLMContext();
+  const context = new LLMContext({ messages: [...history] });
   const aggregators = new LLMContextAggregatorPair(context);
 
   const pipeline = new Pipeline([
@@ -73,8 +85,12 @@ export async function runVoiceAgent(connection: WebsocketConnection, env: Env): 
     aggregators.assistant(),
   ]);
 
+  const conversationId = crypto.randomUUID();
   const worker = new PipelineWorker(pipeline, {
     cancelOnIdleTimeout: false,
+    // Traced when OTEL_EXPORTER_OTLP_ENDPOINT is set; see observability.ts.
+    enableTracing: startTracing(env),
+    conversationId,
     params: new PipelineParams({
       audioInSampleRate: INPUT_SAMPLE_RATE,
       audioOutSampleRate: OUTPUT_SAMPLE_RATE,
@@ -83,10 +99,13 @@ export async function runVoiceAgent(connection: WebsocketConnection, env: Env): 
     }),
   });
 
+  reportErrors(worker, conversationId, env);
+
   const runner = new WorkerRunner({ handleSigint: false, handleSigterm: false });
   await runner.addWorkers(worker);
 
   transport.eventHandler("on_client_connected", async () => {
+    if (history.length > 0) return;
     context.addMessage({
       role: "developer",
       content: "Please introduce yourself to the user.",
@@ -97,5 +116,10 @@ export async function runVoiceAgent(connection: WebsocketConnection, env: Env): 
     await runner.cancel();
   });
 
-  await runner.run();
+  try {
+    await runner.run();
+  } finally {
+    await flushTracing();
+  }
+  return context.messages;
 }

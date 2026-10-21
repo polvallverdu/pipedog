@@ -31,6 +31,10 @@ VOICE_PROVIDER=google GOOGLE_API_KEY=... bun run --cwd examples/smallwebrtc-voic
 
 Set `OPENAI_BASE_URL` to use an OpenAI-compatible API, and `PORT` to change the port.
 
+Tracing and error alerts are off until you set `OTEL_EXPORTER_OTLP_ENDPOINT` (an OTLP/HTTP traces
+endpoint) and `ERROR_WEBHOOK_URL` (pipeline errors are POSTed there as JSON). See
+`src/observability.ts`.
+
 ## Test it
 
 ```sh
@@ -48,6 +52,7 @@ It needs a Chromium for Playwright: `bunx playwright-core install chromium` in t
 ## Files
 
 - `src/bot.ts`: the pipeline, `runVoiceBot(connection, { provider })`. OpenAI or Google services.
+- `src/observability.ts`: tracing and error alerts.
 - `src/server.ts`: the HTTP server. It serves the page and the SmallWebRTC offer endpoint, and starts
   a bot for each connection.
 - `public/index.html`: the page. It loads the unchanged Pipecat browser SDK from esm.sh.

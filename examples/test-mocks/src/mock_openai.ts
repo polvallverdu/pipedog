@@ -30,6 +30,10 @@ export interface MockOpenAI extends ProviderMock {
   realtimeUrl: string;
   /** The `Authorization` header of each realtime connection. */
   realtimeAuth: (string | null)[];
+  /** When set, chat completions fail with a server error. */
+  failChat: boolean;
+  /** The messages of each chat completion request. */
+  chats: { role: string; content: unknown }[][];
 }
 
 /** RMS above which a 16-bit chunk counts as speech. */
@@ -93,6 +97,8 @@ export function startMockOpenAI(): MockOpenAI {
     baseUrl: "",
     realtimeUrl: "",
     realtimeAuth: [],
+    failChat: false,
+    chats: [],
     heard: 0,
     asked: [],
     spoken: [],
@@ -129,7 +135,14 @@ export function startMockOpenAI(): MockOpenAI {
       }
 
       if (pathname === "/v1/chat/completions") {
+        if (mock.failChat) {
+          return Response.json(
+            { error: { message: "mock chat failure", type: "server_error" } },
+            { status: 500 },
+          );
+        }
         const body = (await request.json()) as { messages: { role: string; content: unknown }[] };
+        mock.chats.push(body.messages);
         const last = [...body.messages].reverse().find((m) => m.role === "user");
         const question = typeof last?.content === "string" ? last.content : "";
         mock.asked.push(question);

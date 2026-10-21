@@ -79,9 +79,11 @@
         "@pipedog/core": "workspace:*",
         "@pipedog/google": "workspace:*",
         "@pipedog/openai": "workspace:*",
+        "@pipedog/tracing": "workspace:*",
         "@pipedog/transport-smallwebrtc": "workspace:*",
       },
       "devDependencies": {
+        "@opentelemetry/api": "1.9.1",
         "@pipecat-ai/client-js": "1.13.1",
         "@pipecat-ai/small-webrtc-transport": "1.10.8",
         "@pipedog/example-test-mocks": "workspace:*",
@@ -100,6 +102,7 @@
         "@pipedog/core": "workspace:*",
         "@pipedog/openai": "workspace:*",
         "@pipedog/serializer-protobuf": "workspace:*",
+        "@pipedog/tracing": "workspace:*",
         "@pipedog/transport-websocket": "workspace:*",
       },
       "devDependencies": {

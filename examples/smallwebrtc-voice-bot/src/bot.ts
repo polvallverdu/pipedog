@@ -26,6 +26,7 @@ import { OpenAISTTService } from "@pipedog/openai/stt";
 import { OpenAITTSService } from "@pipedog/openai/tts";
 import type { SmallWebRTCConnection } from "@pipedog/transport-smallwebrtc/connection";
 import { SmallWebRTCTransport } from "@pipedog/transport-smallwebrtc/transport";
+import { reportErrors, startTracing } from "./observability.ts";
 
 export const SYSTEM_INSTRUCTION =
   "You are a helpful assistant in a voice conversation. Your responses will be spoken aloud, so avoid emojis, bullet points, or other formatting that can't be spoken. Respond to what the user said in a creative, helpful, and brief way.";
@@ -110,8 +111,12 @@ export async function runVoiceBot(
     aggregators.assistant(),
   ]);
 
+  const conversationId = crypto.randomUUID();
   const worker = new PipelineWorker(pipeline, {
     cancelOnIdleTimeout: false,
+    // Traced when OTEL_EXPORTER_OTLP_ENDPOINT is set; see observability.ts.
+    enableTracing: startTracing(),
+    conversationId,
     params: new PipelineParams({
       audioInSampleRate: INPUT_SAMPLE_RATE,
       audioOutSampleRate: OUTPUT_SAMPLE_RATE,
@@ -119,6 +124,8 @@ export async function runVoiceBot(
       enableUsageMetrics: true,
     }),
   });
+
+  reportErrors(worker, conversationId);
 
   const runner = new WorkerRunner({ handleSigint: false, handleSigterm: false });
   await runner.addWorkers(worker);

@@ -16,6 +16,10 @@ export interface Env {
   OPENAI_BASE_URL?: string;
   /** Optional: the realtime transcription WebSocket URL. */
   OPENAI_REALTIME_URL?: string;
+  /** Optional: an OTLP/HTTP traces endpoint; see observability.ts. */
+  OTEL_EXPORTER_OTLP_ENDPOINT?: string;
+  /** Optional: where pipeline errors are POSTed; see observability.ts. */
+  ERROR_WEBHOOK_URL?: string;
 }
 
 const SESSION_PATH = /^\/api\/session\/([A-Za-z0-9_-]{1,64})$/;
