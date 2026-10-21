@@ -55,6 +55,7 @@
         "@pipedog/audio-silero": "workspace:*",
         "@pipedog/audio-smart-turn": "workspace:*",
         "@pipedog/core": "workspace:*",
+        "@pipedog/google": "workspace:*",
         "@pipedog/openai": "workspace:*",
         "@pipedog/transport-smallwebrtc": "workspace:*",
       },

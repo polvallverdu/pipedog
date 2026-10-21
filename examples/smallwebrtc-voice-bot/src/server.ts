@@ -4,14 +4,15 @@
 // HTTP server for the voice bot: serves the page and the SmallWebRTC offer
 // endpoint, and starts a conversation for every connection.
 //
-//   bun src/server.ts        (env: OPENAI_API_KEY, PORT=7860)
+//   bun src/server.ts        (env: VOICE_PROVIDER=openai|google, OPENAI_API_KEY or
+//                             GOOGLE_API_KEY, PORT=7860)
 
 import { readFileSync } from "node:fs";
 import http from "node:http";
 import { createTask } from "@pipedog/asyncio";
 import { nodeRequestListener, smallWebRTCOfferHandler } from "@pipedog/transport-smallwebrtc/http";
 import { SmallWebRTCRequestHandler } from "@pipedog/transport-smallwebrtc/request_handler";
-import { runVoiceBot, type VoiceBotOptions } from "./bot.ts";
+import { runVoiceBot, type VoiceBotOptions, type VoiceProvider } from "./bot.ts";
 
 const page = readFileSync(new URL("../public/index.html", import.meta.url));
 
@@ -35,7 +36,11 @@ export function createServer(options: VoiceBotOptions = {}): http.Server {
 
 if (import.meta.main) {
   const port = Number(process.env.PORT ?? 7860);
-  createServer().listen(port, () => {
-    console.log(`Voice bot: open http://localhost:${port}`);
+  const provider = (process.env.VOICE_PROVIDER ?? "openai") as VoiceProvider;
+  if (provider !== "openai" && provider !== "google") {
+    throw new Error(`VOICE_PROVIDER must be "openai" or "google", not "${provider}"`);
+  }
+  createServer({ provider }).listen(port, () => {
+    console.log(`Voice bot (${provider}): open http://localhost:${port}`);
   });
 }

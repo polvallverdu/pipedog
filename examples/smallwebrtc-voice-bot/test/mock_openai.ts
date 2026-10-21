@@ -3,24 +3,15 @@
 //
 // A stand-in for the OpenAI API, for the end-to-end test: transcription
 // returns the scripted question, chat streams a canned answer chosen from the
-// last user message, and speech returns a 24 kHz PCM tone. It records what it
-// receives so the test can check what the bot sent.
+// last user message, and speech returns a 24 kHz PCM tone.
 
-export const SCRIPTED_QUESTION = "What is the capital of Germany?";
-export const ANSWER = "The capital of Germany is Berlin.";
-export const GREETING = "Hello, I am your voice assistant. Ask me anything.";
-
-export interface MockOpenAI {
-  /** Base URL to use as the OpenAI `baseUrl` (ends in `/v1`). */
-  baseUrl: string;
-  /** Byte size of each audio file sent for transcription. */
-  transcriptions: number[];
-  /** The messages of each chat completion request. */
-  chats: { role: string; content: unknown }[][];
-  /** The text of each speech synthesis request. */
-  speeches: string[];
-  stop(): void;
-}
+import {
+  ANSWER,
+  GREETING,
+  type ProviderMock,
+  SCRIPTED_QUESTION,
+  tonePcm,
+} from "./mock_provider.ts";
 
 function chunk(delta: Record<string, unknown>, finishReason: string | null): string {
   return `data: ${JSON.stringify({
@@ -32,21 +23,12 @@ function chunk(delta: Record<string, unknown>, finishReason: string | null): str
   })}\n\n`;
 }
 
-/** 0.5 s of a 440 Hz tone, 24 kHz mono 16-bit little-endian PCM. */
-function tonePcm(): ArrayBuffer {
-  const samples = 12000;
-  const pcm = new Int16Array(samples);
-  for (let i = 0; i < samples; i++)
-    pcm[i] = Math.round(6000 * Math.sin((2 * Math.PI * 440 * i) / 24000));
-  return pcm.buffer;
-}
-
-export function startMockOpenAI(): MockOpenAI {
-  const mock: MockOpenAI = {
+export function startMockOpenAI(): ProviderMock {
+  const mock: ProviderMock = {
     baseUrl: "",
-    transcriptions: [],
-    chats: [],
-    speeches: [],
+    heard: 0,
+    asked: [],
+    spoken: [],
     stop: () => server.stop(true),
   };
 
@@ -60,16 +42,16 @@ export function startMockOpenAI(): MockOpenAI {
       if (pathname === "/v1/audio/transcriptions") {
         const form = await request.formData();
         const file = form.get("file") as File;
-        mock.transcriptions.push(file.size);
+        mock.heard += file.size;
         return Response.json({ text: SCRIPTED_QUESTION });
       }
 
       if (pathname === "/v1/chat/completions") {
         const body = (await request.json()) as { messages: { role: string; content: unknown }[] };
-        mock.chats.push(body.messages);
         const last = [...body.messages].reverse().find((m) => m.role === "user");
-        const answer =
-          typeof last?.content === "string" && last.content.includes("capital") ? ANSWER : GREETING;
+        const question = typeof last?.content === "string" ? last.content : "";
+        mock.asked.push(question);
+        const answer = question.includes("capital") ? ANSWER : GREETING;
         return new Response(
           chunk({ role: "assistant", content: answer }, null) +
             chunk({}, "stop") +
@@ -80,7 +62,7 @@ export function startMockOpenAI(): MockOpenAI {
 
       if (pathname === "/v1/audio/speech") {
         const body = (await request.json()) as { input: string };
-        mock.speeches.push(body.input);
+        mock.spoken.push(body.input);
         return new Response(tonePcm(), { headers: { "content-type": "application/octet-stream" } });
       }
 

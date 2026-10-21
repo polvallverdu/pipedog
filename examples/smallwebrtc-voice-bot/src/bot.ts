@@ -1,10 +1,10 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// A voice assistant over SmallWebRTC: the user's speech goes to OpenAI
-// (transcription, chat and speech synthesis) and the reply is spoken back.
-// Mirrors Pipecat's examples/transports/transports-small-webrtc.py, with
-// OpenAI in place of Deepgram and Cartesia.
+// A voice assistant over SmallWebRTC: the user's speech goes to a speech-to-text
+// service, a chat model writes a reply, and a speech synthesis service speaks it
+// back. Mirrors Pipecat's examples/transports/transports-small-webrtc.py. The
+// services are OpenAI's, or Google Gemini's, chosen by `provider`.
 
 import { SileroVADAnalyzer } from "@pipedog/audio-silero";
 import { createLocalSmartTurnAnalyzerV3 } from "@pipedog/audio-smart-turn";
@@ -20,6 +20,9 @@ import { TransportParams } from "@pipedog/core/transports/base_transport";
 import { TurnAnalyzerUserTurnStopStrategy } from "@pipedog/core/turns/user_stop/turn_analyzer_user_turn_stop_strategy";
 import { UserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
 import { WorkerRunner } from "@pipedog/core/workers/runner";
+import { GeminiSTTService } from "@pipedog/google/gemini_live/stt";
+import { GoogleLLMService, GoogleLLMSettings } from "@pipedog/google/llm";
+import { GeminiTTSService } from "@pipedog/google/tts";
 import { OpenAILLMSettings } from "@pipedog/openai/base_llm";
 import { OpenAILLMService } from "@pipedog/openai/llm";
 import { OpenAISTTService } from "@pipedog/openai/stt";
@@ -32,14 +35,53 @@ export const SYSTEM_INSTRUCTION =
 
 /** Input audio from the browser is 16 kHz. */
 const INPUT_SAMPLE_RATE = 16000;
-/** OpenAI's speech synthesis returns 24 kHz PCM. */
+/** Both providers' speech synthesis returns 24 kHz PCM. */
 const OUTPUT_SAMPLE_RATE = 24000;
 
+export type VoiceProvider = "openai" | "google";
+
 export interface VoiceBotOptions {
-  /** OpenAI API key. Defaults to the `OPENAI_API_KEY` environment variable. */
+  /** Which services to use: OpenAI (default) or Google Gemini. */
+  provider?: VoiceProvider;
+  /**
+   * API key. Defaults to `OPENAI_API_KEY` or `GOOGLE_API_KEY`, depending on the
+   * provider.
+   */
   apiKey?: string;
-  /** Base URL of an OpenAI-compatible API. Defaults to `OPENAI_BASE_URL`, then the OpenAI API. */
+  /**
+   * Base URL of the provider's API. Defaults to `OPENAI_BASE_URL` for OpenAI, and
+   * to Google's own endpoint for Gemini.
+   */
   baseUrl?: string;
+}
+
+/** Speech-to-text, chat and speech synthesis services for one provider. */
+function createServices(options: VoiceBotOptions) {
+  if (options.provider === "google") {
+    const apiKey = options.apiKey ?? process.env.GOOGLE_API_KEY ?? "";
+    const httpOptions = options.baseUrl ? { baseUrl: options.baseUrl } : null;
+    return {
+      stt: new GeminiSTTService({ apiKey, httpOptions }),
+      llm: new GoogleLLMService({
+        apiKey,
+        httpOptions,
+        settings: new GoogleLLMSettings({ systemInstruction: SYSTEM_INSTRUCTION }),
+      }),
+      tts: new GeminiTTSService({ apiKey, httpOptions, sampleRate: OUTPUT_SAMPLE_RATE }),
+    };
+  }
+
+  const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY ?? null;
+  const baseUrl = options.baseUrl ?? process.env.OPENAI_BASE_URL ?? null;
+  return {
+    stt: new OpenAISTTService({ apiKey, baseUrl }),
+    llm: new OpenAILLMService({
+      apiKey,
+      baseUrl,
+      settings: new OpenAILLMSettings({ systemInstruction: SYSTEM_INSTRUCTION }),
+    }),
+    tts: new OpenAITTSService({ apiKey, baseUrl, sampleRate: OUTPUT_SAMPLE_RATE }),
+  };
 }
 
 /** Runs one voice conversation over `connection`, until the client disconnects. */
@@ -47,21 +89,12 @@ export async function runVoiceBot(
   connection: SmallWebRTCConnection,
   options: VoiceBotOptions = {},
 ): Promise<void> {
-  const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY ?? null;
-  const baseUrl = options.baseUrl ?? process.env.OPENAI_BASE_URL ?? null;
-
   const transport = new SmallWebRTCTransport(
     connection,
     new TransportParams({ audioInEnabled: true, audioOutEnabled: true }),
   );
 
-  const stt = new OpenAISTTService({ apiKey, baseUrl });
-  const llm = new OpenAILLMService({
-    apiKey,
-    baseUrl,
-    settings: new OpenAILLMSettings({ systemInstruction: SYSTEM_INSTRUCTION }),
-  });
-  const tts = new OpenAITTSService({ apiKey, baseUrl, sampleRate: OUTPUT_SAMPLE_RATE });
+  const { stt, llm, tts } = createServices(options);
 
   const context = new LLMContext();
   const aggregators = new LLMContextAggregatorPair(context, {
