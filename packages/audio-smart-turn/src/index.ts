@@ -127,4 +127,9 @@ export function createLocalSmartTurnAnalyzerV3(
   });
 }
 
+export {
+  HttpSmartTurnAnalyzer,
+  type HttpSmartTurnAnalyzerOptions,
+  serializeNpy,
+} from "./smart_turn/http_smart_turn.ts";
 export { LocalSmartTurnAnalyzerV3 };

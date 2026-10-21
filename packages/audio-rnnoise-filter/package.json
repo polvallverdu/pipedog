@@ -1,0 +1,70 @@
+{
+  "name": "@pipedog/audio-rnnoise-filter",
+  "version": "0.6.1",
+  "description": "RNNoise noise suppression for pipedog: a port of Pipecat's RNNoiseFilter, with RNNoise compiled to WebAssembly, so it runs on Bun, Node, Deno and Cloudflare Workers.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "rnnoise",
+    "noise-suppression",
+    "audio-filter",
+    "wasm"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/audio-rnnoise-filter"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/audio-rnnoise-filter#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./wasm": {
+      "types": "./src/wasm.ts",
+      "workerd": "./src/wasm.workerd.ts",
+      "default": "./src/wasm.ts"
+    },
+    "./rnnoise.wasm": "./wasm/rnnoise.wasm"
+  },
+  "files": [
+    "dist",
+    "src",
+    "wasm"
+  ],
+  "scripts": {
+    "extract:wasm": "bun scripts/extract-wasm.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@jitsi/rnnoise-wasm": "0.2.1"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/audio/filters/rnnoise_filter.py"
+    ],
+    "compat": {
+      "needs": {
+        "all": "Nothing to install: the WebAssembly module ships in the package.",
+        "workerd": "The bundler must import .wasm files as modules (wrangler's default rule)."
+      }
+    }
+  }
+}

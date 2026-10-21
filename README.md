@@ -159,7 +159,9 @@ from real runs by the compat harness (`bun run compat`), not by hand.
 
 Every package below is verified on all four, except `@pipedog/transport-smallwebrtc` (not Workers:
 no UDP), `@pipedog/transport-livekit`, `@pipedog/heygen` and `@pipedog/transport-heygen` (not
-Workers: LiveKit's media SDK is a native addon) and `@pipedog/mcp` (a stdio tool for Bun and Node). A few entry points inside verified
+Workers: LiveKit's media SDK is a native addon), `@pipedog/transport-local` (spawns sox or ffmpeg: Bun,
+Node and Deno), `@pipedog/transport-whatsapp` (on Workers only the webhook, signature and API parts
+work: answering a call needs WebRTC) and `@pipedog/mcp` (a stdio tool for Bun and Node). A few entry points inside verified
 packages don't run on Workers: `@pipedog/aws`'s `SageMakerBidiClient` (HTTP/2), Google's gRPC
 Cloud Speech and Text-to-Speech services, and the servers that listen on a port (the runner's
 `main()` and `serve()`, `serveFetch`). Each package's README has its own runtime table.
@@ -191,6 +193,8 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/transport-smallwebrtc`](packages/transport-smallwebrtc) | Peer-to-peer WebRTC transport (werift, Opus via WASM) for the Pipecat browser SDK's `SmallWebRTCTransport`. |
 | [`@pipedog/transport-livekit`](packages/transport-livekit) | LiveKit transport: joins a LiveKit room (your server or LiveKit Cloud) with audio, video, data messages and SIP DTMF, on LiveKit's native Node SDK. |
 | [`@pipedog/heygen`](packages/heygen), [`@pipedog/transport-heygen`](packages/transport-heygen) | HeyGen avatars (LiveAvatar and Interactive Avatar): `HeyGenVideoService` and `HeyGenTransport`. |
+| [`@pipedog/transport-whatsapp`](packages/transport-whatsapp) | WhatsApp Business voice calls (`WhatsAppClient`): Meta calling webhooks, signature checks, accept/reject/terminate, on SmallWebRTC. |
+| [`@pipedog/transport-local`](packages/transport-local) | `LocalAudioTransport`: the machine's microphone and speakers through sox or ffmpeg, no native addon. |
 | [`@pipedog/transport-websocket`](packages/transport-websocket) | WebSocket transports: client, server and bring-your-own-socket, with servers for Bun, Node and Deno, and fetch handlers for Workers. |
 | [`@pipedog/serializer-protobuf`](packages/serializer-protobuf) | `ProtobufFrameSerializer`, wire-compatible with Pipecat's `frames.proto`. |
 | [`@pipedog/serializer-rtvi-client`](packages/serializer-rtvi-client) | `RTVIClientSerializer`: a pipeline acting as an RTVI client of another bot. |
@@ -203,7 +207,9 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/runner`](packages/runner) | Pipecat's development runner: `createTransport()` from the runner arguments, and `main()`, a dev server with the prebuilt browser client, SmallWebRTC signalling, LiveKit session tokens, and telephony webhooks and WebSockets for Twilio, Telnyx, Plivo and Exotel. Also a fetch handler (`createRunnerApp()`) to mount in your own server. |
 | [`@pipedog/evals`](packages/evals) | Pipecat's evals: test a bot end to end with scripted or LLM-simulated users, matchers and an LLM judge, from YAML scenarios, with the `pipedog-eval` CLI and multi-bot suites. |
 | [`@pipedog/audio-silero`](packages/audio-silero) | Silero VAD (`SileroVADAnalyzer`), with the upstream model included. |
-| [`@pipedog/audio-smart-turn`](packages/audio-smart-turn) | Local Smart Turn v3 end-of-turn detection, with the upstream model included. |
+| [`@pipedog/audio-smart-turn`](packages/audio-smart-turn) | Smart Turn end-of-turn detection: local v3 with the upstream model included, and `HttpSmartTurnAnalyzer` for a remote endpoint (`fetch` only). |
+| [`@pipedog/audio-rnnoise-filter`](packages/audio-rnnoise-filter) | `RNNoiseFilter`: RNNoise noise suppression compiled to WebAssembly, on every runtime. |
+| [`@pipedog/audio-soundfile-mixer`](packages/audio-soundfile-mixer) | `SoundfileMixer`: background sound from WAV files (bytes, URL or path) mixed into the bot's audio, in pure TypeScript. |
 | [`@pipedog/onnx`](packages/onnx) | Small ONNX inference backend: `onnxruntime-node` when installed, else `onnxruntime-web`, with a Workers variant. |
 | [`@pipedog/resampler-wasm`](packages/resampler-wasm) | High-quality PCM resampling (rubato sinc, compiled to WebAssembly), one-shot and streaming. |
 | [`@pipedog/sentencex-wasm`](packages/sentencex-wasm) | Wikimedia sentencex sentence segmentation, compiled to WebAssembly. |

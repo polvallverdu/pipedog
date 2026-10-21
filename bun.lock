@@ -8,10 +8,15 @@
         "@biomejs/biome": "2.5.15",
         "@changesets/changelog-github": "1.0.1",
         "@changesets/cli": "3.0.3",
+        "@pipedog/audio-rnnoise-filter": "workspace:*",
         "@pipedog/audio-silero": "workspace:*",
         "@pipedog/audio-smart-turn": "workspace:*",
+        "@pipedog/audio-soundfile-mixer": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/onnx": "workspace:*",
+        "@pipedog/transport-local": "workspace:*",
+        "@pipedog/transport-smallwebrtc": "workspace:*",
+        "@pipedog/transport-whatsapp": "workspace:*",
         "@types/bun": "1.4.3",
         "typescript": "7.0.2",
         "workerd": "1.20261005.1",
@@ -210,6 +215,17 @@
       "name": "@pipedog/asyncio",
       "version": "0.6.1",
     },
+    "packages/audio-rnnoise-filter": {
+      "name": "@pipedog/audio-rnnoise-filter",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@jitsi/rnnoise-wasm": "0.2.1",
+      },
+    },
     "packages/audio-silero": {
       "name": "@pipedog/audio-silero",
       "version": "0.6.1",
@@ -223,8 +239,17 @@
       "name": "@pipedog/audio-smart-turn",
       "version": "0.6.1",
       "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/onnx": "workspace:*",
+      },
+    },
+    "packages/audio-soundfile-mixer": {
+      "name": "@pipedog/audio-soundfile-mixer",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
       },
     },
     "packages/aws": {
@@ -746,6 +771,14 @@
         "@livekit/rtc-node",
       ],
     },
+    "packages/transport-local": {
+      "name": "@pipedog/transport-local",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
     "packages/transport-smallwebrtc": {
       "name": "@pipedog/transport-smallwebrtc",
       "version": "0.6.1",
@@ -783,6 +816,15 @@
       "optionalPeers": [
         "ws",
       ],
+    },
+    "packages/transport-whatsapp": {
+      "name": "@pipedog/transport-whatsapp",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/transport-smallwebrtc": "workspace:*",
+      },
     },
     "packages/ultravox": {
       "name": "@pipedog/ultravox",
@@ -1126,6 +1168,8 @@
 
     "@img/sharp-win32-x64": ["@img/sharp-win32-x64@0.35.5", "", { "os": "win32", "cpu": "x64" }, "sha512-x76eH0vEiHlcMQu8Y8IenntaACtddpT6W0wmXtWrnKcnKI7ME5DdgqhAD6SEWOEl1v2zDvkZDhFA9KnURwpfqg=="],
 
+    "@jitsi/rnnoise-wasm": ["@jitsi/rnnoise-wasm@0.2.1", "", {}, "sha512-iEj77www43pS2Yq+cfLZb+hFuI7L5ccisBzzPMcOjjLsG4/LAlkD1CY58/8gc84nHdLBGmD/OPIWGnvYnXvB0A=="],
+
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 
     "@jridgewell/remapping": ["@jridgewell/remapping@2.3.5", "", { "dependencies": { "@jridgewell/gen-mapping": "^0.3.5", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-LI9u/+laYG4Ds1TDKSJW2YPrIlcVYOwi2fUC6xB43lueCjgxV4lffOCZCtYFiH6TNOX+tQKXx97T4IKHbhyHEQ=="],
@@ -1272,9 +1316,13 @@
 
     "@pipedog/asyncio": ["@pipedog/asyncio@workspace:packages/asyncio"],
 
+    "@pipedog/audio-rnnoise-filter": ["@pipedog/audio-rnnoise-filter@workspace:packages/audio-rnnoise-filter"],
+
     "@pipedog/audio-silero": ["@pipedog/audio-silero@workspace:packages/audio-silero"],
 
     "@pipedog/audio-smart-turn": ["@pipedog/audio-smart-turn@workspace:packages/audio-smart-turn"],
+
+    "@pipedog/audio-soundfile-mixer": ["@pipedog/audio-soundfile-mixer@workspace:packages/audio-soundfile-mixer"],
 
     "@pipedog/aws": ["@pipedog/aws@workspace:packages/aws"],
 
@@ -1380,9 +1428,13 @@
 
     "@pipedog/transport-livekit": ["@pipedog/transport-livekit@workspace:packages/transport-livekit"],
 
+    "@pipedog/transport-local": ["@pipedog/transport-local@workspace:packages/transport-local"],
+
     "@pipedog/transport-smallwebrtc": ["@pipedog/transport-smallwebrtc@workspace:packages/transport-smallwebrtc"],
 
     "@pipedog/transport-websocket": ["@pipedog/transport-websocket@workspace:packages/transport-websocket"],
+
+    "@pipedog/transport-whatsapp": ["@pipedog/transport-whatsapp@workspace:packages/transport-whatsapp"],
 
     "@pipedog/ultravox": ["@pipedog/ultravox@workspace:packages/ultravox"],
 

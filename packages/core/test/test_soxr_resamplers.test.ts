@@ -98,7 +98,8 @@ test("test_soxr_stream_audio_resampler_defaults_to_vhq", async () => {
   expect(calls.quality).toEqual("VHQ");
 });
 
-// TODO: needs unported module audio/filters/rnnoise_filter (package @pipedog/audio-rnnoise-filter).
+// Needs RNNoiseFilter, which lives in @pipedog/audio-rnnoise-filter (core cannot depend on it):
+// ported in packages/audio-rnnoise-filter/test/test_soxr_resamplers.test.ts.
 test.todo("test_rnnoise_default_resampler_quality_is_forwarded");
 
 function _tone(samples: number, rate = 16000): Uint8Array {

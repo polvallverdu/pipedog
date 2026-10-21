@@ -5,7 +5,7 @@
 // Type-checked on every docs build.
 
 import { SileroVADAnalyzer } from "@pipedog/audio-silero";
-import { createLocalSmartTurnAnalyzerV3 } from "@pipedog/audio-smart-turn";
+import { createLocalSmartTurnAnalyzerV3, HttpSmartTurnAnalyzer } from "@pipedog/audio-smart-turn";
 import { type Frame, TranscriptionFrame } from "@pipedog/core/frames/frames";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import {
@@ -89,6 +89,27 @@ const context = new LLMContext();
     userTurnStopTimeout: 5.0,
   });
   // #endregion explicit-defaults
+  void userParams;
+}
+
+{
+  // #region http-smart-turn
+  // Smart Turn as a service: each candidate turn is POSTed to the endpoint.
+  const userParams = new LLMUserAggregatorParams({
+    vadAnalyzer: new SileroVADAnalyzer(),
+    userTurnStrategies: new UserTurnStrategies({
+      start: [new VADUserTurnStartStrategy(), new TranscriptionUserTurnStartStrategy()],
+      stop: [
+        new TurnAnalyzerUserTurnStopStrategy({
+          turnAnalyzer: new HttpSmartTurnAnalyzer({
+            url: "https://smart-turn.example.com/predict",
+            headers: { Authorization: `Bearer ${process.env.SMART_TURN_KEY}` },
+          }),
+        }),
+      ],
+    }),
+  });
+  // #endregion http-smart-turn
   void userParams;
 }
 

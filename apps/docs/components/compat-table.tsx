@@ -32,13 +32,29 @@ export function CompatTable() {
               </td>
               {RUNTIMES.map((r) => {
                 const ok = pkg.runtimes.includes(r);
+                const partial = ok && pkg.partial.includes(r);
+                const unsupported = pkg.unsupported.includes(r);
                 return (
                   <td
                     key={r}
                     className="p-2 text-center align-top"
-                    title={ok ? `verified on ${RUNTIME_LABELS[r]}` : "not verified yet"}
+                    title={
+                      partial
+                        ? `partly verified on ${RUNTIME_LABELS[r]}`
+                        : ok
+                          ? `verified on ${RUNTIME_LABELS[r]}`
+                          : unsupported
+                            ? "not supported"
+                            : "not verified yet"
+                    }
                   >
-                    {ok ? "✅" : <span className="text-fd-muted-foreground">—</span>}
+                    {partial ? (
+                      "⚠️"
+                    ) : ok ? (
+                      "✅"
+                    ) : (
+                      <span className="text-fd-muted-foreground">{unsupported ? "n/a" : "—"}</span>
+                    )}
                   </td>
                 );
               })}
@@ -47,9 +63,9 @@ export function CompatTable() {
         </tbody>
       </table>
       <p className="text-xs text-fd-muted-foreground mt-2">
-        ✅ = a smoke test imports the package on that runtime (<code>pipecat.runtimes</code> in its{" "}
-        <code>package.json</code>). — = not verified yet. Generated at build time from{" "}
-        {packages.length} packages.
+        ✅ = a smoke test exercises the package on that runtime (<code>pipecat.runtimes</code> in
+        its <code>package.json</code>). ⚠️ = only part of it works there. n/a = the runtime can't run
+        it. — = not verified yet. Generated at build time from {packages.length} packages.
       </p>
     </div>
   );

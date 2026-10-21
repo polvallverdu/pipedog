@@ -1,0 +1,12 @@
+{
+  "title": "Audio filters & mixers",
+  "pages": [
+    "index",
+    "rnnoise-filter",
+    "soundfile-mixer",
+    "---Coming soon---",
+    "aic-filter",
+    "koala-filter",
+    "krisp-viva-filter"
+  ]
+}

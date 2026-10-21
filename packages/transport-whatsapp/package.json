@@ -1,0 +1,73 @@
+{
+  "name": "@pipedog/transport-whatsapp",
+  "version": "0.6.1",
+  "description": "WhatsApp Business calling for pipedog: a port of Pipecat's WhatsAppClient and WhatsAppApi (Meta Cloud API calling webhooks, HMAC signature checks, SDP accept/reject/terminate) on the SmallWebRTC transport.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "whatsapp",
+    "whatsapp-calling",
+    "webrtc",
+    "transport"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/transport-whatsapp"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/transport-whatsapp#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./connection": {
+      "types": "./src/connection.ts",
+      "workerd": "./src/connection.workerd.ts",
+      "default": "./src/connection.ts"
+    },
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/transport-smallwebrtc": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/transports/whatsapp/api.py",
+      "src/pipecat/transports/whatsapp/client.py"
+    ],
+    "compat": {
+      "partialRuntimes": [
+        "workerd"
+      ],
+      "needs": {
+        "all": "A WhatsApp Business account with Calling enabled, an access token and a public HTTPS webhook URL.",
+        "bun": "A long-lived server that can use UDP (SmallWebRTC runs on werift).",
+        "node": "A long-lived server that can use UDP (SmallWebRTC runs on werift).",
+        "deno": "A long-lived server that can use UDP (SmallWebRTC runs on werift).",
+        "workerd": "Webhook verification, signature checks and API calls only. There is no WebRTC, so calls cannot be answered."
+      }
+    }
+  }
+}

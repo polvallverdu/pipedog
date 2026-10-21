@@ -8,6 +8,7 @@ import {
   createGenerator,
   remarkAutoTypeTable,
 } from "fumadocs-typescript";
+import { remarkRuntimeMatrix } from "./lib/remark-runtime-matrix";
 import { remarkStripLicense } from "./lib/remark-strip-license";
 
 // Reads the pipedog sources (packages/*/src) through tsconfig.api.json.
@@ -31,7 +32,7 @@ export const docs = defineDocs({
 
 export default defineConfig({
   mdxOptions: {
-    remarkPlugins: [[remarkAutoTypeTable, { generator }], remarkStripLicense],
+    remarkPlugins: [[remarkAutoTypeTable, { generator }], remarkStripLicense, remarkRuntimeMatrix],
     rehypeCodeOptions: {
       ...rehypeCodeDefaultOptions,
       themes: { light: "github-light", dark: "github-dark" },

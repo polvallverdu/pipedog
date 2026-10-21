@@ -24,6 +24,12 @@ export interface PackageCompat {
   description: string | null;
   dir: string;
   runtimes: Runtime[];
+  /** Runtimes where only part of the package works (`pipecat.compat.partialRuntimes`). */
+  partial: Runtime[];
+  /** Runtimes the package cannot support (`pipecat.compat.unsupportedRuntimes`). */
+  unsupported: Runtime[];
+  /** What each runtime needs, from `pipecat.compat.needs` (`all` applies to every runtime). */
+  needs: Partial<Record<Runtime | "all", string>>;
   upstream: string[];
 }
 
@@ -42,14 +48,27 @@ export function readPackageCompat(dir = packagesDir()): PackageCompat[] {
       name?: string;
       description?: string;
       private?: boolean;
-      pipecat?: { runtimes?: string[]; upstream?: string[] };
+      pipecat?: {
+        runtimes?: string[];
+        upstream?: string[];
+        compat?: {
+          partialRuntimes?: string[];
+          unsupportedRuntimes?: string[];
+          needs?: Partial<Record<Runtime | "all", string>>;
+        };
+      };
     };
     if (!pkg.name) continue;
     const runtimes = (pkg.pipecat?.runtimes ?? []).filter((r): r is Runtime =>
       (RUNTIMES as readonly string[]).includes(r),
     );
+    const runtimeList = (names: string[] | undefined) =>
+      (names ?? []).filter((r): r is Runtime => (RUNTIMES as readonly string[]).includes(r));
     out.push({
       name: pkg.name,
+      partial: runtimeList(pkg.pipecat?.compat?.partialRuntimes),
+      unsupported: runtimeList(pkg.pipecat?.compat?.unsupportedRuntimes),
+      needs: pkg.pipecat?.compat?.needs ?? {},
       description: pkg.description ?? null,
       dir: `packages/${entry.name}`,
       runtimes,
