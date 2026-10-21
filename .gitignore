@@ -6,6 +6,7 @@ dist/
 coverage/
 .env
 .next/
+apps/docs/out/
 .source/
 next-env.d.ts
 .claude/worktrees/
