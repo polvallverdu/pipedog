@@ -16,13 +16,14 @@ Against the pinned upstream commit (counts from `porting/manifest.json`):
 
 | | Ported | Upstream | Share |
 |---|---|---|---|
-| Modules | 502 | 667 | 75% (64% of the lines) |
-| Test files | 244 | 340 | 72% |
+| Modules | 559 | 667 | 84% (75% of the lines) |
+| Test files | 272 | 340 | 80% |
 | Core modules (`@pipedog/core`) | 361 | 361 | 100% |
 | Core test files | 150 | 150 | 100% |
-| Target packages | 43 started, 62 not | 105 | |
+| Target packages | 53 started, 52 not | 105 | |
 
-pipedog publishes 49 packages: those 43, plus six with no upstream counterpart (`@pipedog/asyncio`,
+pipedog publishes 58 packages: 52 of those 53 (the 53rd, `@pipedog/cli`, has one ported module, the
+eval command, which lives in `@pipedog/evals`), plus six with no upstream counterpart (`@pipedog/asyncio`,
 `@pipedog/mcp`, `@pipedog/onnx`, `@pipedog/resampler-wasm`, `@pipedog/sentencex-wasm`,
 `@pipedog/tracing`).
 
@@ -38,8 +39,9 @@ pipedog publishes 49 packages: those 43, plus six with no upstream counterpart (
 
 - **Core runtime**: frames, processors, pipelines, workers and the runner, the bus, observers,
   RTVI, base services and transports, turn management. See [Core concepts](/docs/concepts/frames).
-- **Local audio models**: Silero VAD and Smart Turn. See
-  [Turn detection](/docs/concepts/turn-detection).
+- **Local audio models and filters**: Silero VAD and Smart Turn (local v3, and
+  `HttpSmartTurnAnalyzer` for a remote endpoint), the RNNoise noise filter and the soundfile mixer.
+  See [Turn detection](/docs/concepts/turn-detection).
 - **Services**: OpenAI, Google, Anthropic, Deepgram, Cartesia, ElevenLabs, the Whisper base and
   LangChain. See [Supported services](/docs/services).
 - **Cloud platforms**: Azure (Azure OpenAI LLM, Realtime and image, Voice Live, Azure Speech STT
@@ -55,7 +57,9 @@ pipedog publishes 49 packages: those 43, plus six with no upstream counterpart (
   and AWS speech services above.
 - **Transports**: [WebSocket](/docs/transports/websocket) (server, client, fetch handlers, and
   `serveFetch` for WebSocket upgrades on Bun, Node and Deno),
-  [SmallWebRTC](/docs/transports/smallwebrtc) and [LiveKit](/docs/transports/livekit).
+  [SmallWebRTC](/docs/transports/smallwebrtc), [LiveKit](/docs/transports/livekit),
+  [WhatsApp](/docs/transports/whatsapp) calling and [local audio](/docs/transports/local-audio)
+  (microphone and speakers).
 - **Video avatars**: [HeyGen](/docs/services/video/heygen) (LiveAvatar and Interactive Avatar),
   as a service and as a transport.
 - **Serializers**: [Protobuf](/docs/serializers/protobuf),
@@ -69,22 +73,23 @@ pipedog publishes 49 packages: those 43, plus six with no upstream counterpart (
   `@pipedog/runner`.
 - **Evals**: [Pipecat's evals](/docs/evals) in `@pipedog/evals`: scripted and simulated
   scenarios, the LLM judge, suites, and the `pipedog-eval` CLI (`pipecat eval`).
+- **Flows**: [Pipecat Flows](/docs/flows) in `@pipedog/flows`: nodes, functions, actions, and
+  YAML/JSON configs.
 - **Tracing**: OpenTelemetry, in `@pipedog/tracing`. See
   [Metrics & tracing](/docs/concepts/metrics-and-tracing).
 
 ## What's not ported yet
 
-157 upstream modules (34% of the lines) and 94 test files are still to do. Every upstream provider
+108 upstream modules (25% of the lines) and 68 test files are still to do. Every upstream provider
 that isn't ported has a "coming soon" page, or a row on
 [Other upstream providers](/docs/services/other-upstream). The main gaps, with their remaining
 upstream modules:
 
 | Gap | Modules | What it is |
 |---|---|---|
-| Transports | 13 | [Daily](/docs/transports/daily) (with its runner routes and dial-in), [local audio](/docs/transports/local-audio), the [Vonage Video Connector](/docs/transports/vonage), [WhatsApp](/docs/transports/whatsapp), and the Tavus, LemonSlice and MoQ transports. |
-| CLI | 17 | The `pipecat` command line tool (`@pipedog/cli`). |
-| Pipecat Flows | 8 | Structured conversation flows (`@pipedog/flows`). |
-| Audio filters and analyzers | 12 | Noise filters (Krisp VIVA, RNNoise, Koala, AIC), Krisp and AIC VAD and turn models, the soundfile mixer, and Smart Turn v2, CoreML and HTTP (Smart Turn v3, the default, is ported). |
+| Transports | 9 | [Daily](/docs/transports/daily) (with its runner routes and dial-in), the [Vonage Video Connector](/docs/transports/vonage), and the Tavus, LemonSlice and MoQ transports. |
+| CLI | 16 | The rest of the `pipecat` command line tool (`@pipedog/cli`): `pipecat init` project scaffolding, the service registry, hub status and the config validator. The eval command is ported, as the `pipedog-eval` bin in [`@pipedog/evals`](/docs/evals); the manifest still assigns `cli/commands/eval.py` to `@pipedog/cli`, so `porting/STATUS.md` shows that package as 1/17. |
+| Audio filters and analyzers | 7 | Noise filters (Krisp VIVA, Koala, AIC), and the Krisp and AIC VAD and turn models. Smart Turn v3, RNNoise, the soundfile mixer and HTTP Smart Turn are ported. |
 | Extensions | 5 | The IVR navigator and voicemail detector in `pipecat.extensions` (`@pipedog/extensions`). |
 | MCP client service | 1 | `pipecat.services.mcp_service`, which gives an LLM the tools of an MCP server (`@pipedog/mcp-client`). Not to be confused with [`@pipedog/mcp`](/docs/guides/llms#mcp-server), the docs server, which exists. |
 | Providers with a page | 25 | 11 providers: AssemblyAI, Gladia, NVIDIA (LLM, Riva STT and TTS), Sarvam AI, Soniox, Speechmatics, Fish Audio, Hume, Rime, and the Simli and Tavus video avatars. |
@@ -111,9 +116,6 @@ means it is possible, but needs vendor SDKs or keys, or waits on a moving spec. 
 | ai-coustics (AIC) filter and Quail VAD | Deferred | `@ai-coustics/aic-sdk` is native (darwin and linux), and the other build is WASM, aimed at browsers. Both need a license key. | Planned as an optional package. | `@ai-coustics/aic-sdk` on npm |
 | Koala (Picovoice) noise suppression | Deferred | There is no Node build, only `@picovoice/koala-web` (WASM, for browsers), and it needs an AccessKey. | It will be ported if users ask: [open a request](https://github.com/polvallverdu/pipedog/issues/new?template=feature_request.yml). | `@picovoice/koala-web` on npm |
 | Tk local transport, Smart Turn v2 and Smart Turn CoreML | Skipped | Skipped on purpose. Tk is a desktop GUI, and both Smart Turn variants are superseded by v3, which is ported. | Nothing planned. Open a request if you have a use for one. | |
-
-These are not blocked, and are in progress: WhatsApp calling, local audio, RNNoise, the WAV mixer
-and HTTP Smart Turn.
 
 Contributions are welcome on any of these, especially the portable parts (the REST helpers for
 Daily, Tavus and LemonSlice) and the bring-your-own-SDK packages. Open a request with the

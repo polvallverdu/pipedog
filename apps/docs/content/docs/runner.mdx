@@ -332,9 +332,11 @@ bun bot.ts -t telnyx --proxy mybot.ngrok.io          # phone calls through an ng
 
 ## Not ported
 
-- Daily (`-t daily`, `-d/--direct`, `/daily`, the dial-in webhook), LiveKit, MOQ, the Vonage
-  Video Connector (`-t vonage`) and WhatsApp: their transports are not ported. The argument
-  classes exist for type parity; selecting them fails with a clear message.
-- Evals (`eval-connect` detection, `-t eval`): `pipecat.evals` is not ported; `-t eval` is
-  deprecated upstream.
+- Daily (`-t daily`, `-d/--direct`, `/daily`, the dial-in webhook), MOQ and the Vonage Video
+  Connector (`-t vonage`): their transports are not ported. The WhatsApp transport is ported
+  ([`@pipedog/transport-whatsapp`](/docs/transports/whatsapp)), but the runner's `--whatsapp`
+  route is not wired to it. The argument classes exist for type parity; selecting these fails
+  with a clear message.
+- `-t eval`: deprecated upstream, so not ported. The evals themselves are ported, in
+  [`@pipedog/evals`](/docs/evals).
 - The MOQ CLI flags and the deprecated `--folder` flag.
