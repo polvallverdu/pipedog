@@ -30,8 +30,8 @@ renders the same file.
   [Plivo](/docs/serializers/plivo), [Exotel](/docs/serializers/exotel),
   [Vonage](/docs/serializers/vonage) and [Genesys](/docs/serializers/genesys). See
   [Telephony](/docs/telephony).
-- **Runner**: the telephony helpers only (`parseTelephonyWebsocket`, `CallData`), in
-  `@pipedog/runner`.
+- **Runner**: the [development runner](/docs/runner) (`main()`, the prebuilt client,
+  WebRTC and telephony routes) and `createTransport`, in `@pipedog/runner`.
 - **Tracing**: OpenTelemetry, in `@pipedog/tracing`. See
   [Metrics & tracing](/docs/concepts/metrics-and-tracing).
 
@@ -44,8 +44,6 @@ Every upstream provider that isn't ported has a "coming soon" page, or a row on
 - **Realtime speech-to-speech**: xAI Grok Realtime.
 - **Speech providers**: AssemblyAI, Gladia, Speechmatics, Soniox, Rime, Fish, Hume, Inworld.
 - **WebRTC rooms**: [Daily](/docs/transports/daily) and [LiveKit](/docs/transports/livekit).
-- **The development runner**: `pipecat.runner.run` (the `main()` server and prebuilt UI) and
-  `create_transport`.
 - **Video avatars**: Tavus, HeyGen and Simli.
 - **Evals** and the `pipecat` CLI (`@pipedog/evals`, `@pipedog/cli` in the status file).
 

@@ -1,0 +1,333 @@
+---
+title: Development runner
+description: Run a bot with WebRTC in the browser and phone calls over Twilio, Telnyx, Plivo or Exotel, with the same bot() entry point as Pipecat's runner.
+---
+
+`@pipedog/runner` is the port of Pipecat's `pipecat.runner`: `createTransport()` picks the
+transport from the runner arguments, and `main()` starts a development server that serves the
+prebuilt client, the SmallWebRTC signalling routes, the telephony WebSocket and webhook, and
+`/start`. A bot written against Pipecat's runner keeps its shape: one exported `bot(runnerArgs)`
+function, one `main()` call.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/server/utilities/runner/guide">
+    Pipecat's documentation for the development runner.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/runner/src">
+    `packages/runner/src` (`run.ts`, `utils.ts`, `types.ts`, `serve.ts`).
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/runner
+```
+
+It brings the SmallWebRTC and WebSocket transports and the Telnyx, Twilio, Plivo and Exotel
+serializers. On Node, also install `ws` for the WebSocket routes (`npm install ws`); Bun and Deno
+need nothing else.
+
+## A bot
+
+```ts
+// bot.ts
+import { TransportParams } from "@pipedog/core/transports/base_transport";
+import { FastAPIWebsocketParams } from "@pipedog/transport-websocket/fastapi";
+import { createTransport } from "@pipedog/runner/utils";
+import type { RunnerArguments } from "@pipedog/runner/types";
+
+const transportParams = {
+  webrtc: () => new TransportParams({ audioInEnabled: true, audioOutEnabled: true }),
+  telnyx: () => new FastAPIWebsocketParams({ audioInEnabled: true, audioOutEnabled: true }),
+};
+
+export async function bot(runnerArgs: RunnerArguments) {
+  const transport = await createTransport(runnerArgs, transportParams);
+  // build the pipeline with transport.input() and transport.output(), then run it
+}
+
+if (import.meta.main) {
+  const { main } = await import("@pipedog/runner/run");
+  await main();
+}
+```
+
+```bash
+bun bot.ts -t webrtc                         # open http://localhost:7860
+bun bot.ts -t telnyx --proxy mybot.ngrok.io  # point the Telnyx number at https://mybot.ngrok.io/
+bun bot.ts                                   # every ported transport at once
+```
+
+`main()` finds `bot` the way upstream does: on the script that was run, then in `bot.ts` (or
+`.js`) in the current directory, then in the first script there that exports it. Pass
+`main({ bot })` to skip the lookup.
+
+## Routes
+
+| Route | What it does |
+|---|---|
+| `GET /` | Redirects to `/client/`. |
+| `GET /client/` | The prebuilt Pipecat client (see below). |
+| `POST /start` | Starts a session: `{"transport": "webrtc", "enableDefaultIceServers": true, "body": {...}}`. Returns `sessionId` and `iceConfig` for WebRTC, `wsUrl` (and `token` with `--ws-auth token`) for telephony and plain WebSocket. |
+| `GET /status` | The transports this runner serves. |
+| `POST`, `PATCH /api/offer` | SmallWebRTC offers and ICE candidates; a known `pc_id` renegotiates (and `restart_pc` restarts) the existing peer connection. |
+| `/sessions/{id}/api/offer` | The same, for a session from `/start` (Pipecat Cloud's proxy shape); its `/start` body becomes `runnerArgs.body`. |
+| `POST /` | With `-t twilio`, `telnyx` or `plivo`: the TwiML or TeXML that connects the call to `wss://<proxy>/ws`. With `-t exotel`: the WebSocket URL to configure. |
+| `/ws`, `/ws/{token}` | The telephony media stream. |
+| `/ws-client`, `/ws-client/{token}` | A plain WebSocket session (`transportType: "websocket"`). |
+| `POST /files`, `POST /sessions/{id}/files` | Client uploads, with `-u/--uploads-folder` or a `createFileStorage()` export. |
+| `GET /files/{name}` | Downloads from `-f/--downloads-folder`. |
+
+## Phone calls and hang-ups
+
+For a telephony connection, `createTransport()` reads the provider's first messages (Telnyx
+sends `connected`, then `start`), finds the provider, and builds its serializer with the stream
+ID and call ID. The handshake is then on the runner arguments:
+
+```ts
+if (runnerArgs instanceof WebSocketRunnerArguments) {
+  runnerArgs.transportType; // "telnyx"
+  runnerArgs.callData?.callId; // Telnyx's call_control_id
+  runnerArgs.callData?.streamId;
+  runnerArgs.callData?.fromNumber;
+}
+```
+
+A caller can hang up while the call is connecting, before the provider's `start` message. That
+is a typed outcome rather than a stray exception: `createTransport()` throws
+`TelephonyCallEndedError` (a subclass of the `TelephonyHandshakeError` upstream raises), and
+`runnerArgs.handshake` is `{ status: "closed", messagesReceived: 0 | 1 }`.
+
+```ts
+import { TelephonyCallEndedError } from "@pipedog/runner/utils";
+
+let transport;
+try {
+  transport = await createTransport(runnerArgs, transportParams);
+} catch (e) {
+  if (e instanceof TelephonyCallEndedError) return; // nothing to talk to
+  throw e;
+}
+```
+
+If the bot doesn't catch it, the runner logs the hang-up at info level instead of as an error.
+`telephonyHandshake(websocket)` gives the same outcome without creating a transport.
+
+## Startup hook
+
+Upstream composes FastAPI lifespans. Here a lifespan is a function that runs before the server
+listens and may return a cleanup:
+
+```ts
+await main({
+  lifespan: async () => {
+    await warmUpClients();
+    return async () => await closeClients();
+  },
+});
+```
+
+## Mounting the runner in your own server
+
+The runner is a fetch handler. `createRunnerApp()` builds it from the same options as the CLI
+flags; `serve()` listens on Bun, Node or Deno.
+
+```ts
+import { createRunnerApp } from "@pipedog/runner/run";
+import { serve } from "@pipedog/runner/serve";
+
+const runner = await createRunnerApp({ bot, transport: "telnyx", proxy: "mybot.ngrok.io" });
+await serve(runner, { port: 7860 });
+```
+
+In Hono, SvelteKit or anything else built on `Request` and `Response`, call `runner.startup()`
+once and route requests to `runner.fetch`. On Deno and Cloudflare Workers, `runner.fetch` also
+upgrades WebSockets. On Bun and Node, the server upgrades them: match the request with
+`runner.matchWebSocket(request)`, upgrade it, and run the returned function with the
+connection (for example a `WebsocketConnection` from `honoWebsocket`).
+
+```ts
+const runner = await createRunnerApp({ bot });
+await runner.startup();
+app.all("*", (c) => runner.fetch(c.req.raw)); // Hono
+```
+
+Upstream lets you add routes to the runner's FastAPI `app`; the module-level `app` here works the
+same way: `app.get("/health", () => ({ ok: true }))` before `main()`.
+
+## The prebuilt client
+
+Upstream mounts `PipecatPrebuiltUI` from the `pipecat-ai-prebuilt` Python package, the React
+client from [pipecat-ai/pipecat-prebuilt](https://github.com/pipecat-ai/pipecat-prebuilt)
+(formerly `small-webrtc-prebuilt`). Its build is only published inside that Python wheel: there
+is no npm package or CDN build of it (`@pipecat-ai/voice-ui-kit` is the component library it is
+made from, not a built app). `@pipedog/runner` ships the wheel's built client unmodified
+(release 1.3.0, BSD-2-Clause, in `prebuilt/dist`), so `/client` works offline once installed.
+Pass `createRunnerApp({ prebuilt: false })` to leave it out, or a directory or reader function to
+serve another build.
+
+## Coming from Pipecat's runner
+
+| Python | TypeScript |
+|---|---|
+| `from pipecat.runner.run import main` | `import { main } from "@pipedog/runner/run"` |
+| `if __name__ == "__main__": main()` | `if (import.meta.main) await main();` |
+| `async def bot(runner_args: RunnerArguments)` | `export async function bot(runnerArgs: RunnerArguments)` |
+| `from pipecat.runner.utils import create_transport` | `import { createTransport } from "@pipedog/runner/utils"` |
+| `await create_transport(runner_args, transport_params)` | `await createTransport(runnerArgs, transportParams)` |
+| `"webrtc": lambda: TransportParams(audio_in_enabled=True)` | `webrtc: () => new TransportParams({ audioInEnabled: true })` |
+| `"telnyx": lambda: FastAPIWebsocketParams(...)` | `telnyx: () => new FastAPIWebsocketParams({ ... })` |
+| `SmallWebRTCRunnerArguments`, `WebSocketRunnerArguments` | same names, from `@pipedog/runner/types` |
+| `DailyRunnerArguments`, `LiveKitRunnerArguments`, `VonageRunnerArguments`, `MOQRunnerArguments` | same names (types only; the transports are not ported) |
+| `runner_args.call_data.call_id` / `call_data["call_id"]` | `runnerArgs.callData?.callId` / `callData.getItem("call_id")` |
+| `runner_args.transport_type` | `runnerArgs.transportType` |
+| `runner_args.body`, `session_id`, `handle_sigint`, `cli_args` | `body`, `sessionId`, `handleSigint`, `cliArgs` |
+| `parse_telephony_websocket(websocket)` | `parseTelephonyWebsocket(websocket)` |
+| `ValueError` when the call closes before the handshake | `TelephonyCallEndedError`, and `runnerArgs.handshake.status === "closed"` |
+| `main(parser)` with an `argparse.ArgumentParser` | `main({ parser })` with `ArgumentParser` from `@pipedog/runner/run`; values in `runnerArgs.cliArgs` |
+| `from pipecat.runner.run import app; @app.get(...)` | `import { app } from "@pipedog/runner/run"; app.get(...)` |
+| FastAPI lifespan | `main({ lifespan })` / `app.addLifespan()` |
+| `uvicorn.run(app)` | `serve(app)` from `@pipedog/runner/serve`, or `app.fetch` in your server |
+| `python bot.py -t webrtc` | `bun bot.ts -t webrtc` |
+| `-t twilio -x mybot.ngrok.io` | the same flags |
+| `--host`, `--port`, `--esp32`, `--ice-servers`, `--ws-auth`, `--allowed-origins`, `-u`, `-f`, `--runner-body`, `-v` | the same flags |
+| `-t daily`, `-d`, `-t livekit`, `-t moq`, `-t vonage`, `--whatsapp` | recognized; fail with "not ported to pipedog yet" |
+| `.env` loaded with `load_dotenv(override=True)` | the same |
+
+## A migrated bot: bot.py to bot.ts
+
+A bot that talks over WebRTC during development and answers Telnyx calls in production.
+
+```python
+# bot.py
+from loguru import logger
+
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
+from pipecat.runner.types import RunnerArguments, WebSocketRunnerArguments
+from pipecat.runner.utils import create_transport
+from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.services.openai.stt import OpenAISTTService
+from pipecat.services.openai.tts import OpenAITTSService
+from pipecat.transports.base_transport import TransportParams
+from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
+from pipecat.workers.runner import WorkerRunner
+
+transport_params = {
+    "webrtc": lambda: TransportParams(audio_in_enabled=True, audio_out_enabled=True),
+    "telnyx": lambda: FastAPIWebsocketParams(audio_in_enabled=True, audio_out_enabled=True),
+}
+
+
+async def bot(runner_args: RunnerArguments):
+    transport = await create_transport(runner_args, transport_params)
+
+    if isinstance(runner_args, WebSocketRunnerArguments):
+        logger.info(f"Call from {runner_args.call_data.from_number}")
+
+    stt = OpenAISTTService()
+    llm = OpenAILLMService()
+    tts = OpenAITTSService()
+    context = LLMContext()
+    aggregators = LLMContextAggregatorPair(context)
+
+    pipeline = Pipeline([
+        transport.input(), stt, aggregators.user(), llm, tts,
+        transport.output(), aggregators.assistant(),
+    ])
+    worker = PipelineWorker(pipeline, params=PipelineParams(enable_metrics=True))
+
+    @transport.event_handler("on_client_disconnected")
+    async def on_client_disconnected(transport, client):
+        await worker.cancel()
+
+    runner = WorkerRunner(handle_sigint=runner_args.handle_sigint)
+    await runner.add_workers(worker)
+    await runner.run()
+
+
+if __name__ == "__main__":
+    from pipecat.runner.run import main
+
+    main()
+```
+
+```ts
+// bot.ts
+import { Pipeline } from "@pipedog/core/pipeline/pipeline";
+import { PipelineParams, PipelineWorker } from "@pipedog/core/pipeline/worker";
+import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
+import { LLMContextAggregatorPair } from "@pipedog/core/processors/aggregators/llm_response_universal";
+import { TransportParams } from "@pipedog/core/transports/base_transport";
+import { logger } from "@pipedog/core/utils/logger";
+import { WorkerRunner } from "@pipedog/core/workers/runner";
+import { OpenAILLMService } from "@pipedog/openai/llm";
+import { OpenAISTTService } from "@pipedog/openai/stt";
+import { OpenAITTSService } from "@pipedog/openai/tts";
+import { type RunnerArguments, WebSocketRunnerArguments } from "@pipedog/runner/types";
+import { createTransport, TelephonyCallEndedError } from "@pipedog/runner/utils";
+import { FastAPIWebsocketParams } from "@pipedog/transport-websocket/fastapi";
+
+const transportParams = {
+  webrtc: () => new TransportParams({ audioInEnabled: true, audioOutEnabled: true }),
+  telnyx: () => new FastAPIWebsocketParams({ audioInEnabled: true, audioOutEnabled: true }),
+};
+
+export async function bot(runnerArgs: RunnerArguments) {
+  let transport;
+  try {
+    transport = await createTransport(runnerArgs, transportParams);
+  } catch (e) {
+    if (e instanceof TelephonyCallEndedError) return; // hung up while connecting
+    throw e;
+  }
+
+  if (runnerArgs instanceof WebSocketRunnerArguments) {
+    logger.info(`Call from ${runnerArgs.callData?.fromNumber}`);
+  }
+
+  const stt = new OpenAISTTService();
+  const llm = new OpenAILLMService();
+  const tts = new OpenAITTSService();
+  const context = new LLMContext();
+  const aggregators = new LLMContextAggregatorPair(context);
+
+  const pipeline = new Pipeline([
+    transport.input(), stt, aggregators.user(), llm, tts,
+    transport.output(), aggregators.assistant(),
+  ]);
+  const worker = new PipelineWorker(pipeline, {
+    params: new PipelineParams({ enableMetrics: true }),
+  });
+
+  transport.eventHandler("on_client_disconnected", async () => {
+    await worker.cancel();
+  });
+
+  const runner = new WorkerRunner({ handleSigint: runnerArgs.handleSigint });
+  await runner.addWorkers(worker);
+  await runner.run();
+}
+
+if (import.meta.main) {
+  const { main } = await import("@pipedog/runner/run");
+  await main();
+}
+```
+
+```bash
+bun bot.ts -t webrtc                                 # development, in the browser
+bun bot.ts -t telnyx --proxy mybot.ngrok.io          # phone calls through an ngrok tunnel
+```
+
+## Not ported
+
+- Daily (`-t daily`, `-d/--direct`, `/daily`, the dial-in webhook), LiveKit, MOQ, the Vonage
+  Video Connector (`-t vonage`) and WhatsApp: their transports are not ported. The argument
+  classes exist for type parity; selecting them fails with a clear message.
+- Evals (`eval-connect` detection, `-t eval`): `pipecat.evals` is not ported; `-t eval` is
+  deprecated upstream.
+- The MOQ CLI flags and the deprecated `--folder` flag.

@@ -18,6 +18,7 @@
 import { createTask, rethrowIfCancelled, type Task, wait } from "@pipedog/asyncio";
 import { logger } from "@pipedog/core/utils/logger";
 
+import type { UpgradingServer } from "./fetch.ts";
 import { WebsocketConnection } from "./socket.ts";
 
 export interface WebsocketServeOptions {
@@ -239,3 +240,227 @@ export const websocketServe: WebsocketServe = async (options) => {
       "(e.g. with a WebSocketPair) and use FastAPIWebsocketTransport.",
   );
 };
+
+/** A fetch handler; the second argument upgrades WebSockets (see `upgradeWebSocket`). */
+export type UpgradingFetchHandler = (
+  request: Request,
+  server: UpgradingServer,
+) => Response | undefined | Promise<Response | undefined>;
+
+export interface ServeFetchOptions {
+  /** The host to listen on. Defaults to `localhost`. */
+  host?: string;
+  /** The port to listen on; 0 picks a free one. */
+  port: number;
+  /**
+   * Seconds a request may stay idle (Bun's `idleTimeout`, at most 255).
+   * Defaults to 120, so slow requests such as WebRTC offers waiting for ICE
+   * gathering aren't cut off.
+   */
+  idleTimeout?: number;
+}
+
+/** A listening fetch server. */
+export interface FetchServer {
+  /** The port it listens on (the real one when 0 was asked for). */
+  readonly port: number;
+  /** Stop listening and drop open connections. */
+  close(): Promise<void>;
+}
+
+/** Copy a Node `IncomingMessage`'s headers into `Headers`. */
+function nodeHeaders(raw: Record<string, string | string[] | undefined>): Headers {
+  const headers = new Headers();
+  for (const [name, value] of Object.entries(raw)) {
+    if (Array.isArray(value)) for (const v of value) headers.append(name, v);
+    else if (typeof value === "string") headers.set(name, value);
+  }
+  return headers;
+}
+
+async function serveFetchBun(
+  handler: UpgradingFetchHandler,
+  options: ServeFetchOptions,
+): Promise<FetchServer> {
+  const Bun = (globalThis as Any).Bun;
+  const { bunWebSocket } = await import("./fetch.ts");
+  const server = Bun.serve({
+    hostname: options.host ?? "localhost",
+    port: options.port,
+    idleTimeout: Math.min(options.idleTimeout ?? 120, 255),
+    fetch: (request: Request, srv: UpgradingServer) => handler(request, srv),
+    websocket: bunWebSocket,
+  });
+  return {
+    port: server.port,
+    async close() {
+      server.stop(true);
+    },
+  };
+}
+
+async function serveFetchDeno(
+  handler: UpgradingFetchHandler,
+  options: ServeFetchOptions,
+): Promise<FetchServer> {
+  const Deno = (globalThis as Any).Deno;
+  const abort = new AbortController();
+  let listening: (addr: { port: number }) => void = () => {};
+  const ready = new Promise<{ port: number }>((resolve) => {
+    listening = resolve;
+  });
+  // Deno upgrades from fetch on its own; the server argument is never used.
+  const noUpgrade: UpgradingServer = { upgrade: () => false };
+  const server = Deno.serve(
+    {
+      hostname: options.host ?? "localhost",
+      port: options.port,
+      signal: abort.signal,
+      onListen: (addr: { port: number }) => listening(addr),
+    },
+    async (request: Request) =>
+      (await handler(request, noUpgrade)) ?? new Response(null, { status: 500 }),
+  );
+  const addr = await ready;
+  return {
+    port: addr.port,
+    async close() {
+      abort.abort();
+      await server.finished;
+    },
+  };
+}
+
+async function serveFetchNode(
+  handler: UpgradingFetchHandler,
+  options: ServeFetchOptions,
+): Promise<FetchServer> {
+  // Loaded by name: the package is typed without Node's types.
+  const httpModule = "node:http";
+  const http: Any = await import(httpModule);
+  const { bridgeFromData } = await import("./fetch.ts");
+  // `ws` is an optional peer dependency, only needed on Node.
+  const moduleName = "ws";
+  let ws: Any = null;
+  try {
+    ws = await import(moduleName);
+  } catch (e) {
+    rethrowIfCancelled(e);
+    logger.warning(
+      "The `ws` package is not installed, so WebSocket upgrades are refused. Install it " +
+        "with `npm install ws`.",
+    );
+  }
+  const WebSocketServer = ws?.WebSocketServer ?? ws?.default?.WebSocketServer;
+  const wss = WebSocketServer ? new WebSocketServer({ noServer: true }) : null;
+  const host = options.host ?? "localhost";
+
+  const server = http.createServer(async (req: Any, res: Any) => {
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const method = req.method ?? "GET";
+    const headers = nodeHeaders(req.headers);
+    const body = method === "GET" || method === "HEAD" ? undefined : new Blob(chunks as BlobPart[]);
+    const request = new Request(`http://${headers.get("host") ?? host}${req.url ?? "/"}`, {
+      method,
+      headers,
+      body,
+    });
+    const refuse: UpgradingServer = { upgrade: () => false };
+    let response: Response;
+    try {
+      response = (await handler(request, refuse)) ?? new Response(null, { status: 500 });
+    } catch (e) {
+      rethrowIfCancelled(e);
+      logger.error(`Request handler error: ${e}`);
+      response = new Response("Internal Server Error", { status: 500 });
+    }
+    const out: Record<string, string | string[]> = {};
+    response.headers.forEach((value, name) => {
+      out[name] = name === "set-cookie" ? response.headers.getSetCookie() : value;
+    });
+    res.writeHead(response.status, out);
+    res.end(new Uint8Array(await response.arrayBuffer()));
+  });
+
+  server.on("upgrade", async (req: Any, socket: Any, head: Any) => {
+    const headers = nodeHeaders(req.headers);
+    const request = new Request(`http://${headers.get("host") ?? host}${req.url ?? "/"}`, {
+      headers,
+    });
+    let upgraded = false;
+    const upgrader: UpgradingServer = {
+      upgrade(_request, upgradeOptions) {
+        if (!wss || upgraded) return false;
+        upgraded = true;
+        const bridge = bridgeFromData(upgradeOptions?.data);
+        wss.handleUpgrade(req, socket, head, (client: Any) => {
+          client.binaryType = "arraybuffer";
+          client.on("message", (message: unknown, isBinary: boolean) =>
+            bridge?._message(isBinary ? message : String(message)),
+          );
+          client.on("close", (code: number, reason: Uint8Array) =>
+            bridge?._close(code, new TextDecoder().decode(reason)),
+          );
+          client.on("error", () => {});
+          bridge?._open({
+            send: (message) => client.send(message),
+            close: (code, reason) => client.close(code, reason),
+          });
+        });
+        return true;
+      },
+    };
+    let response: Response | undefined;
+    try {
+      response = await handler(request, upgrader);
+    } catch (e) {
+      rethrowIfCancelled(e);
+      logger.error(`Upgrade handler error: ${e}`);
+      response = new Response(null, { status: 500 });
+    }
+    if (!upgraded) {
+      const status = response?.status ?? 500;
+      socket.write(
+        `HTTP/1.1 ${status === 101 ? 500 : status} Upgrade refused\r\nConnection: close\r\n\r\n`,
+      );
+      socket.destroy();
+    }
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(options.port, host, () => resolve());
+  });
+  const port = (server.address() as { port: number }).port;
+  return {
+    port,
+    async close() {
+      for (const client of wss?.clients ?? []) client.terminate();
+      (server as Any).closeAllConnections?.();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    },
+  };
+}
+
+/**
+ * Serve a fetch handler, WebSocket upgrades included, with the runtime's own
+ * server: `Bun.serve` (with `bunWebSocket`), `Deno.serve`, or Node's `http`
+ * module with the `ws` package (an optional peer dependency). The handler gets
+ * the upgrading server as its second argument; `websocketFetchHandler` and
+ * `upgradeWebSocket(request, { server })` use it.
+ *
+ * @throws Error on runtimes that can't listen on a port (Cloudflare Workers).
+ */
+export async function serveFetch(
+  handler: UpgradingFetchHandler,
+  options: ServeFetchOptions,
+): Promise<FetchServer> {
+  const g = globalThis as Any;
+  if (g.Bun) return await serveFetchBun(handler, options);
+  if (g.Deno) return await serveFetchDeno(handler, options);
+  if (g.process?.versions?.node && g.navigator?.userAgent !== "Cloudflare-Workers") {
+    return await serveFetchNode(handler, options);
+  }
+  throw new Error("This runtime can't listen on a port; export the fetch handler instead.");
+}

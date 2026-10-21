@@ -9,7 +9,8 @@ Press `#` to end the call; the bot finishes its sentence and hangs up.
 
 ## What you need
 
-- [Bun](https://bun.sh) to install the repository, and [Deno](https://deno.com) to run the server.
+- [Bun](https://bun.sh) to install the repository and run the server (or [Deno](https://deno.com),
+  with `bun run start:deno`).
 - An OpenAI API key.
 - A Twilio account and a phone number with voice.
 - A public HTTPS URL for your machine, e.g. from `ngrok http 8765`.
@@ -62,7 +63,8 @@ The app is one fetch handler with two routes (`src/app.ts`):
   4. A small processor ends the pipeline when the caller presses `#`; on the `EndFrame`, the
      serializer `POST`s `Status=completed` to Twilio's REST API.
 
-`src/deno.ts` serves it with `Deno.serve`. On Cloudflare Workers, serve `createPhoneApp(...)` from
+`src/server.ts` serves it on Bun (or Node) with `serveFetch`, which upgrades the media WebSocket
+with the runtime's own server; `src/deno.ts` serves it with `Deno.serve`. On Cloudflare Workers, serve `createPhoneApp(...)` from
 a Durable Object per call, as in `examples/workers-durable-voice-agent`.
 
 ## Test it without a phone
@@ -75,7 +77,7 @@ The tests need no API key and no Twilio account. A scripted fake Twilio (`test/f
 sends `connected` and `start`, waits for the greeting, then plays a recorded question as 20 ms
 μ-law `media` events in real time and waits for the answer. The OpenAI APIs are the mock from
 `examples/test-mocks`, and Twilio's REST API is a local stand-in that records the hang-up. The
-same call runs in process (through a stand-in for Workers' `WebSocketPair`) and on Deno over a real
+same call runs in process (through a stand-in for Workers' `WebSocketPair`), and on Bun and Deno over a real
 port.
 
 ## Next

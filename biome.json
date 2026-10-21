@@ -15,7 +15,8 @@
       "!apps/docs/out",
       "!packages/mcp/snapshot",
       "!**/.wrangler",
-      "!apps/docs/next-env.d.ts"
+      "!apps/docs/next-env.d.ts",
+      "!packages/runner/prebuilt"
     ]
   },
   "formatter": {

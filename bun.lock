@@ -511,7 +511,23 @@
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
+        "@pipedog/serializer-exotel": "workspace:*",
+        "@pipedog/serializer-plivo": "workspace:*",
+        "@pipedog/serializer-telnyx": "workspace:*",
+        "@pipedog/serializer-twilio": "workspace:*",
+        "@pipedog/transport-smallwebrtc": "workspace:*",
+        "@pipedog/transport-websocket": "workspace:*",
       },
+      "devDependencies": {
+        "playwright-core": "1.63.0",
+        "ws": "8.22.0",
+      },
+      "peerDependencies": {
+        "ws": "^8.0.0",
+      },
+      "optionalPeers": [
+        "ws",
+      ],
     },
     "packages/sambanova": {
       "name": "@pipedog/sambanova",

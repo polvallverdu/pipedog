@@ -6176,9 +6176,9 @@
       "tests": [
         "test_runner_run.py"
       ],
-      "status": "in_progress",
+      "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "PARTIAL: index.ts re-exports the telephony helpers (types.ts, utils.ts) only. The development runner (run.py) is not ported."
+      "notes": "index.ts re-exports types.ts and utils.ts (upstream's __init__ is empty); the dev server is @pipedog/runner/run and /serve."
     },
     {
       "module": "pipecat.runner.daily",
@@ -6198,9 +6198,9 @@
         "pydantic"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Needs the Daily transport (pipecat.transports.daily), not ported; -t daily / --direct fail clearly."
     },
     {
       "module": "pipecat.runner.livekit",
@@ -6219,9 +6219,9 @@
       "tests": [
         "test_runner_run.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Needs the LiveKit transport, not ported; -t livekit fails clearly."
     },
     {
       "module": "pipecat.runner.moq",
@@ -6240,9 +6240,9 @@
       "tests": [
         "test_moq_transport.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Needs the MOQ transport, not ported; -t moq fails clearly."
     },
     {
       "module": "pipecat.runner.run",
@@ -6280,9 +6280,9 @@
         "test_runner_downloads.py",
         "test_runner_run.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "The FastAPI app is RunnerApp, a router over a fetch handler (routes, websocket routes, mounts, lifespans, CORS); createRunnerApp() builds it from options, serve() (serve.ts) runs it on Bun/Node/Deno via transport-websocket's serveFetch. main() parses upstream's flags with a small ArgumentParser (argparse.ts), finds bot() on the entry script / bot.ts / cwd scripts, loads .env. Routes: /, /client (prebuilt.ts serves the pipecat-ai-prebuilt 1.3.0 build vendored in prebuilt/), /start, /status, /api/offer POST/PATCH and /sessions/{id}/... proxy (smallWebRTCOfferHandler), /ws(/{token}) telephony with XML webhook POST /, /ws-client(/{token}), /files uploads/downloads. DIVERGENCE: module globals (RUNNER_FILE_STORAGE, _SESSION_UPLOAD_URLS) live on the app; WS token helpers and _resolveDownloadPath are async; uploads storage resolved on first use; startup hooks are lifespan functions returning a cleanup. Not ported: Daily routes/direct/dial-in, LiveKit, MOQ (flags too), Vonage, WhatsApp, eval, deprecated --folder and -t eval (they fail with a clear message)."
     },
     {
       "module": "pipecat.runner.types",
@@ -6306,9 +6306,9 @@
         "test_moq_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "in_progress",
+      "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "PARTIAL: only CallData, TelnyxCallData and ExotelCallData. Dict-style access is getItem/get/has; modelValidate mimics pydantic (aliases, populate_by_name, extra=allow, type checks). Not ported: DialinSettings, DailyDialinRequest, RunnerArguments and its subclasses."
+      "notes": "All runner argument classes and DialinSettings/DailyDialinRequest (fromDict/toDict for the wire keys). Deprecated EvalRunnerArguments and MOQ serve_bind not ported. WebSocketRunnerArguments adds pipedog's handshake (TelephonyHandshake). Daily/LiveKit/Vonage/MOQ classes are kept for API parity; their transports are not ported. CallData: dict-style access is getItem/get/has; modelValidate mimics pydantic."
     },
     {
       "module": "pipecat.runner.utils",
@@ -6345,9 +6345,9 @@
         "test_moq_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "in_progress",
+      "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "PARTIAL: only the telephony parse: _detectTransportTypeFromMessage and parseTelephonyWebsocket (socket = anything with Starlette's receive(); cache in a WeakMap). Added telephonyHandshake (pipedog-only typed outcome: started / closed / unrecognized). DIVERGENCE: eval-connect detection skipped (pipecat.evals not ported). Not ported: create_transport, _create_telephony_transport, SDP munging, Daily/LiveKit/Vonage helpers."
+      "notes": "createTransport, _getTransportParams, _createTelephonyTransport (serializers lazily imported), smallwebrtcSdpMunging, parseTelephonyWebsocket. DIVERGENCE: a hang-up before the provider's start message is TelephonyCallEndedError (extends TelephonyHandshakeError/ValueError) with runnerArgs.handshake set, for 0 or 1 messages (upstream: ValueError, or 'Missing transport params for unknown'). Not ported: eval-connect detection (pipecat.evals), _maybe_apply_daily_dialin and the Daily/LiveKit/Vonage/MOQ transports (TransportNotPortedError), deprecated get_transport_client_id and maybe_capture_participant_*."
     },
     {
       "module": "pipecat.runner.vonage",
@@ -6361,9 +6361,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Needs the Vonage Video Connector transport, not ported; -t vonage fails clearly."
     },
     {
       "module": "pipecat.serializers",
@@ -19161,8 +19161,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 139,
-      "status": "todo",
-      "notes": ""
+      "status": "skipped",
+      "notes": "Needs the MOQ transport, not ported."
     },
     {
       "file": "tests/test_nova_sonic_usage_metrics.py",
@@ -20156,8 +20156,8 @@
         "pipecat.runner.run"
       ],
       "needsModules": 147,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass"
     },
     {
       "file": "tests/test_runner_run.py",
@@ -20172,8 +20172,8 @@
         "pipecat.utils.security.allowed_origins"
       ],
       "needsModules": 148,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "103 pass, 3 skip (Daily routes, deprecated -t eval), 3 todo (pipecat.runner.livekit)"
     },
     {
       "file": "tests/test_runner_utils.py",
@@ -20189,8 +20189,8 @@
         "pipecat.transports.daily.transport"
       ],
       "needsModules": 138,
-      "status": "in_progress",
-      "notes": "PARTIAL: the telephony tests (TestCallData, TestParseTelephonyWebSocket, TestParseTelephonyIdempotent: 12 pass) are ported to packages/runner/test/test_runner_utils.test.ts, not the manifest's packages/evals path; the eval, create_transport, Daily and deprecated tests are test.todo (10)."
+      "status": "tested",
+      "notes": "22 pass, 2 skip (deprecated), 6 todo (pipecat.evals, Daily dial-in); lives in packages/runner/test/test_runner_utils.test.ts. Includes pipedog createTransport tests (Telnyx handshake, hang-ups, unported transports)."
     },
     {
       "file": "tests/test_sagemaker_bidi_client.py",

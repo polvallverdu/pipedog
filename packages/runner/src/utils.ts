@@ -7,16 +7,15 @@
 /**
  * Transport utility functions.
  *
- * PARTIAL PORT: only the telephony WebSocket helpers are ported:
- * `parseTelephonyWebsocket`, which detects the provider (Twilio, Telnyx,
- * Plivo, Exotel) from its first WebSocket messages and extracts the stream and
- * call IDs, and the detection it uses. `telephonyHandshake` (a pipedog
- * addition) reports the same parse as a typed outcome, including a call that
- * hung up before its handshake completed. Not ported yet: the eval-connect
- * detection (needs `pipecat.evals`), `create_transport` and
- * `_create_telephony_transport` (need the development runner's
- * `RunnerArguments`), the SmallWebRTC SDP munging, and the Daily, LiveKit and
- * Vonage Video helpers.
+ * `parseTelephonyWebsocket` detects the telephony provider (Twilio, Telnyx,
+ * Plivo, Exotel) from its first WebSocket messages; `telephonyHandshake` (a
+ * pipedog addition) reports the same parse as a typed outcome, including a
+ * call that hung up before its handshake completed. `createTransport` builds
+ * the transport the runner arguments ask for, and `smallwebrtcSdpMunging`
+ * adapts SDP for ESP32 peers. Not ported: the eval-connect detection (needs
+ * `pipecat.evals`), the Daily dial-in helper and the Daily, LiveKit, Vonage
+ * and MOQ transports (not ported), and the deprecated
+ * `get_transport_client_id` and `maybe_capture_participant_*`.
  *
  * Nothing here depends on a runtime or a web framework: the socket is
  * anything with Starlette's `receive()` (a `WebsocketConnection` from
@@ -33,10 +32,27 @@
  */
 
 import { rethrowIfCancelled } from "@pipedog/asyncio";
+import type { BaseTransport } from "@pipedog/core/transports/base_transport";
+import { getEnv } from "@pipedog/core/utils/env";
 import { logger } from "@pipedog/core/utils/logger";
 import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 
-import { CallData, ExotelCallData, type JsonDict, TelnyxCallData } from "./types.ts";
+import type { FastAPIWebsocketParams } from "@pipedog/transport-websocket/fastapi";
+
+import {
+  CallData,
+  DailyRunnerArguments,
+  ExotelCallData,
+  type JsonDict,
+  LiveKitRunnerArguments,
+  MOQRunnerArguments,
+  type RunnerArguments,
+  type RunnerWebSocket,
+  SmallWebRTCRunnerArguments,
+  TelnyxCallData,
+  VonageRunnerArguments,
+  WebSocketRunnerArguments,
+} from "./types.ts";
 
 /** A telephony provider `parseTelephonyWebsocket` can detect, or `"unknown"`. */
 export type TelephonyTransportType = "twilio" | "telnyx" | "plivo" | "exotel" | "unknown";
@@ -389,4 +405,324 @@ export async function telephonyHandshake(
   if (transportType !== "unknown") return { status: "started", transportType, callData };
   if (closedAfterOneMessage.has(websocket)) return { status: "closed", messagesReceived: 1 };
   return { status: "unrecognized", callData };
+}
+
+// ---------------------------------------------------------------------------
+// Transport creation from runner arguments.
+// ---------------------------------------------------------------------------
+
+/**
+ * Raised by `createTransport` when the caller hangs up before the telephony
+ * provider's handshake completes (the socket closes before its `start`
+ * message). A pipedog addition: upstream raises a `ValueError` when no message
+ * arrived, and fails to find transport params for `"unknown"` when only a
+ * first message (such as Telnyx's `connected`) did. `handshake` is the typed
+ * outcome, also set on `runnerArgs.handshake`.
+ *
+ * It extends `TelephonyHandshakeError` (upstream's `ValueError`), so code that
+ * catches that keeps working.
+ *
+ * @example
+ * try {
+ *   transport = await createTransport(runnerArgs, transportParams);
+ * } catch (e) {
+ *   if (e instanceof TelephonyCallEndedError) return; // the caller hung up
+ *   throw e;
+ * }
+ */
+export class TelephonyCallEndedError extends TelephonyHandshakeError {
+  /** The handshake's outcome. */
+  readonly handshake: Extract<TelephonyHandshake, { status: "closed" }>;
+
+  constructor(handshake: Extract<TelephonyHandshake, { status: "closed" }>) {
+    super(
+      handshake.messagesReceived === 0
+        ? "WebSocket closed before receiving telephony handshake messages"
+        : "WebSocket closed after the provider's first message, before its start message",
+    );
+    this.handshake = handshake;
+  }
+}
+
+/**
+ * Raised when the runner arguments select a transport pipedog has not ported
+ * (Daily, LiveKit, Vonage Video Connector, MOQ, evals). Plays the part of the
+ * `ImportError` upstream raises when the transport's extra isn't installed.
+ */
+export class TransportNotPortedError extends Error {
+  override name = "TransportNotPortedError";
+  /** The transport key (`"daily"`, `"livekit"`, `"vonage"`, `"moq"`...). */
+  readonly transport: string;
+
+  constructor(transport: string, upstreamModule: string) {
+    super(
+      `The ${transport} transport (${upstreamModule}) is not ported to pipedog yet. ` +
+        "Use webrtc, websocket or a telephony transport (twilio, telnyx, plivo, exotel). " +
+        "See https://polvallverdu.github.io/pipedog/docs/roadmap.",
+    );
+    this.transport = transport;
+  }
+}
+
+/** A function returning the transport params for one transport. */
+export type TransportParamsFactory = () => any;
+
+/**
+ * Transport params factories by transport name: `"webrtc"`, `"websocket"`,
+ * `"twilio"`, `"telnyx"`, `"plivo"`, `"exotel"` (and, for API parity,
+ * `"daily"`, `"livekit"`, `"vonage"`, `"moq"`).
+ */
+export type TransportParamsMap = Record<string, TransportParamsFactory>;
+
+/**
+ * Get transport parameters from factory function.
+ *
+ * @param transportKey The transport key to look up.
+ * @param transportParams Transport names mapped to parameter factory functions.
+ * @returns Transport parameters from the factory function.
+ * @throws Error (upstream's `ValueError`) If the key is missing from `transportParams`.
+ */
+export function _getTransportParams(
+  transportKey: string,
+  transportParams: TransportParamsMap,
+): any {
+  if (!Object.hasOwn(transportParams, transportKey)) {
+    throw new TransportParamsError(
+      `Missing transport params for '${transportKey}'. ` +
+        `Please add '${transportKey}' key to your transport_params dict.`,
+    );
+  }
+  const params = transportParams[transportKey]!();
+  logger.debug(`Using transport params for ${transportKey}`);
+  return params;
+}
+
+/** Upstream's `ValueError` for missing transport params or unsupported runner arguments. */
+export class TransportParamsError extends Error {
+  override name = "ValueError";
+}
+
+/**
+ * Create a telephony transport with pre-parsed WebSocket data.
+ *
+ * @param websocket The WebSocket connection from the telephony provider.
+ * @param params `FastAPIWebsocketParams` (required).
+ * @param transportType Pre-detected provider type ("twilio", "telnyx", "plivo", "exotel").
+ * @param callData Pre-parsed `CallData` with provider-specific fields.
+ * @returns A `FastAPIWebsocketTransport` ready for telephony use.
+ */
+export async function _createTelephonyTransport(
+  websocket: RunnerWebSocket,
+  params: FastAPIWebsocketParams,
+  transportType: string,
+  callData: CallData,
+): Promise<BaseTransport> {
+  const { FastAPIWebsocketTransport } = await import("@pipedog/transport-websocket/fastapi");
+
+  // Always set add_wav_header to False for telephony
+  params.addWavHeader = false;
+
+  logger.info(`Using pre-detected telephony provider: ${transportType}`);
+
+  // Build serializers from the raw wire values via subscript access (the
+  // detected provider guarantees these identifier fields are present). Bots use
+  // the typed attribute API instead: callData.fromNumber, callData.callId, etc.
+  const wire = (key: string) => callData.getItem(key) as string;
+  if (transportType === "twilio") {
+    const { TwilioFrameSerializer } = await import("@pipedog/serializer-twilio/twilio");
+    params.serializer = new TwilioFrameSerializer({
+      streamSid: wire("stream_id"),
+      callSid: wire("call_id"),
+      accountSid: getEnv("TWILIO_ACCOUNT_SID") ?? "",
+      authToken: getEnv("TWILIO_AUTH_TOKEN") ?? "",
+    });
+  } else if (transportType === "telnyx") {
+    const { TelnyxFrameSerializer } = await import("@pipedog/serializer-telnyx/telnyx");
+    params.serializer = new TelnyxFrameSerializer({
+      streamId: wire("stream_id"),
+      callControlId: wire("call_id"),
+      outboundEncoding: wire("outbound_encoding"),
+      inboundEncoding: "PCMU", // Standard default
+      apiKey: getEnv("TELNYX_API_KEY") ?? "",
+    });
+  } else if (transportType === "plivo") {
+    const { PlivoFrameSerializer } = await import("@pipedog/serializer-plivo/plivo");
+    params.serializer = new PlivoFrameSerializer({
+      streamId: wire("stream_id"),
+      callId: wire("call_id"),
+      authId: getEnv("PLIVO_AUTH_ID") ?? "",
+      authToken: getEnv("PLIVO_AUTH_TOKEN") ?? "",
+    });
+  } else if (transportType === "exotel") {
+    const { ExotelFrameSerializer } = await import("@pipedog/serializer-exotel/exotel");
+    params.serializer = new ExotelFrameSerializer({
+      streamSid: wire("stream_id"),
+      callSid: wire("call_id"),
+    });
+  } else {
+    throw new TransportParamsError(
+      `Unsupported telephony provider: ${transportType}. ` +
+        "Supported providers: twilio, telnyx, plivo, exotel",
+    );
+  }
+
+  return new FastAPIWebsocketTransport(websocket, params);
+}
+
+/**
+ * Create a transport from runner arguments using factory functions.
+ *
+ * This function uses the clean `transportParams` factory pattern where users
+ * define an object mapping transport names to parameter factory functions.
+ *
+ * For a telephony connection (`WebSocketRunnerArguments` without
+ * `transportType: "websocket"`) it reads the provider's handshake, exposes it
+ * on `runnerArgs` (`transportType`, `callData`, and pipedog's `handshake`) and
+ * builds the provider's serializer. A caller who hangs up before the handshake
+ * completes is reported as `TelephonyCallEndedError`.
+ *
+ * @param runnerArgs Arguments from the runner.
+ * @param transportParams Transport names mapped to parameter factory functions.
+ * @returns Configured transport instance.
+ * @throws TransportParamsError If the transport key is missing from `transportParams`
+ *   or the runner arguments type is unsupported.
+ * @throws TelephonyCallEndedError If the caller hung up before the telephony handshake.
+ * @throws TransportNotPortedError For Daily, LiveKit, Vonage and MOQ arguments.
+ *
+ * @example
+ * const transportParams = {
+ *   webrtc: () => new TransportParams({ audioInEnabled: true, audioOutEnabled: true }),
+ *   telnyx: () =>
+ *     new FastAPIWebsocketParams({
+ *       audioInEnabled: true,
+ *       audioOutEnabled: true,
+ *       // addWavHeader and serializer will be set automatically
+ *     }),
+ * };
+ *
+ * const transport = await createTransport(runnerArgs, transportParams);
+ */
+export async function createTransport(
+  runnerArgs: RunnerArguments,
+  transportParams: TransportParamsMap,
+): Promise<BaseTransport> {
+  // Create transport based on runner args type
+  if (runnerArgs instanceof DailyRunnerArguments) {
+    _getTransportParams("daily", transportParams);
+    throw new TransportNotPortedError("daily", "pipecat.transports.daily");
+  }
+  if (runnerArgs instanceof SmallWebRTCRunnerArguments) {
+    const params = _getTransportParams("webrtc", transportParams);
+    // Loaded by name, so bundles for Cloudflare Workers (where WebRTC can't run)
+    // don't pull in the WebRTC stack.
+    const moduleName = "@pipedog/transport-smallwebrtc/transport";
+    const { SmallWebRTCTransport } = (await import(
+      moduleName
+    )) as typeof import("@pipedog/transport-smallwebrtc/transport");
+    return new SmallWebRTCTransport(runnerArgs.webrtcConnection, params);
+  }
+  if (runnerArgs instanceof WebSocketRunnerArguments) {
+    if (runnerArgs.transportType === "websocket") {
+      const params = _getTransportParams("websocket", transportParams);
+      const { FastAPIWebsocketTransport } = await import("@pipedog/transport-websocket/fastapi");
+      return new FastAPIWebsocketTransport(runnerArgs.websocket, params);
+    }
+
+    // Parse once to determine the provider and get data. pipedog reads it as a
+    // typed outcome, so a caller who hung up mid-handshake is told apart from a
+    // provider that isn't recognized.
+    const handshake = await telephonyHandshake(runnerArgs.websocket);
+    runnerArgs.handshake = handshake;
+    if (handshake.status === "closed") {
+      // DIVERGENCE: upstream raises ValueError("WebSocket closed before receiving
+      // telephony handshake messages") with no message, and "Missing transport
+      // params for 'unknown'" after one. Both are a hang-up, reported as such.
+      throw new TelephonyCallEndedError(handshake);
+    }
+    const [transportType, callData] = await parseTelephonyWebsocket(runnerArgs.websocket);
+
+    // Expose the parsed handshake to the bot so it can personalize the call
+    // (caller lookup, routing, etc.) without re-parsing the single-use stream.
+    runnerArgs.transportType = transportType;
+    runnerArgs.callData = callData;
+
+    // DIVERGENCE: upstream detects an eval harness's `eval-connect` message here
+    // and builds the eval transport. pipecat.evals is not ported.
+
+    const params = _getTransportParams(transportType, transportParams);
+
+    // Create telephony transport with pre-parsed data
+    return await _createTelephonyTransport(runnerArgs.websocket, params, transportType, callData);
+  }
+  if (runnerArgs instanceof LiveKitRunnerArguments) {
+    _getTransportParams("livekit", transportParams);
+    throw new TransportNotPortedError("livekit", "pipecat.transports.livekit");
+  }
+  if (runnerArgs instanceof VonageRunnerArguments) {
+    throw new TransportNotPortedError("vonage", "pipecat.transports.vonage.video_connector");
+  }
+  if (runnerArgs instanceof MOQRunnerArguments) {
+    _getTransportParams("moq", transportParams);
+    throw new TransportNotPortedError("moq", "pipecat.transports.moq");
+  }
+  throw new TransportParamsError(
+    `Unsupported runner arguments type: ${(runnerArgs as object)?.constructor?.name ?? typeof runnerArgs}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SmallWebRTC SDP munging.
+// ---------------------------------------------------------------------------
+
+/** Python's `str.splitlines()`: no trailing empty line. */
+function splitlines(text: string): string[] {
+  const lines = text.split(/\r\n|\r|\n/);
+  if (lines.at(-1) === "") lines.pop();
+  return lines;
+}
+
+/**
+ * Clean up ICE candidates in SDP text for SmallWebRTC.
+ *
+ * @param text SDP text to clean up.
+ * @param pattern Pattern to match for candidate filtering.
+ * @returns Cleaned SDP text with filtered ICE candidates.
+ */
+export function _smallwebrtcSdpCleanupIceCandidates(text: string, pattern: string): string {
+  logger.debug("Removing unsupported ICE candidates from SDP");
+  const result: string[] = [];
+  for (const line of splitlines(text)) {
+    if (/a=candidate/.test(line)) {
+      if (new RegExp(pattern).test(line) && !/raddr/.test(line)) result.push(line);
+    } else {
+      result.push(line);
+    }
+  }
+  return `${result.join("\r\n")}\r\n`;
+}
+
+/**
+ * Remove unsupported fingerprint algorithms from SDP text.
+ *
+ * @returns SDP text with sha-384 and sha-512 fingerprints removed.
+ */
+export function _smallwebrtcSdpCleanupFingerprints(text: string): string {
+  logger.debug("Removing unsupported fingerprints from SDP");
+  const result = splitlines(text).filter((line) => !/sha-384/.test(line) && !/sha-512/.test(line));
+  return `${result.join("\r\n")}\r\n`;
+}
+
+/**
+ * Apply SDP modifications for SmallWebRTC compatibility.
+ *
+ * @param sdp Original SDP string.
+ * @param host Host address for ICE candidate filtering.
+ * @returns Modified SDP string with fingerprint and ICE candidate cleanup.
+ */
+export function smallwebrtcSdpMunging(sdp: string, host: string | null): string {
+  let result = _smallwebrtcSdpCleanupFingerprints(sdp);
+  if (host) {
+    result = _smallwebrtcSdpCleanupIceCandidates(result, host);
+  }
+  return result;
 }

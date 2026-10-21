@@ -5,22 +5,47 @@
 // Ported from pipecat: tests/test_runner_utils.py
 
 /**
- * The telephony parts of upstream's runner utils tests: `CallData` and
- * `parse_telephony_websocket`. The rest needs modules that are not ported yet
- * (`pipecat.evals`, `create_transport`, the Daily transport) and is `todo`.
+ * Upstream's runner utils tests: `CallData`, `parse_telephony_websocket` and
+ * `create_transport`, plus pipedog's tests of `createTransport` (hang-ups,
+ * unported transports) and the SDP munging. The eval and Daily dial-in tests
+ * need modules that are not ported (`pipecat.evals`, the Daily transport) and
+ * are `todo`.
  *
  * Upstream mocks the socket with `MagicMock().iter_text.return_value =
  * MockAsyncIterator([...])`; here the socket is a stand-in with Starlette's
  * `receive()`, which `parseTelephonyWebsocket` reads.
  */
 
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { CallData, ExotelCallData, TelnyxCallData } from "../src/types.ts";
+import { TelnyxFrameSerializer } from "@pipedog/serializer-telnyx/telnyx";
+import { TwilioFrameSerializer } from "@pipedog/serializer-twilio/twilio";
 import {
+  FastAPIWebsocketParams,
+  FastAPIWebsocketTransport,
+} from "@pipedog/transport-websocket/fastapi";
+import { WebsocketConnection } from "@pipedog/transport-websocket/socket";
+
+import {
+  CallData,
+  DailyRunnerArguments,
+  ExotelCallData,
+  LiveKitRunnerArguments,
+  MOQRunnerArguments,
+  RunnerArguments,
+  TelnyxCallData,
+  VonageRunnerArguments,
+  WebSocketRunnerArguments,
+} from "../src/types.ts";
+import {
+  createTransport,
   parseTelephonyWebsocket,
+  smallwebrtcSdpMunging,
+  TelephonyCallEndedError,
+  TelephonyHandshakeError,
   type TelephonyWebsocket,
   type TelephonyWebsocketMessage,
+  TransportNotPortedError,
 } from "../src/utils.ts";
 
 /** Mock WebSocket: hands out `messages` as text, then a disconnect. */
@@ -81,9 +106,16 @@ describe("TestCallData", () => {
     expect(cd.getItem("weird_provider_field")).toEqual("x");
   });
 
-  // call_data lives on RunnerArguments, which is not ported (only the
-  // telephony types are).
-  test.todo("test_call_data_is_a_base_field (needs pipecat.runner.types.RunnerArguments)");
+  /**
+   * callData lives on the base, so any runnerArgs exposes it (defaults null),
+   * letting bots read runnerArgs.callData uniformly.
+   */
+  test("test_call_data_is_a_base_field", () => {
+    expect(new RunnerArguments().callData).toBeNull();
+    expect(
+      new DailyRunnerArguments({ roomUrl: "https://example.daily.co/room" }).callData,
+    ).toBeNull();
+  });
 });
 
 describe("TestParseTelephonyWebSocket", () => {
@@ -244,10 +276,156 @@ describe("TestParseEvalConnect", () => {
   test.todo("test_eval_connect_leaves_the_next_message_unread (needs pipecat.evals.serializer)");
 });
 
+// The serializers hang up through the providers' REST APIs and refuse to start
+// without credentials; createTransport reads them from the environment.
+const savedEnv = { ...process.env };
+beforeAll(() => {
+  process.env.TWILIO_ACCOUNT_SID = "AC_test";
+  process.env.TWILIO_AUTH_TOKEN = "test-token";
+  process.env.TELNYX_API_KEY = "test-key";
+});
+afterAll(() => {
+  for (const key of ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TELNYX_API_KEY"]) {
+    if (savedEnv[key] === undefined) delete process.env[key];
+    else process.env[key] = savedEnv[key];
+  }
+});
+
+/** A WebsocketConnection that has already received `messages`, then closes if `close`. */
+function connectionWith(messages: unknown[], close = false): WebsocketConnection {
+  const sent: unknown[] = [];
+  const connection = new WebsocketConnection({
+    send: (data) => {
+      sent.push(data);
+    },
+    close: () => connection.feedClose(1000, ""),
+  });
+  for (const m of messages) connection.feedMessage(JSON.stringify(m));
+  if (close) connection.feedClose(1000, "");
+  return connection;
+}
+
 describe("TestCreateTransportExposesCallData", () => {
-  test.todo(
-    "test_telephony_call_data_set_on_runner_args (needs pipecat.runner.utils.create_transport)",
-  );
+  // DIVERGENCE: upstream patches _create_telephony_transport; ES modules can't be
+  // patched, so the real transport is built (a stronger check).
+  test("test_telephony_call_data_set_on_runner_args", async () => {
+    const ws = connectionWith(
+      [{ event: "start", start: { streamSid: "MZ9", callSid: "CA9" } }],
+      true,
+    );
+    const args = new WebSocketRunnerArguments({ websocket: ws }); // transportType null -> telephony
+
+    const result = await createTransport(args, {
+      twilio: () => new FastAPIWebsocketParams({ allowedOrigins: [] }),
+    });
+
+    expect(result).toBeInstanceOf(FastAPIWebsocketTransport);
+    expect((result as any)._params.serializer).toBeInstanceOf(TwilioFrameSerializer);
+    expect(args.transportType).toBe("twilio");
+    expect(args.callData).not.toBeNull();
+    // Both styles work: typed attribute access and dict-style subscript.
+    expect(args.callData!.callId).toBe("CA9");
+    expect(args.callData!.getItem("call_id")).toBe("CA9");
+  });
+});
+
+describe("pipedog: createTransport", () => {
+  const telnyxStart = {
+    event: "start",
+    sequence_number: "1",
+    stream_id: "stream-abc",
+    start: {
+      call_control_id: "v3:cc-123",
+      from: "+15551234567",
+      to: "+15559876543",
+      media_format: { encoding: "PCMU", sample_rate: 8000, channels: 1 },
+    },
+  };
+  const params = { telnyx: () => new FastAPIWebsocketParams({ allowedOrigins: [] }) };
+
+  test("Telnyx connected then start builds a TelnyxFrameSerializer with the call's IDs", async () => {
+    const ws = connectionWith([{ event: "connected", version: "1.0.0" }, telnyxStart]);
+    const args = new WebSocketRunnerArguments({ websocket: ws });
+    const transport = await createTransport(args, params);
+    const serializer = (transport as any)._params.serializer as TelnyxFrameSerializer;
+    expect(serializer).toBeInstanceOf(TelnyxFrameSerializer);
+    expect((serializer as any)._streamId).toBe("stream-abc");
+    expect((serializer as any)._callControlId).toBe("v3:cc-123");
+    expect(args.transportType).toBe("telnyx");
+    expect(args.callData!.callId).toBe("v3:cc-123");
+    expect(args.handshake?.status).toBe("started");
+    expect((transport as any)._params.addWavHeader).toBe(false);
+  });
+
+  test("a caller who hangs up after connected, before start, is a TelephonyCallEndedError", async () => {
+    const ws = connectionWith([{ event: "connected", version: "1.0.0" }], true);
+    const args = new WebSocketRunnerArguments({ websocket: ws });
+    const error = await createTransport(args, params).catch((e) => e);
+    expect(error).toBeInstanceOf(TelephonyCallEndedError);
+    expect(error).toBeInstanceOf(TelephonyHandshakeError);
+    expect(error.handshake).toEqual({ status: "closed", messagesReceived: 1 });
+    expect(args.handshake).toEqual({ status: "closed", messagesReceived: 1 });
+    expect(args.callData).toBeNull();
+  });
+
+  test("a socket that closes before any message is a TelephonyCallEndedError", async () => {
+    const args = new WebSocketRunnerArguments({ websocket: connectionWith([], true) });
+    const error = await createTransport(args, params).catch((e) => e);
+    expect(error).toBeInstanceOf(TelephonyCallEndedError);
+    expect(args.handshake).toEqual({ status: "closed", messagesReceived: 0 });
+  });
+
+  test("missing transport params name the key", async () => {
+    const ws = connectionWith([telnyxStart], true);
+    const args = new WebSocketRunnerArguments({ websocket: ws });
+    await expect(createTransport(args, {})).rejects.toThrow(
+      "Missing transport params for 'telnyx'",
+    );
+  });
+
+  test("a plain WebSocket session uses the 'websocket' params", async () => {
+    const args = new WebSocketRunnerArguments({
+      websocket: connectionWith([]),
+      transportType: "websocket",
+    });
+    const transport = await createTransport(args, {
+      websocket: () => new FastAPIWebsocketParams({ allowedOrigins: [] }),
+    });
+    expect(transport).toBeInstanceOf(FastAPIWebsocketTransport);
+  });
+
+  test("unported transports fail clearly", async () => {
+    for (const args of [
+      new DailyRunnerArguments({ roomUrl: "https://x.daily.co/r" }),
+      new LiveKitRunnerArguments({ roomName: "r", url: "wss://x", token: "t" }),
+      new VonageRunnerArguments({ applicationId: "a", vonageSessionId: "s", token: "t" }),
+      new MOQRunnerArguments({ serve: true }),
+    ]) {
+      const any = { daily: () => ({}), livekit: () => ({}), vonage: () => ({}), moq: () => ({}) };
+      await expect(createTransport(args, any)).rejects.toBeInstanceOf(TransportNotPortedError);
+    }
+  });
+
+  test("MOQRunnerArguments needs a relay in client mode", () => {
+    expect(() => new MOQRunnerArguments()).toThrow("relay_url");
+    expect(new MOQRunnerArguments({ host: "h", port: 1 }).path).toBe("/moq");
+  });
+
+  test("smallwebrtcSdpMunging drops sha-384/512 fingerprints and foreign candidates", () => {
+    const sdp = [
+      "v=0",
+      "a=fingerprint:sha-256 AA",
+      "a=fingerprint:sha-384 BB",
+      "a=fingerprint:sha-512 CC",
+      "a=candidate:1 1 udp 1 192.168.1.10 5000 typ host",
+      "a=candidate:2 1 udp 1 10.0.0.2 5000 typ host",
+      "a=candidate:3 1 udp 1 192.168.1.10 6000 typ srflx raddr 0.0.0.0 rport 0",
+    ].join("\r\n");
+    expect(smallwebrtcSdpMunging(sdp, "192.168.1.10")).toBe(
+      "v=0\r\na=fingerprint:sha-256 AA\r\na=candidate:1 1 udp 1 192.168.1.10 5000 typ host\r\n",
+    );
+    expect(smallwebrtcSdpMunging(sdp, null).split("\r\n").length).toBe(6);
+  });
 });
 
 describe("TestCreateTransportEval", () => {
@@ -263,9 +441,11 @@ describe("TestMaybeApplyDailyDialin", () => {
 });
 
 describe("TestGetTransportClientId", () => {
-  test.todo("test_is_deprecated_and_asks_the_transport (deprecated upstream; not ported)");
+  // get_transport_client_id is deprecated upstream (since 1.13.0) and not ported.
+  test.skip("test_is_deprecated_and_asks_the_transport", () => {});
 });
 
 describe("TestMaybeCaptureParticipantVideo", () => {
-  test.todo("test_is_deprecated (deprecated upstream; not ported)");
+  // maybe_capture_participant_* are deprecated upstream (since 1.13.0) and not ported.
+  test.skip("test_is_deprecated", () => {});
 });

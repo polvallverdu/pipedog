@@ -8,7 +8,8 @@
 // - the TwiML webhook answers with <Connect><Stream>, and checks signatures;
 // - in process: the fetch handler's upgrade goes through a stand-in for
 //   Workers' WebSocketPair, and the fake caller talks to it;
-// - on Deno, when `deno` is installed: src/deno.ts serves the app on a port,
+// - on Bun (src/server.ts, serveFetch) and on Deno when `deno` is installed
+//   (src/deno.ts): the app is served on a port,
 //   and the fake caller connects over a real WebSocket.
 //
 // Each call: the bot greets the caller, the caller asks the recorded question
@@ -281,17 +282,25 @@ describe("a call, in process (the fetch handler's WebSocketPair upgrade)", () =>
 
 const DENO = Bun.which("deno");
 
-describe.skipIf(!DENO)("a call, on Deno (Deno.serve and a real WebSocket)", () => {
-  let proc: ReturnType<typeof Bun.spawn> | null = null;
-  let port = 0;
+const SERVERS: { name: string; cmd: string[] | null }[] = [
+  { name: "Bun (serveFetch: Bun.serve's upgrade)", cmd: [process.execPath, "src/server.ts"] },
+  {
+    name: "Deno (Deno.serve)",
+    cmd: DENO ? [DENO, "run", "--allow-net", "--allow-env", "--allow-read", "src/deno.ts"] : null,
+  },
+];
 
-  beforeAll(async () => {
-    const probe = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("") });
-    port = probe.port as number;
-    probe.stop(true);
-    proc = Bun.spawn(
-      [DENO as string, "run", "--allow-net", "--allow-env", "--allow-read", "src/deno.ts"],
-      {
+for (const { name, cmd } of SERVERS)
+  describe.skipIf(!cmd)(`a call, on ${name} and a real WebSocket`, () => {
+    let proc: ReturnType<typeof Bun.spawn> | null = null;
+    let port = 0;
+    const tag = name.split(" ")[0]!.toLowerCase();
+
+    beforeAll(async () => {
+      const probe = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("") });
+      port = probe.port as number;
+      probe.stop(true);
+      proc = Bun.spawn(cmd!, {
         cwd: join(import.meta.dir, ".."),
         env: {
           ...process.env,
@@ -306,40 +315,39 @@ describe.skipIf(!DENO)("a call, on Deno (Deno.serve and a real WebSocket)", () =
         },
         stdout: "pipe",
         stderr: "inherit",
-      },
-    );
-    // Ready once it prints its listening line.
-    const reader = (proc.stdout as ReadableStream<Uint8Array>).getReader();
-    let out = "";
-    const deadline = Date.now() + 60_000;
-    while (!out.includes("listening") && Date.now() < deadline) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      out += new TextDecoder().decode(value);
-    }
-    reader.releaseLock();
-    if (!out.includes("listening")) throw new Error(`deno did not start: ${out}`);
-  }, 90_000);
+      });
+      // Ready once it prints its listening line.
+      const reader = (proc.stdout as ReadableStream<Uint8Array>).getReader();
+      let out = "";
+      const deadline = Date.now() + 60_000;
+      while (!out.includes("listening") && Date.now() < deadline) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        out += new TextDecoder().decode(value);
+      }
+      reader.releaseLock();
+      if (!out.includes("listening")) throw new Error(`${tag} did not start: ${out}`);
+    }, 90_000);
 
-  afterAll(() => {
-    proc?.kill();
+    afterAll(() => {
+      proc?.kill();
+    });
+
+    test("greets, answers the question, and hangs up when the caller presses #", async () => {
+      const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+      await new Promise((resolve, reject) => {
+        socket.addEventListener("open", resolve);
+        socket.addEventListener("error", reject);
+      });
+      const result = await placeCall(socket as ClientSocket, {
+        streamSid: `MZ-${tag}`,
+        callSid: `CA-${tag}`,
+        accountSid: ACCOUNT_SID,
+        from: "+15551234567",
+        to: "+15559876543",
+        question: QUESTION,
+        hangUp: "pound",
+      });
+      await checkCall(result, `CA-${tag}`, `MZ-${tag}`, "pound");
+    }, 60_000);
   });
-
-  test("greets, answers the question, and hangs up when the caller presses #", async () => {
-    const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`);
-    await new Promise((resolve, reject) => {
-      socket.addEventListener("open", resolve);
-      socket.addEventListener("error", reject);
-    });
-    const result = await placeCall(socket as ClientSocket, {
-      streamSid: "MZ-deno",
-      callSid: "CA-deno",
-      accountSid: ACCOUNT_SID,
-      from: "+15551234567",
-      to: "+15559876543",
-      question: QUESTION,
-      hangUp: "pound",
-    });
-    await checkCall(result, "CA-deno", "MZ-deno", "pound");
-  }, 60_000);
-});
