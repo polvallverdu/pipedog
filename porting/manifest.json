@@ -9827,8 +9827,8 @@
       "module": "pipecat.services.mcp_service",
       "upstream": "src/pipecat/services/mcp_service.py",
       "lines": 673,
-      "package": "@pipedog/mcp",
-      "ts": "packages/mcp/src/mcp_service.ts",
+      "package": "@pipedog/mcp-client",
+      "ts": "packages/mcp-client/src/mcp_service.ts",
       "layer": 9,
       "mvp": false,
       "cycle": false,
@@ -19054,8 +19054,8 @@
     {
       "file": "tests/test_mcp_service.py",
       "lines": 963,
-      "package": "@pipedog/mcp",
-      "ts": "packages/mcp/test/test_mcp_service.test.ts",
+      "package": "@pipedog/mcp-client",
+      "ts": "packages/mcp-client/test/test_mcp_service.test.ts",
       "imports": [
         "pipecat.services",
         "pipecat.services.llm_service",

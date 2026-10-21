@@ -136,6 +136,33 @@ function removeSourceMaps(dir: string): void {
   }
 }
 
+/**
+ * Problems with a prepared package directory (empty when fine): every `files` entry must exist,
+ * and @pipedog/mcp must bundle a docs snapshot made for this release and the production site
+ * (packages/mcp/scripts/snapshot.ts writes it).
+ */
+export function checkPackageFiles(dir: string, m: Manifest): string[] {
+  const problems: string[] = [];
+  for (const f of m.files ?? []) {
+    if (!existsSync(join(dir, f))) problems.push(`"files" lists ${f}, which is missing`);
+  }
+  if (m.name === "@pipedog/mcp") {
+    const path = join(dir, "snapshot", "docs.json");
+    if (!existsSync(path)) {
+      problems.push("no docs snapshot: run `bun packages/mcp/scripts/snapshot.ts --build`");
+    } else {
+      const s = JSON.parse(readFileSync(path, "utf8"));
+      if (s.version !== m.version)
+        problems.push(`the docs snapshot is for ${s.version}, not ${m.version}`);
+      if (s.siteUrl !== "https://polvallverdu.github.io/pipedog")
+        problems.push(`the docs snapshot links to ${s.siteUrl}, not the docs site`);
+      if (!(s.pages?.length > 0) || !(s.api?.length > 0))
+        problems.push("the docs snapshot has no pages or no API");
+    }
+  }
+  return problems;
+}
+
 /** Problems with a manifest about to be published (empty when fine). */
 export function checkPublishManifest(m: Manifest): string[] {
   const problems: string[] = [];

@@ -39,4 +39,88 @@ The buttons under each page title:
 
 ## MCP server
 
-MCP server: coming soon (`@pipedog/mcp`).
+[`@pipedog/mcp`](https://www.npmjs.com/package/@pipedog/mcp) is a local MCP server for these
+docs. Coding agents (Claude Code, Cursor, VS Code, Windsurf and any other MCP client) start it
+over stdio and get four tools:
+
+| Tool | What it does |
+|---|---|
+| `list_pages(section?)` | Every page's slug, title and description, by section. `section` is a sidebar section (`Services`), a group (`Speech-to-text`) or a slug prefix (`services/stt`). |
+| `search_docs(query, limit?)` | Keyword search (BM25) over the page sections: the slug, title, section heading and a snippet. |
+| `read_page(slug)` | A page's full Markdown, e.g. `services/stt/deepgram`. |
+| `get_api(symbol)` | An exported class, function or type of the `@pipedog/*` packages: its import path, its constructor and options interface, its declaration from the `.d.ts` and the pages that document it. |
+
+Each page is also an MCP resource, `pipedog://docs/<slug>`, and llms.txt is `pipedog://llms.txt`.
+
+The docs ship inside the package: each release bundles the docs and the API of that release, so
+the server works offline and matches the pipedog version it came with. To keep the two together,
+pin it to your pipedog version: `npx -y @pipedog/mcp@<version>`. With `--live` (or
+`PIPEDOG_MCP_LIVE=1`) it fetches the current docs from this site instead, and falls back to the
+bundled ones if the site doesn't answer within 10 seconds (`--timeout <ms>`). It needs Node.js 20
+or later.
+
+### Claude Code
+
+```bash
+claude mcp add pipedog -- npx -y @pipedog/mcp
+```
+
+Add `--scope project` to write it to the project's `.mcp.json`, for everyone on the repository.
+
+### Cursor
+
+`.cursor/mcp.json` in the project, or `~/.cursor/mcp.json` for every project:
+
+```json
+{
+  "mcpServers": {
+    "pipedog": {
+      "command": "npx",
+      "args": ["-y", "@pipedog/mcp"]
+    }
+  }
+}
+```
+
+### VS Code
+
+`.vscode/mcp.json` in the project (VS Code uses `servers`, not `mcpServers`):
+
+```json
+{
+  "servers": {
+    "pipedog": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@pipedog/mcp"]
+    }
+  }
+}
+```
+
+### Windsurf
+
+`~/.codeium/windsurf/mcp_config.json` (in Devin Desktop, Windsurf's successor,
+`~/.config/devin/mcp_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "pipedog": {
+      "command": "npx",
+      "args": ["-y", "@pipedog/mcp"]
+    }
+  }
+}
+```
+
+### Options
+
+| Option | Environment variable | |
+|---|---|---|
+| `--live` | `PIPEDOG_MCP_LIVE=1` | Read the current docs from the site, falling back to the bundled ones. |
+| `--docs-url <url>` | `PIPEDOG_DOCS_URL` | The docs site for `--live` (default: this site). |
+| `--timeout <ms>` | `PIPEDOG_MCP_TIMEOUT_MS` | How long `--live` waits for the site (default 10000). |
+
+With Bun, `bunx @pipedog/mcp` works too. For live mode, add `"--live"` to `args`, or
+`-- npx -y @pipedog/mcp --live` for Claude Code.

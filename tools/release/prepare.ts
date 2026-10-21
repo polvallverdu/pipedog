@@ -7,6 +7,7 @@
 //   bun tools/release/prepare.ts
 
 import {
+  checkPackageFiles,
   checkPublishManifest,
   preparePackageDir,
   publishablePackages,
@@ -30,6 +31,12 @@ for (const [name, p] of pkgs) {
     continue;
   }
   preparePackageDir(p.dir, p.manifest, versions);
+  const missing = checkPackageFiles(p.dir, publishManifest(p.manifest, versions));
+  if (missing.length) {
+    failed = true;
+    console.error(`${name}: ${missing.join("; ")}`);
+    continue;
+  }
   console.log(`prepared ${name}@${p.manifest.version}`);
 }
 if (failed) process.exit(1);

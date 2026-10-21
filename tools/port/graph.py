@@ -48,7 +48,8 @@ PACKAGE_RULES = [
     ("pipecat.extensions", "@pipedog/extensions", None),
     ("pipecat.bus.network.pgmq", "@pipedog/bus-pgmq", None),
     ("pipecat.bus.network.redis", "@pipedog/bus-redis", None),
-    ("pipecat.services.mcp_service", "@pipedog/mcp", None),
+    # @pipedog/mcp is the docs MCP server (packages/mcp); the MCP client service goes here.
+    ("pipecat.services.mcp_service", "@pipedog/mcp-client", None),
     ("pipecat.processors.metrics.sentry", "@pipedog/sentry", None),
     ("pipecat.workers.proxy.websocket.server", "@pipedog/worker-proxy", None),
     ("pipecat.processors.gstreamer", "@pipedog/gstreamer", None),
