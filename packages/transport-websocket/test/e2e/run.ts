@@ -22,8 +22,13 @@ import type { BunPlugin, Subprocess } from "bun";
 export const ROOT = resolve(import.meta.dir, "../../../..");
 const HERE = import.meta.dir;
 // Under the transport package's node_modules, so a bundle's `import("ws")`
-// finds its `ws` dev dependency as an installed app would.
-const OUT = join(ROOT, "packages/transport-websocket/node_modules/.cache/pipedog-e2e");
+// finds its `ws` dev dependency as an installed app would. PIPEDOG_E2E_CACHE
+// names another directory there, so concurrent runs don't share bundles.
+const OUT = join(
+  ROOT,
+  "packages/transport-websocket/node_modules/.cache",
+  process.env.PIPEDOG_E2E_CACHE ?? "pipedog-e2e",
+);
 /** A compatibility date workerd 1.20261005.1 supports. */
 const COMPATIBILITY_DATE = "2026-10-01";
 
@@ -145,11 +150,48 @@ function bundle(target: "node" | "deno" | "workerd", entry: Entry = "entry.ts"):
   return p;
 }
 
+/** Ports `freePort` handed out, so concurrent pairs never get the same one. */
+const handedOut = new Set<number>();
+
+/**
+ * A port nothing listens on right now. Another socket can still take it
+ * before the server binds it (another process's listener, or the ephemeral
+ * source port of any outgoing connection), so servers started on it go
+ * through `withFreshPort`.
+ */
 export function freePort(): number {
-  const server = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
-  const port = server.port;
-  server.stop(true);
-  return port;
+  for (;;) {
+    const server = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
+    const port = server.port;
+    server.stop(true);
+    if (!handedOut.has(port)) {
+      handedOut.add(port);
+      return port;
+    }
+  }
+}
+
+/** How Bun, Node, Deno, workerd and Python report a listen whose port is taken. */
+const ADDR_IN_USE =
+  /EADDRINUSE|AddrInUse|address already in use|address in use|is port \d+ in use/i;
+
+/** Thrown by a start whose port was taken between `freePort` and the bind. */
+class PortTaken extends Error {}
+
+/** Start something on a fresh port, and again on another one if that port was taken meanwhile. */
+async function withFreshPort<T>(
+  start: (port: number) => Promise<T>,
+  nextPort: () => number = freePort,
+  attempts = 5,
+): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await start(nextPort());
+    } catch (e) {
+      if (!(e instanceof PortTaken) || i >= attempts) throw e;
+      console.warn(`e2e: ${e.message}, retrying on another port`);
+    }
+  }
 }
 
 /** Collects a process's output and resolves when a line matches. */
@@ -176,7 +218,13 @@ class Proc {
     };
     const pumped = Promise.all([pump(this.proc.stdout), pump(this.proc.stderr)]);
     this.done = pumped.then(() => this.proc.exited);
+    void this.done.then(() => {
+      this.exited = true;
+    });
   }
+
+  /** Whether the process has exited and all its output is in. */
+  exited = false;
 
   /** Add output from outside the process (e.g. a Worker's HTTP answer). */
   append(text: string): void {
@@ -266,7 +314,10 @@ const echoWorker :Workerd.Worker = (
 `;
 }
 
-/** Start workerd with the e2e Worker on `port` and wait until it answers. */
+/**
+ * Start workerd with the e2e Worker on `port` and wait until it answers.
+ * Throws `PortTaken` if workerd couldn't bind the port.
+ */
 async function startWorkerd(port: number, timeoutMs: number): Promise<Proc> {
   const bundlePath = await bundle("workerd", "worker.ts");
   const dir = join(bundlePath, "..");
@@ -274,30 +325,47 @@ async function startWorkerd(port: number, timeoutMs: number): Promise<Proc> {
   await Bun.write(config, workerdConfig(port));
   const proc = new Proc([workerdBin() as string, "serve", config], {}, dir);
   const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
+  while (Date.now() < deadline && !proc.exited && !ADDR_IN_USE.test(proc.output)) {
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/health`);
-      if (res.ok) break;
+      const res = await fetch(`http://127.0.0.1:${port}/health`, {
+        signal: AbortSignal.timeout(1000),
+      });
+      // Only our Worker answers "ok"; anything else is whoever holds the port.
+      if (res.ok && (await res.text()) === "ok" && !proc.exited) return proc;
     } catch {
-      await Bun.sleep(50);
+      // Not listening yet.
     }
+    await Bun.sleep(50);
   }
-  return proc;
+  proc.kill();
+  if (ADDR_IN_USE.test(proc.output)) throw new PortTaken(`port ${port} is taken`);
+  throw new Error(`workerd did not start on port ${port}:\n${proc.output}`);
 }
 
-interface RunningServer {
+export interface RunningServer {
   uri: string;
   proc: Proc;
   /** Whether the server exits by itself once its client leaves. */
   exitsAfterClient: boolean;
 }
 
-async function startServer(
+/** Start a server; `nextPort` picks the ports to try (tests pass a taken one first). */
+export async function startServer(
   kind: ServerKind,
   timeoutMs: number,
   extraEnv: Record<string, string> = {},
+  nextPort: () => number = freePort,
 ): Promise<RunningServer> {
-  const port = freePort();
+  return withFreshPort((port) => startServerOn(kind, port, timeoutMs, extraEnv), nextPort);
+}
+
+/** Start a server on `port`; throws `PortTaken` if the port was taken before the server bound it. */
+async function startServerOn(
+  kind: ServerKind,
+  port: number,
+  timeoutMs: number,
+  extraEnv: Record<string, string>,
+): Promise<RunningServer> {
   if (kind === "workerd" || kind === "workerd-do") {
     const proc = await startWorkerd(port, timeoutMs);
     const path = kind === "workerd-do" ? "/do" : "/";
@@ -320,9 +388,11 @@ async function startServer(
     });
     proc = new Proc(cmd, env);
   }
-  const ready = await proc.waitFor(/E2E_READY/, timeoutMs);
-  if (!ready) {
+  // Some servers log a failed listen and keep running, so watch for that too.
+  const ready = await proc.waitFor(new RegExp(`E2E_READY|${ADDR_IN_USE.source}`, "i"), timeoutMs);
+  if (!ready || ADDR_IN_USE.test(ready[0])) {
     proc.kill();
+    if (ready) throw new PortTaken(`port ${port} is taken`);
     throw new Error(`${kind} server did not start:\n${proc.output}`);
   }
   return { uri: `ws://127.0.0.1:${port}${path}`, proc, exitsAfterClient: true };
@@ -338,8 +408,11 @@ async function startClient(
   }
   if (kind === "workerd") {
     // The Worker answers with the result; print it as the process clients do.
-    const port = freePort();
-    const proc = await startWorkerd(port, 20_000);
+    let port = 0;
+    const proc = await withFreshPort((p) => {
+      port = p;
+      return startWorkerd(p, 20_000);
+    });
     void fetch(`http://127.0.0.1:${port}/client?uri=${encodeURIComponent(uri)}`)
       .then((res) => res.text())
       .then((text) => {
