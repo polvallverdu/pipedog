@@ -9,9 +9,10 @@
  *
  * Porting notes:
  * - The WebSocket is opened with `websocketConnect` from core, which sends
- *   the `Authorization` header on Bun, Node and Deno. Runtimes whose
- *   `WebSocket` can't send headers (Cloudflare Workers) pass a
- *   `webSocketFactory` (an addition to the upstream options).
+ *   the `Authorization` header on Bun, Node, Deno and Cloudflare Workers
+ *   (through `fetch` with an `Upgrade: websocket` header). Other runtimes
+ *   whose `WebSocket` can't send headers pass a `webSocketFactory` (an
+ *   addition to the upstream options).
  * - `parse_server_event` raises only `ValueError`, which the receive loop
  *   skips; here any (non-cancellation) error from `parseServerEvent` is
  *   treated as that.
@@ -385,7 +386,8 @@ export interface OpenAILiveLLMServiceOptions extends LLMServiceOptions {
   delegation?: ResponsesDelegation | ClientDelegation | null;
   /**
    * Creates the underlying `WebSocket` (see `WebsocketConnectOptions`), for
-   * runtimes whose `WebSocket` can't send the `Authorization` header.
+   * runtimes other than Bun, Node, Deno and Cloudflare Workers, whose
+   * `WebSocket` can't send the `Authorization` header.
    */
   webSocketFactory?: WebsocketConnectOptions["webSocketFactory"];
 }

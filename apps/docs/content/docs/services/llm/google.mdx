@@ -70,8 +70,8 @@ request is sent).
 | `topK` | `number \| null` | `null` | Top-k sampling. |
 | `topP` | `number \| null` | `null` | Nucleus sampling. |
 | `seed` | `number \| null` | `null` | Random seed. Gemini treats it as best effort. |
-| `frequencyPenalty` | `number \| null` | `null` | Not sent by this service. |
-| `presencePenalty` | `number \| null` | `null` | Not sent by this service. |
+| `frequencyPenalty` | `number \| null` | `null` | Frequency penalty. Not every Gemini model accepts it. |
+| `presencePenalty` | `number \| null` | `null` | Presence penalty. Not every Gemini model accepts it. |
 | `thinking` | `GoogleThinkingConfig \| null` | `null` | Thinking configuration. See below. |
 | `safetySettings` | `SafetySetting[] \| null` | `null` | Content safety filters. Categories you leave out keep the Gemini API defaults. |
 | `useProviderThinkingDefault` | `boolean` | `false` | Send no thinking default; run at Google's default. |

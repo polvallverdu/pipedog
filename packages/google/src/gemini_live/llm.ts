@@ -1253,6 +1253,9 @@ export class GeminiLiveLLMService extends LLMService<GeminiLiveLLMAdapter & Base
       await this.pushFrame(frame, direction);
     } else if (frame instanceof LLMSetToolsFrame) {
       // TODO: implement runtime tool updates for Gemini Live.
+      // DIVERGENCE: upstream drops the frame silently. It is still dropped
+      // here, with a warning like the one for unapplied settings updates.
+      this._warnUnhandledUpdatedSettings(["tools"]);
     } else {
       await this.pushFrame(frame, direction);
     }

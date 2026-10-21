@@ -14,16 +14,18 @@
  * Porting notes:
  * - `aiohttp` → the global `fetch` (injectable with the `fetch` option).
  *   Requests are cancelled with the current task (`currentSignal()`).
- * - `aiofiles` → an injected reader (`fs`, `{ readFile(path) }`;
- *   `node:fs/promises` satisfies it). Without one, `node:fs/promises` is
- *   imported lazily on first upload, which works on Bun, Node and Deno but not
- *   on Cloudflare Workers.
+ * - `aiofiles` → `uploadFile` takes the file's contents directly (bytes, an
+ *   `ArrayBuffer`, a `Blob` or a `ReadableStream`), which works on every
+ *   runtime. A path, as upstream takes, is read with an injected reader
+ *   (`fs`, `{ readFile(path) }`; `node:fs/promises` satisfies it), or else
+ *   with `node:fs/promises` imported on first use (Bun, Node, Deno); on a
+ *   runtime without it, such as Cloudflare Workers, a path throws.
  * - `mimetypes.guess_type` → a table of the common extensions
  *   (`guessMimeType`); unknown extensions fall back to
  *   `application/octet-stream`, as upstream does.
  */
 
-import { abortable, currentSignal } from "@pipedog/asyncio";
+import { abortable, currentSignal, rethrowIfCancelled } from "@pipedog/asyncio";
 import type { LocalFileSystem } from "@pipedog/core/utils/file_storage";
 import { logger } from "@pipedog/core/utils/logger";
 import { pyJsonDumps } from "@pipedog/core/utils/py_json";
@@ -31,12 +33,36 @@ import { pyJsonDumps } from "@pipedog/core/utils/py_json";
 /** The part of a filesystem `GeminiFileAPI.uploadFile` uses. */
 export type GeminiFileAPIFileSystem = Pick<LocalFileSystem, "readFile">;
 
+/**
+ * What `GeminiFileAPI.uploadFile` uploads: a path to read, or the file's
+ * contents.
+ */
+export type GeminiFileAPIUploadSource =
+  | string
+  | Uint8Array
+  | ArrayBuffer
+  | Blob
+  | ReadableStream<Uint8Array>;
+
+/** Options for `GeminiFileAPI.uploadFile`. */
+export interface GeminiFileAPIUploadOptions {
+  /**
+   * The file's MIME type. Defaults to the one guessed from the path, else
+   * a `Blob`'s own type, else the one guessed from `displayName`, else
+   * `application/octet-stream`.
+   */
+  mimeType?: string | null;
+}
+
 export interface GeminiFileAPIOptions {
   /** Google AI API key. */
   apiKey: string;
   /** Base URL for the Gemini File API (default is the v1beta endpoint). */
   baseUrl?: string | null;
-  /** Reads files for `uploadFile` (`node:fs/promises` satisfies it). */
+  /**
+   * Reads paths given to `uploadFile` (`node:fs/promises` satisfies it).
+   * Not needed when uploading contents.
+   */
   fs?: GeminiFileAPIFileSystem | null;
   /** The `fetch` implementation to use. Defaults to the global `fetch`. */
   fetch?: typeof fetch | null;
@@ -154,40 +180,86 @@ export class GeminiFileAPI {
     this._fetch = options.fetch ?? ((input, init) => fetch(input, init));
   }
 
+  /** Import `node:fs/promises`, the default reader for paths. */
+  protected async _importFs(): Promise<GeminiFileAPIFileSystem> {
+    // Lazy, so importing this module works on runtimes without node:fs.
+    const specifier = "node:fs/promises";
+    return (await abortable(import(specifier))) as GeminiFileAPIFileSystem;
+  }
+
   protected async _readFile(filePath: string): Promise<Uint8Array> {
     if (this._fs === null) {
-      // Lazy, so importing this module works on runtimes without node:fs.
-      const specifier = "node:fs/promises";
-      this._fs = (await abortable(import(specifier))) as GeminiFileAPIFileSystem;
+      let fs: GeminiFileAPIFileSystem;
+      try {
+        fs = await this._importFs();
+      } catch (e) {
+        rethrowIfCancelled(e);
+        throw new Error(
+          `GeminiFileAPI.uploadFile: cannot read the path ${filePath}, because this runtime has no node:fs. Pass the file's contents (a Uint8Array, an ArrayBuffer, a Blob or a ReadableStream) instead, or give GeminiFileAPI an \`fs\`.`,
+          { cause: e },
+        );
+      }
+      this._fs = fs;
     }
     const data = await abortable(this._fs.readFile(filePath));
     return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  }
+
+  /** Read an upload source into bytes. */
+  protected async _readSource(file: GeminiFileAPIUploadSource): Promise<Uint8Array> {
+    if (typeof file === "string") {
+      return await this._readFile(file);
+    }
+    if (file instanceof Uint8Array) {
+      return file;
+    }
+    if (file instanceof ArrayBuffer) {
+      return new Uint8Array(file);
+    }
+    if (typeof Blob !== "undefined" && file instanceof Blob) {
+      return new Uint8Array(await abortable(file.arrayBuffer()));
+    }
+    // A ReadableStream: the upload needs its length up front, so read it all.
+    return new Uint8Array(await abortable(new Response(file).arrayBuffer()));
   }
 
   /**
    * Upload a file to the Gemini File API using the correct resumable upload
    * protocol.
    *
-   * @param filePath Path to the file to upload.
+   * DIVERGENCE: upstream takes only a path. This also takes the file's
+   * contents, which needs no filesystem, so it works on every runtime.
+   *
+   * @param file Path to the file to upload, or the file's contents.
    * @param displayName Optional display name for the file.
+   * @param options.mimeType The file's MIME type (see
+   *   `GeminiFileAPIUploadOptions`).
    * @returns File metadata including uri, name, and display_name.
    */
   async uploadFile(
-    filePath: string,
+    file: GeminiFileAPIUploadSource,
     displayName: string | null = null,
+    options: GeminiFileAPIUploadOptions = {},
   ): Promise<Record<string, unknown>> {
-    logger.info(`Uploading file: ${filePath}`);
+    const isPath = typeof file === "string";
+    logger.info(
+      `Uploading file: ${isPath ? file : (displayName ?? `<${file.constructor?.name ?? "data"}>`)}`,
+    );
 
     const signal = currentSignal();
 
     // Determine the file's MIME type
-    let mimeType = guessMimeType(filePath);
+    let mimeType =
+      options.mimeType ||
+      (isPath ? guessMimeType(file) : null) ||
+      (typeof Blob !== "undefined" && file instanceof Blob ? file.type : null) ||
+      (!isPath && displayName ? guessMimeType(displayName) : null);
     if (!mimeType) {
       mimeType = "application/octet-stream";
     }
 
     // Read the file
-    const fileData = await this._readFile(filePath);
+    const fileData = await this._readSource(file);
 
     // Create the metadata payload
     let metadata: Record<string, unknown> = {};
@@ -256,8 +328,8 @@ export class GeminiFileAPI {
     }
 
     const fileInfo = (await abortable(response.json())) as Record<string, unknown>;
-    const file = (fileInfo.file ?? {}) as Record<string, unknown>;
-    logger.info(`File uploaded successfully: ${file.name ?? "None"}`);
+    const uploaded = (fileInfo.file ?? {}) as Record<string, unknown>;
+    logger.info(`File uploaded successfully: ${uploaded.name ?? "None"}`);
     return fileInfo;
   }
 
