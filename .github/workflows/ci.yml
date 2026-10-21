@@ -8,31 +8,73 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  test:
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.2
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - run: bun install --frozen-lockfile
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
       - run: bun run typecheck
       - run: bun run lint
-      - run: bun test packages
-      - name: Runtime compatibility (bun, node, deno, workerd)
-        run: bun tools/compat/run.ts
-      - name: Release rehearsal (pack, install from tarballs, import everything from Node)
-        run: bun run release:verify
-      - name: Docs build
-        run: bun run docs:build
       - name: Changeset present
         if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'changeset-release/')
         run: bunx changeset status --since=origin/main || echo "::warning::No changeset in this PR. Add one with 'bun changeset' if it changes a published package."
+
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: list
+        name: Packages with tests
+        run: |
+          dirs=()
+          for dir in packages/*/; do
+            if find "${dir}test" -name '*.test.ts' 2>/dev/null | grep -q .; then
+              dirs+=("${dir%/}")
+            fi
+          done
+          printf 'packages=%s\n' "$(printf '%s\n' "${dirs[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.plan.outputs.packages) }}
+    name: test (${{ matrix.package }})
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: bun test ${{ matrix.package }}
+
+  compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Runtime compatibility (bun, node, deno, workerd)
+        run: bun tools/compat/run.ts
+
+  release-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Release rehearsal (pack, install from tarballs, import everything from Node)
+        run: bun run release:verify
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: bun run docs:build
