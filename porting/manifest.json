@@ -13785,9 +13785,9 @@
         "pydantic"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "In @pipedog/transport-whatsapp. Runs on Bun, Node, Deno and Workers (fetch only). DIVERGENCE: aiohttp session -> optional fetch option; pydantic models -> interfaces with wire property names (from_ is 'from') + hand-written parseWebhookRequest (accepts Meta's newer optional wa_id/from); updateWhatsappPhoneNumberId also updates the URL. Upstream has no tests: test/whatsapp.test.ts is new."
     },
     {
       "module": "pipecat.transports.whatsapp.client",
@@ -13808,9 +13808,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "In @pipedog/transport-whatsapp, on SmallWebRTCConnection (werift). Bun, Node, Deno: whole calls (compat smoke answers a real offer). Workers: webhook verification, HMAC signature check (WebCrypto) and API calls only; connect events fail with a clear error (the ./connection export has a workerd stub, so werift is never bundled). DIVERGENCE: aiohttp -> fetch option; signature check is async; createConnection option added; deprecated one-arg connection_callback not ported; new whatsAppWebhookHandler fetch handler. Upstream has no tests: test/whatsapp.test.ts is new."
     },
     {
       "module": "pipecat.turns",

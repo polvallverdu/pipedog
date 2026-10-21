@@ -14,6 +14,8 @@
         "@pipedog/audio-soundfile-mixer": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/onnx": "workspace:*",
+        "@pipedog/transport-smallwebrtc": "workspace:*",
+        "@pipedog/transport-whatsapp": "workspace:*",
         "@types/bun": "1.4.3",
         "typescript": "7.0.2",
         "workerd": "1.20261005.1",
@@ -779,6 +781,15 @@
         "ws",
       ],
     },
+    "packages/transport-whatsapp": {
+      "name": "@pipedog/transport-whatsapp",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/transport-smallwebrtc": "workspace:*",
+      },
+    },
     "packages/ultravox": {
       "name": "@pipedog/ultravox",
       "version": "0.6.1",
@@ -1382,6 +1393,8 @@
     "@pipedog/transport-smallwebrtc": ["@pipedog/transport-smallwebrtc@workspace:packages/transport-smallwebrtc"],
 
     "@pipedog/transport-websocket": ["@pipedog/transport-websocket@workspace:packages/transport-websocket"],
+
+    "@pipedog/transport-whatsapp": ["@pipedog/transport-whatsapp@workspace:packages/transport-whatsapp"],
 
     "@pipedog/ultravox": ["@pipedog/ultravox@workspace:packages/ultravox"],
 
