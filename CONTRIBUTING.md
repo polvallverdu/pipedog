@@ -7,8 +7,8 @@ Bug reports from real use (especially against live providers) are just as valuab
 
 ## Prerequisites
 
-- **Bun 1.4.2.** That is the version CI uses (`.github/actions/setup/action.yml`); the root
-  `package.json` does not pin one with `packageManager` or `engines`, so use 1.4.2 or newer.
+- **Bun 1.4.3.** That is the version CI uses (`.github/actions/setup/action.yml`); the root
+  `package.json` does not pin one with `packageManager` or `engines`, so use 1.4.3 or newer.
 - **Node.js 22 or later** and **Deno 2.x**, optional. You only need them to run the runtime
   compatibility harness (`bun run compat`) locally. CI uses Node 24.
 - **Python 3**, optional. Only for `bun run port:plan`, which rebuilds the porting manifest from the
