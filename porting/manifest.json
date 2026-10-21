@@ -399,9 +399,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: implemented in packages/xai/src/grok_realtime_adapter.ts (next to the service that uses it; @pipedog/grok depends on @pipedog/xai, not the reverse); packages/grok/src/grok_realtime_adapter.ts re-exports it."
     },
     {
       "module": "pipecat.adapters.services.inworld_realtime_adapter",
@@ -9150,9 +9150,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Empty upstream __init__: export {}."
     },
     {
       "module": "pipecat.services.grok.realtime.events",
@@ -9169,9 +9169,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Deprecated upstream alias: re-exports @pipedog/xai/realtime/events, like grok.llm. DIVERGENCE: no import-time deprecation warning (sideEffects: false); the deprecation is in the module docs."
     },
     {
       "module": "pipecat.services.grok.realtime.llm",
@@ -9188,9 +9188,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Deprecated upstream alias: re-exports @pipedog/xai/realtime/llm, like grok.llm. DIVERGENCE: no import-time deprecation warning (sideEffects: false); the deprecation is in the module docs."
     },
     {
       "module": "pipecat.services.groq",
@@ -12493,9 +12493,9 @@
         "test_xai_realtime_user_audio.py",
         "test_xai_realtime_voices.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Empty upstream __init__: export {}."
     },
     {
       "module": "pipecat.services.xai.realtime.events",
@@ -12521,9 +12521,9 @@
         "test_xai_realtime_user_audio.py",
         "test_xai_realtime_voices.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/xai/src/realtime/events.ts. Pydantic models become classes on a small local BaseModel (the @pipedog/openai realtime machinery), with camelCase fields and snake_case wire keys; extra='allow' models (McpTool, DTMF and MCP events) keep unknown keys in modelExtra. Validation is reduced to required fields and server-event type literals."
     },
     {
       "module": "pipecat.services.xai.realtime.llm",
@@ -12562,9 +12562,9 @@
         "test_settings.py",
         "test_xai_realtime_user_audio.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/xai/src/realtime/llm.ts (GrokRealtimeLLMService). websocketConnect from core with the Authorization header, so it runs on Workers too. Deprecated session_properties constructor arg not ported (use settings). DIVERGENCE: a failed response with non-string status_details renders it as JSON, not a Python dict repr."
     },
     {
       "module": "pipecat.services.xai.stt",
@@ -18395,7 +18395,7 @@
       ],
       "needsModules": 143,
       "status": "todo",
-      "notes": "Partial: the Inworld sub-test of TestRealtimePackedHistoryKeepsNonAscii (1 pass) is in packages/inworld/test/test_get_llm_invocation_params.test.ts; the rest is still to be ported."
+      "notes": "Partial: the Inworld sub-test of TestRealtimePackedHistoryKeepsNonAscii (1 pass) is in packages/inworld/test/test_get_llm_invocation_params.test.ts; TestGrokRealtimeGetLLMInvocationParams and the Grok packed-history sub-test (8 pass) are in packages/xai/test/test_get_llm_invocation_params.test.ts; the rest is still to be ported."
     },
     {
       "file": "tests/test_gladia_stt.py",
@@ -19762,7 +19762,7 @@
       ],
       "needsModules": 139,
       "status": "todo",
-      "notes": "Partial: the Inworld section (TestInworldRealtimeIntermediateResults, 4 pass) is in packages/inworld/test/test_realtime_intermediate_results.test.ts, the Ultravox section (TestUltravoxIntermediateResults, 5 pass) in packages/ultravox/test/test_realtime_intermediate_results.test.ts, and the Nova Sonic section (4 pass) in packages/aws/test/test_realtime_intermediate_results.test.ts; the other providers' sections are still to be ported with their packages."
+      "notes": "Partial: the Inworld section (TestInworldRealtimeIntermediateResults, 4 pass) is in packages/inworld/test/test_realtime_intermediate_results.test.ts, the Ultravox section (TestUltravoxIntermediateResults, 5 pass) in packages/ultravox/test/test_realtime_intermediate_results.test.ts, the Grok section (TestGrokRealtimeIntermediateResults, the shared OpenAI-protocol suite, 13 pass) in packages/xai/test/test_realtime_intermediate_results.test.ts, and the Nova Sonic section (4 pass) in packages/aws/test/test_realtime_intermediate_results.test.ts; the other providers' sections are still to be ported with their packages."
     },
     {
       "file": "tests/test_realtime_service_tool_sync.py",
@@ -19793,7 +19793,7 @@
       ],
       "needsModules": 134,
       "status": "todo",
-      "notes": "Partial: the Inworld section (1 pass) is in packages/inworld/test/test_realtime_tool_result_encoding.test.ts; the other providers' sections are still to be ported."
+      "notes": "Partial: the Inworld section (1 pass) is in packages/inworld/test/test_realtime_tool_result_encoding.test.ts and the xAI section (1 pass) in packages/xai/test/test_realtime_tool_result_encoding.test.ts; the other providers' sections are still to be ported."
     },
     {
       "file": "tests/test_realtime_tool_sync.py",
@@ -20438,7 +20438,7 @@
       ],
       "needsModules": 134,
       "status": "todo",
-      "notes": "Partial: the Inworld Realtime sections (TestInworldRealtimeSettingsApplyUpdate, TestInworldRealtimeSettingsFromMapping, 13 pass) are in packages/inworld/test/test_settings.test.ts; the rest is still to be ported."
+      "notes": "Partial: the Inworld Realtime sections (13 pass) are in packages/inworld/test/test_settings.test.ts and the Grok Realtime sections (TestGrokRealtimeSettingsApplyUpdate, TestGrokRealtimeSettingsFromMapping, 10 pass) in packages/xai/test/test_settings.test.ts; the rest is still to be ported."
     },
     {
       "file": "tests/test_shared.py",
@@ -21803,8 +21803,8 @@
         "pipecat.services.xai.realtime.events"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "19 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_xai_realtime_user_audio.py",
@@ -21818,8 +21818,8 @@
         "pipecat.services.xai.realtime.llm"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_xai_realtime_voices.py",
@@ -21831,8 +21831,8 @@
         "pipecat.services.xai.realtime.events"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "3 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_xai_stt.py",
