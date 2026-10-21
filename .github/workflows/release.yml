@@ -8,6 +8,9 @@ name: Release
 # One-time setup per package on npmjs.com: Settings -> Trusted publisher ->
 # GitHub Actions, repository polvallverdu/pipedog, workflow `release.yml`,
 # environment `npm`.
+#
+# No checks run here: the Version Packages PR must pass CI (the required `test`
+# check) before it can be merged, so main is already verified when this runs.
 
 on:
   push:
@@ -59,9 +62,6 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
       # Trusted publishing needs npm >= 11.5.1.
       - run: npm install -g npm@12.2.0
       - run: bun install --frozen-lockfile
@@ -77,15 +77,6 @@ jobs:
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Checks
-        if: steps.v.outputs.published == 'false'
-        run: |
-          bun run typecheck
-          bun run lint
-          bun test packages
-          bun tools/compat/run.ts
-          bun run release:verify
 
       - name: Publish every package (fixed version)
         if: steps.v.outputs.published == 'false'
