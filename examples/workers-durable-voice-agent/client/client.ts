@@ -23,15 +23,29 @@ export interface ScriptedUserResult {
   endedAt: number;
 }
 
+export interface ScriptedUserOptions {
+  /** The longest to listen for the reply after the recording ends, in seconds. Defaults to 10. */
+  listenSecs?: number;
+  /**
+   * Hang up as soon as this returns true (checked while listening), after a
+   * short wait for the last audio to arrive. Without it, listen for `listenSecs`.
+   */
+  until?: () => boolean;
+}
+
+/** After `until` is met, how long to wait for the audio still in flight, in seconds. */
+const TAIL_SECS = 1.5;
+
 /**
  * Stream `pcm16k` (16-bit mono, 16 kHz) to the agent at `url` in real time, then
- * keep listening for `listenSecs` for the reply.
+ * listen for the reply.
  */
 export async function runScriptedUser(
   url: string,
   pcm16k: Uint8Array,
-  listenSecs = 10,
+  options: ScriptedUserOptions = {},
 ): Promise<ScriptedUserResult> {
+  const listenSecs = options.listenSecs ?? 10;
   const serializer = new ProtobufFrameSerializer();
   const connection = await websocketConnect(url);
   const startedAt = Date.now();
@@ -60,7 +74,15 @@ export async function runScriptedUser(
   }
 
   // Let the reply arrive, then hang up.
-  await new Promise((resolve) => setTimeout(resolve, listenSecs * 1000));
+  const deadline = Date.now() + listenSecs * 1000;
+  if (options.until) {
+    while (!options.until() && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    await new Promise((resolve) => setTimeout(resolve, TAIL_SECS * 1000));
+  } else {
+    await new Promise((resolve) => setTimeout(resolve, listenSecs * 1000));
+  }
   await connection.close();
   await listening.catch(() => {});
   return { spokenBytes, startedAt, endedAt: Date.now() };
