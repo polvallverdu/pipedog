@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/elevenlabs",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "ElevenLabs services (STT, Realtime STT, WebSocket and HTTP TTS, Text-to-Dialogue) for pipedog.",
   "license": "BSD-2-Clause",
   "repository": {

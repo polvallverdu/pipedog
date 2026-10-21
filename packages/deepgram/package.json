@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/deepgram",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Deepgram services (STT, TTS, Flux STT and TTS) for pipedog.",
   "license": "BSD-2-Clause",
   "repository": {

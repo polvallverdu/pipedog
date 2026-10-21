@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/core",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Unofficial TypeScript port of the Pipecat core: frames, processors, pipelines, workers, observers, RTVI.",
   "license": "BSD-2-Clause",
   "repository": {

@@ -1,5 +1,12 @@
 # @pipedog/tracing
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [[`b88231a`](https://github.com/polvallverdu/pipedog/commit/b88231af79d984e191b54c30965fa062a60ec8c3)]:
+  - @pipedog/core@0.4.0
+
 ## 0.3.0
 
 ### Patch Changes
