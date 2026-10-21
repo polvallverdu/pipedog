@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/anthropic",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Anthropic services (Claude LLM) for pipedog.",
   "license": "BSD-2-Clause",
   "repository": {

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/whisper",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Base speech-to-text service for Whisper-compatible APIs, shared by the pipedog STT services that speak the Whisper protocol.",
   "license": "BSD-2-Clause",
   "repository": {

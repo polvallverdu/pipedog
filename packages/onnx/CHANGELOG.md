@@ -1,5 +1,12 @@
 # @pipedog/onnx
 
+## 0.3.0
+
+### Patch Changes
+
+- Updated dependencies [[`6aa3dac`](https://github.com/polvallverdu/pipedog/commit/6aa3dacb45a967e7bc147ab2905b9d8a808fa8c0)]:
+  - @pipedog/core@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
