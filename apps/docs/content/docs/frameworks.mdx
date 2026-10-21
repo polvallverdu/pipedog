@@ -1,0 +1,122 @@
+---
+title: Frameworks
+description: Mount a pipedog voice agent in SvelteKit, Hono, Bun, Next.js, Express, Elysia, Nuxt, Deno or Vercel.
+---
+
+pipedog's voice endpoints are fetch handlers: a function from a `Request` to a `Response`. Each
+framework just routes a request to them. Every snippet below is in
+[`examples/framework-snippets`](https://github.com/polvallverdu/pipedog/tree/main/examples/framework-snippets),
+and the test suite there mounts each one and checks it.
+
+Two endpoints are mounted:
+
+- **`offer`**: WebRTC signalling for [SmallWebRTC](/docs/voice-bot). The browser POSTs its SDP offer and
+  gets the answer. The media then runs over UDP, so the server has to be a long-lived process, not a
+  serverless function.
+- **`socket`**: a WebSocket with protobuf audio frames, for clients that stream audio over a socket.
+  It works wherever the runtime can upgrade a request from fetch. Where it can't, the framework
+  section says so.
+
+The agent behind both is the same. It needs `OPENAI_API_KEY` in the environment, and it reads
+`OPENAI_BASE_URL` if you set one.
+
+## The endpoints
+
+<include cwd meta='title="shared/voice.ts"'>../../examples/framework-snippets/shared/voice.ts</include>
+
+<Tabs items={["SvelteKit", "Hono", "Bun", "Next.js", "Express", "Elysia", "Nuxt", "Deno", "Vercel"]}>
+  <Tab value="SvelteKit">
+
+Use an adapter that runs a Node, Bun or Deno server, such as `@sveltejs/adapter-node`. The
+serverless adapters don't carry the UDP media.
+
+<include cwd meta='title="src/routes/api/offer/+server.ts"'>../../examples/framework-snippets/sveltekit/src/routes/api/offer/+server.ts</include>
+
+The route file imports the endpoint through `$lib/voice`, a one-line re-export of the shared module.
+
+  </Tab>
+  <Tab value="Hono">
+
+Hono routes the offer, and upgrades `/ws` with its own WebSocket helper and our Hono adapter.
+This snippet runs on Bun. On Node, use `@hono/node-server` with the same routes, and on Workers, the
+`socket` fetch handler works without the Bun helper.
+
+<include cwd meta='title="app.ts"'>../../examples/framework-snippets/hono/app.ts</include>
+
+  </Tab>
+  <Tab value="Bun">
+
+`Bun.serve` routes the offer and upgrades `/ws` on the server, then hands each socket to the agent.
+
+<include cwd meta='title="server.ts"'>../../examples/framework-snippets/bun/server.ts</include>
+
+  </Tab>
+  <Tab value="Next.js">
+
+A route handler on the Node.js runtime. Next.js runs on Node, not the edge, because the offer's
+media runs over UDP. A WebSocket can't be upgraded from a Next.js route handler, so mount `socket`
+on a server that can upgrade (Bun, Node or Deno) or on Workers.
+
+<include cwd meta='title="app/api/offer/route.ts"'>../../examples/framework-snippets/nextjs/app/api/offer/route.ts</include>
+
+  </Tab>
+  <Tab value="Express">
+
+Express 5 mounts the offer through `nodeRequestListener`. Don't add `express.json()` in front of it:
+the offer reads the body itself. This snippet mounts only the offer.
+
+<include cwd meta='title="server.ts"'>../../examples/framework-snippets/express/server.ts</include>
+
+  </Tab>
+  <Tab value="Elysia">
+
+Elysia runs on Bun. The offer is a route. This snippet mounts only the offer: Elysia has its own
+WebSocket route API, which it doesn't use here.
+
+<include cwd meta='title="server.ts"'>../../examples/framework-snippets/elysia/server.ts</include>
+
+  </Tab>
+  <Tab value="Nuxt">
+
+A Nitro server route. Use a Node, Bun or Deno preset. The serverless presets don't carry the UDP
+media. Nuxt auto-imports `defineEventHandler` and `toWebRequest`, so the handler doesn't import them.
+
+<include cwd meta='title="server/api/offer.post.ts"'>../../examples/framework-snippets/nuxt/server/api/offer.post.ts</include>
+
+  </Tab>
+  <Tab value="Deno">
+
+`Deno.serve` routes both endpoints. `socket` is a fetch handler, so the upgrade uses
+`Deno.upgradeWebSocket` under the hood.
+
+<include cwd meta='title="main.ts"'>../../examples/framework-snippets/deno/main.ts</include>
+
+  </Tab>
+  <Tab value="Vercel">
+
+Vercel runs a `server.ts` with the Bun runtime, so the Bun snippet's shape works with a `routes` map.
+Set the runtime in `vercel.json`:
+
+```json
+{ "bunVersion": "1.x" }
+```
+
+<include cwd meta='title="server.ts"'>../../examples/framework-snippets/vercel/server.ts</include>
+
+Each WebSocket is pinned to one function instance for its lifetime, and messages don't cross
+instances. Keep shared state in a database. A function's duration limit also ends a long session.
+Vercel Daemons are always-on workers with no inbound HTTP or TCP traffic, so they can't serve these
+endpoints; they suit background workers that pull their own work.
+
+  </Tab>
+</Tabs>
+
+## What is tested
+
+The test suite starts each snippet on Bun, and Deno's when it's installed. It checks two things for
+each: the offer route reaches pipedog's handler (a framework's own 404 wouldn't return pipedog's
+message), and the WebSocket route accepts an upgrade. The Next.js, Nuxt and SvelteKit route files
+are called as the handlers they export; the others run as servers.
+
+Not tested here: a deployment on any of these hosts, and the WebRTC media on the serverless hosts
+(Next.js on Vercel, Nuxt's serverless presets), which the UDP requirement rules out.

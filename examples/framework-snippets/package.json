@@ -1,0 +1,29 @@
+{
+  "name": "@pipedog/example-framework-snippets",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The same voice endpoints mounted in each major framework, tested on Bun.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/audio-silero": "workspace:*",
+    "@pipedog/audio-smart-turn": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/openai": "workspace:*",
+    "@pipedog/serializer-protobuf": "workspace:*",
+    "@pipedog/transport-smallwebrtc": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/kit": "3.0.1",
+    "@types/express": "5.0.6",
+    "elysia": "1.4.30",
+    "express": "5.2.1",
+    "h3": "1.15.11",
+    "hono": "4.13.13"
+  }
+}
