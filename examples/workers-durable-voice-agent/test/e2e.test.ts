@@ -1,0 +1,120 @@
+// Copyright (c) 2026, pipedog contributors
+// SPDX-License-Identifier: BSD-2-Clause
+//
+// Parallel voice agents on Durable Objects, end to end: `wrangler dev` runs the
+// Worker locally (workerd), two scripted users stream the same question to two
+// sessions at once, and each session must answer on its own. The OpenAI API is
+// the mock from the SmallWebRTC example, so no API key is needed.
+
+import { afterAll, beforeAll, expect, test } from "bun:test";
+import { mkdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { startMockOpenAI } from "@pipedog/example-test-mocks/mock_openai";
+import {
+  ANSWER,
+  type ProviderMock,
+  SCRIPTED_QUESTION,
+} from "@pipedog/example-test-mocks/mock_provider";
+import { runScriptedUser } from "../client/client.ts";
+import { wavToPcm16k } from "../client/wav.ts";
+
+const EXAMPLE = join(import.meta.dir, "..");
+const QUESTION_WAV = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "test-mocks",
+  "assets",
+  "capital_question.wav",
+);
+const WRANGLER = join(EXAMPLE, "node_modules", ".bin", "wrangler");
+const STARTUP_TIMEOUT_MS = 180_000;
+const LOG_DIR = join(EXAMPLE, "node_modules", ".cache", "workers-e2e");
+
+let mock: ProviderMock;
+let worker: ReturnType<typeof Bun.spawn> | null = null;
+let port = 0;
+
+/** Start `wrangler dev` and resolve once it reports it is ready. */
+async function startWorker(
+  apiBase: string,
+): Promise<{ proc: ReturnType<typeof Bun.spawn>; port: number }> {
+  const probe = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("") });
+  const freePort = probe.port;
+  probe.stop(true);
+
+  const proc = Bun.spawn(
+    [
+      WRANGLER,
+      "dev",
+      "--port",
+      String(freePort),
+      "--ip",
+      "127.0.0.1",
+      "--var",
+      "OPENAI_API_KEY:test-key",
+      "--var",
+      `OPENAI_BASE_URL:${apiBase}`,
+    ],
+    { cwd: EXAMPLE, stdout: "pipe", stderr: "pipe" },
+  );
+
+  mkdirSync(LOG_DIR, { recursive: true });
+  const log = Bun.file(join(LOG_DIR, "wrangler.log")).writer();
+  const ready = new Promise<void>((resolve, reject) => {
+    const scan = async (stream: ReadableStream<Uint8Array>) => {
+      const decoder = new TextDecoder();
+      for await (const chunk of stream) {
+        log.write(chunk);
+        if (decoder.decode(chunk).includes("Ready on")) resolve();
+      }
+    };
+    scan(proc.stdout as ReadableStream<Uint8Array>).catch(reject);
+    scan(proc.stderr as ReadableStream<Uint8Array>).catch(reject);
+    proc.exited.then((code) => reject(new Error(`wrangler exited with code ${code}`)));
+  });
+  await Promise.race([
+    ready,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("wrangler dev did not start")), STARTUP_TIMEOUT_MS),
+    ),
+  ]);
+  return { proc, port: freePort };
+}
+
+beforeAll(async () => {
+  mock = startMockOpenAI();
+  const started = await startWorker(mock.baseUrl);
+  worker = started.proc;
+  port = started.port;
+}, STARTUP_TIMEOUT_MS + 30_000);
+
+afterAll(() => {
+  worker?.kill();
+  mock?.stop();
+});
+
+test("two voice sessions run in parallel, each on its own Durable Object", async () => {
+  const pcm = wavToPcm16k(readFileSync(QUESTION_WAV));
+  const sessions = ["alice", "bob"].map((id) =>
+    runScriptedUser(`ws://127.0.0.1:${port}/api/session/${id}`, pcm, 15),
+  );
+  const [alice, bob] = await Promise.all(sessions);
+
+  // Each session heard its own reply.
+  expect(alice!.spokenBytes).toBeGreaterThan(0);
+  expect(bob!.spokenBytes).toBeGreaterThan(0);
+
+  // Each session's question reached the chat model, and each got an answer.
+  const questions = mock.asked.filter((q) => q.includes(SCRIPTED_QUESTION));
+  expect(questions.length).toBeGreaterThanOrEqual(2);
+  expect(mock.spoken.filter((s) => s === ANSWER).length).toBeGreaterThanOrEqual(2);
+
+  // They ran at the same time.
+  expect(alice!.startedAt < bob!.endedAt && bob!.startedAt < alice!.endedAt).toBe(true);
+}, 240_000);
+
+test("a request that isn't a WebSocket upgrade is refused", async () => {
+  const response = await fetch(`http://127.0.0.1:${port}/api/session/carol`);
+  expect(response.status).toBe(426);
+});

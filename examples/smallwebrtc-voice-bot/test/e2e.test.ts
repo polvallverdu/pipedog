@@ -17,12 +17,16 @@ import { beforeAll, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { startMockGoogle } from "@pipedog/example-test-mocks/mock_google";
+import { startMockOpenAI } from "@pipedog/example-test-mocks/mock_openai";
+import {
+  ANSWER,
+  type ProviderMock,
+  SCRIPTED_QUESTION,
+} from "@pipedog/example-test-mocks/mock_provider";
 import type { Browser, BrowserContext } from "playwright-core";
 import type { VoiceProvider } from "../src/bot.ts";
 import { createServer } from "../src/server.ts";
-import { startMockGoogle } from "./mock_google.ts";
-import { startMockOpenAI } from "./mock_openai.ts";
-import { ANSWER, type ProviderMock, SCRIPTED_QUESTION } from "./mock_provider.ts";
 
 const MOCKS: Record<VoiceProvider, () => ProviderMock> = {
   openai: startMockOpenAI,
@@ -31,7 +35,7 @@ const MOCKS: Record<VoiceProvider, () => ProviderMock> = {
 
 const HERE = import.meta.dir;
 const CACHE = join(HERE, "..", "node_modules", ".cache", "voice-bot-e2e");
-const QUESTION_WAV = join(HERE, "assets", "capital_question.wav");
+const QUESTION_WAV = join(HERE, "..", "..", "test-mocks", "assets", "capital_question.wav");
 
 async function findChromium(): Promise<string | null> {
   if (process.env.PIPEDOG_E2E === "0") return null;

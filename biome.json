@@ -12,6 +12,8 @@
       "!.claude",
       "!**/.next",
       "!**/.source",
+      "!apps/docs/out",
+      "!**/.wrangler",
       "!apps/docs/next-env.d.ts"
     ]
   },

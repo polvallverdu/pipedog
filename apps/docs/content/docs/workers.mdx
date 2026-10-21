@@ -1,0 +1,134 @@
+---
+title: Voice agents on Workers and Durable Objects
+description: Run one voice agent per session on Cloudflare Durable Objects, and serve pipedog endpoints from any framework with fetch handlers.
+---
+
+A voice agent is a long-lived connection with state: a pipeline, a conversation, and a socket.
+Cloudflare Durable Objects suit that shape. Each object is a single-threaded actor with its own
+state, so one object can run one voice session without interfering with any other. Cloudflare places
+the objects across its network, which lets many sessions run in parallel.
+
+The complete example is
+[`examples/workers-durable-voice-agent`](https://github.com/polvallverdu/pipedog/tree/main/examples/workers-durable-voice-agent).
+This page explains the pattern.
+
+## The shape
+
+```text
+client ──WebSocket──► Worker ──getByName(id)──► VoiceSession (Durable Object)
+                                                   │ FastAPIWebsocketTransport
+                                                   │ Silero VAD, Smart Turn
+                                                   │ speech, chat, speech synthesis
+```
+
+- The **Worker** routes each session to a Durable Object by name. The same name always reaches the
+  same object.
+- The **Durable Object** accepts the WebSocket and runs the agent for as long as the socket is open.
+- The **transport** is the WebSocket transport, carrying audio as protobuf frames in the Pipecat wire
+  format. WebRTC needs UDP, which Workers don't have, so use the WebSocket transport here.
+
+## The Durable Object
+
+`websocketFetchHandler` turns a connection into a fetch handler. The object returns its result from
+`fetch`:
+
+```ts
+import { DurableObject } from "cloudflare:workers";
+import { websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
+
+export class VoiceSession extends DurableObject<Env> {
+  readonly #handler = websocketFetchHandler((connection) => runVoiceAgent(connection, this.env));
+
+  override fetch(request: Request): Promise<Response> {
+    return this.#handler(request);
+  }
+}
+```
+
+`runVoiceAgent` builds the pipeline on the connection with `FastAPIWebsocketTransport`. It is the
+same pipeline as the other voice bot examples: speech in, speech-to-text, the user's turn, the chat
+model, speech synthesis, and speech out.
+
+## The Worker
+
+```ts
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const id = new URL(request.url).pathname.split("/")[3];
+    return env.VOICE_SESSION.getByName(id).fetch(request);
+  },
+} satisfies ExportedHandler<Env>;
+```
+
+## Models and bundling
+
+Silero VAD and Smart Turn run ONNX models. A Worker can't read model files from disk, so the models
+are bundled with the Worker. A `Data` rule in `wrangler.jsonc` turns each `.onnx` import into its
+bytes, and the analyzers take those bytes:
+
+```ts
+import sileroModel from "./silero_vad.onnx";
+
+const vad = new SileroVADAnalyzer({ model: sileroModel });
+```
+
+## Fetch handlers
+
+Every HTTP entry point in pipedog is a fetch handler: a function from a `Request` to a `Response`.
+That makes pipedog usable from any framework that routes requests this way.
+
+- **WebSocket endpoints.** `websocketFetchHandler` works where the runtime upgrades a request from
+  fetch: Cloudflare Workers and Durable Objects, and Deno. Bun and Node upgrade on their own server
+  instead, with `websocketServe` or the Hono adapter.
+- **WebRTC signaling.** `smallWebRTCOfferHandler` is a plain fetch handler. Its media runs over UDP,
+  so the server has to be a long-lived Node, Bun or Deno process. Serverless hosts can't carry it.
+
+Shapes for the other frameworks:
+
+```ts
+// Bun
+Bun.serve({ fetch: handler });
+
+// Hono
+app.post("/api/offer", (c) => offer(c.req.raw));
+
+// Next.js app router (app/api/offer/route.ts)
+export const POST = (request: Request) => offer(request);
+
+// SvelteKit (src/routes/api/offer/+server.ts)
+export const POST = ({ request }) => offer(request);
+```
+
+The Workers example runs in tests against workerd, through `wrangler dev`. The other snippets show the
+same handler mounted in each framework; they are not tested here.
+
+## Run it
+
+```sh
+cd examples/workers-durable-voice-agent
+echo "OPENAI_API_KEY=sk-..." > .dev.vars
+bun run dev
+```
+
+Stream a recording to a session with the scripted user from the example, in a second terminal:
+
+```sh
+bun run client ws://127.0.0.1:8787/api/session/alice ../test-mocks/assets/capital_question.wav
+```
+
+Then deploy:
+
+```sh
+bunx wrangler secret put OPENAI_API_KEY
+bun run deploy
+```
+
+## Limits to plan for
+
+- **Duration.** A Durable Object is billed while it runs. A connected session keeps it running, so
+  idle sessions cost time. Hibernation, where the object sleeps between messages, would save that, but
+  the agent's timers would need to survive a sleep, and this example doesn't do that.
+- **CPU.** Speech models take CPU time. Check the limits for your plan, and measure the VAD and turn
+  detection under real load.
+- **Transport.** WebRTC isn't available here. Audio goes over WebSocket, so the client has to send
+  and receive protobuf frames.

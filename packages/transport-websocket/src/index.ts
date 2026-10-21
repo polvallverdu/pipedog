@@ -5,6 +5,7 @@
 
 export * from "./client.ts";
 export * from "./fastapi.ts";
+export * from "./fetch.ts";
 export * from "./hono.ts";
 export * from "./rtvi_client.ts";
 export * from "./serve.ts";

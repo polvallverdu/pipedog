@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Chromium for the browser tests
-        if: startsWith(matrix.package, 'examples/')
+        if: matrix.package == 'examples/smallwebrtc-voice-bot'
         working-directory: ${{ matrix.package }}
         run: bunx playwright-core install --with-deps chromium
       - run: bun test ${{ matrix.package }}
