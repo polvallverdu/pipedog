@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "upstream": "bun tools/upstream.ts",
-    "typecheck": "tsc -b packages/*/tsconfig.json",
+    "typecheck": "tsc -b packages/*/tsconfig.json examples/*/tsconfig.json",
     "test": "bun test",
     "lint": "biome check . && bun tools/port/check-headers.ts",
     "format": "biome format --write .",

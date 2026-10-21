@@ -36,7 +36,7 @@ jobs:
         name: Packages with tests
         run: |
           dirs=()
-          for dir in packages/*/; do
+          for dir in packages/*/ examples/*/; do
             if find "${dir}test" -name '*.test.ts' 2>/dev/null | grep -q .; then
               dirs+=("${dir%/}")
             fi
@@ -54,6 +54,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      - name: Chromium for the browser tests
+        if: startsWith(matrix.package, 'examples/')
+        working-directory: ${{ matrix.package }}
+        run: bunx playwright-core install --with-deps chromium
       - run: bun test ${{ matrix.package }}
 
   compat:
