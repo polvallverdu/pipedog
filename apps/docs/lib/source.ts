@@ -21,9 +21,13 @@ export function pageUrls(page: { url: string }) {
 
 /** Point the site-relative links in Markdown at the absolute Markdown versions of the pages. */
 function absoluteLinks(markdown: string): string {
-  return markdown.replace(/\]\((\/docs(?:\/[^)#\s]*)?)(#[^)\s]*)?\)/g, (_, path: string, hash) =>
-    hash ? `](${siteUrl}${path.replace(/\/$/, "")}/${hash})` : `](${siteUrl}${markdownPath(path)})`,
-  );
+  return markdown
+    .replace(/\]\((\/llms(?:-full)?\.txt)\)/g, (_, path: string) => `](${siteUrl}${path})`)
+    .replace(/\]\((\/docs(?:\/[^)#\s]*)?)(#[^)\s]*)?\)/g, (_, path: string, hash) =>
+      hash
+        ? `](${siteUrl}${path.replace(/\/$/, "")}/${hash})`
+        : `](${siteUrl}${markdownPath(path)})`,
+    );
 }
 
 function decodeEntities(text: string): string {
