@@ -199,6 +199,7 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 | Example | What |
 | --- | --- |
 | [`smallwebrtc-voice-bot`](examples/smallwebrtc-voice-bot) | Voice assistant in the browser over SmallWebRTC, with OpenAI or Google Gemini services. Tested end to end in headless Chromium. |
+| [`websocket-voice-bot`](examples/websocket-voice-bot) | The same voice assistant over a WebSocket with protobuf frames, the format `@pipecat-ai/websocket-transport` speaks. Tested end to end in headless Chromium. |
 | [`workers-durable-voice-agent`](examples/workers-durable-voice-agent) | Parallel voice agents on Cloudflare Workers, one Durable Object per session, over WebSocket. |
 | [`framework-snippets`](examples/framework-snippets) | The same voice endpoints mounted in Bun, Deno, Elysia, Express, Hono, Next.js, Nuxt, SvelteKit and Vercel. |
 | [`test-mocks`](examples/test-mocks) | Mock OpenAI and Gemini APIs and a recorded question, used by the examples' tests. |
@@ -208,6 +209,7 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 - [Getting started](https://polvallverdu.github.io/pipedog/docs/) and
   [installation](https://polvallverdu.github.io/pipedog/docs/installation/)
 - [Voice bot over SmallWebRTC](https://polvallverdu.github.io/pipedog/docs/voice-bot/)
+- [Examples](https://polvallverdu.github.io/pipedog/docs/examples/): every runnable example and its run command
 - [Turn detection](https://polvallverdu.github.io/pipedog/docs/turn-detection/): local models, VAD
   only, or on the provider's side
 - [Voice agents on Workers and Durable Objects](https://polvallverdu.github.io/pipedog/docs/workers/)

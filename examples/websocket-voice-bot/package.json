@@ -1,0 +1,32 @@
+{
+  "name": "@pipedog/example-websocket-voice-bot",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Voice assistant over WebSocket with protobuf frames: OpenAI speech-to-text, chat and text-to-speech.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "scripts": {
+    "start": "bun src/server.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/audio-silero": "workspace:*",
+    "@pipedog/audio-smart-turn": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/google": "workspace:*",
+    "@pipedog/openai": "workspace:*",
+    "@pipedog/serializer-protobuf": "workspace:*",
+    "@pipedog/tracing": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@opentelemetry/api": "1.9.1",
+    "@pipecat-ai/client-js": "1.13.1",
+    "@pipecat-ai/websocket-transport": "1.7.2",
+    "@pipedog/example-test-mocks": "workspace:*",
+    "@types/ws": "8.18.2",
+    "playwright-core": "1.63.0"
+  }
+}

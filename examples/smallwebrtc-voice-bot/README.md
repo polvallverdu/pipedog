@@ -5,6 +5,11 @@ model writes a reply, and a speech synthesis service speaks it back. The service
 (default) or Google Gemini's. It mirrors Pipecat's
 `examples/transports/transports-small-webrtc.py`, with OpenAI in place of Deepgram and Cartesia.
 
+[`websocket-voice-bot`](../websocket-voice-bot) is the same bot over a plain WebSocket. Its README
+says when to pick which: WebRTC copes better with lossy networks and gives browser users lower
+latency, echo cancellation and Opus; a WebSocket needs no ICE or TURN, goes through proxies, runs
+on Cloudflare Workers, and suits server-to-server audio and phone bridges.
+
 ```text
 browser mic ──► SmallWebRTC ──► Silero VAD + Smart Turn ──► OpenAI transcription
                                                                   │
