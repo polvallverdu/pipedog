@@ -40,6 +40,7 @@ import {
   type OnnxBackend,
   type OnnxModelSource,
   type OnnxSession,
+  sharedSession,
 } from "@pipedog/onnx";
 
 // Model state resets.
@@ -89,6 +90,13 @@ export interface SileroOnnxModelOptions {
   forceOnnxCpu?: boolean;
   /** The ONNX backend (default: `createOnnxBackend()`). */
   backend?: OnnxBackend | Promise<OnnxBackend>;
+  /**
+   * Share one inference session with every other model for the same backend,
+   * model and options (default `true`). The model's state lives in this
+   * object, not the session, so sharing is safe; it loads the model once
+   * instead of once per call.
+   */
+  shareSession?: boolean;
 }
 
 /**
@@ -109,6 +117,8 @@ export class SileroOnnxModel {
   protected _contextSize = 0;
   protected _lastSr = 0;
   protected _lastBatchSize = 0;
+  /** Whether this model owns its session (`shareSession: false`), so dispose releases it. */
+  protected _ownsSession: boolean;
 
   /**
    * Initialize the Silero ONNX model.
@@ -120,12 +130,18 @@ export class SileroOnnxModel {
   constructor(path: OnnxModelSource, options: SileroOnnxModelOptions = {}) {
     const forceOnnxCpu = options.forceOnnxCpu ?? true;
     const backend = options.backend ?? createOnnxBackend();
+    const sessionOptions = {
+      forceCpu: forceOnnxCpu,
+      interOpNumThreads: 1,
+      intraOpNumThreads: 1,
+    };
+    // DIVERGENCE: upstream loads a session per model; sessions are shared here
+    // by default, since a bot builds one VAD per call.
+    this._ownsSession = options.shareSession === false;
     this.session = Promise.resolve(backend).then((b) =>
-      b.createSession(path, {
-        forceCpu: forceOnnxCpu,
-        interOpNumThreads: 1,
-        intraOpNumThreads: 1,
-      }),
+      this._ownsSession
+        ? b.createSession(path, sessionOptions)
+        : sharedSession(b, path, sessionOptions),
     );
     // Errors surface on first use; don't report an unhandled rejection now.
     this.session.catch(() => {});
@@ -249,10 +265,10 @@ export class SileroOnnxModel {
     return out;
   }
 
-  /** Release the ONNX session. */
+  /** Release the ONNX session, if this model owns it (a shared one stays loaded). */
   async dispose(): Promise<void> {
     const session = await this.session.catch(() => null);
-    await session?.dispose();
+    if (this._ownsSession) await session?.dispose();
   }
 }
 
@@ -270,6 +286,8 @@ export interface SileroVADAnalyzerOptions extends VADAnalyzerOptions {
   model?: OnnxModelSource;
   /** The ONNX backend (default: `createOnnxBackend()`). */
   backend?: OnnxBackend | Promise<OnnxBackend>;
+  /** Share the inference session across analyzers (default `true`); see `SileroOnnxModelOptions`. */
+  shareSession?: boolean;
 }
 
 /**
@@ -315,6 +333,7 @@ export class SileroVADAnalyzer extends VADAnalyzer {
     const model = new SileroOnnxModel(modelFilePath, {
       forceOnnxCpu: true,
       backend: options.backend,
+      shareSession: options.shareSession,
     });
     this._model = model;
     this._modelLoaded = model.session.then(() => logger.debug("Loaded Silero VAD"));

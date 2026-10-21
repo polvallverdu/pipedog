@@ -17,8 +17,8 @@ This page explains the pattern.
 ```text
 client ──WebSocket──► Worker ──getByName(id)──► VoiceSession (Durable Object)
                                                    │ FastAPIWebsocketTransport
-                                                   │ Silero VAD, Smart Turn
-                                                   │ speech, chat, speech synthesis
+                                                   │ OpenAI realtime transcription (turns)
+                                                   │ chat, speech synthesis
 ```
 
 - The **Worker** routes each session to a Durable Object by name. The same name always reaches the
@@ -60,22 +60,24 @@ export default {
 } satisfies ExportedHandler<Env>;
 ```
 
-## Models and bundling
+## Turn detection
 
-Silero VAD and Smart Turn run ONNX models. A Worker can't read model files from disk, so the models
-are bundled with the Worker. A `Data` rule in `wrangler.jsonc` turns each `.onnx` import into its
-bytes, and the analyzers take those bytes:
+The agent detects turns on the provider's side: `OpenAIRealtimeSTTService` with server VAD, and no
+VAD analyzer. So the Worker loads no local models and no ONNX runtime. That matters here:
 
-```ts
-import sileroModel from "./silero_vad.onnx";
+| Turn detection | Worker size (gzipped) |
+| --- | --- |
+| Provider (this example) | 818 KB |
+| Silero VAD and Smart Turn, bundled | 13.7 MB |
 
-const vad = new SileroVADAnalyzer({ model: sileroModel });
-```
+Cloudflare limits a Worker to 10 MB compressed on paid plans and 3 MB on the free plan, so the local
+models don't fit. They also load about 100 MB of runtime and models, close to a Durable Object's
+128 MB memory limit. See [Turn detection](/docs/turn-detection) for the modes.
 
 ## Fetch handlers
 
-Every HTTP entry point in pipedog is a fetch handler: a function from a `Request` to a `Response`.
-That makes pipedog usable from any framework that routes requests this way.
+pipedog's voice endpoints are fetch handlers: functions from a `Request` to a `Response`. That makes
+them usable from any framework that routes requests this way.
 
 - **WebSocket endpoints.** `websocketFetchHandler` works where the runtime upgrades a request from
   fetch: Cloudflare Workers and Durable Objects, and Deno. Bun and Node upgrade on their own server
@@ -128,7 +130,7 @@ bun run deploy
 - **Duration.** A Durable Object is billed while it runs. A connected session keeps it running, so
   idle sessions cost time. Hibernation, where the object sleeps between messages, would save that, but
   the agent's timers would need to survive a sleep, and this example doesn't do that.
-- **CPU.** Speech models take CPU time. Check the limits for your plan, and measure the VAD and turn
-  detection under real load.
+- **CPU.** Each session still decodes, resamples and serializes audio. Check the CPU limits for your
+  plan under real load.
 - **Transport.** WebRTC isn't available here. Audio goes over WebSocket, so the client has to send
   and receive protobuf frames.

@@ -14,6 +14,8 @@ export interface Env {
   OPENAI_API_KEY: string;
   /** Optional: an OpenAI-compatible API base URL. */
   OPENAI_BASE_URL?: string;
+  /** Optional: the realtime transcription WebSocket URL. */
+  OPENAI_REALTIME_URL?: string;
 }
 
 const SESSION_PATH = /^\/api\/session\/([A-Za-z0-9_-]{1,64})$/;

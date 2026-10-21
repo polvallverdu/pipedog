@@ -5,7 +5,6 @@
 // speech synthesis, speech out.
 
 import { SileroVADAnalyzer } from "@pipedog/audio-silero";
-import { createLocalSmartTurnAnalyzerV3 } from "@pipedog/audio-smart-turn";
 import { LLMRunFrame } from "@pipedog/core/frames/frames";
 import { Pipeline } from "@pipedog/core/pipeline/pipeline";
 import { PipelineParams, PipelineWorker } from "@pipedog/core/pipeline/worker";
@@ -15,8 +14,6 @@ import {
   LLMUserAggregatorParams,
 } from "@pipedog/core/processors/aggregators/llm_response_universal";
 import type { BaseTransport } from "@pipedog/core/transports/base_transport";
-import { TurnAnalyzerUserTurnStopStrategy } from "@pipedog/core/turns/user_stop/turn_analyzer_user_turn_stop_strategy";
-import { UserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
 import { WorkerRunner } from "@pipedog/core/workers/runner";
 import { OpenAILLMSettings } from "@pipedog/openai/base_llm";
 import { OpenAILLMService } from "@pipedog/openai/llm";
@@ -33,15 +30,10 @@ const OUTPUT_SAMPLE_RATE = 24000;
 /** Runs one voice agent on `transport`, until the client disconnects. Reads OPENAI_API_KEY. */
 export async function runAgent(transport: BaseTransport): Promise<void> {
   const context = new LLMContext();
+  // Silero detects speech; the default turn strategies end the turn with Smart
+  // Turn (from @pipedog/audio-smart-turn).
   const aggregators = new LLMContextAggregatorPair(context, {
-    userParams: new LLMUserAggregatorParams({
-      vadAnalyzer: new SileroVADAnalyzer(),
-      userTurnStrategies: new UserTurnStrategies({
-        stop: [
-          new TurnAnalyzerUserTurnStopStrategy({ turnAnalyzer: createLocalSmartTurnAnalyzerV3() }),
-        ],
-      }),
-    }),
+    userParams: new LLMUserAggregatorParams({ vadAnalyzer: new SileroVADAnalyzer() }),
   });
 
   const pipeline = new Pipeline([

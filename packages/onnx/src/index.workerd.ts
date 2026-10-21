@@ -15,6 +15,7 @@ import { createWorkerdBackend, type WorkerdBackendOptions } from "./workerd.ts";
 export * from "./backend.ts";
 export * from "./model.ts";
 export type { NativeBackendOptions } from "./native.ts";
+export * from "./shared.ts";
 export { configureWebEnv, type WebBackendOptions } from "./web.ts";
 export { createWorkerdBackend, type WorkerdBackendOptions } from "./workerd.ts";
 

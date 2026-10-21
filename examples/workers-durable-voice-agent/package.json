@@ -13,8 +13,6 @@
   },
   "dependencies": {
     "@pipedog/asyncio": "workspace:*",
-    "@pipedog/audio-silero": "workspace:*",
-    "@pipedog/audio-smart-turn": "workspace:*",
     "@pipedog/core": "workspace:*",
     "@pipedog/openai": "workspace:*",
     "@pipedog/serializer-protobuf": "workspace:*",

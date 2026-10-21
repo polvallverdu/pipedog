@@ -2,26 +2,22 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // One voice agent over a WebSocket: audio in as protobuf frames, OpenAI
-// transcription, chat and speech synthesis, audio out. The same pipeline as the
-// SmallWebRTC example, on the WebSocket transport. The VAD and turn models are
-// bundled with the Worker, since a Worker can't read model files from disk.
+// realtime transcription, chat and speech synthesis, audio out.
+//
+// Turn detection runs on OpenAI's side (server VAD), so the Worker loads no
+// local models: no Silero VAD, no Smart Turn, no ONNX runtime. That keeps the
+// Worker small enough to deploy and light on memory; see the README for the
+// numbers, and for running the local models elsewhere.
 
-import { SileroVADAnalyzer } from "@pipedog/audio-silero";
-import { createLocalSmartTurnAnalyzerV3 } from "@pipedog/audio-smart-turn";
 import { LLMRunFrame } from "@pipedog/core/frames/frames";
 import { Pipeline } from "@pipedog/core/pipeline/pipeline";
 import { PipelineParams, PipelineWorker } from "@pipedog/core/pipeline/worker";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
-import {
-  LLMContextAggregatorPair,
-  LLMUserAggregatorParams,
-} from "@pipedog/core/processors/aggregators/llm_response_universal";
-import { TurnAnalyzerUserTurnStopStrategy } from "@pipedog/core/turns/user_stop/turn_analyzer_user_turn_stop_strategy";
-import { UserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
+import { LLMContextAggregatorPair } from "@pipedog/core/processors/aggregators/llm_response_universal";
 import { WorkerRunner } from "@pipedog/core/workers/runner";
 import { OpenAILLMSettings } from "@pipedog/openai/base_llm";
 import { OpenAILLMService } from "@pipedog/openai/llm";
-import { OpenAISTTService } from "@pipedog/openai/stt";
+import { OpenAIRealtimeSTTService } from "@pipedog/openai/stt";
 import { OpenAITTSService } from "@pipedog/openai/tts";
 import { ProtobufFrameSerializer } from "@pipedog/serializer-protobuf/protobuf";
 import {
@@ -29,14 +25,12 @@ import {
   FastAPIWebsocketTransport,
 } from "@pipedog/transport-websocket/fastapi";
 import type { WebsocketConnection } from "@pipedog/transport-websocket/socket";
-import sileroModel from "../node_modules/@pipedog/audio-silero/data/silero_vad.onnx";
-import smartTurnModel from "../node_modules/@pipedog/audio-smart-turn/data/smart-turn-v3.2-cpu.onnx";
 import type { Env } from "./worker.ts";
 
 export const SYSTEM_INSTRUCTION =
   "You are a helpful assistant in a voice conversation. Your responses will be spoken aloud, so avoid emojis, bullet points, or other formatting that can't be spoken. Respond to what the user said in a creative, helpful, and brief way.";
 
-/** The browser or client sends 16 kHz audio; OpenAI's speech returns 24 kHz. */
+/** The client sends 16 kHz audio; OpenAI's speech returns 24 kHz. */
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -54,23 +48,20 @@ export async function runVoiceAgent(connection: WebsocketConnection, env: Env): 
     }),
   );
 
-  const context = new LLMContext();
-  const aggregators = new LLMContextAggregatorPair(context, {
-    userParams: new LLMUserAggregatorParams({
-      vadAnalyzer: new SileroVADAnalyzer({ model: sileroModel }),
-      userTurnStrategies: new UserTurnStrategies({
-        stop: [
-          new TurnAnalyzerUserTurnStopStrategy({
-            turnAnalyzer: createLocalSmartTurnAnalyzerV3({ model: smartTurnModel }),
-          }),
-        ],
-      }),
-    }),
+  // OpenAI detects when the user starts and stops speaking. With no VAD
+  // analyzer, the user aggregator follows the service's turn signals.
+  const stt = new OpenAIRealtimeSTTService({
+    apiKey,
+    baseUrl: env.OPENAI_REALTIME_URL,
+    turnDetection: { type: "server_vad" },
   });
+
+  const context = new LLMContext();
+  const aggregators = new LLMContextAggregatorPair(context);
 
   const pipeline = new Pipeline([
     transport.input(),
-    new OpenAISTTService({ apiKey, baseUrl }),
+    stt,
     aggregators.user(),
     new OpenAILLMService({
       apiKey,
