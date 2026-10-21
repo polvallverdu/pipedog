@@ -13,3 +13,6 @@ packages/mcp/snapshot/
 .source/
 next-env.d.ts
 .claude/worktrees/
+
+# The runner vendors the prebuilt client; it must ship (see tools/runner/sync-prebuilt.ts).
+!packages/runner/prebuilt/dist/
