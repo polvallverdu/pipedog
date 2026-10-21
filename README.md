@@ -186,6 +186,12 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/serializer-protobuf`](packages/serializer-protobuf) | `ProtobufFrameSerializer`, wire-compatible with Pipecat's `frames.proto`. |
 | [`@pipedog/serializer-rtvi-client`](packages/serializer-rtvi-client) | `RTVIClientSerializer`: a pipeline acting as an RTVI client of another bot. |
 | [`@pipedog/serializer-telnyx`](packages/serializer-telnyx) | `TelnyxFrameSerializer` for Telnyx WebSocket media streams. |
+| [`@pipedog/serializer-twilio`](packages/serializer-twilio) | `TwilioFrameSerializer` for Twilio Media Streams, with hang-up through Twilio's REST API. |
+| [`@pipedog/serializer-plivo`](packages/serializer-plivo) | `PlivoFrameSerializer` for Plivo audio streaming. |
+| [`@pipedog/serializer-exotel`](packages/serializer-exotel) | `ExotelFrameSerializer` for Exotel's Voicebot media streams. |
+| [`@pipedog/serializer-vonage`](packages/serializer-vonage) | `VonageFrameSerializer` for the Vonage Audio Connector. |
+| [`@pipedog/serializer-genesys`](packages/serializer-genesys) | `GenesysAudioHookSerializer` for Genesys Cloud AudioHook. |
+| [`@pipedog/runner`](packages/runner) | Pipecat's runner, partially: the telephony helpers (`parseTelephonyWebsocket`, `CallData`) that detect the provider and parse a call's handshake. |
 | [`@pipedog/audio-silero`](packages/audio-silero) | Silero VAD (`SileroVADAnalyzer`), with the upstream model included. |
 | [`@pipedog/audio-smart-turn`](packages/audio-smart-turn) | Local Smart Turn v3 end-of-turn detection, with the upstream model included. |
 | [`@pipedog/onnx`](packages/onnx) | Small ONNX inference backend: `onnxruntime-node` when installed, else `onnxruntime-web`, with a Workers variant. |
@@ -205,6 +211,7 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 | --- | --- |
 | [`smallwebrtc-voice-bot`](examples/smallwebrtc-voice-bot) | Voice assistant in the browser over SmallWebRTC, with OpenAI or Google Gemini services. Tested end to end in headless Chromium. |
 | [`websocket-voice-bot`](examples/websocket-voice-bot) | The same voice assistant over a WebSocket with protobuf frames, the format `@pipecat-ai/websocket-transport` speaks. Tested end to end in headless Chromium. |
+| [`twilio-phone-bot`](examples/twilio-phone-bot) | A phone bot on Twilio Media Streams, the TwiML webhook and the media WebSocket as one fetch handler (Deno, Workers). Tested with a scripted fake Twilio, in process and on Deno. |
 | [`workers-durable-voice-agent`](examples/workers-durable-voice-agent) | Parallel voice agents on Cloudflare Workers, one Durable Object per session, over WebSocket. |
 | [`framework-snippets`](examples/framework-snippets) | The same voice endpoints mounted in Bun, Deno, Elysia, Express, Hono, Next.js, Nuxt, SvelteKit and Vercel. |
 | [`test-mocks`](examples/test-mocks) | Mock OpenAI and Gemini APIs and a recorded question, used by the examples' tests. |

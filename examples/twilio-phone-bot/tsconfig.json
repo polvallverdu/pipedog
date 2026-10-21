@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["bun"]
+  },
+  "include": ["src", "test"],
+  "references": [
+    { "path": "../../packages/asyncio" },
+    { "path": "../../packages/core" },
+    { "path": "../../packages/openai" },
+    { "path": "../../packages/runner" },
+    { "path": "../../packages/serializer-twilio" },
+    { "path": "../../packages/transport-websocket" },
+    { "path": "../test-mocks" }
+  ]
+}

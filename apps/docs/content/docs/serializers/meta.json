@@ -5,11 +5,10 @@
     "protobuf",
     "rtvi-client",
     "telnyx",
-    "---Coming soon---",
-    "exotel",
-    "genesys",
-    "plivo",
     "twilio",
-    "vonage"
+    "plivo",
+    "exotel",
+    "vonage",
+    "genesys"
   ]
 }

@@ -1,0 +1,1924 @@
+{
+  "sessions": [
+    {
+      "label": "full session",
+      "params": {
+        "channel": "external",
+        "supported_languages": ["en-US", "es-ES"],
+        "selected_language": "en-US",
+        "start_paused": false
+      },
+      "steps": [
+        {
+          "in_audio": "00020406080a0c0e10121416181a1c1e20222426282a2c2e30323436383a3c3e40424446484a4c4e50525456585a5c5e60626466686a6c6e70727476787a7c7e80828486888a8c8e90929496989a9c9ea0a2a4a6a8aaacaeb0b2b4b6b8babcbec0c2c4c6c8caccced0d2d4d6d8dadcdee0e2e4e6e8eaeceef0f2f4f6f8fafcfe01030507090b0d0f11131517191b1d1f21232527292b2d2f31333537393b3d3f41434547494b4d4f51535557595b5d5f61636567696b6d6f71737577797b7d7f81838587898b8d8f91939597999b9d9fa1a3a5a7a9abadafb1b3b5b7b9bbbdbfc1c3c5c7c9cbcdcfd1d3d5d7d9dbdddfe1e3e5e7e9ebedeff1f3f5f7f9fbfdff",
+          "frame": null,
+          "state": {
+            "session_id": "d83f0b77-0ee8-47b7-b01c-5484758d822a",
+            "conversation_id": null,
+            "is_open": false,
+            "is_paused": false,
+            "participant": null,
+            "input_variables": null,
+            "channel": "external"
+          }
+        },
+        {
+          "out_audio": "00006d1b9824bf1873062900920b851c1120c20dcaefa6daa3dbb3ed67fe9bfef5ef34e3e0e8f701591e5f2aac1f500ac5fd8d03f3123119bf0a41ee63d701d69ce8fafd9104eff97dec20ee97038a1fba2d7224d30c98fab8fa3d0843118f07f1ed76d6e9d260e584fe0e0b9404a5f6dbf38f04c31e6a2edd26f20de8f6a0f110fdd908910410ef09d882d212e4d9ff9c113a0f030196f9a204e81b5b2cdf26c70d0df3e0e81ff287001b02b7f11bdcc6d49de4ba01b9173319ed0ae3fea9030617a9279824830c6def13e117e8d9f86a00dff57ee283d9cde6d603e51cda21ca13630399014f109e204c20710a71ecc9da98df45f2a7ff5efbdbea5ee04fead405a9209d28141bd20686fe1e08a917601ae90779ea7ed623d926edddffe801b5f4d9e8bdee5c07a2220a2d682008099ffae9fe5c0d52134805d9e98ed416d5b6e9f800180976ff5df2a7f31e088822d42e8723fe0930f641f55e02ad0bea02cbea2ed5a5d30be8cc027310710a49fc9bf8dd073920dc2d5d24cb0997f1c7eb5ff7fd031d016ced68d8d7d417e815057017f614f80530fd7306b91b312afd22a10840ed1be310edc9fc1d00b7f119de85d8ace97f07871d591ed00e0c01d90335150f24a21fc70699e9d7db12e484f60c0083f7f2e55fde7decaf09362202264a16f0032300020ddd1ba71a94040ce781d6eddc88f1ef0084fe7feff4e52ef04b0b1125722b001cb80588fb9703221280146102f2e581d309d811eeb10250062cfab8ee53f4000cc825522eac1f5d0657f685f97f07ae0d87008be618d3a4d536ec1f05690e4f050ef883f8920b2c24762e3221f805f4f06defa2fcb70650fffae85dd5cfd5eeebf2074016361058015afcda093920df2b9e20bc04d1ebf9e539f21a00f4fe3ded38da71d80dedd10a441d321afe0985ffd206151abd26211ef00266e7cadde9e848fa90ff2df366e145dd50ef5c0deb22a2227b11c90190020f126b1f0c1ae80023e46fd73de198f5260180fa79eae6e35df2360fbd26ff28641705034ffd9a086716c814fdfe68e25bd3a5db45f29a03cc02e4f4d1ebd2f50b105f28e82c721b370361f746fe490ccf0e86fd7ee2ddd168d866f0b7068c0b000074f449f99a0f9827232e821d7a0231f1b7f3ba019f08c9fc8ee418d3a1d7f5ef2e0a2f141c0b34fd66fcbb0d5b24a52c981d030138eb99e966f7b102fbfc9ce801d743d9caf0a30d1a1c87158005dafe680ac31e9128dd1b18fff4e595e0f1ed70fd37fe85ee5edd15dda4f2b010bb229a1ed30c7000b805171736229a1810fddfe143d9ebe52ef97b0002f6cee5bce22ff5f3128f27c825c3120c01e6ffc70d071a2f1444fb62df21d4c7df26f6a603a8fecaefc0e90ef81214312aa32a0617b00049f95e0393100c0f08facede8ad1d4db6ef47d07f207b1fa97f1e1faca135c2ae82c751979ff52f281f87b06a909a3f954e0aed138da00f4ad0b4811d405b0f94ffdef11f7277f2c0e1a9ffd80ebdeed69fc780448fa00e48ed4efdab5f4d20f0c1a81107c0111ff780e13237f29f4186cfb59e523e4fef2ddff10fcb6e9fed9cadd51f68313a1210e1a7d08f4ff7c09ee1b2924671639f95ee0f1dbcbea27fcf4fe30f1a7e179e281f854167b27e721490ee3ff3703f012e51cc0125ff703ddcfd547e48df9d00208fa0aeb90e8ebfae917292b98279412e3fe03fca1083914690e35f6a3db24d2c7df23f86507b7038ff58def34fdf5175b2cd22a351516fd53f4a2fdbf0ad00902f679dc2cd178dde2f7590ca30d8a00e8f608ff",
+          "out": null,
+          "state": {
+            "session_id": "d83f0b77-0ee8-47b7-b01c-5484758d822a",
+            "conversation_id": null,
+            "is_open": false,
+            "is_paused": false,
+            "participant": null,
+            "input_variables": null,
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"open\", \"seq\": 1, \"serverseq\": 0, \"id\": \"e160e428-53e2-487c-977d-96989bf5c99d\", \"position\": \"PT0S\", \"parameters\": {\"organizationId\": \"org\", \"conversationId\": \"conv-456\", \"participant\": {\"id\": \"p1\", \"ani\": \"+1234567890\", \"dnis\": \"+0987654321\"}, \"media\": [{\"type\": \"audio\", \"format\": \"PCMU\", \"channels\": [\"external\"], \"rate\": 8000}], \"language\": \"en-US\", \"inputVariables\": {\"customer_id\": \"cust-789\", \"queue\": \"billing\"}}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "opened",
+              "seq": 1,
+              "clientseq": 1,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "parameters": {
+                "startPaused": false,
+                "media": [
+                  {
+                    "type": "audio",
+                    "format": "PCMU",
+                    "channels": ["external"],
+                    "rate": 8000
+                  }
+                ],
+                "supportedLanguages": ["en-US", "es-ES"],
+                "selectedLanguage": "en-US"
+              }
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in_audio": "00020406080a0c0e10121416181a1c1e20222426282a2c2e30323436383a3c3e40424446484a4c4e50525456585a5c5e60626466686a6c6e70727476787a7c7e80828486888a8c8e90929496989a9c9ea0a2a4a6a8aaacaeb0b2b4b6b8babcbec0c2c4c6c8caccced0d2d4d6d8dadcdee0e2e4e6e8eaeceef0f2f4f6f8fafcfe01030507090b0d0f11131517191b1d1f21232527292b2d2f31333537393b3d3f41434547494b4d4f51535557595b5d5f61636567696b6d6f71737577797b7d7f81838587898b8d8f91939597999b9d9fa1a3a5a7a9abadafb1b3b5b7b9bbbdbfc1c3c5c7c9cbcdcfd1d3d5d7d9dbdddfe1e3e5e7e9ebedeff1f3f5f7f9fbfdff",
+          "frame": {
+            "type": "InputAudioRawFrame",
+            "hex": "8482848a8492849a84a284aa84b284ba84c184c584c984cd84d184d584d984dd04e104e304e504e704e904eb04ed04efc4f0c4f1c4f2c4f3c4f4c4f5c4f6c4f7a4f824f9a4f924faa4fa24fba4fb24fc94fcd4fc14fd54fd94fdd4fd14fe54fe8cfeacfeccfeecfe0cff2cff4cff6cff88ff98ffa8ffb8ffc8ffd8ffe8fff8ff7c7d7c757c6d7c657c5d7c557c4d7c457c3e7c3a7c367c327c2e7c2a7c267c22fc1efc1cfc1afc18fc16fc14fc12fc103c0f3c0e3c0d3c0c3c0b3c0a3c093c085c07dc065c06dc055c05dc045c04dc036c032c03ec02ac026c022c02ec01ac017401540134011401f400d400b4009400780068005800480038002800180008008486848e8496849e84a684ae84b684be84c384c784cb84cf84d384d784db84df04e204e404e604e804ea04ec04ee04f044f144f244f344f444f544f644f744f8e4f864f9e4f964fae4fa64fbe4fb64fcb4fcf4fc34fd74fdb4fdf4fd34fe74fe9cfebcfedcfefcfe1cff3cff5cff7cff90ffa0ffb0ffc0ffd0ffe0fff0ff00007c797c717c697c617c597c517c497c417c3c7c387c347c307c2c7c287c247c20fc1dfc1bfc19fc17fc15fc13fc11fc0fbc0ebc0dbc0cbc0bbc0abc09bc08bc071c079c061c069c051c059c041c049c034c030c03cc028c024c020c02cc018c016401440124010401e400c400a400840070006000500040003000200010000000",
+            "sample_rate": 8000
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in_audio": "00020406080a0c0e10121416181a1c1e20222426282a2c2e30323436383a3c3e40424446484a4c4e50525456585a5c5e60626466686a6c6e70727476787a7c7e80828486888a8c8e90929496989a9c9ea0a2a4a6a8aaacaeb0b2b4b6b8babcbec0c2c4c6c8caccced0d2d4d6d8dadcdee0e2e4e6e8eaeceef0f2f4f6f8fafcfe01030507090b0d0f11131517191b1d1f21232527292b2d2f31333537393b3d3f41434547494b4d4f51535557595b5d5f61636567696b6d6f71737577797b7d7f81838587898b8d8f91939597999b9d9fa1a3a5a7a9abadafb1b3b5b7b9bbbdbfc1c3c5c7c9cbcdcfd1d3d5d7d9dbdddfe1e3e5e7e9ebedeff1f3f5f7f9fbfdff",
+          "frame": {
+            "type": "InputAudioRawFrame",
+            "hex": "8482848a8492849a84a284aa84b284ba84c184c584c984cd84d184d584d984dd04e104e304e504e704e904eb04ed04efc4f0c4f1c4f2c4f3c4f4c4f5c4f6c4f7a4f824f9a4f924faa4fa24fba4fb24fc94fcd4fc14fd54fd94fdd4fd14fe54fe8cfeacfeccfeecfe0cff2cff4cff6cff88ff98ffa8ffb8ffc8ffd8ffe8fff8ff7c7d7c757c6d7c657c5d7c557c4d7c457c3e7c3a7c367c327c2e7c2a7c267c22fc1efc1cfc1afc18fc16fc14fc12fc103c0f3c0e3c0d3c0c3c0b3c0a3c093c085c07dc065c06dc055c05dc045c04dc036c032c03ec02ac026c022c02ec01ac017401540134011401f400d400b4009400780068005800480038002800180008008486848e8496849e84a684ae84b684be84c384c784cb84cf84d384d784db84df04e204e404e604e804ea04ec04ee04f044f144f244f344f444f544f644f744f8e4f864f9e4f964fae4fa64fbe4fb64fcb4fcf4fc34fd74fdb4fdf4fd34fe74fe9cfebcfedcfefcfe1cff3cff5cff7cff90ffa0ffb0ffc0ffd0ffe0fff0ff00007c797c717c697c617c597c517c497c417c3c7c387c347c307c2c7c287c247c20fc1dfc1bfc19fc17fc15fc13fc11fc0fbc0ebc0dbc0cbc0bbc0abc09bc08bc071c079c061c069c051c059c041c049c034c030c03cc028c024c020c02cc018c016401440124010401e400c400a400840070006000500040003000200010000000",
+            "sample_rate": 8000
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_audio": "00006d1b9824bf1873062900920b851c1120c20dcaefa6daa3dbb3ed67fe9bfef5ef34e3e0e8f701591e5f2aac1f500ac5fd8d03f3123119bf0a41ee63d701d69ce8fafd9104eff97dec20ee97038a1fba2d7224d30c98fab8fa3d0843118f07f1ed76d6e9d260e584fe0e0b9404a5f6dbf38f04c31e6a2edd26f20de8f6a0f110fdd908910410ef09d882d212e4d9ff9c113a0f030196f9a204e81b5b2cdf26c70d0df3e0e81ff287001b02b7f11bdcc6d49de4ba01b9173319ed0ae3fea9030617a9279824830c6def13e117e8d9f86a00dff57ee283d9cde6d603e51cda21ca13630399014f109e204c20710a71ecc9da98df45f2a7ff5efbdbea5ee04fead405a9209d28141bd20686fe1e08a917601ae90779ea7ed623d926edddffe801b5f4d9e8bdee5c07a2220a2d682008099ffae9fe5c0d52134805d9e98ed416d5b6e9f800180976ff5df2a7f31e088822d42e8723fe0930f641f55e02ad0bea02cbea2ed5a5d30be8cc027310710a49fc9bf8dd073920dc2d5d24cb0997f1c7eb5ff7fd031d016ced68d8d7d417e815057017f614f80530fd7306b91b312afd22a10840ed1be310edc9fc1d00b7f119de85d8ace97f07871d591ed00e0c01d90335150f24a21fc70699e9d7db12e484f60c0083f7f2e55fde7decaf09362202264a16f0032300020ddd1ba71a94040ce781d6eddc88f1ef0084fe7feff4e52ef04b0b1125722b001cb80588fb9703221280146102f2e581d309d811eeb10250062cfab8ee53f4000cc825522eac1f5d0657f685f97f07ae0d87008be618d3a4d536ec1f05690e4f050ef883f8920b2c24762e3221f805f4f06defa2fcb70650fffae85dd5cfd5eeebf2074016361058015afcda093920df2b9e20bc04d1ebf9e539f21a00f4fe3ded38da71d80dedd10a441d321afe0985ffd206151abd26211ef00266e7cadde9e848fa90ff2df366e145dd50ef5c0deb22a2227b11c90190020f126b1f0c1ae80023e46fd73de198f5260180fa79eae6e35df2360fbd26ff28641705034ffd9a086716c814fdfe68e25bd3a5db45f29a03cc02e4f4d1ebd2f50b105f28e82c721b370361f746fe490ccf0e86fd7ee2ddd168d866f0b7068c0b000074f449f99a0f9827232e821d7a0231f1b7f3ba019f08c9fc8ee418d3a1d7f5ef2e0a2f141c0b34fd66fcbb0d5b24a52c981d030138eb99e966f7b102fbfc9ce801d743d9caf0a30d1a1c87158005dafe680ac31e9128dd1b18fff4e595e0f1ed70fd37fe85ee5edd15dda4f2b010bb229a1ed30c7000b805171736229a1810fddfe143d9ebe52ef97b0002f6cee5bce22ff5f3128f27c825c3120c01e6ffc70d071a2f1444fb62df21d4c7df26f6a603a8fecaefc0e90ef81214312aa32a0617b00049f95e0393100c0f08facede8ad1d4db6ef47d07f207b1fa97f1e1faca135c2ae82c751979ff52f281f87b06a909a3f954e0aed138da00f4ad0b4811d405b0f94ffdef11f7277f2c0e1a9ffd80ebdeed69fc780448fa00e48ed4efdab5f4d20f0c1a81107c0111ff780e13237f29f4186cfb59e523e4fef2ddff10fcb6e9fed9cadd51f68313a1210e1a7d08f4ff7c09ee1b2924671639f95ee0f1dbcbea27fcf4fe30f1a7e179e281f854167b27e721490ee3ff3703f012e51cc0125ff703ddcfd547e48df9d00208fa0aeb90e8ebfae917292b98279412e3fe03fca1083914690e35f6a3db24d2c7df23f86507b7038ff58def34fdf5175b2cd22a351516fd53f4a2fdbf0ad00902f679dc2cd178dde2f7590ca30d8a00e8f608ff",
+          "out": {
+            "hex": "ffa49da6c4fab7a29fb32f1d1d2d5e612f2228dca19a9fba59cfaca6b92d1b1a285bcb452b2dcf9f989db54848beaebf2d1a19245fb8cb3c36cba0989cb33c3254bdcb2e1b18237aadb0e744cba3999cb3352833efdb321d1a24dea7a6b965cfa89b9db52e202741f23a211c26cea29eabd0dfaf9f9fba2b1d1f33734b2a1f29c69f9ba4c25fbea7a5bf291a1c2c7adc38282ec09e999fbc4866b4acc8291a1a29e8bc6e3336be9e989dba3b39d8b7d42a1a1927d5afba4f40bf9f989dbb322b3dcde52c1b1a27c9a8aac655c4a39a9ebd2c222c52fb321e1b29bfa1a1b1e6ceaa9d9fc2291d233bfd3d251e2bbb9e9ca9cefbb4a3a4cb261a1e32e85f2e252fb89d9aa3c74ccfadaad825191b2dd6c4462e37b69c989fc43b43bfb3ef26191a2bc9b2c83f3fb79d989fc6302e50c36c281a1a2bbfa9afe24fbb9f999fca2b2533fc662c1c1b2cb9a2a5ba6fc2a59ca1d4261e28477135201e2eb49e9eaeddd7ada0a5e9231b203ae547292333b09c9ba8d356bda9aa6721191d33cfd5382b3aaf9b99a4d23d5db6b15721181b2fc3b7ff3743af9b98a1d83136debd5224191b2fbaabb8554fb39d99a1e72a293dd653281b1c30b3a3a9c765baa09ba36925202d575d2d1e1e34ae9ea0b5f1c7a89ea654211c2542f03a252239ac9b9cace67bb3a5ab4a1f191f3bcf622f293fab9a9aa8ec43d0aeb0461f181d37bfbf483249ab9a99a66f333fc4bb441f181c36b7aec64456ad9b99a5582a2d4fcc47231a1d38afa5aedf68b29e9aa64b2423347a4e291c1e3bab9ea5bd7dbba39da9421f1d2a4e663121213fa99c9eb27bd2aca2ac3d1e1a2344d5462a2849a79a9bac654dbdabb23b1d181f3fc0cf3a2f55a7999aaa543758b9bb3a1d181e3eb6b3ef3c68"
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_audio": "00006d1b9824bf1873062900920b851c1120c20dcaefa6daa3dbb3ed67fe9bfef5ef34e3e0e8f701591e5f2aac1f500ac5fd8d03f3123119bf0a41ee63d701d69ce8fafd9104eff97dec20ee97038a1fba2d7224d30c98fab8fa3d0843118f07f1ed76d6e9d260e584fe0e0b9404a5f6dbf38f04c31e6a2edd26f20de8f6a0f110fdd908910410ef09d882d212e4d9ff9c113a0f030196f9a204e81b5b2cdf26c70d0df3e0e81ff287001b02b7f11bdcc6d49de4ba01b9173319ed0ae3fea9030617a9279824830c6def13e117e8d9f86a00dff57ee283d9cde6d603e51cda21ca13630399014f109e204c20710a71ecc9da98df45f2a7ff5efbdbea5ee04fead405a9209d28141bd20686fe1e08a917601ae90779ea7ed623d926edddffe801b5f4d9e8bdee5c07a2220a2d682008099ffae9fe5c0d52134805d9e98ed416d5b6e9f800180976ff5df2a7f31e088822d42e8723fe0930f641f55e02ad0bea02cbea2ed5a5d30be8cc027310710a49fc9bf8dd073920dc2d5d24cb0997f1c7eb5ff7fd031d016ced68d8d7d417e815057017f614f80530fd7306b91b312afd22a10840ed1be310edc9fc1d00b7f119de85d8ace97f07871d591ed00e0c01d90335150f24a21fc70699e9d7db12e484f60c0083f7f2e55fde7decaf09362202264a16f0032300020ddd1ba71a94040ce781d6eddc88f1ef0084fe7feff4e52ef04b0b1125722b001cb80588fb9703221280146102f2e581d309d811eeb10250062cfab8ee53f4000cc825522eac1f5d0657f685f97f07ae0d87008be618d3a4d536ec1f05690e4f050ef883f8920b2c24762e3221f805f4f06defa2fcb70650fffae85dd5cfd5eeebf2074016361058015afcda093920df2b9e20bc04d1ebf9e539f21a00f4fe3ded38da71d80dedd10a441d321afe0985ffd206151abd26211ef00266e7cadde9e848fa90ff2df366e145dd50ef5c0deb22a2227b11c90190020f126b1f0c1ae80023e46fd73de198f5260180fa79eae6e35df2360fbd26ff28641705034ffd9a086716c814fdfe68e25bd3a5db45f29a03cc02e4f4d1ebd2f50b105f28e82c721b370361f746fe490ccf0e86fd7ee2ddd168d866f0b7068c0b000074f449f99a0f9827232e821d7a0231f1b7f3ba019f08c9fc8ee418d3a1d7f5ef2e0a2f141c0b34fd66fcbb0d5b24a52c981d030138eb99e966f7b102fbfc9ce801d743d9caf0a30d1a1c87158005dafe680ac31e9128dd1b18fff4e595e0f1ed70fd37fe85ee5edd15dda4f2b010bb229a1ed30c7000b805171736229a1810fddfe143d9ebe52ef97b0002f6cee5bce22ff5f3128f27c825c3120c01e6ffc70d071a2f1444fb62df21d4c7df26f6a603a8fecaefc0e90ef81214312aa32a0617b00049f95e0393100c0f08facede8ad1d4db6ef47d07f207b1fa97f1e1faca135c2ae82c751979ff52f281f87b06a909a3f954e0aed138da00f4ad0b4811d405b0f94ffdef11f7277f2c0e1a9ffd80ebdeed69fc780448fa00e48ed4efdab5f4d20f0c1a81107c0111ff780e13237f29f4186cfb59e523e4fef2ddff10fcb6e9fed9cadd51f68313a1210e1a7d08f4ff7c09ee1b2924671639f95ee0f1dbcbea27fcf4fe30f1a7e179e281f854167b27e721490ee3ff3703f012e51cc0125ff703ddcfd547e48df9d00208fa0aeb90e8ebfae917292b98279412e3fe03fca1083914690e35f6a3db24d2c7df23f86507b7038ff58def34fdf5175b2cd22a351516fd53f4a2fdbf0ad00902f679dc2cd178dde2f7590ca30d8a00e8f608ff",
+          "out": {
+            "hex": "ffa49da6c4fab7a29fb32f1d1d2d5e612f2228dca19a9fba59cfaca6b92d1b1a285bcb452b2dcf9f989db54848beaebf2d1a19245fb8cb3c36cba0989cb33c3254bdcb2e1b18237aadb0e744cba3999cb3352833efdb321d1a24dea7a6b965cfa89b9db52e202741f23a211c26cea29eabd0dfaf9f9fba2b1d1f33734b2a1f29c69f9ba4c25fbea7a5bf291a1c2c7adc38282ec09e999fbc4866b4acc8291a1a29e8bc6e3336be9e989dba3b39d8b7d42a1a1927d5afba4f40bf9f989dbb322b3dcde52c1b1a27c9a8aac655c4a39a9ebd2c222c52fb321e1b29bfa1a1b1e6ceaa9d9fc2291d233bfd3d251e2bbb9e9ca9cefbb4a3a4cb261a1e32e85f2e252fb89d9aa3c74ccfadaad825191b2dd6c4462e37b69c989fc43b43bfb3ef26191a2bc9b2c83f3fb79d989fc6302e50c36c281a1a2bbfa9afe24fbb9f999fca2b2533fc662c1c1b2cb9a2a5ba6fc2a59ca1d4261e28477135201e2eb49e9eaeddd7ada0a5e9231b203ae547292333b09c9ba8d356bda9aa6721191d33cfd5382b3aaf9b99a4d23d5db6b15721181b2fc3b7ff3743af9b98a1d83136debd5224191b2fbaabb8554fb39d99a1e72a293dd653281b1c30b3a3a9c765baa09ba36925202d575d2d1e1e34ae9ea0b5f1c7a89ea654211c2542f03a252239ac9b9cace67bb3a5ab4a1f191f3bcf622f293fab9a9aa8ec43d0aeb0461f181d37bfbf483249ab9a99a66f333fc4bb441f181c36b7aec64456ad9b99a5582a2d4fcc47231a1d38afa5aedf68b29e9aa64b2423347a4e291c1e3bab9ea5bd7dbba39da9421f1d2a4e663121213fa99c9eb27bd2aca2ac3d1e1a2344d5462a2849a79a9bac654dbdabb23b1d181f3fc0cf3a2f55a7999aaa543758b9bb3a1d181e3eb6b3ef3c68"
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"ping\", \"seq\": 2, \"id\": \"e160\", \"position\": \"PT1.5S\", \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "pong",
+              "seq": 2,
+              "clientseq": 2,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT1.500S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"ping\", \"seq\": 3, \"id\": \"e160\", \"position\": \"PT0.0625S\", \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "pong",
+              "seq": 3,
+              "clientseq": 3,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT0.062S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"ping\", \"seq\": 4, \"id\": \"e160\", \"position\": \"PT0.1875S\", \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "pong",
+              "seq": 4,
+              "clientseq": 4,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT0.188S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"ping\", \"seq\": 5, \"id\": \"e160\", \"position\": \"PT10.0005S\", \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "pong",
+              "seq": 5,
+              "clientseq": 5,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT10.001S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"ping\", \"seq\": 6, \"id\": \"e160\", \"position\": \"PT2.0004999S\", \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "pong",
+              "seq": 6,
+              "clientseq": 6,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT2.001S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"ping\", \"seq\": 7, \"id\": \"e160\", \"position\": \"PTxS\", \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "pong",
+              "seq": 7,
+              "clientseq": 7,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT0.000S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"ping\", \"seq\": 8, \"id\": \"e160\", \"position\": \"P1D\", \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "pong",
+              "seq": 8,
+              "clientseq": 8,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT0.000S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"ping\", \"seq\": 9, \"id\": \"e160\", \"position\": \"PT1e1S\", \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "pong",
+              "seq": 9,
+              "clientseq": 9,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT10.000S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"ping\", \"seq\": 10, \"id\": \"e160\", \"position\": \"PT123456.789S\", \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "pong",
+              "seq": 10,
+              "clientseq": 10,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT123456.789S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"dtmf\", \"seq\": 11, \"parameters\": {\"digit\": \"5\"}}",
+          "frame": {
+            "type": "InputDTMFFrame",
+            "button": "5"
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"dtmf\", \"seq\": 12, \"parameters\": {\"digit\": \"*\"}}",
+          "frame": {
+            "type": "InputDTMFFrame",
+            "button": "*"
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"dtmf\", \"seq\": 13, \"parameters\": {\"digit\": \"A\"}}",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"dtmf\", \"seq\": 14, \"parameters\": {}}",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "interruption"
+          },
+          "out": "{\"version\": \"2\", \"type\": \"event\", \"seq\": 11, \"clientseq\": 14, \"id\": \"e160e428-53e2-487c-977d-96989bf5c99d\", \"position\": \"PT123456.789S\", \"parameters\": {\"entities\": [{\"type\": \"barge_in\", \"data\": {}}]}}",
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "type": "hello"
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {
+              "type": "hello"
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {}
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {}
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "a": {
+                "b": [
+                  1,
+                  2,
+                  {
+                    "c": null
+                  }
+                ],
+                "d": true,
+                "e": false
+              }
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {
+              "a": {
+                "b": [
+                  1,
+                  2,
+                  {
+                    "c": null
+                  }
+                ],
+                "d": true,
+                "e": false
+              }
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "unicode": "héllo wörld — 你好 🎉",
+              "emoji": "😀",
+              "ctl": "tab\tnl\n\"q\"\\"
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {
+              "unicode": "héllo wörld — 你好 🎉",
+              "emoji": "😀",
+              "ctl": "tab\tnl\n\"q\"\\"
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "floats": [0.1, 1.5, -2.25, 1e-7, 1.7976931348623157e308, 123456.789, 1e21, 5e-324]
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {
+              "floats": [0.1, 1.5, -2.25, 1e-7, 1.7976931348623157e308, 123456.789, 1e21, 5e-324]
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "ints": [0, -1, 42, 2147483648, 9007199254740991, -9007199254740991]
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {
+              "ints": [0, -1, 42, 2147483648, 9007199254740991, -9007199254740991]
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": [1, "two", 3.5, null, true]
+          },
+          "out": {
+            "error": "AttributeError"
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": [1, "two", 3.5, null, true]
+          },
+          "out": {
+            "error": "AttributeError"
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": "just a string"
+          },
+          "out": {
+            "error": "AttributeError"
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": "just a string"
+          },
+          "out": {
+            "error": "AttributeError"
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "label": "rtvi-ai",
+              "type": "bot-ready",
+              "id": "1",
+              "data": {
+                "version": "1.0.0"
+              }
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {
+              "label": "rtvi-ai",
+              "type": "bot-ready",
+              "id": "1",
+              "data": {
+                "version": "1.0.0"
+              }
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "label": "rtvi-ai",
+              "type": "server-message",
+              "data": {
+                "k": "v"
+              }
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {
+              "label": "rtvi-ai",
+              "type": "server-message",
+              "data": {
+                "k": "v"
+              }
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "nested": {
+                "deep": {
+                  "deeper": {
+                    "deepest": [
+                      "x",
+                      {
+                        "y": "ü"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {
+              "nested": {
+                "deep": {
+                  "deeper": {
+                    "deepest": [
+                      "x",
+                      {
+                        "y": "ü"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "key with spaces": 1,
+              "ключ": "значение",
+              "": "empty key"
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message_urgent",
+            "message": {
+              "key with spaces": 1,
+              "ключ": "значение",
+              "": "empty key"
+            }
+          },
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "message",
+            "message": {
+              "version": "2",
+              "type": "custom",
+              "x": "ü"
+            }
+          },
+          "out": "{\"version\": \"2\", \"type\": \"custom\", \"x\": \"\\u00fc\"}",
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"pause\", \"seq\": 15, \"position\": \"PT20S\", \"parameters\": {\"reason\": \"hold\"}}",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": true,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in_audio": "00020406080a0c0e10121416181a1c1e20222426282a2c2e30323436383a3c3e40424446484a4c4e50525456585a5c5e60626466686a6c6e70727476787a7c7e80828486888a8c8e90929496989a9c9ea0a2a4a6a8aaacaeb0b2b4b6b8babcbec0c2c4c6c8caccced0d2d4d6d8dadcdee0e2e4e6e8eaeceef0f2f4f6f8fafcfe01030507090b0d0f11131517191b1d1f21232527292b2d2f31333537393b3d3f41434547494b4d4f51535557595b5d5f61636567696b6d6f71737577797b7d7f81838587898b8d8f91939597999b9d9fa1a3a5a7a9abadafb1b3b5b7b9bbbdbfc1c3c5c7c9cbcdcfd1d3d5d7d9dbdddfe1e3e5e7e9ebedeff1f3f5f7f9fbfdff",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": true,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_audio": "00006d1b9824bf1873062900920b851c1120c20dcaefa6daa3dbb3ed67fe9bfef5ef34e3e0e8f701591e5f2aac1f500ac5fd8d03f3123119bf0a41ee63d701d69ce8fafd9104eff97dec20ee97038a1fba2d7224d30c98fab8fa3d0843118f07f1ed76d6e9d260e584fe0e0b9404a5f6dbf38f04c31e6a2edd26f20de8f6a0f110fdd908910410ef09d882d212e4d9ff9c113a0f030196f9a204e81b5b2cdf26c70d0df3e0e81ff287001b02b7f11bdcc6d49de4ba01b9173319ed0ae3fea9030617a9279824830c6def13e117e8d9f86a00dff57ee283d9cde6d603e51cda21ca13630399014f109e204c20710a71ecc9da98df45f2a7ff5efbdbea5ee04fead405a9209d28141bd20686fe1e08a917601ae90779ea7ed623d926edddffe801b5f4d9e8bdee5c07a2220a2d682008099ffae9fe5c0d52134805d9e98ed416d5b6e9f800180976ff5df2a7f31e088822d42e8723fe0930f641f55e02ad0bea02cbea2ed5a5d30be8cc027310710a49fc9bf8dd073920dc2d5d24cb0997f1c7eb5ff7fd031d016ced68d8d7d417e815057017f614f80530fd7306b91b312afd22a10840ed1be310edc9fc1d00b7f119de85d8ace97f07871d591ed00e0c01d90335150f24a21fc70699e9d7db12e484f60c0083f7f2e55fde7decaf09362202264a16f0032300020ddd1ba71a94040ce781d6eddc88f1ef0084fe7feff4e52ef04b0b1125722b001cb80588fb9703221280146102f2e581d309d811eeb10250062cfab8ee53f4000cc825522eac1f5d0657f685f97f07ae0d87008be618d3a4d536ec1f05690e4f050ef883f8920b2c24762e3221f805f4f06defa2fcb70650fffae85dd5cfd5eeebf2074016361058015afcda093920df2b9e20bc04d1ebf9e539f21a00f4fe3ded38da71d80dedd10a441d321afe0985ffd206151abd26211ef00266e7cadde9e848fa90ff2df366e145dd50ef5c0deb22a2227b11c90190020f126b1f0c1ae80023e46fd73de198f5260180fa79eae6e35df2360fbd26ff28641705034ffd9a086716c814fdfe68e25bd3a5db45f29a03cc02e4f4d1ebd2f50b105f28e82c721b370361f746fe490ccf0e86fd7ee2ddd168d866f0b7068c0b000074f449f99a0f9827232e821d7a0231f1b7f3ba019f08c9fc8ee418d3a1d7f5ef2e0a2f141c0b34fd66fcbb0d5b24a52c981d030138eb99e966f7b102fbfc9ce801d743d9caf0a30d1a1c87158005dafe680ac31e9128dd1b18fff4e595e0f1ed70fd37fe85ee5edd15dda4f2b010bb229a1ed30c7000b805171736229a1810fddfe143d9ebe52ef97b0002f6cee5bce22ff5f3128f27c825c3120c01e6ffc70d071a2f1444fb62df21d4c7df26f6a603a8fecaefc0e90ef81214312aa32a0617b00049f95e0393100c0f08facede8ad1d4db6ef47d07f207b1fa97f1e1faca135c2ae82c751979ff52f281f87b06a909a3f954e0aed138da00f4ad0b4811d405b0f94ffdef11f7277f2c0e1a9ffd80ebdeed69fc780448fa00e48ed4efdab5f4d20f0c1a81107c0111ff780e13237f29f4186cfb59e523e4fef2ddff10fcb6e9fed9cadd51f68313a1210e1a7d08f4ff7c09ee1b2924671639f95ee0f1dbcbea27fcf4fe30f1a7e179e281f854167b27e721490ee3ff3703f012e51cc0125ff703ddcfd547e48df9d00208fa0aeb90e8ebfae917292b98279412e3fe03fca1083914690e35f6a3db24d2c7df23f86507b7038ff58def34fdf5175b2cd22a351516fd53f4a2fdbf0ad00902f679dc2cd178dde2f7590ca30d8a00e8f608ff",
+          "out": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": true,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "call": "create_resumed_response",
+          "kwargs": {},
+          "result": {
+            "version": "2",
+            "type": "resumed",
+            "seq": 12,
+            "clientseq": 15,
+            "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "position": "PT20.000S",
+            "parameters": {}
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in_audio": "00020406080a0c0e10121416181a1c1e20222426282a2c2e30323436383a3c3e40424446484a4c4e50525456585a5c5e60626466686a6c6e70727476787a7c7e80828486888a8c8e90929496989a9c9ea0a2a4a6a8aaacaeb0b2b4b6b8babcbec0c2c4c6c8caccced0d2d4d6d8dadcdee0e2e4e6e8eaeceef0f2f4f6f8fafcfe01030507090b0d0f11131517191b1d1f21232527292b2d2f31333537393b3d3f41434547494b4d4f51535557595b5d5f61636567696b6d6f71737577797b7d7f81838587898b8d8f91939597999b9d9fa1a3a5a7a9abadafb1b3b5b7b9bbbdbfc1c3c5c7c9cbcdcfd1d3d5d7d9dbdddfe1e3e5e7e9ebedeff1f3f5f7f9fbfdff",
+          "frame": {
+            "type": "InputAudioRawFrame",
+            "hex": "8482848a8492849a84a284aa84b284ba84c184c584c984cd84d184d584d984dd04e104e304e504e704e904eb04ed04efc4f0c4f1c4f2c4f3c4f4c4f5c4f6c4f7a4f824f9a4f924faa4fa24fba4fb24fc94fcd4fc14fd54fd94fdd4fd14fe54fe8cfeacfeccfeecfe0cff2cff4cff6cff88ff98ffa8ffb8ffc8ffd8ffe8fff8ff7c7d7c757c6d7c657c5d7c557c4d7c457c3e7c3a7c367c327c2e7c2a7c267c22fc1efc1cfc1afc18fc16fc14fc12fc103c0f3c0e3c0d3c0c3c0b3c0a3c093c085c07dc065c06dc055c05dc045c04dc036c032c03ec02ac026c022c02ec01ac017401540134011401f400d400b4009400780068005800480038002800180008008486848e8496849e84a684ae84b684be84c384c784cb84cf84d384d784db84df04e204e404e604e804ea04ec04ee04f044f144f244f344f444f544f644f744f8e4f864f9e4f964fae4fa64fbe4fb64fcb4fcf4fc34fd74fdb4fdf4fd34fe74fe9cfebcfedcfefcfe1cff3cff5cff7cff90ffa0ffb0ffc0ffd0ffe0fff0ff00007c797c717c697c617c597c517c497c417c3c7c387c347c307c2c7c287c247c20fc1dfc1bfc19fc17fc15fc13fc11fc0fbc0ebc0dbc0cbc0bbc0abc09bc08bc071c079c061c069c051c059c041c049c034c030c03cc028c024c020c02cc018c016401440124010401e400c400a400840070006000500040003000200010000000",
+            "sample_rate": 8000
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"update\", \"seq\": 16, \"parameters\": {\"participant\": {\"ani\": \"+1\", \"name\": \"John Doe\"}}}",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"error\", \"seq\": 17, \"parameters\": {\"code\": 409, \"message\": \"Conflict\"}}",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"playback_started\", \"seq\": 18}",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"playback_completed\", \"seq\": 19}",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"discard\", \"seq\": 20}",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "not json",
+          "frame": null,
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "call": "create_error_message",
+          "kwargs": {
+            "code": 500,
+            "message": "Internal error",
+            "retryable": true
+          },
+          "result": {
+            "version": "2",
+            "type": "error",
+            "seq": 13,
+            "clientseq": 20,
+            "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "position": "PT20.000S",
+            "parameters": {
+              "code": 500,
+              "message": "Internal error",
+              "retryable": true
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "call": "create_disconnect_message",
+          "kwargs": {},
+          "result": {
+            "version": "2",
+            "type": "disconnect",
+            "seq": 14,
+            "clientseq": 20,
+            "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "position": "PT20.000S",
+            "parameters": {
+              "reason": "completed",
+              "outputVariables": {
+                "action": "transfer"
+              }
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "call": "create_disconnect_message",
+          "kwargs": {
+            "reason": "error",
+            "action": "finished",
+            "output_variables": {
+              "action": "override",
+              "k": 1
+            },
+            "info": "why"
+          },
+          "result": {
+            "version": "2",
+            "type": "disconnect",
+            "seq": 15,
+            "clientseq": 20,
+            "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "position": "PT20.000S",
+            "parameters": {
+              "reason": "error",
+              "outputVariables": {
+                "action": "override",
+                "k": 1
+              },
+              "info": "why"
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "set_output_variables": {
+            "intent": "billing",
+            "resolved": true,
+            "score": 0.95
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"close\", \"seq\": 21, \"position\": \"PT30.0S\", \"parameters\": {\"reason\": \"end\"}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "closed",
+              "seq": 16,
+              "clientseq": 21,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT30.000S",
+              "parameters": {
+                "outputVariables": {
+                  "intent": "billing",
+                  "resolved": true,
+                  "score": 0.95
+                }
+              }
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": false,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "end"
+          },
+          "out": "{\"version\": \"2\", \"type\": \"disconnect\", \"seq\": 17, \"clientseq\": 21, \"id\": \"e160e428-53e2-487c-977d-96989bf5c99d\", \"position\": \"PT30.000S\", \"parameters\": {\"reason\": \"completed\", \"outputVariables\": {\"action\": \"transfer\", \"intent\": \"billing\", \"resolved\": true, \"score\": 0.95}}}",
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": false,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        },
+        {
+          "out_frame": {
+            "kind": "cancel"
+          },
+          "out": "{\"version\": \"2\", \"type\": \"disconnect\", \"seq\": 18, \"clientseq\": 21, \"id\": \"e160e428-53e2-487c-977d-96989bf5c99d\", \"position\": \"PT30.000S\", \"parameters\": {\"reason\": \"completed\", \"outputVariables\": {\"action\": \"transfer\", \"intent\": \"billing\", \"resolved\": true, \"score\": 0.95}}}",
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": false,
+            "is_paused": false,
+            "participant": {
+              "ani": "+1",
+              "name": "John Doe"
+            },
+            "input_variables": {
+              "customer_id": "cust-789",
+              "queue": "billing"
+            },
+            "channel": "external"
+          }
+        }
+      ]
+    },
+    {
+      "label": "stereo",
+      "params": {
+        "channel": "both",
+        "supported_languages": null,
+        "selected_language": null,
+        "start_paused": true
+      },
+      "steps": [
+        {
+          "in": "{\"version\": \"2\", \"type\": \"open\", \"seq\": 1, \"serverseq\": 0, \"id\": \"e160e428-53e2-487c-977d-96989bf5c99d\", \"position\": \"PT0S\", \"parameters\": {\"organizationId\": \"org\", \"conversationId\": \"conv-456\", \"participant\": {\"id\": \"p1\", \"ani\": \"+1234567890\", \"dnis\": \"+0987654321\"}, \"media\": [{\"type\": \"audio\", \"format\": \"PCMU\", \"channels\": [\"external\", \"internal\"], \"rate\": 8000}], \"language\": \"en-US\"}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "opened",
+              "seq": 1,
+              "clientseq": 1,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "parameters": {
+                "startPaused": true,
+                "media": [
+                  {
+                    "type": "audio",
+                    "format": "PCMU",
+                    "channels": ["external", "internal"],
+                    "rate": 8000
+                  }
+                ]
+              }
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": null,
+            "channel": "both"
+          }
+        },
+        {
+          "in_audio": "00020406080a0c0e10121416181a1c1e20222426282a2c2e30323436383a3c3e40424446484a4c4e50525456585a5c5e60626466686a6c6e70727476787a7c7e80828486888a8c8e90929496989a9c9ea0a2a4a6a8aaacaeb0b2b4b6b8babcbec0c2c4c6c8caccced0d2d4d6d8dadcdee0e2e4e6e8eaeceef0f2f4f6f8fafcfe01030507090b0d0f11131517191b1d1f21232527292b2d2f31333537393b3d3f41434547494b4d4f51535557595b5d5f61636567696b6d6f71737577797b7d7f81838587898b8d8f91939597999b9d9fa1a3a5a7a9abadafb1b3b5b7b9bbbdbfc1c3c5c7c9cbcdcfd1d3d5d7d9dbdddfe1e3e5e7e9ebedeff1f3f5f7f9fbfdff",
+          "frame": {
+            "type": "InputAudioRawFrame",
+            "hex": "8482849284a284b284c184c984d184d904e104e504e904edc4f0c4f2c4f4c4f6a4f8a4f9a4faa4fb94fc14fd94fd14fe8cfeccfe0cff4cff88ffa8ffc8ffe8ff7c7d7c6d7c5d7c4d7c3e7c367c2e7c26fc1efc1afc16fc123c0f3c0d3c0b3c095c075c065c055c046c03ec026c02ec0174013401f400b40078005800380018008486849684a684b684c384cb84d384db04e204e604ea04ee44f144f344f544f7e4f8e4f9e4fae4fbb4fc34fdb4fd34fe9cfedcfe1cff5cff90ffb0ffd0fff0ff7c797c697c597c497c3c7c347c2c7c24fc1dfc19fc15fc11bc0ebc0cbc0abc081c071c061c051c044c03cc024c02cc0164012401e400a4007000500030001000",
+            "sample_rate": 8000
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": null,
+            "channel": "both"
+          }
+        },
+        {
+          "in_audio": "00020406080a0c",
+          "frame": {
+            "type": "InputAudioRawFrame",
+            "hex": "8482849284a284b2",
+            "sample_rate": 8000
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": null,
+            "channel": "both"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"close\", \"seq\": 2, \"parameters\": {}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "closed",
+              "seq": 2,
+              "clientseq": 2,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "position": "PT0.000S",
+              "parameters": {}
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": false,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": null,
+            "channel": "both"
+          }
+        }
+      ]
+    },
+    {
+      "label": "internal channel",
+      "params": {
+        "channel": "internal",
+        "supported_languages": null,
+        "selected_language": null,
+        "start_paused": false
+      },
+      "steps": [
+        {
+          "in": "{\"version\": \"2\", \"type\": \"open\", \"seq\": 1, \"serverseq\": 0, \"id\": \"e160e428-53e2-487c-977d-96989bf5c99d\", \"position\": \"PT0S\", \"parameters\": {\"organizationId\": \"org\", \"conversationId\": \"conv-456\", \"participant\": {\"id\": \"p1\", \"ani\": \"+1234567890\", \"dnis\": \"+0987654321\"}, \"media\": [{\"type\": \"audio\", \"format\": \"PCMU\", \"channels\": [\"internal\"], \"rate\": 8000}], \"language\": \"en-US\"}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "opened",
+              "seq": 1,
+              "clientseq": 1,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "parameters": {
+                "startPaused": false,
+                "media": [
+                  {
+                    "type": "audio",
+                    "format": "PCMU",
+                    "channels": ["internal"],
+                    "rate": 8000
+                  }
+                ]
+              }
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": "conv-456",
+            "is_open": true,
+            "is_paused": false,
+            "participant": {
+              "id": "p1",
+              "ani": "+1234567890",
+              "dnis": "+0987654321"
+            },
+            "input_variables": null,
+            "channel": "internal"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"open\", \"seq\": 2, \"serverseq\": 0, \"id\": \"e160e428-53e2-487c-977d-96989bf5c99d\", \"position\": \"PT0S\", \"parameters\": {\"organizationId\": \"org\", \"conversationId\": null, \"participant\": null, \"media\": [], \"language\": \"en-US\"}}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "opened",
+              "seq": 2,
+              "clientseq": 2,
+              "id": "e160e428-53e2-487c-977d-96989bf5c99d",
+              "parameters": {
+                "startPaused": false,
+                "media": [
+                  {
+                    "type": "audio",
+                    "format": "PCMU",
+                    "channels": ["internal"],
+                    "rate": 8000
+                  }
+                ]
+              }
+            }
+          },
+          "state": {
+            "session_id": "e160e428-53e2-487c-977d-96989bf5c99d",
+            "conversation_id": null,
+            "is_open": true,
+            "is_paused": false,
+            "participant": null,
+            "input_variables": null,
+            "channel": "internal"
+          }
+        },
+        {
+          "in": "{\"version\": \"2\", \"type\": \"open\", \"seq\": 3, \"id\": \"no-params\"}",
+          "frame": {
+            "type": "OutputTransportMessageUrgentFrame",
+            "message": {
+              "version": "2",
+              "type": "opened",
+              "seq": 3,
+              "clientseq": 3,
+              "id": "no-params",
+              "parameters": {
+                "startPaused": false,
+                "media": [
+                  {
+                    "type": "audio",
+                    "format": "PCMU",
+                    "channels": ["internal"],
+                    "rate": 8000
+                  }
+                ]
+              }
+            }
+          },
+          "state": {
+            "session_id": "no-params",
+            "conversation_id": null,
+            "is_open": true,
+            "is_paused": false,
+            "participant": null,
+            "input_variables": null,
+            "channel": "internal"
+          }
+        }
+      ]
+    }
+  ]
+}

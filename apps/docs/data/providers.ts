@@ -687,6 +687,36 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/serializer-telnyx",
       classes: ["TelnyxFrameSerializer"],
     },
+    {
+      slug: "twilio",
+      name: "Twilio",
+      pkg: "@pipedog/serializer-twilio",
+      classes: ["TwilioFrameSerializer"],
+    },
+    {
+      slug: "plivo",
+      name: "Plivo",
+      pkg: "@pipedog/serializer-plivo",
+      classes: ["PlivoFrameSerializer"],
+    },
+    {
+      slug: "exotel",
+      name: "Exotel",
+      pkg: "@pipedog/serializer-exotel",
+      classes: ["ExotelFrameSerializer"],
+    },
+    {
+      slug: "vonage",
+      name: "Vonage",
+      pkg: "@pipedog/serializer-vonage",
+      classes: ["VonageFrameSerializer"],
+    },
+    {
+      slug: "genesys",
+      name: "Genesys",
+      pkg: "@pipedog/serializer-genesys",
+      classes: ["GenesysAudioHookSerializer"],
+    },
   ],
 };
 
@@ -1044,47 +1074,6 @@ export const upcoming: UpcomingPage[] = [
     modules: ["transports/local/audio.py"],
     upstreamUrl:
       "https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/transports/local/audio.py",
-  },
-  // Serializers
-  {
-    section: "serializers",
-    slug: "twilio",
-    name: "Twilio",
-    about: "Twilio Media Streams, for phone calls over a WebSocket.",
-    classes: ["TwilioFrameSerializer"],
-    modules: ["serializers/twilio.py"],
-  },
-  {
-    section: "serializers",
-    slug: "plivo",
-    name: "Plivo",
-    about: "Plivo audio streams, for phone calls over a WebSocket.",
-    classes: ["PlivoFrameSerializer"],
-    modules: ["serializers/plivo.py"],
-  },
-  {
-    section: "serializers",
-    slug: "exotel",
-    name: "Exotel",
-    about: "Exotel voice streams, for phone calls over a WebSocket.",
-    classes: ["ExotelFrameSerializer"],
-    modules: ["serializers/exotel.py"],
-  },
-  {
-    section: "serializers",
-    slug: "vonage",
-    name: "Vonage",
-    about: "Vonage Voice API audio over a WebSocket.",
-    classes: ["VonageFrameSerializer"],
-    modules: ["serializers/vonage.py"],
-  },
-  {
-    section: "serializers",
-    slug: "genesys",
-    name: "Genesys",
-    about: "Genesys Cloud AudioHook, for contact-center calls.",
-    classes: ["GenesysAudioHookSerializer"],
-    modules: ["serializers/genesys.py"],
   },
 ];
 

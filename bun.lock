@@ -45,10 +45,16 @@
         "@pipedog/openrouter": "workspace:*",
         "@pipedog/perplexity": "workspace:*",
         "@pipedog/qwen": "workspace:*",
+        "@pipedog/runner": "workspace:*",
         "@pipedog/sambanova": "workspace:*",
+        "@pipedog/serializer-exotel": "workspace:*",
+        "@pipedog/serializer-genesys": "workspace:*",
+        "@pipedog/serializer-plivo": "workspace:*",
         "@pipedog/serializer-protobuf": "workspace:*",
         "@pipedog/serializer-rtvi-client": "workspace:*",
         "@pipedog/serializer-telnyx": "workspace:*",
+        "@pipedog/serializer-twilio": "workspace:*",
+        "@pipedog/serializer-vonage": "workspace:*",
         "@pipedog/tracing": "workspace:*",
         "@pipedog/transport-smallwebrtc": "workspace:*",
         "@pipedog/transport-websocket": "workspace:*",
@@ -124,6 +130,21 @@
     "examples/test-mocks": {
       "name": "@pipedog/example-test-mocks",
       "version": "0.0.0",
+    },
+    "examples/twilio-phone-bot": {
+      "name": "@pipedog/example-twilio-phone-bot",
+      "version": "0.0.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+        "@pipedog/runner": "workspace:*",
+        "@pipedog/serializer-twilio": "workspace:*",
+        "@pipedog/transport-websocket": "workspace:*",
+      },
+      "devDependencies": {
+        "@pipedog/example-test-mocks": "workspace:*",
+      },
     },
     "examples/websocket-voice-bot": {
       "name": "@pipedog/example-websocket-voice-bot",
@@ -454,6 +475,14 @@
       "name": "@pipedog/resampler-wasm",
       "version": "0.5.0",
     },
+    "packages/runner": {
+      "name": "@pipedog/runner",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
     "packages/sambanova": {
       "name": "@pipedog/sambanova",
       "version": "0.5.0",
@@ -468,6 +497,30 @@
       "version": "0.5.0",
       "devDependencies": {
         "sentencex": "1.0.32",
+      },
+    },
+    "packages/serializer-exotel": {
+      "name": "@pipedog/serializer-exotel",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/serializer-genesys": {
+      "name": "@pipedog/serializer-genesys",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/serializer-plivo": {
+      "name": "@pipedog/serializer-plivo",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
       },
     },
     "packages/serializer-protobuf": {
@@ -487,6 +540,22 @@
     },
     "packages/serializer-telnyx": {
       "name": "@pipedog/serializer-telnyx",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/serializer-twilio": {
+      "name": "@pipedog/serializer-twilio",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/serializer-vonage": {
+      "name": "@pipedog/serializer-vonage",
       "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
@@ -1032,6 +1101,8 @@
 
     "@pipedog/example-test-mocks": ["@pipedog/example-test-mocks@workspace:examples/test-mocks"],
 
+    "@pipedog/example-twilio-phone-bot": ["@pipedog/example-twilio-phone-bot@workspace:examples/twilio-phone-bot"],
+
     "@pipedog/example-websocket-voice-bot": ["@pipedog/example-websocket-voice-bot@workspace:examples/websocket-voice-bot"],
 
     "@pipedog/example-workers-durable-voice-agent": ["@pipedog/example-workers-durable-voice-agent@workspace:examples/workers-durable-voice-agent"],
@@ -1064,15 +1135,27 @@
 
     "@pipedog/resampler-wasm": ["@pipedog/resampler-wasm@workspace:packages/resampler-wasm"],
 
+    "@pipedog/runner": ["@pipedog/runner@workspace:packages/runner"],
+
     "@pipedog/sambanova": ["@pipedog/sambanova@workspace:packages/sambanova"],
 
     "@pipedog/sentencex-wasm": ["@pipedog/sentencex-wasm@workspace:packages/sentencex-wasm"],
+
+    "@pipedog/serializer-exotel": ["@pipedog/serializer-exotel@workspace:packages/serializer-exotel"],
+
+    "@pipedog/serializer-genesys": ["@pipedog/serializer-genesys@workspace:packages/serializer-genesys"],
+
+    "@pipedog/serializer-plivo": ["@pipedog/serializer-plivo@workspace:packages/serializer-plivo"],
 
     "@pipedog/serializer-protobuf": ["@pipedog/serializer-protobuf@workspace:packages/serializer-protobuf"],
 
     "@pipedog/serializer-rtvi-client": ["@pipedog/serializer-rtvi-client@workspace:packages/serializer-rtvi-client"],
 
     "@pipedog/serializer-telnyx": ["@pipedog/serializer-telnyx@workspace:packages/serializer-telnyx"],
+
+    "@pipedog/serializer-twilio": ["@pipedog/serializer-twilio@workspace:packages/serializer-twilio"],
+
+    "@pipedog/serializer-vonage": ["@pipedog/serializer-vonage@workspace:packages/serializer-vonage"],
 
     "@pipedog/tracing": ["@pipedog/tracing@workspace:packages/tracing"],
 
