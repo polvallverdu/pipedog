@@ -611,6 +611,12 @@ export class GoogleLLMService extends LLMService<GeminiLLMAdapter & BaseLLMAdapt
         top_p: given(this._settings.topP),
         top_k: given(this._settings.topK),
         max_output_tokens: given(this._settings.maxTokens),
+        // DIVERGENCE: upstream leaves frequency_penalty and presence_penalty
+        // out of the generation params, so the inherited LLMSettings fields
+        // are never sent. GenerateContentConfig accepts both, so they are
+        // sent here when set.
+        frequency_penalty: given(this._settings.frequencyPenalty),
+        presence_penalty: given(this._settings.presencePenalty),
         seed: given(this._settings.seed),
         safety_settings: assertGiven(this._settings.safetySettings),
         tools: options.tools ?? null,

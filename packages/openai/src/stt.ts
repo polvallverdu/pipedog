@@ -19,9 +19,9 @@
  *   `BaseWhisperSTTService` (`@pipedog/whisper`).
  * - `OpenAIRealtimeSTTService` uses the global `WebSocket` through
  *   `WebsocketService._websocketConnect()`. The `Authorization` header is sent
- *   on the opening handshake, which the Bun, Node and Deno `WebSocket`
- *   support; on Cloudflare Workers override `_connectWebsocket()` or the
- *   connect options to open the socket through `fetch`.
+ *   on the opening handshake on Bun, Node, Deno and Cloudflare Workers (where
+ *   core opens the socket through `fetch` with an `Upgrade: websocket`
+ *   header); browsers can't send it.
  * - Deprecated APIs are not ported: the `model`, `language`, `prompt`,
  *   `temperature` (`OpenAISTTService`) and `model`, `language`, `prompt`,
  *   `noiseReduction` (`OpenAIRealtimeSTTService`) constructor options.

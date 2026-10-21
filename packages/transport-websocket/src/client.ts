@@ -13,8 +13,9 @@
  *
  * The connection is opened with the global `WebSocket` (see `socket.ts`), so
  * the transport runs on Bun, Node, Deno and Cloudflare Workers. Extra
- * handshake headers (`additionalHeaders`) aren't supported by browsers or
- * Workers.
+ * handshake headers (`additionalHeaders`) are sent on all four (Workers open
+ * the socket through `fetch` with an `Upgrade: websocket` header); browsers
+ * can't send them.
  */
 
 import { monotonic, rethrowIfCancelled, sleep, type Task, TimeoutError } from "@pipedog/asyncio";

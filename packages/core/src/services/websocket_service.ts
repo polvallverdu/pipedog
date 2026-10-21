@@ -107,7 +107,8 @@ export interface WebsocketConnectOptions {
   openTimeout?: number | null;
   /**
    * Extra HTTP headers for the opening handshake (`additional_headers` in
-   * `websockets`). Supported by the Bun, Node (undici) and Deno `WebSocket`;
+   * `websockets`). Supported by the Bun, Node (undici) and Deno `WebSocket`,
+   * and on Cloudflare Workers, where the socket is opened through `fetch`;
    * on other runtimes pass a `webSocketFactory` that can send them.
    */
   additionalHeaders?: Record<string, string> | null;
@@ -115,8 +116,9 @@ export interface WebsocketConnectOptions {
   subprotocols?: string[] | null;
   /**
    * Creates the underlying `WebSocket`. Defaults to the global `WebSocket`.
-   * Use it on runtimes that open websockets differently (e.g. Cloudflare
-   * Workers, through `fetch` with an `Upgrade` header).
+   * Use it on runtimes that open websockets differently. Cloudflare Workers
+   * need none: there the socket is opened through `fetch` with an `Upgrade`
+   * header.
    */
   webSocketFactory?:
     | ((

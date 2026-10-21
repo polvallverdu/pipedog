@@ -22,8 +22,8 @@ npm i @pipedog/transport-websocket @pipedog/serializer-protobuf ws   # Node: `ws
 | `websocketServe()` (`/serve`) | ✅ | ✅ with `ws` | ✅ | ❌ throws, pointing to `WebSocketPair` |
 | `FastAPIWebsocketTransport` (`/fastapi`), bring your own socket | ✅ | ✅ | ✅ | ✅ `WebSocketPair`, in a Worker or a Durable Object |
 | `honoWebsocket()` (`/hono`) | ✅ `hono/bun` | ✅ `@hono/node-ws` | ✅ `hono/deno` | ✅ `hono/cloudflare-workers` |
-| `WebsocketClientTransport` (`/client`) | ✅ | ✅ | ✅ | ✅ (no `additionalHeaders`) |
-| `RTVIClientTransport` (`/rtvi_client`) | ✅ | ✅ | ✅ | ✅ (no `additionalHeaders`) |
+| `WebsocketClientTransport` (`/client`) | ✅ | ✅ | ✅ | ✅ |
+| `RTVIClientTransport` (`/rtvi_client`) | ✅ | ✅ | ✅ | ✅ |
 
 These are tested, not assumed:
 
@@ -260,7 +260,7 @@ const transport = new WebsocketClientTransport(
     audioOutEnabled: true,
     addWavHeader: false, // upstream's default is true
     serializer: new ProtobufFrameSerializer(), // the default
-    additionalHeaders: { Authorization: "Bearer …" }, // not on Workers or browsers
+    additionalHeaders: { Authorization: "Bearer …" }, // not in browsers
   }),
 );
 transport.eventHandler("on_connected", async () => console.log("connected"));

@@ -116,7 +116,7 @@ Upload a file, then reference its `uri` in a `file_data` content part of a conte
 
 <include cwd>snippets/services/s2s-gemini-live.ts#file-api</include>
 
-`GeminiFileAPI` has `uploadFile(filePath, displayName?)`, `getFile(name)`,
+`GeminiFileAPI` has `uploadFile(file, displayName?, { mimeType? })`, `getFile(name)`,
 `listFiles(pageSize?, pageToken?)` and `deleteFile(name)`. Each returns the parsed JSON response
 (or `true` for `deleteFile`) and throws when the API returns an error. To build one yourself:
 
@@ -142,7 +142,7 @@ Inherited from `LLMService`.
   analyzer. `LLMContextAggregatorPair` detects this service, so context writes are correct
   either way.
 - Tools in the context take precedence over `tools` given at construction. Tools can't change
-  mid-session: `LLMSetToolsFrame` is dropped.
+  mid-session: `LLMSetToolsFrame` is dropped, with a warning.
 - Functions registered with `cancelOnInterruption: false` use Gemini's `NON_BLOCKING` tool
   behavior on models that support it (3.8 and later, and pre-3.0). On Gemini 3.x models before
   3.8, the service logs an error and pushes an error the first time one is used.
@@ -162,9 +162,13 @@ The client is `GoogleGenAI` from `@google/genai`, which opens the Live API over 
 `WebSocket`. Server messages arrive through the SDK's callbacks and are fed to the service's
 receive task, so socket errors go through the same reconnect path as upstream.
 
-`GeminiFileAPI` uses the global `fetch` (injectable with `fetch`). `uploadFile()` reads the
-file with the injected `fs`, or imports `node:fs/promises` on first use, which works on Bun,
-Node and Deno but not on Cloudflare Workers.
+`GeminiFileAPI` uses the global `fetch` (injectable with `fetch`). `uploadFile()` takes a path,
+as upstream does, or the file's contents (a `Uint8Array`, an `ArrayBuffer`, a `Blob` or a
+`ReadableStream`). Contents work on every runtime, Cloudflare Workers included. A path is read
+with the injected `fs`, or with `node:fs/promises` imported on first use (Bun, Node, Deno); on a
+runtime without it, a path throws an error that says to pass the contents. The MIME type comes
+from `mimeType`, else the path's extension, else a `Blob`'s type, else `displayName`'s
+extension, else `application/octet-stream`.
 
 `historyConfig` is set on the connect config as upstream does, but `@google/genai` 2.27 does
 not forward it in the setup message.

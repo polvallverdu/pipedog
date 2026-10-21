@@ -49,7 +49,9 @@ const locallyDriven = new GeminiLiveLLMService({
 // #endregion local-vad
 
 // #region file-api
-// uploadFile() reads the file with node:fs/promises (Bun, Node, Deno).
+// A path is read with node:fs/promises (Bun, Node, Deno). On any runtime,
+// including Workers, pass the contents instead (bytes, a Blob or a stream):
+// llm.fileApi.uploadFile(new TextEncoder().encode(menu), "menu.txt").
 const uploaded = await llm.fileApi.uploadFile("menu.txt", "Menu");
 const file = uploaded.file as { uri: string };
 
