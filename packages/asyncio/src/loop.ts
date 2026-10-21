@@ -25,6 +25,15 @@
 // setImmediate and timers wait about a millisecond; MessageChannel messages
 // are delivered without draining microtasks in between) and MessageChannel or
 // setTimeout elsewhere.
+//
+// On Cloudflare Workers there is no ready queue: one isolate serves many
+// requests and Durable Objects, and code runs in the I/O context of whatever
+// event resumed it. A callback run from another context's turn would do that
+// context's I/O (a Durable Object writing to its WebSocket from another
+// object's turn fails), and a task it creates would stay there. So each
+// callback gets a body read of its own, started in the context that scheduled
+// it, and runs when that read settles. The reads of one context settle in the
+// order they were started, so callbacks still run in FIFO order, one per turn.
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -80,6 +89,9 @@ type Trigger = { arm: () => void; idle: () => void };
 let trigger: Trigger | undefined;
 let armed = false;
 
+/** Schedules one callback on its own, in the scheduling context (Workers), if set. */
+let schedule: ((handle: Handle) => void) | null | undefined;
+
 /**
  * Schedule `callback` to run on a later turn of the loop, after the code
  * running now (and every callback scheduled before it) has run up to its
@@ -108,6 +120,11 @@ export function callLater(delay: number, callback: () => void): Handle {
 }
 
 function enqueue(handle: Handle): void {
+  schedule ??= makeContextScheduler();
+  if (schedule) {
+    schedule(handle);
+    return;
+  }
   ready.push(handle);
   if (!armed) {
     armed = true;
@@ -139,6 +156,10 @@ function runOne(): void {
   } else {
     trigger!.idle();
   }
+  runHandle(handle);
+}
+
+function runHandle(handle: Handle): void {
   try {
     // Callbacks run outside any task, as in asyncio (current_task() is None).
     taskStorage.run(undefined, () => handle._run());
@@ -149,6 +170,25 @@ function runOne(): void {
       throw e;
     });
   }
+}
+
+/**
+ * On Cloudflare Workers, a scheduler that runs each callback in the I/O
+ * context that scheduled it (see the top of this file); elsewhere null, and
+ * callbacks share the ready queue.
+ */
+function makeContextScheduler(): ((handle: Handle) => void) | null {
+  const g = globalThis as {
+    navigator?: { userAgent?: string };
+    Response?: new (body: string) => { arrayBuffer(): Promise<ArrayBuffer> };
+  };
+  if (g.navigator?.userAgent !== "Cloudflare-Workers" || typeof g.Response !== "function") {
+    return null;
+  }
+  const Response = g.Response;
+  // A body read settles from the runtime's event loop, after microtasks, in
+  // the context that started it.
+  return (handle) => void new Response("").arrayBuffer().then(() => runHandle(handle));
 }
 
 interface PortLike {
@@ -163,18 +203,10 @@ function makeTrigger(run: () => void): Trigger {
     Bun?: unknown;
     Deno?: unknown;
     process?: { versions?: { node?: string } };
-    navigator?: { userAgent?: string };
     setImmediate?: (callback: () => void) => unknown;
     MessageChannel?: new () => { port1: PortLike; port2: PortLike };
-    Response?: new (body: string) => { arrayBuffer(): Promise<ArrayBuffer> };
   };
   const noop = () => {};
-
-  if (g.navigator?.userAgent === "Cloudflare-Workers" && typeof g.Response === "function") {
-    // A body read settles from the runtime's event loop, after microtasks.
-    const Response = g.Response;
-    return { arm: () => void new Response("").arrayBuffer().then(run), idle: noop };
-  }
 
   const isNode = typeof g.process?.versions?.node === "string" && !g.Bun && !g.Deno;
   if (isNode && typeof g.MessageChannel === "function") {
