@@ -1,5 +1,13 @@
 # @pipedog/elevenlabs
 
+## 0.6.0
+
+### Patch Changes
+
+- Updated dependencies [[`b53032d`](https://github.com/polvallverdu/pipedog/commit/b53032d6a46103d5a1c1fd16b3b61dfd38a7bc2b), [`dd4712b`](https://github.com/polvallverdu/pipedog/commit/dd4712bcedc3ac408918651673743fe90520f8db)]:
+  - @pipedog/asyncio@0.6.0
+  - @pipedog/core@0.6.0
+
 ## 0.5.0
 
 ### Patch Changes

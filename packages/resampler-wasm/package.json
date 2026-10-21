@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/resampler-wasm",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "High-quality PCM resampling (rubato sinc, compiled to WebAssembly) for pipedog: one-shot and streaming, soxr-style quality presets, runs on Bun, Node, Deno and Cloudflare Workers.",
   "keywords": [
     "pipecat",

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/serializer-twilio",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Twilio Media Streams WebSocket frame serializer (TwilioFrameSerializer) for pipedog.",
   "keywords": [
     "pipecat",

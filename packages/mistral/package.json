@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/mistral",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Mistral services (LLM, Voxtral STT and TTS) for pipedog.",
   "keywords": [
     "pipecat",
