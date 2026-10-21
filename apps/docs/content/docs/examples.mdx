@@ -1,0 +1,31 @@
+---
+title: Examples
+description: Runnable voice bots in the repository, over WebRTC, over a WebSocket, and on Cloudflare Durable Objects.
+---
+
+Each example is a complete project in the repository's
+[`examples`](https://github.com/polvallverdu/pipedog/tree/main/examples) folder, with an end-to-end
+test that runs it against mock provider APIs. Clone the repository and run `bun install` once, then
+start any of them from the repository root.
+
+| Example | Run it | What it is |
+| --- | --- | --- |
+| [`smallwebrtc-voice-bot`](https://github.com/polvallverdu/pipedog/tree/main/examples/smallwebrtc-voice-bot) | `OPENAI_API_KEY=sk-... bun run --cwd examples/smallwebrtc-voice-bot start` | A voice assistant in the browser over SmallWebRTC, with OpenAI or Google Gemini services. |
+| [`websocket-voice-bot`](https://github.com/polvallverdu/pipedog/tree/main/examples/websocket-voice-bot) | `OPENAI_API_KEY=sk-... bun run --cwd examples/websocket-voice-bot start` | The same assistant over a WebSocket, with protobuf frames for `@pipecat-ai/websocket-transport`. |
+| [`workers-durable-voice-agent`](https://github.com/polvallverdu/pipedog/tree/main/examples/workers-durable-voice-agent) | `bun run --cwd examples/workers-durable-voice-agent dev` | Parallel voice agents on Cloudflare Workers, one Durable Object per session, over WebSocket. |
+
+The two browser bots serve their page on [http://localhost:7860](http://localhost:7860). Set
+`VOICE_PROVIDER=google` and `GOOGLE_API_KEY` to use Gemini instead of OpenAI. The Workers example
+reads `OPENAI_API_KEY` from `.dev.vars`; its README shows how to stream a recording to a session.
+
+## WebRTC or WebSocket?
+
+The two browser bots are the same pipeline with a different transport. Pick by where your audio
+comes from:
+
+- **WebRTC** copes better with lossy networks: it runs over UDP, so a lost packet doesn't hold up
+  the audio behind it. Browser users get lower latency, the browser's echo cancellation, and Opus
+  compression. See the [voice bot guide](/docs/voice-bot).
+- **WebSocket** is simpler: no ICE or TURN servers, it passes through HTTP proxies and load
+  balancers, and it runs on Cloudflare Workers, where WebRTC can't. It is also the way to go for
+  server-to-server audio and phone bridges. See the [WebSocket transport](/docs/transports/websocket).
