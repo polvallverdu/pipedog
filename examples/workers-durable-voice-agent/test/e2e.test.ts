@@ -7,7 +7,7 @@
 // the mock from the SmallWebRTC example, so no API key is needed.
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   type MockObservability,
@@ -73,6 +73,8 @@ async function startWorker(
     { cwd: EXAMPLE, stdout: "pipe", stderr: "pipe" },
   );
 
+  // A writer doesn't truncate the file: remove the last run's log first.
+  rmSync(join(LOG_DIR, "wrangler.log"), { force: true });
   const log = Bun.file(join(LOG_DIR, "wrangler.log")).writer();
   const ready = new Promise<void>((resolve, reject) => {
     const scan = async (stream: ReadableStream<Uint8Array>) => {
