@@ -29,6 +29,7 @@ import { OpenAILLMService } from "@pipedog/openai/llm";
 import { NovitaLLMService } from "../../novita/src/llm.ts";
 import { PerplexityLLMService } from "../../perplexity/src/llm.ts";
 import { SambaNovaLLMService } from "../../sambanova/src/llm.ts";
+import { GrokLLMService } from "../../xai/src/llm.ts";
 import { BasetenLLMService } from "../src/llm.ts";
 
 type ServiceClass = typeof OpenAILLMService;
@@ -36,14 +37,13 @@ type ServiceClass = typeof OpenAILLMService;
 const SERVICES: [string, ServiceClass, Record<string, unknown>][] = [
   ["openai", OpenAILLMService, { apiKey: "test-key" }],
   ["baseten", BasetenLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
+  ["grok", GrokLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
   ["novita", NovitaLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
   ["perplexity", PerplexityLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
   ["sambanova", SambaNovaLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
 ];
 
-// Not ported yet: the services in pipecat.services.xai.llm (grok) and
-// pipecat.services.nvidia.llm (nvidia).
-test.todo("grok: needs pipecat.services.xai.llm (@pipedog/xai)");
+// Not ported yet: the service in pipecat.services.nvidia.llm (nvidia).
 test.todo("nvidia: needs pipecat.services.nvidia.llm (@pipedog/nvidia)");
 
 /** Build a stream chunk carrying a cumulative usage snapshot. */

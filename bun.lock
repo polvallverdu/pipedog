@@ -36,8 +36,10 @@
         "@pipedog/elevenlabs": "workspace:*",
         "@pipedog/fireworks": "workspace:*",
         "@pipedog/google": "workspace:*",
+        "@pipedog/groq": "workspace:*",
         "@pipedog/inworld": "workspace:*",
         "@pipedog/langchain": "workspace:*",
+        "@pipedog/mistral": "workspace:*",
         "@pipedog/nebius": "workspace:*",
         "@pipedog/novita": "workspace:*",
         "@pipedog/ollama": "workspace:*",
@@ -55,11 +57,13 @@
         "@pipedog/serializer-telnyx": "workspace:*",
         "@pipedog/serializer-twilio": "workspace:*",
         "@pipedog/serializer-vonage": "workspace:*",
+        "@pipedog/together": "workspace:*",
         "@pipedog/tracing": "workspace:*",
         "@pipedog/transport-smallwebrtc": "workspace:*",
         "@pipedog/transport-websocket": "workspace:*",
         "@pipedog/ultravox": "workspace:*",
         "@pipedog/whisper": "workspace:*",
+        "@pipedog/xai": "workspace:*",
         "cn": "0.4.0",
         "fumadocs-core": "16.16.2",
         "fumadocs-mdx": "15.4.6",
@@ -350,6 +354,23 @@
         "@google-cloud/text-to-speech",
       ],
     },
+    "packages/grok": {
+      "name": "@pipedog/grok",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/xai": "workspace:*",
+      },
+    },
+    "packages/groq": {
+      "name": "@pipedog/groq",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+        "@pipedog/whisper": "workspace:*",
+      },
+    },
     "packages/inworld": {
       "name": "@pipedog/inworld",
       "version": "0.5.0",
@@ -385,6 +406,15 @@
       },
       "devDependencies": {
         "@types/node": "24.19.1",
+      },
+    },
+    "packages/mistral": {
+      "name": "@pipedog/mistral",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
       },
     },
     "packages/nebius": {
@@ -562,6 +592,15 @@
         "@pipedog/core": "workspace:*",
       },
     },
+    "packages/together": {
+      "name": "@pipedog/together",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
     "packages/tracing": {
       "name": "@pipedog/tracing",
       "version": "0.5.0",
@@ -631,6 +670,15 @@
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
         "openai": "^6.49.0",
+      },
+    },
+    "packages/xai": {
+      "name": "@pipedog/xai",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
       },
     },
   },
@@ -1111,11 +1159,17 @@
 
     "@pipedog/google": ["@pipedog/google@workspace:packages/google"],
 
+    "@pipedog/grok": ["@pipedog/grok@workspace:packages/grok"],
+
+    "@pipedog/groq": ["@pipedog/groq@workspace:packages/groq"],
+
     "@pipedog/inworld": ["@pipedog/inworld@workspace:packages/inworld"],
 
     "@pipedog/langchain": ["@pipedog/langchain@workspace:packages/langchain"],
 
     "@pipedog/mcp": ["@pipedog/mcp@workspace:packages/mcp"],
+
+    "@pipedog/mistral": ["@pipedog/mistral@workspace:packages/mistral"],
 
     "@pipedog/nebius": ["@pipedog/nebius@workspace:packages/nebius"],
 
@@ -1157,6 +1211,8 @@
 
     "@pipedog/serializer-vonage": ["@pipedog/serializer-vonage@workspace:packages/serializer-vonage"],
 
+    "@pipedog/together": ["@pipedog/together@workspace:packages/together"],
+
     "@pipedog/tracing": ["@pipedog/tracing@workspace:packages/tracing"],
 
     "@pipedog/transport-smallwebrtc": ["@pipedog/transport-smallwebrtc@workspace:packages/transport-smallwebrtc"],
@@ -1166,6 +1222,8 @@
     "@pipedog/ultravox": ["@pipedog/ultravox@workspace:packages/ultravox"],
 
     "@pipedog/whisper": ["@pipedog/whisper@workspace:packages/whisper"],
+
+    "@pipedog/xai": ["@pipedog/xai@workspace:packages/xai"],
 
     "@pnpm/deps.graph-sequencer": ["@pnpm/deps.graph-sequencer@1100.0.1", "", {}, "sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A=="],
 

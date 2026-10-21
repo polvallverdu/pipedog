@@ -10,17 +10,17 @@
     "aws",
     "aws-sagemaker",
     "whisper",
+    "groq",
+    "mistral",
+    "together",
+    "xai",
     "---Coming soon---",
     "assemblyai",
     "azure",
     "gladia",
-    "groq",
-    "mistral",
     "nvidia",
     "sarvam",
     "soniox",
-    "speechmatics",
-    "together",
-    "xai"
+    "speechmatics"
   ]
 }
