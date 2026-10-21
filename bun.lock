@@ -25,14 +25,26 @@
         "@pipedog/anthropic": "workspace:*",
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/audio-silero": "workspace:*",
+        "@pipedog/baseten": "workspace:*",
         "@pipedog/cartesia": "workspace:*",
+        "@pipedog/cerebras": "workspace:*",
         "@pipedog/core": "workspace:*",
+        "@pipedog/crusoe": "workspace:*",
         "@pipedog/deepgram": "workspace:*",
+        "@pipedog/deepseek": "workspace:*",
         "@pipedog/elevenlabs": "workspace:*",
+        "@pipedog/fireworks": "workspace:*",
         "@pipedog/google": "workspace:*",
         "@pipedog/inworld": "workspace:*",
         "@pipedog/langchain": "workspace:*",
+        "@pipedog/nebius": "workspace:*",
+        "@pipedog/novita": "workspace:*",
+        "@pipedog/ollama": "workspace:*",
         "@pipedog/openai": "workspace:*",
+        "@pipedog/openrouter": "workspace:*",
+        "@pipedog/perplexity": "workspace:*",
+        "@pipedog/qwen": "workspace:*",
+        "@pipedog/sambanova": "workspace:*",
         "@pipedog/serializer-protobuf": "workspace:*",
         "@pipedog/serializer-rtvi-client": "workspace:*",
         "@pipedog/serializer-telnyx": "workspace:*",
@@ -183,12 +195,30 @@
         "@pipedog/onnx": "workspace:*",
       },
     },
+    "packages/baseten": {
+      "name": "@pipedog/baseten",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
     "packages/cartesia": {
       "name": "@pipedog/cartesia",
       "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/cerebras": {
+      "name": "@pipedog/cerebras",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
       },
     },
     "packages/core": {
@@ -212,6 +242,15 @@
         "@opentelemetry/api",
       ],
     },
+    "packages/crusoe": {
+      "name": "@pipedog/crusoe",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
     "packages/deepgram": {
       "name": "@pipedog/deepgram",
       "version": "0.5.0",
@@ -220,12 +259,30 @@
         "@pipedog/core": "workspace:*",
       },
     },
+    "packages/deepseek": {
+      "name": "@pipedog/deepseek",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
     "packages/elevenlabs": {
       "name": "@pipedog/elevenlabs",
       "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/fireworks": {
+      "name": "@pipedog/fireworks",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
       },
     },
     "packages/google": {
@@ -288,6 +345,33 @@
         "@types/node": "24.19.1",
       },
     },
+    "packages/nebius": {
+      "name": "@pipedog/nebius",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/novita": {
+      "name": "@pipedog/novita",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/ollama": {
+      "name": "@pipedog/ollama",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
     "packages/onnx": {
       "name": "@pipedog/onnx",
       "version": "0.5.0",
@@ -318,9 +402,45 @@
         "openai": "^6.49.0",
       },
     },
+    "packages/openrouter": {
+      "name": "@pipedog/openrouter",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/perplexity": {
+      "name": "@pipedog/perplexity",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/qwen": {
+      "name": "@pipedog/qwen",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
     "packages/resampler-wasm": {
       "name": "@pipedog/resampler-wasm",
       "version": "0.5.0",
+    },
+    "packages/sambanova": {
+      "name": "@pipedog/sambanova",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
     },
     "packages/sentencex-wasm": {
       "name": "@pipedog/sentencex-wasm",
@@ -825,11 +945,19 @@
 
     "@pipedog/audio-smart-turn": ["@pipedog/audio-smart-turn@workspace:packages/audio-smart-turn"],
 
+    "@pipedog/baseten": ["@pipedog/baseten@workspace:packages/baseten"],
+
     "@pipedog/cartesia": ["@pipedog/cartesia@workspace:packages/cartesia"],
+
+    "@pipedog/cerebras": ["@pipedog/cerebras@workspace:packages/cerebras"],
 
     "@pipedog/core": ["@pipedog/core@workspace:packages/core"],
 
+    "@pipedog/crusoe": ["@pipedog/crusoe@workspace:packages/crusoe"],
+
     "@pipedog/deepgram": ["@pipedog/deepgram@workspace:packages/deepgram"],
+
+    "@pipedog/deepseek": ["@pipedog/deepseek@workspace:packages/deepseek"],
 
     "@pipedog/docs": ["@pipedog/docs@workspace:apps/docs"],
 
@@ -845,6 +973,8 @@
 
     "@pipedog/example-workers-durable-voice-agent": ["@pipedog/example-workers-durable-voice-agent@workspace:examples/workers-durable-voice-agent"],
 
+    "@pipedog/fireworks": ["@pipedog/fireworks@workspace:packages/fireworks"],
+
     "@pipedog/google": ["@pipedog/google@workspace:packages/google"],
 
     "@pipedog/inworld": ["@pipedog/inworld@workspace:packages/inworld"],
@@ -853,11 +983,25 @@
 
     "@pipedog/mcp": ["@pipedog/mcp@workspace:packages/mcp"],
 
+    "@pipedog/nebius": ["@pipedog/nebius@workspace:packages/nebius"],
+
+    "@pipedog/novita": ["@pipedog/novita@workspace:packages/novita"],
+
+    "@pipedog/ollama": ["@pipedog/ollama@workspace:packages/ollama"],
+
     "@pipedog/onnx": ["@pipedog/onnx@workspace:packages/onnx"],
 
     "@pipedog/openai": ["@pipedog/openai@workspace:packages/openai"],
 
+    "@pipedog/openrouter": ["@pipedog/openrouter@workspace:packages/openrouter"],
+
+    "@pipedog/perplexity": ["@pipedog/perplexity@workspace:packages/perplexity"],
+
+    "@pipedog/qwen": ["@pipedog/qwen@workspace:packages/qwen"],
+
     "@pipedog/resampler-wasm": ["@pipedog/resampler-wasm@workspace:packages/resampler-wasm"],
+
+    "@pipedog/sambanova": ["@pipedog/sambanova@workspace:packages/sambanova"],
 
     "@pipedog/sentencex-wasm": ["@pipedog/sentencex-wasm@workspace:packages/sentencex-wasm"],
 

@@ -2,14 +2,18 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // Writes the provider pages that come from data/providers.ts: one short "coming soon" page per
-// upcoming provider, the overview and category index pages, the long-tail list, and the
-// meta.json files that order the sidebar. The ported pages are written by hand and only listed.
+// upcoming provider, one page per OpenAI-compatible LLM service (their usage samples are
+// hand-written in snippets/), the overview and category index pages, the long-tail list, and the
+// meta.json files that order the sidebar. The other ported pages are written by hand and only
+// listed.
 // Run with `bun run providers:generate` (in apps/docs); `--check` fails if a file is stale.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import {
   type Category,
+  type CompatibleLlmPage,
+  compatibleLlm,
   longTail,
   type PortedPage,
   ported,
@@ -139,6 +143,133 @@ ${pkg ? `Its pipedog package will be \`${pkg}\`.\n\n` : ""}- [Pipecat's ${page.n
   test by test. The [porting status](/docs/contributing/status) lists what's done.
 
 Until then, see what is ported in [${sections[page.section].title}](/docs/${folder(page.section)}).
+`;
+}
+
+const tick = (text: string) => `\`${text}\``;
+
+function compatibleLlmPage(page: CompatibleLlmPage): string {
+  const dir = page.pkg.replace("@pipedog/", "");
+  const snippet = `snippets/services/llm-${page.slug}.ts`;
+  const sourceFiles = [
+    `packages/${dir}/src/llm.ts`,
+    ...(page.adapter ? [`${page.adapter.module}.ts`] : []),
+  ];
+  const cards = [
+    `  <Card title="Upstream page" href="${upstreamDocs}/llm/${page.slug}">\n    Pipecat's documentation for the same service.\n  </Card>`,
+    `  <Card title="Source" href="${repo}/tree/main/packages/${dir}/src">\n    ${sourceFiles.map(tick).join(" and ")}.\n  </Card>`,
+    ...page.links.map(
+      (link) => `  <Card title="${link.title}" href="${link.href}">\n    ${link.text}\n  </Card>`,
+    ),
+  ];
+  const imports = [
+    `import { ${page.cls} } from "${page.pkg}/llm";`,
+    ...(page.adapter
+      ? [`import { ${page.adapter.cls} } from "${page.pkg}/${page.adapter.module}";`]
+      : []),
+  ];
+  const key = page.env
+    ? `\n- Pass the key as \`apiKey\`. It is required, and the service never falls back to\n  \`OPENAI_API_KEY\`. The examples read it from \`${page.env}\`.`
+    : "";
+  const models = [page.model, ...page.models].map(tick).join(", ");
+  const settingsRows = [
+    `| \`model\` | \`string\` | \`"${page.model}"\` | Model name. |`,
+    ...(page.settingsRows ?? []),
+  ];
+  const usage = (page.usage ?? [])
+    .map((u) => `${u.intro}\n\n<include cwd>${snippet}#${u.region}</include>\n\n`)
+    .join("");
+  const role = page.developerRole
+    ? `"developer" messages are sent as is: the API supports that role.`
+    : `"developer" messages are sent as "user" messages, since the API doesn't support that role (\`supportsDeveloperRole\` is \`false\`).`;
+  const notes = [
+    `Runs a completion for each \`LLMContextFrame\`, between an \`LLMFullResponseStartFrame\` and an\n  \`LLMFullResponseEndFrame\`, and streams the reply as \`LLMTextFrame\`s, as\n  [\`OpenAILLMService\`](/docs/services/llm/openai) does. Function calls, token usage metrics and\n  \`runInference\` work the same way.`,
+    role,
+    ...(page.adapter
+      ? [`Messages go through \`${page.adapter.cls}\`, which ${page.adapter.about}.`]
+      : []),
+    ...page.notes,
+  ];
+  const adapterLine = page.adapter
+    ? ` It uses \`${page.adapter.cls}\`, which ${page.adapter.about}.`
+    : "";
+  return `${frontmatter(page.name, `${page.cls} streams chat completions from ${page.name} through its OpenAI-compatible API.`)}
+${GENERATED}
+
+## Overview
+
+${page.about}
+
+- **\`${page.cls}\`**: an \`OpenAILLMService\` subclass with ${page.name}'s base URL and default
+  model.${adapterLine}
+
+<Cards>
+${cards.join("\n")}
+</Cards>
+
+## Installation
+
+\`\`\`bash
+bun add ${page.pkg}
+\`\`\`
+
+It depends on \`@pipedog/openai\`, which is installed with it.
+
+\`\`\`ts
+${imports.join("\n")}
+\`\`\`
+
+## Prerequisites
+
+- ${page.account}${key}
+
+## ${page.cls}
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/${dir}/src/llm.ts" name="${page.cls}Options" />
+
+The other options (\`organization\`, \`project\`, \`defaultHeaders\`, \`serviceTier\`,
+\`retryOnTimeout\`, \`retryTimeoutSecs\`, function calling) are \`OpenAILLMService\`'s. See
+[OpenAI](/docs/services/llm/openai#configuration).
+
+| | |
+|---|---|
+| Base URL | \`${page.baseUrl}\` |
+| Default model | \`${page.model}\` |
+| Models to try | ${models}. See the provider's catalog for the rest. |
+
+### Settings
+
+Runtime-updatable settings, passed as \`settings: new ${page.cls}.Settings({...})\`
+(\`${page.settings}\`). They are [OpenAI's settings](/docs/services/llm/openai#settings), with these
+defaults:
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+${settingsRows.join("\n")}
+
+Every other setting keeps OpenAI's default. Unset sampling settings are left out of the request, so
+the provider's own defaults apply. \`extra\` carries provider-specific request fields.
+
+### Usage
+
+<include cwd meta='title="llm.ts"'>${snippet}#usage</include>
+
+${usage}Change settings mid-call with an \`LLMUpdateSettingsFrame\`. The next completion uses them:
+
+<include cwd>${snippet}#update</include>
+
+### Notes
+
+${notes.map((note) => `- ${note}`).join("\n")}
+
+## Runtime notes
+
+- The client is the official \`openai\` JS SDK (through \`@pipedog/openai\`), which talks through
+  \`fetch\`. It works on Bun, Node, Deno and Cloudflare Workers.
+- The deprecated \`model\` constructor option is not ported. Use \`settings\`.
+- Tested against a local OpenAI-compatible mock server, not against ${page.name} itself.
 `;
 }
 
@@ -273,6 +404,9 @@ for (const page of upcoming) {
   }
   await write(`${folder(page.section)}/${page.slug}.mdx`, upcomingPage(page));
 }
+for (const page of compatibleLlm) {
+  await write(`services/llm/${page.slug}.mdx`, compatibleLlmPage(page));
+}
 for (const category of categories) {
   await write(`services/${category}/index.mdx`, sectionIndex(category));
   await write(`services/${category}/meta.json`, sectionMeta(category, true));
@@ -297,5 +431,5 @@ if (stale.length) {
 console.log(
   check
     ? "generate-providers: up to date"
-    : `generate-providers: ${upcoming.length} coming-soon pages, ${categories.length + 3} indexes`,
+    : `generate-providers: ${upcoming.length} coming-soon pages, ${compatibleLlm.length} OpenAI-compatible LLM pages, ${categories.length + 3} indexes`,
 );

@@ -322,9 +322,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/deepseek/src/deepseek_adapter.ts. Tested by packages/deepseek/test/test_deepseek_adapter.test.ts (TestDeepSeekGetLLMInvocationParams of tests/test_get_llm_invocation_params.py)."
     },
     {
       "module": "pipecat.adapters.services.gemini_adapter",
@@ -587,9 +587,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/perplexity/src/perplexity_adapter.ts (copy.deepcopy -> structuredClone). Tested by packages/perplexity/test/test_perplexity_adapter.test.ts (TestPerplexityGetLLMInvocationParams of tests/test_get_llm_invocation_params.py)."
     },
     {
       "module": "pipecat.audio",
@@ -7450,9 +7450,9 @@
         "test_openai_compatible_api_key.py",
         "test_openai_compatible_token_usage.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/baseten/src/llm.ts: OpenAILLMService subclass. Tested against the examples' mock OpenAI server (test/baseten_llm_client.test.ts)."
     },
     {
       "module": "pipecat.services.bland",
@@ -7714,9 +7714,9 @@
         "test_cerebras_llm.py",
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cerebras/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
     },
     {
       "module": "pipecat.services.crusoe",
@@ -7753,9 +7753,9 @@
       "tests": [
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/crusoe/src/llm.ts: OpenAILLMService subclass."
     },
     {
       "module": "pipecat.services.deepgram",
@@ -8162,9 +8162,9 @@
         "test_openai_compatible_extra_body.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/deepseek/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`). DeepSeekThinkingConfig (pydantic upstream) is a class with modelDump(); a plain thinking object is coerced in the settings constructor (upstream __post_init__)."
     },
     {
       "module": "pipecat.services.elevenlabs",
@@ -8435,9 +8435,9 @@
       "tests": [
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/fireworks/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
     },
     {
       "module": "pipecat.services.fish",
@@ -10209,9 +10209,9 @@
       "tests": [
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/nebius/src/llm.ts: OpenAILLMService subclass."
     },
     {
       "module": "pipecat.services.neuphonic",
@@ -10296,9 +10296,9 @@
         "test_openai_compatible_api_key.py",
         "test_openai_compatible_token_usage.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/novita/src/llm.ts: OpenAILLMService subclass."
     },
     {
       "module": "pipecat.services.nvidia",
@@ -10521,9 +10521,9 @@
         "test_ollama_llm.py",
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/ollama/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
     },
     {
       "module": "pipecat.services.openai",
@@ -11092,9 +11092,9 @@
         "test_openai_compatible_extra_body.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/openrouter/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`). OpenRouterProviderPreferences (pydantic, extra=allow) is a class taking camelCase or snake_case options; unknown options are kept in `extra` and sent as given; modelDump() writes snake_case keys."
     },
     {
       "module": "pipecat.services.perplexity",
@@ -11132,9 +11132,9 @@
         "test_openai_compatible_api_key.py",
         "test_openai_compatible_token_usage.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/perplexity/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
     },
     {
       "module": "pipecat.services.piper",
@@ -11260,9 +11260,9 @@
       "tests": [
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/qwen/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
     },
     {
       "module": "pipecat.services.resembleai",
@@ -11431,9 +11431,9 @@
         "test_openai_compatible_token_usage.py",
         "test_sambanova_llm.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/sambanova/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`). The stream is closed as in BaseOpenAILLMService (iterator.return() + controller.abort()) instead of `async with chunk_stream`."
     },
     {
       "module": "pipecat.services.sarvam",
@@ -17270,8 +17270,8 @@
         "pipecat.services.cerebras.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_classifiers_clef.py",
@@ -19186,8 +19186,8 @@
         "pipecat.services.novita.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "1 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_nvidia_llm.py",
@@ -19243,8 +19243,8 @@
         "pipecat.services.ollama.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_compatible_api_key.py",
@@ -19299,8 +19299,8 @@
         "pipecat.utils.types"
       ],
       "needsModules": 126,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "12 pass, 0 fail, 0 skip, 8 todo. todo: together and grok (not ported yet), inception and sarvam (not ported yet)."
     },
     {
       "file": "tests/test_openai_compatible_token_usage.py",
@@ -19319,8 +19319,8 @@
         "pipecat.services.xai.llm"
       ],
       "needsModules": 125,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "35 pass, 0 fail, 0 skip, 2 todo. todo: grok (pipecat.services.xai.llm) and nvidia (pipecat.services.nvidia.llm), not ported yet."
     },
     {
       "file": "tests/test_openai_http_client.py",
@@ -20223,8 +20223,8 @@
         "pipecat.services.sambanova.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "1 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_sarvam_llm.py",

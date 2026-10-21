@@ -34,6 +34,8 @@ export interface MockOpenAI extends ProviderMock {
   failChat: boolean;
   /** The messages of each chat completion request. */
   chats: { role: string; content: unknown }[][];
+  /** Each chat completion request: its `Authorization` header and JSON body. */
+  chatRequests: { authorization: string | null; body: Record<string, any> }[];
 }
 
 /** RMS above which a 16-bit chunk counts as speech. */
@@ -99,6 +101,7 @@ export function startMockOpenAI(): MockOpenAI {
     realtimeAuth: [],
     failChat: false,
     chats: [],
+    chatRequests: [],
     heard: 0,
     asked: [],
     spoken: [],
@@ -141,7 +144,10 @@ export function startMockOpenAI(): MockOpenAI {
             { status: 500 },
           );
         }
-        const body = (await request.json()) as { messages: { role: string; content: unknown }[] };
+        const body = (await request.json()) as {
+          messages: { role: string; content: unknown }[];
+        } & Record<string, any>;
+        mock.chatRequests.push({ authorization: request.headers.get("authorization"), body });
         mock.chats.push(body.messages);
         const last = [...body.messages].reverse().find((m) => m.role === "user");
         const question = typeof last?.content === "string" ? last.content : "";
