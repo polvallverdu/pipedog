@@ -1,0 +1,28 @@
+{
+  "name": "@pipedog/example-workers-durable-voice-agent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Parallel voice agents on Cloudflare Durable Objects: one voice session per Durable Object, over WebSockets.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "client": "bun client/client.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/audio-silero": "workspace:*",
+    "@pipedog/audio-smart-turn": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/openai": "workspace:*",
+    "@pipedog/serializer-protobuf": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261007.1",
+    "@pipedog/example-test-mocks": "workspace:*",
+    "wrangler": "4.148.0"
+  }
+}

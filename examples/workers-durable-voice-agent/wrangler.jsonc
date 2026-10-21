@@ -1,0 +1,15 @@
+{
+  // Parallel voice agents: each session is one Durable Object, serving one WebSocket.
+  "name": "workers-durable-voice-agent",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [{ "name": "VOICE_SESSION", "class_name": "VoiceSession" }]
+  },
+  "migrations": [{ "tag": "v1", "new_classes": ["VoiceSession"] }],
+  // The VAD and turn models are bundled as data and passed to the analyzers.
+  "rules": [{ "type": "Data", "globs": ["**/*.onnx"], "fallthrough": true }],
+  // Set with `wrangler secret put OPENAI_API_KEY`, or in .dev.vars for local runs.
+  "vars": {}
+}
