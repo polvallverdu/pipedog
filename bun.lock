@@ -153,7 +153,7 @@
     },
     "packages/anthropic": {
       "name": "@pipedog/anthropic",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.131.0",
         "@pipedog/asyncio": "workspace:*",
@@ -162,11 +162,11 @@
     },
     "packages/asyncio": {
       "name": "@pipedog/asyncio",
-      "version": "0.4.0",
+      "version": "0.5.0",
     },
     "packages/audio-silero": {
       "name": "@pipedog/audio-silero",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -175,7 +175,7 @@
     },
     "packages/audio-smart-turn": {
       "name": "@pipedog/audio-smart-turn",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/core": "workspace:*",
         "@pipedog/onnx": "workspace:*",
@@ -183,7 +183,7 @@
     },
     "packages/cartesia": {
       "name": "@pipedog/cartesia",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -191,7 +191,7 @@
     },
     "packages/core": {
       "name": "@pipedog/core",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/resampler-wasm": "workspace:*",
@@ -212,7 +212,7 @@
     },
     "packages/deepgram": {
       "name": "@pipedog/deepgram",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -220,7 +220,7 @@
     },
     "packages/elevenlabs": {
       "name": "@pipedog/elevenlabs",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -228,7 +228,7 @@
     },
     "packages/google": {
       "name": "@pipedog/google",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@google/genai": "^2.27.0",
         "@pipedog/asyncio": "workspace:*",
@@ -251,7 +251,7 @@
     },
     "packages/langchain": {
       "name": "@pipedog/langchain",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -266,7 +266,7 @@
     },
     "packages/mcp": {
       "name": "@pipedog/mcp",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "bin": {
         "pipedog-mcp": "./dist/bin.js",
       },
@@ -280,7 +280,7 @@
     },
     "packages/onnx": {
       "name": "@pipedog/onnx",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/core": "workspace:*",
       },
@@ -299,7 +299,7 @@
     },
     "packages/openai": {
       "name": "@pipedog/openai",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -310,18 +310,18 @@
     },
     "packages/resampler-wasm": {
       "name": "@pipedog/resampler-wasm",
-      "version": "0.4.0",
+      "version": "0.5.0",
     },
     "packages/sentencex-wasm": {
       "name": "@pipedog/sentencex-wasm",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "devDependencies": {
         "sentencex": "1.0.32",
       },
     },
     "packages/serializer-protobuf": {
       "name": "@pipedog/serializer-protobuf",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -329,14 +329,14 @@
     },
     "packages/serializer-rtvi-client": {
       "name": "@pipedog/serializer-rtvi-client",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/core": "workspace:*",
       },
     },
     "packages/serializer-telnyx": {
       "name": "@pipedog/serializer-telnyx",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -344,7 +344,7 @@
     },
     "packages/tracing": {
       "name": "@pipedog/tracing",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@opentelemetry/exporter-trace-otlp-http": "0.222.0",
         "@opentelemetry/resources": "2.11.0",
@@ -360,7 +360,7 @@
     },
     "packages/transport-smallwebrtc": {
       "name": "@pipedog/transport-smallwebrtc",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -375,7 +375,7 @@
     },
     "packages/transport-websocket": {
       "name": "@pipedog/transport-websocket",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -398,7 +398,7 @@
     },
     "packages/whisper": {
       "name": "@pipedog/whisper",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
