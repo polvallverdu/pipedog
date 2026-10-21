@@ -1,11 +1,11 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Acceptance test for the voice bot: headless Chromium plays a scripted user
-// (a recorded question as the microphone) and the bot answers it through the
-// whole pipeline: SmallWebRTC in, OpenAI transcription, chat and speech
-// synthesis, SmallWebRTC out. OpenAI is replaced by mock_openai.ts, so the
-// test needs no API key.
+// Acceptance test for the voice bot, once per provider: headless Chromium plays
+// a scripted user (a recorded question as the microphone) and the bot answers it
+// through the whole pipeline: SmallWebRTC in, transcription, chat and speech
+// synthesis, SmallWebRTC out. The provider APIs are replaced by mock_openai.ts
+// and mock_google.ts, so the test needs no API key.
 //
 // The browser loads the Pipecat SDK from esm.sh, as the page does; the test
 // serves those URLs from local bundles of the same packages instead.
@@ -18,8 +18,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import type { Browser, BrowserContext } from "playwright-core";
+import type { VoiceProvider } from "../src/bot.ts";
 import { createServer } from "../src/server.ts";
-import { ANSWER, type MockOpenAI, SCRIPTED_QUESTION, startMockOpenAI } from "./mock_openai.ts";
+import { startMockGoogle } from "./mock_google.ts";
+import { startMockOpenAI } from "./mock_openai.ts";
+import { ANSWER, type ProviderMock, SCRIPTED_QUESTION } from "./mock_provider.ts";
+
+const MOCKS: Record<VoiceProvider, () => ProviderMock> = {
+  openai: startMockOpenAI,
+  google: startMockGoogle,
+};
 
 const HERE = import.meta.dir;
 const CACHE = join(HERE, "..", "node_modules", ".cache", "voice-bot-e2e");
@@ -146,77 +154,71 @@ async function waitFor(predicate: () => boolean, timeoutMs: number): Promise<voi
   }
 }
 
-test.skipIf(!chromiumPath)(
-  "voice bot answers a spoken question in the browser",
-  async () => {
-    const { chromium } = await import("playwright-core");
-    const mock: MockOpenAI = startMockOpenAI();
-    const server = createServer({ apiKey: "test-key", baseUrl: mock.baseUrl });
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const { port } = server.address() as AddressInfo;
+for (const provider of ["openai", "google"] as const) {
+  test.skipIf(!chromiumPath)(
+    `${provider}: the voice bot answers a spoken question in the browser`,
+    async () => {
+      const { chromium } = await import("playwright-core");
+      const mock = MOCKS[provider]();
+      const server = createServer({ provider, apiKey: "test-key", baseUrl: mock.baseUrl });
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      const { port } = server.address() as AddressInfo;
 
-    const browser: Browser = await chromium.launch({
-      executablePath: chromiumPath!,
-      args: [
-        "--use-fake-device-for-media-stream",
-        "--use-fake-ui-for-media-stream",
-        `--use-file-for-fake-audio-capture=${paddedQuestionWav()}`,
-        "--autoplay-policy=no-user-gesture-required",
-      ],
-    });
-    let context: BrowserContext | null = null;
-    try {
-      context = await browser.newContext();
-      await context.route("https://esm.sh/**", (route) =>
-        route.fulfill({
-          contentType: "text/javascript",
-          body: route.request().url().includes("client-js") ? clientBundle : transportBundle,
-        }),
-      );
-      const page = await context.newPage();
-      const errors: string[] = [];
-      page.on("pageerror", (error) => errors.push(error.message));
-      await page.addInitScript(captureRtcConnections);
-      await page.goto(`http://127.0.0.1:${port}/`);
+      const browser: Browser = await chromium.launch({
+        executablePath: chromiumPath!,
+        args: [
+          "--use-fake-device-for-media-stream",
+          "--use-fake-ui-for-media-stream",
+          `--use-file-for-fake-audio-capture=${paddedQuestionWav()}`,
+          "--autoplay-policy=no-user-gesture-required",
+        ],
+      });
+      let context: BrowserContext | null = null;
+      try {
+        context = await browser.newContext();
+        await context.route("https://esm.sh/**", (route) =>
+          route.fulfill({
+            contentType: "text/javascript",
+            body: route.request().url().includes("client-js") ? clientBundle : transportBundle,
+          }),
+        );
+        const page = await context.newPage();
+        const errors: string[] = [];
+        page.on("pageerror", (error) => errors.push(error.message));
+        await page.addInitScript(captureRtcConnections);
+        await page.goto(`http://127.0.0.1:${port}/`);
 
-      await page.click("#connect");
-      await page.evaluate(() => (window as any).__audio.resume());
-      await page.waitForFunction(() =>
-        document.querySelector("#status")?.textContent?.startsWith("Connected"),
-      );
+        await page.click("#connect");
+        await page.evaluate(() => (window as any).__audio.resume());
+        await page.waitForFunction(() =>
+          document.querySelector("#status")?.textContent?.startsWith("Connected"),
+        );
 
-      // The bot greets the user, then answers the scripted question.
-      await waitFor(() => mock.speeches.includes(ANSWER), 60_000);
+        // The bot greets the user, then answers the scripted question.
+        await waitFor(() => mock.spoken.includes(ANSWER), 60_000);
 
-      // The browser received the bot's speech: the audio follows the synthesis
-      // request, so wait until the remote track has a level.
-      const loudest = () => page.evaluate(() => (window as any).__maxRms as number);
-      let level = await loudest();
-      for (let i = 0; i < 100 && level <= 0.01; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        level = await loudest();
+        // The browser received the bot's speech: the audio follows the synthesis
+        // request, so wait until the remote track has a level.
+        const loudest = () => page.evaluate(() => (window as any).__maxRms as number);
+        let level = await loudest();
+        for (let i = 0; i < 100 && level <= 0.01; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          level = await loudest();
+        }
+        expect(level).toBeGreaterThan(0.01);
+
+        // The user's audio was transcribed, and the transcript reached the chat model.
+        expect(mock.heard).toBeGreaterThan(1000);
+        expect(mock.asked.some((question) => question.includes(SCRIPTED_QUESTION))).toBe(true);
+
+        expect(errors).toEqual([]);
+      } finally {
+        await context?.close();
+        await browser.close();
+        server.close();
+        mock.stop();
       }
-      expect(level).toBeGreaterThan(0.01);
-
-      // The user's audio was transcribed, and the transcript reached the chat model.
-      expect(mock.transcriptions.some((bytes) => bytes > 1000)).toBe(true);
-      const asked = mock.chats.some((messages) =>
-        messages.some(
-          (m) =>
-            m.role === "user" &&
-            typeof m.content === "string" &&
-            m.content.includes(SCRIPTED_QUESTION),
-        ),
-      );
-      expect(asked).toBe(true);
-
-      expect(errors).toEqual([]);
-    } finally {
-      await context?.close();
-      await browser.close();
-      server.close();
-      mock.stop();
-    }
-  },
-  90_000,
-);
+    },
+    90_000,
+  );
+}

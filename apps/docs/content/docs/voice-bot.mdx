@@ -38,6 +38,15 @@ OPENAI_API_KEY=sk-... bun run --cwd examples/smallwebrtc-voice-bot start
 Open [http://localhost:7860](http://localhost:7860), click **Connect**, allow the microphone, and talk. The bot introduces
 itself, then answers your question.
 
+To use Google Gemini instead of OpenAI, set `VOICE_PROVIDER=google` and `GOOGLE_API_KEY`. The
+pipeline is the same, with Gemini Live for transcription, Gemini for the reply and Gemini speech
+synthesis for the voice.
+
+```bash
+VOICE_PROVIDER=google GOOGLE_API_KEY=... bun run --cwd examples/smallwebrtc-voice-bot start
+```
+
+
 </Step>
 <Step>
 
@@ -113,7 +122,9 @@ through the pipeline above.
 
 | Setting                  | Where                           | Default                           |
 | ------------------------ | ------------------------------- | --------------------------------- |
-| OpenAI API key           | `OPENAI_API_KEY`                | required                          |
+| Provider                 | `VOICE_PROVIDER`                | `openai` (or `google`)            |
+| OpenAI API key           | `OPENAI_API_KEY`                | required for OpenAI               |
+| Google API key           | `GOOGLE_API_KEY`                | required for Google               |
 | OpenAI-compatible server | `OPENAI_BASE_URL`               | `https://api.openai.com/v1`       |
 | Port                     | `PORT`                          | `7860`                            |
 | Chat model and prompt    | `OpenAILLMSettings` in `bot.ts` | the service default, see the code |
