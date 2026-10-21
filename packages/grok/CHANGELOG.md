@@ -1,5 +1,12 @@
 # @pipedog/grok
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @pipedog/xai@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes

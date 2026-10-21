@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/audio-smart-turn",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Local Smart Turn v3 end-of-turn detection for pipedog: core's LocalSmartTurnAnalyzerV3 wired to @pipedog/onnx, with the upstream smart-turn-v3.2-cpu.onnx model included.",
   "keywords": [
     "pipecat",

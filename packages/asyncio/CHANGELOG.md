@@ -1,5 +1,12 @@
 # @pipedog/asyncio
 
+## 0.6.1
+
+### Patch Changes
+
+- [#43](https://github.com/polvallverdu/pipedog/pull/43) [`9f1ce7a`](https://github.com/polvallverdu/pipedog/commit/9f1ce7aea9ae80195d7ff8da0cb591f7910641ac) Thanks [@polvallverdu](https://github.com/polvallverdu)! - README: explain how callbacks are scheduled on Cloudflare Workers (each in the I/O context that
+  scheduled it), so concurrent Durable Objects don't do each other's I/O.
+
 ## 0.6.0
 
 ### Patch Changes

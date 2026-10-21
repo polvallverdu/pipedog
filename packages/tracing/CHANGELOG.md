@@ -1,5 +1,12 @@
 # @pipedog/tracing
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @pipedog/core@0.6.1
+
 ## 0.6.0
 
 ### Patch Changes
