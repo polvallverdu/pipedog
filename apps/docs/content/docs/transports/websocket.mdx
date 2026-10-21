@@ -18,7 +18,9 @@ the helpers that accept a socket on each runtime:
 - **`RTVIClientTransport`**: a `WebsocketClientTransport` that speaks RTVI as a client to a bot.
 - **`WebsocketConnection`**: the runtime-agnostic socket all four transports talk to.
 - Endpoint helpers that produce a `WebsocketConnection`: `websocketFetchHandler` (fetch
-  handlers), `websocketServe` (listen on a port) and `honoWebsocket` (Hono).
+  handlers, with `upgradeWebSocket` and `bunWebSocket`), `serveFetch` (serve a fetch handler with
+  WebSocket upgrades on Bun, Node and Deno), `websocketServe` (listen on a port) and
+  `honoWebsocket` (Hono).
 
 <Callout type="info">
   For a browser voice client, WebRTC handles network loss and jitter better. See
@@ -48,8 +50,8 @@ the helpers that accept a socket on each runtime:
 bun add @pipedog/transport-websocket
 ```
 
-To use `websocketServe` or `SingleClientWebsocketServerTransport` on Node, also install the `ws`
-package (an optional peer dependency):
+To use `serveFetch`, `websocketServe` or `SingleClientWebsocketServerTransport` on Node, also
+install the `ws` package (an optional peer dependency):
 
 ```bash
 npm install ws
@@ -67,8 +69,8 @@ import {
 import { WebsocketClientParams, WebsocketClientTransport } from "@pipedog/transport-websocket/client";
 import { RTVIClientTransport } from "@pipedog/transport-websocket/rtvi_client";
 import { WebsocketConnection } from "@pipedog/transport-websocket/socket";
-import { websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
-import { websocketServe } from "@pipedog/transport-websocket/serve";
+import { bunWebSocket, upgradeWebSocket, websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
+import { serveFetch, websocketServe } from "@pipedog/transport-websocket/serve";
 import { honoWebsocket } from "@pipedog/transport-websocket/hono";
 ```
 
@@ -103,13 +105,28 @@ below call it once per connection:
 
 <include cwd meta='title="bot.ts"'>snippets/services/transport-websocket.ts#usage</include>
 
-On Cloudflare Workers, Durable Objects and Deno, `websocketFetchHandler` turns it into a fetch
-handler, `(Request) => Promise<Response>`. It answers 426 to a request that is not a WebSocket
-upgrade:
+`websocketFetchHandler` turns it into a fetch handler,
+`(request, server?) => Promise<Response>`. It answers 426 to a request that is not a WebSocket
+upgrade. Cloudflare Workers, Durable Objects and Deno upgrade from the request alone:
 
 <include cwd>snippets/services/transport-websocket.ts#fetch</include>
 
-On Bun, Node and Deno, `websocketServe` listens on a host and port with the runtime's own server:
+Bun upgrades with its server, so pass the `server` Bun gives `fetch` and serve with the
+`bunWebSocket` handlers. `serveFetch` serves a fetch handler with WebSocket upgrades on Bun, Node
+(with the `ws` package) and Deno, so one entry point runs on all three. `upgradeWebSocket(request,
+{ server })`, from the same module, is the upgrade on its own, for your own handlers:
+
+<include cwd>snippets/services/transport-websocket.ts#serve-fetch</include>
+
+```ts title="Bun.serve"
+Bun.serve({
+  fetch: (request, server) => handler(request, server),
+  websocket: bunWebSocket, // from @pipedog/transport-websocket/fetch
+});
+```
+
+`websocketServe` listens on a host and port with the runtime's own server, on Bun, Node and Deno,
+and takes the connection handler directly:
 
 <include cwd>snippets/services/transport-websocket.ts#serve</include>
 
@@ -250,8 +267,8 @@ in either of two ways:
   client, the server side of a Cloudflare `WebSocketPair`, Deno's upgraded socket or a Node `ws`
   socket.
 - `new WebsocketConnection(sink, options)` wraps anything else that can send and close. Report
-  what arrives with `feedMessage()` and `feedClose()`. Bun's `ServerWebSocket`, whose events
-  arrive through `Bun.serve` handlers, works this way:
+  what arrives with `feedMessage()` and `feedClose()`. This is what `bunWebSocket` does for you;
+  to wire Bun's `ServerWebSocket` by hand, inside your own `Bun.serve` handlers:
 
 <include cwd meta='title="bun.ts"'>snippets/services/transport-websocket.ts#bun</include>
 
@@ -268,15 +285,16 @@ Options for `websocketServe`:
 | | Bun | Node | Deno | Cloudflare Workers |
 |---|---|---|---|---|
 | `FastAPIWebsocketTransport` | yes | yes | yes | yes |
-| `websocketFetchHandler` | no (upgrade on `Bun.serve`) | no | yes (`Deno.upgradeWebSocket`) | yes (`WebSocketPair`) |
+| `websocketFetchHandler`, `upgradeWebSocket` | yes (pass the server, serve with `bunWebSocket`) | yes (with `serveFetch`) | yes (`Deno.upgradeWebSocket`) | yes (`WebSocketPair`) |
+| `serveFetch` | yes (`Bun.serve`) | yes (`ws` peer) | yes (`Deno.serve`) | no |
 | `websocketServe` | yes (`Bun.serve`) | yes (`ws` peer) | yes (`Deno.serve`) | no |
 | `honoWebsocket` | yes | yes (`@hono/node-ws`) | yes | yes |
 | `SingleClientWebsocketServerTransport` | yes | yes (`ws` peer) | yes | no |
 | `WebsocketClientTransport`, `RTVIClientTransport` | yes | yes | yes | yes |
 
-- `websocketFetchHandler` throws on Bun and Node, which upgrade on their own server. Use
-  `websocketServe`, `honoWebsocket` or a `WebsocketConnection` sink there.
-- `websocketServe` throws on Cloudflare Workers, which can't listen on a port. Closing the server
+- `websocketFetchHandler` needs the upgrading server on Bun (the second argument of `fetch`) and on
+  Node (from `serveFetch`); without one it throws, naming the fix.
+- `websocketServe` and `serveFetch` throw on Cloudflare Workers, which can't listen on a port. Closing the server
   closes the open connections with code 1001 and waits for their handlers.
 - Both fetch and Hono helpers copy the request headers during the upgrade: on Deno the request is
   closed once upgraded, and reading it then throws.

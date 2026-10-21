@@ -12,8 +12,8 @@ route passes it to `offer` unchanged.
 bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn @sveltejs/kit
 ```
 
-`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
-packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. To run
+the snippet from a checkout instead, see [Installation](/docs/installation#from-source).
 
 ## Files
 
@@ -42,8 +42,8 @@ Use an adapter that runs a Node, Bun or Deno server, such as `@sveltejs/adapter-
 ## WebSocket
 
 This snippet mounts only the offer. To serve `socket` too, run it on a server that upgrades
-WebSockets, such as [Bun](/docs/frameworks/bun) or [Deno](/docs/frameworks/deno), next to the
-SvelteKit app.
+WebSockets next to the SvelteKit app: [Bun](/docs/frameworks/bun), [Deno](/docs/frameworks/deno),
+or `serveFetch(socket, { port })` from `@pipedog/transport-websocket/serve` on Node, Bun or Deno.
 
 ## Authentication
 

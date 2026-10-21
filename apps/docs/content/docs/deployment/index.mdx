@@ -18,6 +18,11 @@ whole call. That shapes where it can run. The transport decides most of it:
 | Vercel Functions | Bun runtime | No (no UDP) | Yes | [Vercel](/docs/deployment/vercel) |
 | Serverless functions without WebSockets | any | No | No | Signalling only |
 
+On a server, [`@pipedog/runner`](/docs/runner) gives you Pipecat's runner routes (the prebuilt
+client, WebRTC signalling, telephony webhooks and WebSockets) as one fetch handler:
+`createRunnerApp()` builds it and `serve()` listens on Bun, Node or Deno. See
+[Servers](/docs/deployment/servers#the-development-runner).
+
 Pipecat's own deployment guides (Fly.io, Cerebrium, Modal, Pipecat Cloud) assume a Python process
 per session. The same patterns apply to a pipedog server: one process (or one Durable Object) per
 session, and a cap on concurrent sessions.

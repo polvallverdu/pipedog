@@ -96,9 +96,10 @@ them by itself after a request ends, so the agent flushes them when each session
 pipedog's voice endpoints are fetch handlers: functions from a `Request` to a `Response`. That makes
 them usable from any framework that routes requests this way.
 
-- **WebSocket endpoints.** `websocketFetchHandler` works where the runtime upgrades a request from
-  fetch: Cloudflare Workers and Durable Objects, and Deno. Bun and Node upgrade on their own server
-  instead, with `websocketServe` or the Hono adapter.
+- **WebSocket endpoints.** `websocketFetchHandler` upgrades from fetch on its own on Cloudflare
+  Workers, Durable Objects and Deno. On Bun, pass it the server Bun gives `fetch` and serve with
+  `bunWebSocket`; on Node, serve it with `serveFetch()`. The runner's fetch handler
+  (`createRunnerApp()`) upgrades the same way, though it isn't tested on Workers yet.
 - **WebRTC signaling.** `smallWebRTCOfferHandler` is a plain fetch handler. Its media runs over UDP,
   so the server has to be a long-lived Node, Bun or Deno process. Serverless hosts can't carry it.
 
@@ -106,7 +107,10 @@ Shapes for the other frameworks:
 
 ```ts
 // Bun
-Bun.serve({ fetch: handler });
+Bun.serve({ fetch: (request, server) => handler(request, server), websocket: bunWebSocket });
+
+// Node, Bun or Deno
+await serveFetch(handler, { port: 8765 });
 
 // Hono
 app.post("/api/offer", (c) => offer(c.req.raw));

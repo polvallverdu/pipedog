@@ -3,8 +3,9 @@ title: Bun
 description: Serve the pipedog WebRTC offer and WebSocket endpoints with Bun.serve.
 ---
 
-`Bun.serve` routes the offer, and upgrades `/ws` on the server. It then hands each socket to the
-agent through a `WebsocketConnection`, which the server feeds with the socket's messages and close.
+`Bun.serve` routes both endpoints. `socket` is a fetch handler that upgrades `/ws` with the server
+Bun passes to `fetch`, and the `bunWebSocket` handlers deliver each socket's messages and close to
+the agent's `WebsocketConnection`.
 
 ## Install
 
@@ -12,8 +13,8 @@ agent through a `WebsocketConnection`, which the server feeds with the socket's 
 bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn
 ```
 
-`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
-packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. To run
+the snippet from a checkout instead, see [Installation](/docs/installation#from-source).
 
 ## Files
 
@@ -24,8 +25,11 @@ The endpoints come from the shared module on the [overview](/docs/frameworks#the
 
 <include cwd meta='title="server.ts"'>../../examples/framework-snippets/bun/server.ts</include>
 
-Bun upgrades a socket on its own server, not from a fetch handler, so this snippet uses
-`runSocketAgent` with the `websocket` handlers instead of `socket`.
+Bun upgrades on its server, not from the `Request` alone, so pass `server` on to `socket` (or to
+`upgradeWebSocket(request, { server })` from `@pipedog/transport-websocket/fetch`) and serve with
+`websocket: bunWebSocket`. To serve any fetch handler with WebSocket upgrades on Bun, Node or Deno
+without this wiring, use `serveFetch()` from `@pipedog/transport-websocket/serve`; see
+[WebSocket](/docs/transports/websocket).
 
 ## Run it
 
@@ -43,5 +47,4 @@ the same config on Vercel Functions, see [Vercel](/docs/frameworks/vercel).
 
 ## Authentication
 
-Neither route has auth. Check the session in `fetch` before `offer` runs and before
-`server.upgrade`, as in [Authentication](/docs/frameworks#authentication).
+Neither route has auth. Check the session in `fetch` before `offer` and `socket` run, as in [Authentication](/docs/frameworks#authentication).

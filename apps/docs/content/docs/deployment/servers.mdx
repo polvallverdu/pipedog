@@ -25,11 +25,36 @@ does exactly this. Pass `handleSigint: false` and `handleSigterm: false` to each
 
 ## Runtimes
 
-- **Bun** runs the agent and upgrades WebSockets in `Bun.serve`. See [Bun](/docs/frameworks/bun).
+- **Bun** runs the agent and upgrades WebSockets in `Bun.serve`: pass the server Bun gives `fetch`
+  to `websocketFetchHandler`'s handler and serve with `bunWebSocket`. See [Bun](/docs/frameworks/bun).
 - **Node.js** 22 or later. Use a framework's Node adapter (Express, Hono's `@hono/node-server`,
   SvelteKit's `adapter-node`), or `nodeRequestListener` from
-  `@pipedog/transport-smallwebrtc/http` for a plain `node:http` server.
+  `@pipedog/transport-smallwebrtc/http` for a plain `node:http` server. For WebSocket endpoints,
+  `serveFetch()` from `@pipedog/transport-websocket/serve` serves a fetch handler with upgrades
+  (with the `ws` package).
 - **Deno** serves both endpoints with `Deno.serve`. See [Deno](/docs/frameworks/deno).
+
+`serveFetch(handler, { port })` listens with the same fetch handler on all three runtimes, so one
+`server.ts` runs on Bun, Node and Deno; `examples/twilio-phone-bot` is served this way.
+
+## The development runner
+
+[`@pipedog/runner`](/docs/runner) is Pipecat's development runner. `main()` serves your `bot()`
+with the prebuilt browser client, SmallWebRTC signalling and the telephony webhooks and WebSockets,
+from flags (`bun bot.ts -t twilio --proxy ...`). For a server you deploy, build the same app with
+`createRunnerApp()` and listen with `serve()`, or mount its `fetch` in your own server:
+
+```ts
+import { createRunnerApp } from "@pipedog/runner/run";
+import { serve } from "@pipedog/runner/serve";
+
+const runner = await createRunnerApp({ bot, transport: "twilio", proxy: "bot.example.com" });
+await serve(runner, { host: "0.0.0.0", port: 7860 });
+```
+
+`serve()` runs on Bun, Node (with `ws`) and Deno. The runner's routes don't authenticate, as
+upstream's don't; put your checks in front of them. See
+[Mounting the runner](/docs/runner#mounting-the-runner-in-your-own-server).
 
 ## SmallWebRTC in production
 

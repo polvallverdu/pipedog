@@ -48,6 +48,10 @@ cancellation point. For foreign awaits such as `fetch`, pass the task's `signal`
 Bun, Node.js 22+, Deno and Cloudflare Workers. The current task is tracked with
 `AsyncLocalStorage` from `node:async_hooks`, so Workers need the `nodejs_compat` flag.
 
+On Bun, Node and Deno, callbacks run from one ready queue, as in CPython. On Workers, where one
+isolate serves many requests and Durable Objects, each callback runs in the I/O context that
+scheduled it (still in FIFO order), so concurrent Durable Objects never do each other's I/O.
+
 ## Links
 
 - Docs: [asyncio API](https://polvallverdu.github.io/pipedog/docs/api/asyncio/),

@@ -23,6 +23,23 @@ A package that cannot work on a runtime (SmallWebRTC on Workers, which has no UD
 are expected to install go in `pipecat.compat.usesOptionalPeers`; all other optional peers are made
 unresolvable during the run, so a package that silently depends on one fails.
 
+Every package is verified on all four runtimes except `@pipedog/transport-smallwebrtc` (no UDP
+on Workers) and `@pipedog/mcp` (a stdio tool for Bun and Node). The harness checks that each
+package loads and runs its smoke test; inside a verified package, a few entry points still need a
+server runtime:
+
+| Entry point | Runs on | Why |
+|---|---|---|
+| Google Cloud Speech-to-Text and Text-to-Speech, and Gemini TTS on GCP (`@pipedog/google`) | Bun, Node, Deno | gRPC over HTTP/2 through Google's Node SDKs. The Gemini API services run on Workers too. |
+| `SageMakerBidiClient` (`@pipedog/aws`) | Bun, Node 22+ (Deno untested) | Full-duplex HTTP/2 through the AWS SDK. |
+| Nova Sonic with `transport: "http2"` (`@pipedog/aws`) | Bun, Node (Deno untested) | The default WebSocket transport runs everywhere, Workers included. |
+| `main()`, `serve()` (`@pipedog/runner`) | Bun, Node (with `ws`), Deno | They listen on a port. On Workers, use the fetch handler from `createRunnerApp()` (untested there). |
+| `serveFetch`, `websocketServe`, `SingleClientWebsocketServerTransport` (`@pipedog/transport-websocket`) | Bun, Node (with `ws`), Deno | They listen on a port. On Workers, use `websocketFetchHandler`. |
+
+Local turn detection (`@pipedog/audio-silero`, `@pipedog/audio-smart-turn`) runs on Workers with
+`onnxruntime-web`, but the models and runtime are large; provider-side turn detection is the usual
+choice there. See [Turn detection](/docs/concepts/turn-detection).
+
 ## What core avoids
 
 To stay portable, `@pipedog/core` and `@pipedog/asyncio`:
@@ -36,8 +53,14 @@ To stay portable, `@pipedog/core` and `@pipedog/asyncio`:
 
 ## Bun, Node and Deno
 
-These run the TypeScript sources directly. `WorkerRunner` installs a SIGINT handler by default, so
-Ctrl-C cancels the bot cleanly. Node needs version 22 or later.
+The npm packages ship compiled JavaScript, and from a checkout Bun and Deno run the TypeScript
+sources directly (Node with its built-in type stripping). `WorkerRunner` installs a SIGINT handler
+by default, so Ctrl-C cancels the bot cleanly. Node needs version 22 or later.
+
+On Bun and Node, a WebSocket is upgraded by the server rather than from the `Request`:
+`serveFetch()` from `@pipedog/transport-websocket/serve` serves a fetch handler with upgrades on
+Bun, Node (with the `ws` package) and Deno, and on Bun you can also pass the server `Bun.serve`
+gives `fetch` to `websocketFetchHandler`'s handler. See [WebSocket](/docs/transports/websocket).
 
 ## Cloudflare Workers
 
@@ -83,6 +106,10 @@ constraints:
   or in an injected runner. Keep per-call CPU low: Workers have CPU-time limits.
 - **No process signals.** `handleSigint` is a no-op; end the runner from your Worker code (for
   example when the WebSocket closes) with `runner.end()` or `runner.cancel()`.
+- **Many sessions per isolate.** One isolate serves many requests and Durable Objects.
+  `@pipedog/asyncio` runs each callback in the I/O context that scheduled it, so parallel sessions
+  in separate Durable Objects don't do each other's I/O. `examples/workers-durable-voice-agent`
+  tests this with parallel sessions on workerd.
 
 ## Native and ML dependencies
 

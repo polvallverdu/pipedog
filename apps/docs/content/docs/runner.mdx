@@ -142,8 +142,11 @@ await serve(runner, { port: 7860 });
 ```
 
 In Hono, SvelteKit or anything else built on `Request` and `Response`, call `runner.startup()`
-once and route requests to `runner.fetch`. On Deno and Cloudflare Workers, `runner.fetch` also
-upgrades WebSockets. On Bun and Node, the server upgrades them: match the request with
+once and route requests to `runner.fetch`. `runner.fetch` also upgrades the WebSocket routes: on
+its own on Deno (and Cloudflare Workers, untested), and with the upgrading server as its second
+argument on Bun (`runner.fetch(request, server)`, served with `bunWebSocket` from
+`@pipedog/transport-websocket/fetch`) and on Node (through `serveFetch`, which `serve()` uses). A
+framework that upgrades sockets itself can match the request with
 `runner.matchWebSocket(request)`, upgrade it, and run the returned function with the
 connection (for example a `WebsocketConnection` from `honoWebsocket`).
 

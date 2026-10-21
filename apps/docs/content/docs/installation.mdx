@@ -4,19 +4,25 @@ description: Add pipedog to a Bun, Node, Deno or Cloudflare Workers project.
 ---
 
 pipedog is split into packages, like Pipecat's optional extras. They are published on npm under
-the `@pipedog` scope, all at the same version (0.4.0 at the time of writing): upgrade them together.
+the `@pipedog` scope and released together at one version: upgrade them together.
 
 | Package | What |
 |---|---|
 | `@pipedog/asyncio` | asyncio semantics for JavaScript: tasks, cooperative cancellation, queues, events |
-| `@pipedog/core` | frames, processors, pipelines, workers, bus, observers, RTVI, base services and transports |
+| `@pipedog/core` | frames, processors, pipelines, workers, bus, observers, RTVI, base services, transports and serializers |
 | `@pipedog/tracing` | OpenTelemetry setup (`setupTracing()`, OTLP and console exporters), like `pipecat-ai[tracing]` |
-| `@pipedog/audio-silero`, `@pipedog/audio-smart-turn` | Silero VAD and Smart Turn, the local turn detection models |
-| `@pipedog/openai`, `@pipedog/google`, `@pipedog/anthropic` | LLM, speech and realtime services |
-| `@pipedog/deepgram`, `@pipedog/cartesia`, `@pipedog/elevenlabs`, `@pipedog/whisper` | speech-to-text and text-to-speech |
+| `@pipedog/audio-silero`, `@pipedog/audio-smart-turn`, `@pipedog/onnx` | Silero VAD and Smart Turn, the local turn detection models, and the ONNX backend they run on |
+| `@pipedog/openai`, `@pipedog/google`, `@pipedog/anthropic`, `@pipedog/azure`, `@pipedog/aws` | LLM, speech, realtime and image services |
+| `@pipedog/deepgram`, `@pipedog/cartesia`, `@pipedog/elevenlabs`, `@pipedog/inworld`, `@pipedog/whisper` | speech-to-text and text-to-speech (Inworld also realtime) |
+| `@pipedog/ultravox` | Ultravox realtime speech-to-speech |
+| `@pipedog/groq`, `@pipedog/mistral`, `@pipedog/together`, `@pipedog/xai` | OpenAI-compatible LLMs with the provider's STT and TTS (xAI also realtime); `@pipedog/grok` is the deprecated alias of `@pipedog/xai` |
+| `@pipedog/baseten`, `@pipedog/cerebras`, `@pipedog/crusoe`, `@pipedog/deepseek`, `@pipedog/fireworks`, `@pipedog/nebius`, `@pipedog/novita`, `@pipedog/ollama`, `@pipedog/openrouter`, `@pipedog/perplexity`, `@pipedog/qwen`, `@pipedog/sambanova` | OpenAI-compatible LLMs, one package per provider |
 | `@pipedog/langchain` | the LangChain processor |
 | `@pipedog/transport-websocket`, `@pipedog/transport-smallwebrtc` | transports |
-| `@pipedog/serializer-protobuf`, `@pipedog/serializer-rtvi-client`, `@pipedog/serializer-telnyx` | serializers |
+| `@pipedog/serializer-protobuf`, `@pipedog/serializer-rtvi-client` | serializers for Pipecat clients |
+| `@pipedog/serializer-twilio`, `@pipedog/serializer-telnyx`, `@pipedog/serializer-plivo`, `@pipedog/serializer-exotel`, `@pipedog/serializer-vonage`, `@pipedog/serializer-genesys` | telephony serializers (see [Telephony](/docs/telephony)) |
+| `@pipedog/runner` | the [development runner](/docs/runner): `main()`, `createTransport()`, the prebuilt client |
+| `@pipedog/resampler-wasm`, `@pipedog/sentencex-wasm` | high-quality resampling and sentence segmentation, compiled to WebAssembly |
 | `@pipedog/mcp` | the docs as a local MCP server for coding agents (see [Docs for AI tools](/docs/guides/llms#mcp-server)) |
 
 Where Python installs `pipecat-ai[deepgram,openai]`, you add `@pipedog/core` plus

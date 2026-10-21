@@ -32,9 +32,9 @@ caller ─► phone network ─► provider (Twilio, Telnyx, Plivo, Exotel, ...)
    it hang up through the provider's REST API, so the caller isn't left on a silent line.
 
 All of this runs over a plain WebSocket, so the same bot runs on Bun, Node, Deno and Cloudflare
-Workers. On Deno and Workers, accept the socket with `websocketFetchHandler` from
-`@pipedog/transport-websocket`; on Bun and Node, use its server adapters. See
-[WebSocket](/docs/transports/websocket).
+Workers. Accept the socket with `websocketFetchHandler` from `@pipedog/transport-websocket`: Deno
+and Workers upgrade from fetch on their own, Bun upgrades with the server it passes to `fetch`, and
+`serveFetch()` serves the handler on Bun, Node and Deno. See [WebSocket](/docs/transports/websocket).
 
 ## Serializers
 
@@ -67,7 +67,10 @@ while the call is still connecting is an ordinary result rather than an exceptio
 bun add @pipedog/runner
 ```
 
-`@pipedog/runner` is a partial port: only these telephony helpers are ported so far.
+The same package is the [development runner](/docs/runner): `main()` serves the webhook for Twilio
+(TwiML), Telnyx (TeXML) and Plivo (XML) and the `/ws` media stream for those and Exotel, and
+`createTransport()` builds the right serializer from the handshake, so a phone bot is one
+`bot(runnerArgs)` function.
 
 ## Next
 

@@ -12,8 +12,8 @@ Hono routes the offer, and upgrades `/ws` with its own WebSocket helper and pipe
 bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn hono
 ```
 
-`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
-packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. To run
+the snippet from a checkout instead, see [Installation](/docs/installation#from-source).
 
 ## Files
 
@@ -36,8 +36,9 @@ WebSocket at `/ws`.
 ## Other runtimes
 
 - **Node.** Serve the app with `@hono/node-server`, with the same routes. `hono/bun`'s
-  `upgradeWebSocket` is Bun only, so use Hono's Node WebSocket helper for `/ws`, or mount `socket` on
-  a separate server.
+  `upgradeWebSocket` is Bun only, so use Hono's Node WebSocket helper (`@hono/node-ws`) with
+  `honoWebsocket` for `/ws`, or serve `socket` on its own with `serveFetch(socket, { port })` from
+  `@pipedog/transport-websocket/serve`, which upgrades on Node with the `ws` package.
 - **Cloudflare Workers.** `socket` is a fetch handler that Workers can upgrade, so mount it directly,
   without the Bun helper: `app.get("/ws", (c) => socket(c.req.raw))`. Leave the offer, and the
   WebRTC transport, out of a Workers build: Workers have no UDP. A session that should outlive one

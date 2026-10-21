@@ -55,6 +55,15 @@ These differences apply everywhere, not to one module. They come from the portin
   sink, because these often quote what failed, such as a URL with `?key=...`.
   `packages/core/src/utils/logger.ts`
 
+### asyncio on Cloudflare Workers
+
+- **Callbacks run in the I/O context that scheduled them.** One workerd isolate serves many
+  requests and Durable Objects, and I/O must happen in the context that owns it. On Workers,
+  `@pipedog/asyncio` has no shared ready queue: each callback runs in the context that scheduled
+  it, still in FIFO order. That is what lets several Durable Objects run voice sessions in one
+  isolate at once. Bun, Node and Deno keep a single ready queue, like CPython.
+  `packages/asyncio/src/loop.ts`
+
 ### Workers and runner
 
 - **Signal handlers.** SIGINT and SIGTERM handlers are installed through the host's `process.on`
@@ -106,6 +115,41 @@ These differences apply everywhere, not to one module. They come from the portin
   explicit `null` is left out of the request, where upstream would send JSON `null`.
   `packages/anthropic/src/llm.ts`
 
+### AWS
+
+- **No botocore credential chain.** Keys come from the options or the `AWS_*` environment
+  variables, as upstream, and beyond that from a `credentialsProvider` function you pass (called
+  per request or per session, so it can renew temporary credentials). Instance profiles, IRSA,
+  ECS roles, SSO and credential files are not read for you. `packages/aws/src/utils.ts`
+- **Nova Sonic over WebSocket.** Upstream streams over HTTP/2 with the experimental Python SDK.
+  Full-duplex HTTP/2 isn't available to `fetch` or on Workers, so the default client speaks the
+  same API over Bedrock's WebSocket endpoint (the transport the AWS JS SDK uses in browsers), on
+  every runtime. `transport: "http2"` uses `@aws-sdk/client-bedrock-runtime` on Node and Bun.
+  `packages/aws/src/nova_sonic/llm.ts`
+- **SageMaker streaming needs HTTP/2.** `SageMakerBidiClient` loads the optional
+  `@aws-sdk/client-sagemaker-runtime-http2` peer, which runs on Node 22+ and Bun, not on Deno or
+  Workers. Its events use the JS SDK's shapes. `packages/aws/src/sagemaker/bidi_client.ts`
+- **No botocore retries.** Bedrock's `client_config` is not ported: no client-side retries of
+  throttled or 5xx requests. Pass a `fetch` to add them. `packages/aws/src/llm.ts`
+- **Every Polly failure is an `ErrorFrame`.** Upstream catches botocore errors only; here a non-2xx
+  response, a network error or missing credentials all become an `ErrorFrame`.
+  `packages/aws/src/tts.ts`
+
+### Azure
+
+- **No Speech SDK.** Upstream uses `azure-cognitiveservices-speech`, a native library. Azure
+  Speech STT and `AzureTTSService` speak the Speech service's WebSocket protocol directly (the one
+  the SDKs use), and `AzureHttpTTSService` calls the REST endpoint with `fetch`, so all of them run
+  on Bun, Node, Deno and Workers. `_speechConfig` is a small stand-in for the SDK's `SpeechConfig`.
+  `packages/azure/src/stt.ts`, `packages/azure/src/tts.ts`
+- **STT connects in `start()`.** The connection opens once the input sample rate is known, and the
+  next audio reopens it after the service closes it. `packages/azure/src/stt.ts`
+- **Interruptions close the TTS connection.** Upstream calls the SDK's `stop_speaking_async()`;
+  here the synthesis connection is closed and reopens on the next synthesis.
+  `packages/azure/src/tts.ts`
+- **`fetch` replaces `aiohttp_session`** in `AzureImageGenServiceREST`, with an injectable image
+  decoder instead of Pillow. `packages/azure/src/image.ts`
+
 ### Cartesia
 
 - **`fetch` replaces `aiohttp_session`.** `CartesiaHttpTTSService` posts with the global `fetch`,
@@ -146,13 +190,22 @@ These differences apply everywhere, not to one module. They come from the portin
 - **`clientOptions` (pipedog-only).** The Cloud STT and TTS services accept extra client options,
   merged over the ones derived from `location` and the credentials. Upstream builds its client
   from those alone. `packages/google/src/stt.ts`, `packages/google/src/tts.ts`
-- **gRPC services need Node or Bun.** Cloud Speech streaming and Cloud TTS go through the Node
-  SDKs (`@google-cloud/speech`, `@google-cloud/text-to-speech`), loaded lazily. Vertex services
+- **gRPC services need a server runtime.** Cloud Speech streaming and Cloud TTS go through the
+  Node SDKs (`@google-cloud/speech`, `@google-cloud/text-to-speech`), loaded lazily; they run on
+  Bun, Node and Deno, not Workers. Vertex services
   authenticate through google-auth-library and run on Bun, Node and Deno, not Workers. See
   [Runtimes](/docs/guides/runtimes).
 - **Image decoding is injectable.** Upstream decodes inline images with Pillow. Here that is the
   `imageDecoder` option; the default throws "not ported yet", so without one an image response
   surfaces as an error. `packages/google/src/llm.ts`, `packages/google/src/image.ts`
+
+### Inworld and xAI realtime
+
+- **Status details are JSON.** When a realtime response fails, upstream reports
+  `str(status_details)`, a Python dict repr. pipedog renders it as JSON.
+  `packages/inworld/src/realtime/llm.ts`, `packages/xai/src/realtime/llm.ts`
+- **`fetch` replaces `aiohttp_session`** in the Inworld and xAI HTTP TTS services.
+  `packages/inworld/src/tts.ts`, `packages/xai/src/tts.ts`
 
 ### LangChain
 
@@ -172,6 +225,30 @@ These differences apply everywhere, not to one module. They come from the portin
   as JSON for objects, where upstream uses Python's `str()` (a Python repr).
   `packages/openai/src/open_ai_responses_adapter.ts`
 
+## Runner
+
+- **A fetch handler instead of FastAPI.** The runner's server is a fetch handler (`app.fetch`), so
+  it runs on Bun, Node and Deno through `serve()` and mounts in any framework.
+  Startup hooks are `lifespan` functions that may return a cleanup. `packages/runner/src/run.ts`
+- **The prebuilt client ships in the package.** Upstream installs it from the
+  `pipecat-ai-prebuilt` wheel; `@pipedog/runner` bundles the same built client.
+  `packages/runner/src/prebuilt.ts`
+- **Unported transports fail clearly.** Daily (with `--direct` and the dial-in webhook), LiveKit,
+  MOQ, the Vonage Video Connector and WhatsApp are recognized, and fail with a message naming
+  them. An eval harness's `eval-connect` message is not detected. `packages/runner/src/run.ts`,
+  `packages/runner/src/utils.ts`
+- **Hang-ups during the handshake are typed.** A caller who hangs up before the provider's `start`
+  message is a `TelephonyCallEndedError` (a subclass of upstream's error), logged at info level.
+  `packages/runner/src/utils.ts`
+- **Async helpers.** The WebSocket token helpers are async, because WebCrypto's HMAC is.
+  `packages/runner/src/run.ts`
+
+## Telephony serializers
+
+The Twilio, Telnyx, Plivo, Exotel, Vonage and Genesys serializers keep upstream's wire formats and
+behavior. Hang-ups through the provider's REST API use `fetch` instead of `aiohttp`, so they work on every
+runtime, Workers included.
+
 ## Transports
 
 - **SmallWebRTC completes pending writes on stop.** Upstream leaves queued writes pending when a
@@ -184,7 +261,9 @@ These differences apply everywhere, not to one module. They come from the portin
 - **WebSocket transports bring their own socket.** Upstream sits on the `websockets` package and
   Starlette's `WebSocket`. pipedog's transports sit on a runtime-agnostic `WebsocketConnection`.
   The FastAPI transport takes any socket your server accepted, on any runtime. Workers can't
-  listen on a port, so use `FastAPIWebsocketTransport` with a `WebSocketPair` there.
+  listen on a port, so use `FastAPIWebsocketTransport` with a `WebSocketPair` there. Fetch-handler
+  helpers (`websocketFetchHandler`, `upgradeWebSocket`, `serveFetch`) accept the socket on each
+  runtime: from the request on Deno and Workers, with the server on Bun and Node.
   `packages/transport-websocket/src/socket.ts`, `packages/transport-websocket/src/fastapi.ts`
 
 ## Reporting a difference

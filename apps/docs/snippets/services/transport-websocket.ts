@@ -15,7 +15,7 @@ import {
 } from "@pipedog/transport-websocket/fastapi";
 import { websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
 import { honoWebsocket } from "@pipedog/transport-websocket/hono";
-import { websocketServe } from "@pipedog/transport-websocket/serve";
+import { serveFetch, websocketServe } from "@pipedog/transport-websocket/serve";
 import { WebsocketConnection } from "@pipedog/transport-websocket/socket";
 
 /** Runs one bot on an accepted WebSocket connection. */
@@ -60,6 +60,14 @@ const workerEntry = {
   },
 };
 // #endregion fetch
+
+// #region serve-fetch
+// Bun, Node (with the `ws` package) and Deno: serve the same fetch handler, with upgrades.
+const fetchServer = await serveFetch(handler, { host: "0.0.0.0", port: 8765 });
+
+// Later: stop listening.
+await fetchServer.close();
+// #endregion serve-fetch
 
 // #region serve
 // Bun, Node (with the `ws` package) and Deno: listen on a port.
