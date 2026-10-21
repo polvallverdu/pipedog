@@ -47,6 +47,23 @@
         "typescript": "7.0.2",
       },
     },
+    "examples/smallwebrtc-voice-bot": {
+      "name": "@pipedog/example-smallwebrtc-voice-bot",
+      "version": "0.0.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/audio-silero": "workspace:*",
+        "@pipedog/audio-smart-turn": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+        "@pipedog/transport-smallwebrtc": "workspace:*",
+      },
+      "devDependencies": {
+        "@pipecat-ai/client-js": "1.13.1",
+        "@pipecat-ai/small-webrtc-transport": "1.10.8",
+        "playwright-core": "1.63.0",
+      },
+    },
     "packages/anthropic": {
       "name": "@pipedog/anthropic",
       "version": "0.3.0",
@@ -608,6 +625,8 @@
     "@pipedog/core": ["@pipedog/core@workspace:packages/core"],
 
     "@pipedog/docs": ["@pipedog/docs@workspace:apps/docs"],
+
+    "@pipedog/example-smallwebrtc-voice-bot": ["@pipedog/example-smallwebrtc-voice-bot@workspace:examples/smallwebrtc-voice-bot"],
 
     "@pipedog/google": ["@pipedog/google@workspace:packages/google"],
 

@@ -1,0 +1,127 @@
+---
+title: Voice bot over SmallWebRTC
+description: A voice assistant you talk to in the browser, with OpenAI speech-to-text, chat and text-to-speech.
+---
+
+This guide runs a voice assistant end to end: you speak in the browser, OpenAI transcribes it and
+writes a reply, and the bot speaks the reply back. It is the same bot as
+[`examples/smallwebrtc-voice-bot`](https://github.com/polvallverdu/pipedog/tree/main/examples/smallwebrtc-voice-bot)
+in the repository, and its test runs it in headless Chromium.
+
+The browser side uses the unchanged Pipecat client SDK, `@pipecat-ai/client-js` with
+`@pipecat-ai/small-webrtc-transport`.
+
+<Steps>
+<Step>
+
+### Get the example
+
+Clone the repository and install the workspace:
+
+```bash
+git clone https://github.com/polvallverdu/pipedog.git
+cd pipedog
+bun install
+```
+
+</Step>
+<Step>
+
+### Run it
+
+Set an OpenAI API key and start the server:
+
+```bash
+OPENAI_API_KEY=sk-... bun run --cwd examples/smallwebrtc-voice-bot start
+```
+
+Open [http://localhost:7860](http://localhost:7860), click **Connect**, allow the microphone, and talk. The bot introduces
+itself, then answers your question.
+
+</Step>
+<Step>
+
+### Read the pipeline
+
+The whole bot is one function, `runVoiceBot`, which builds a pipeline for each connection:
+
+```ts
+const transport = new SmallWebRTCTransport(
+  connection,
+  new TransportParams({ audioInEnabled: true, audioOutEnabled: true }),
+);
+
+const stt = new OpenAISTTService({ apiKey, baseUrl });
+const llm = new OpenAILLMService({
+  apiKey,
+  baseUrl,
+  settings: new OpenAILLMSettings({ systemInstruction: SYSTEM_INSTRUCTION }),
+});
+const tts = new OpenAITTSService({ apiKey, baseUrl, sampleRate: 24000 });
+
+const context = new LLMContext();
+const aggregators = new LLMContextAggregatorPair(context, {
+  userParams: new LLMUserAggregatorParams({
+    vadAnalyzer: new SileroVADAnalyzer(),
+    userTurnStrategies: new UserTurnStrategies({
+      stop: [new TurnAnalyzerUserTurnStopStrategy({ turnAnalyzer: createLocalSmartTurnAnalyzerV3() })],
+    }),
+  }),
+});
+
+const pipeline = new Pipeline([
+  transport.input(),
+  stt,
+  aggregators.user(),
+  llm,
+  tts,
+  transport.output(),
+  aggregators.assistant(),
+]);
+```
+
+Audio from the browser arrives at 16 kHz. Silero VAD detects when the user starts speaking, and
+Smart Turn decides when they have finished, so the bot does not answer mid-sentence. The
+transcript goes to the chat model, and the reply goes to speech synthesis at 24 kHz, the rate
+OpenAI's speech endpoint returns.
+
+</Step>
+<Step>
+
+### Check it with a scripted user
+
+The example's test plays a recorded question into a headless browser's microphone and checks that
+the bot answers it. OpenAI is replaced by a mock, so the test needs no key:
+
+```bash
+bun test examples/smallwebrtc-voice-bot
+```
+
+The test needs Chromium for Playwright (`bunx playwright-core install chromium` in the example's
+directory).
+
+</Step>
+</Steps>
+
+## What the bot does on connect
+
+When the browser connects, the bot adds a developer message asking the model to introduce itself,
+and queues an `LLMRunFrame`. That first reply is the greeting. From then on, each user turn runs
+through the pipeline above.
+
+## Configure it
+
+| Setting                  | Where                           | Default                           |
+| ------------------------ | ------------------------------- | --------------------------------- |
+| OpenAI API key           | `OPENAI_API_KEY`                | required                          |
+| OpenAI-compatible server | `OPENAI_BASE_URL`               | `https://api.openai.com/v1`       |
+| Port                     | `PORT`                          | `7860`                            |
+| Chat model and prompt    | `OpenAILLMSettings` in `bot.ts` | the service default, see the code |
+| Voice                    | `OpenAITTSService` settings     | `alloy`                           |
+
+## Next steps
+
+- [Frames](/docs/concepts/frames) and [frame processors](/docs/concepts/frame-processors) explain the
+  pipeline's building blocks.
+- [Runtimes & compatibility](/docs/runtimes) lists where SmallWebRTC runs: Bun, Node and Deno, not
+  Cloudflare Workers, which have no UDP.
