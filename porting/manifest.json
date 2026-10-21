@@ -3682,9 +3682,9 @@
         "test_flows_config.py",
         "test_flows_flow.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Index re-exports (as the former pipecat-flows package did). DIVERGENCE: NodeConfig/ActionConfig keys are camelCase while FlowConfig (YAML/JSON) keeps snake_case; consolidated results are two-element arrays; direct functions take flowManager as first parameter with metadata for description/parameters; handlers are called as (args, flowManager); FlowConfig.fromFile and !include use an injected readFile; validation is hand-written and raises ValidationError; placeholders render with String()/JSON; no return-annotation warning. Deprecated APIs not ported, except RESET_WITH_SUMMARY which warns once."
     },
     {
       "module": "pipecat.flows.actions",
@@ -3709,9 +3709,9 @@
       "tests": [
         "test_flows_actions.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: camelCase ActionConfig keys (appendTextToContext); handlers called as (action, flowManager)."
     },
     {
       "module": "pipecat.flows.adapters",
@@ -3731,9 +3731,9 @@
       "tests": [
         "test_flows_adapters.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: the summary prompt interpolates JSON of the message list instead of the Python repr."
     },
     {
       "module": "pipecat.flows.config",
@@ -3753,9 +3753,9 @@
         "yaml"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: hand-written validation raising ValidationError (not Pydantic); camelCase fields with snake_case file format and modelDump(); injected readFile for fromFile and !include; shipped flow_config.schema.json is generated from modelJsonSchema()."
     },
     {
       "module": "pipecat.flows.exceptions",
@@ -3773,9 +3773,9 @@
         "test_flows_direct_functions.py",
         "test_flows_manager.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "No divergences."
     },
     {
       "module": "pipecat.flows.flow",
@@ -3796,9 +3796,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: no return-annotation warning (no runtime annotations); handlers called as (args, flowManager) and return two-element arrays; handlers namespaces are objects or Maps."
     },
     {
       "module": "pipecat.flows.manager",
@@ -3834,9 +3834,9 @@
         "test_flows_direct_functions.py",
         "test_flows_manager.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: camelCase NodeConfig; placeholders render with String()/JSON, not str(); flowManager naming. RESET_WITH_SUMMARY kept, warns once."
     },
     {
       "module": "pipecat.flows.types",
@@ -3860,9 +3860,9 @@
         "test_flows_direct_functions.py",
         "test_flows_manager.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: camelCase NodeConfig/ActionConfig; two-element array results; flowManager first parameter with attached metadata. Deprecated FlowResult, flows_direct_function, legacy handler aliases and role_messages not ported."
     },
     {
       "module": "pipecat.frames",
@@ -18074,8 +18074,8 @@
         "pipecat.flows.exceptions"
       ],
       "needsModules": 122,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "14 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_flows_adapters.py",
@@ -18086,8 +18086,8 @@
         "pipecat.flows.adapters"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "1 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_flows_config.py",
@@ -18098,14 +18098,14 @@
         "pipecat.flows"
       ],
       "needsModules": 126,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "33 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_flows_context_strategies.py",
       "lines": 436,
-      "package": "@pipedog/anthropic",
-      "ts": "packages/anthropic/test/test_flows_context_strategies.test.ts",
+      "package": "@pipedog/flows",
+      "ts": "packages/flows/test/test_flows_context_strategies.test.ts",
       "imports": [
         "pipecat.flows.manager",
         "pipecat.flows.types",
@@ -18115,8 +18115,8 @@
         "pipecat.services.openai.llm"
       ],
       "needsModules": 133,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "12 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_flows_direct_functions.py",
@@ -18129,8 +18129,8 @@
         "pipecat.flows.types"
       ],
       "needsModules": 122,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "16 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_flows_flow.py",
@@ -18144,8 +18144,8 @@
         "pipecat.services.openai.llm"
       ],
       "needsModules": 131,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "51 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_flows_manager.py",
@@ -18161,8 +18161,8 @@
         "pipecat.services.openai.llm"
       ],
       "needsModules": 127,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "30 pass, 0 fail, 3 skip, 0 todo"
     },
     {
       "file": "tests/test_frame_adapters.py",

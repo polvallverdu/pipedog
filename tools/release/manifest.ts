@@ -101,6 +101,14 @@ export function publishManifest(manifest: Manifest, versions: Map<string, string
       deps[dep] = version;
     }
   }
+  // A workspace sibling used only by the package's tests has no version to
+  // point at and is no use to a consumer, so it is dropped.
+  const devDeps = m.devDependencies as Record<string, string> | undefined;
+  if (devDeps) {
+    for (const [dep, range] of Object.entries(devDeps)) {
+      if (range.startsWith("workspace:")) delete devDeps[dep];
+    }
+  }
   // Published packages run the compiled dist/ only: no TypeScript sources
   // (or the source maps pointing at them). Licenses always go in.
   const files = new Set<string>((m.files ?? ["dist"]).filter((f: string) => f !== "src"));

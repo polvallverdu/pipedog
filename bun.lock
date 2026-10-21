@@ -36,6 +36,7 @@
         "@pipedog/deepseek": "workspace:*",
         "@pipedog/elevenlabs": "workspace:*",
         "@pipedog/fireworks": "workspace:*",
+        "@pipedog/flows": "workspace:*",
         "@pipedog/google": "workspace:*",
         "@pipedog/groq": "workspace:*",
         "@pipedog/inworld": "workspace:*",
@@ -339,6 +340,20 @@
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/flows": {
+      "name": "@pipedog/flows",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@anthropic-ai/sdk": "0.131.0",
+        "@pipedog/anthropic": "workspace:*",
+        "@pipedog/google": "workspace:*",
         "@pipedog/openai": "workspace:*",
       },
     },
@@ -1185,6 +1200,8 @@
     "@pipedog/example-workers-durable-voice-agent": ["@pipedog/example-workers-durable-voice-agent@workspace:examples/workers-durable-voice-agent"],
 
     "@pipedog/fireworks": ["@pipedog/fireworks@workspace:packages/fireworks"],
+
+    "@pipedog/flows": ["@pipedog/flows@workspace:packages/flows"],
 
     "@pipedog/google": ["@pipedog/google@workspace:packages/google"],
 

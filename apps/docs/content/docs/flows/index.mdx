@@ -1,0 +1,71 @@
+---
+title: Flows
+description: Build structured conversations from nodes, functions and actions with @pipedog/flows, a port of Pipecat Flows.
+---
+
+**Flows** keeps a conversation on rails. Instead of one long prompt with every tool available at
+every moment, you describe the conversation as a graph of **nodes**. Each node gives the LLM one
+job (its task messages), the few tools it may call there, and optional actions to run on the way
+in or out. When the LLM calls a tool, the tool does its work and can send the conversation to the
+next node.
+
+`@pipedog/flows` ports `pipecat.flows`. It works with any LLM service that does function calling:
+OpenAI, Anthropic and Google are covered by the package's end-to-end tests.
+
+```bash
+bun add @pipedog/flows
+```
+
+## Concepts
+
+| Concept | What it is |
+| --- | --- |
+| [Node](/docs/flows/nodes) | One step of the conversation: a role, task messages, functions, actions and a context strategy. |
+| [Function](/docs/flows/functions) | A tool the LLM can call at a node. It does work, and may name the next node. |
+| [Action](/docs/flows/actions) | Something that happens around the LLM's turn at a node: speaking a line, ending the call, or your own code. |
+| [Context strategy](/docs/flows/context-strategies) | What happens to the conversation history when a node is entered. |
+| Flow manager | `FlowManager` runs the graph: it holds the current node and the shared `state`, registers each node's tools with the LLM service, and performs transitions. |
+| Flow config | A flow described as YAML or JSON data, joined to your handlers with `Flow`. |
+
+## Wiring it up
+
+`FlowManager` needs the pipeline worker (to queue frames), the LLM service, and the context
+aggregators:
+
+<include cwd>snippets/flows.ts#manager</include>
+
+Then start in a node with `flowManager.initialize(node)`. See [Nodes](/docs/flows/nodes) for what a
+node contains, or [Dynamic flows](/docs/flows/dynamic-flows) for a graph built at runtime.
+
+## Two ways to define a flow
+
+- **In code.** Node functions return `NodeConfig` objects, and a tool returns the next node.
+  Nothing is fixed ahead of time, so the next node can depend on what the user said. See
+  [Dynamic flows](/docs/flows/dynamic-flows).
+- **As data.** A `FlowConfig` lists the nodes and the edges between them, in YAML or JSON. Your
+  code supplies only the tools' behavior. See [Flow configs](/docs/flows/flow-configs).
+
+Both run on the same `FlowManager`.
+
+## State
+
+`flowManager.state` is a plain object shared by every node and handler. Store what the
+conversation learns (a name, a booking) and read it back anywhere, including in
+[`{{ placeholders }}`](/docs/flows/flow-configs#placeholders) in a config.
+
+## Differences from Pipecat
+
+The behavior matches upstream; the API follows TypeScript conventions:
+
+- `NodeConfig` and `ActionConfig` keys are camelCase (`taskMessages`, `preActions`). The YAML/JSON
+  `FlowConfig` file format keeps upstream's snake_case keys.
+- A tool returns a two-element array, `[result, nextNode]`, where Python returns a tuple.
+- Handlers are called as `(args, flowManager)`.
+- A direct function's first parameter is named `flowManager`, and its description and parameter
+  schemas are attached as metadata (JavaScript has no docstrings or type hints at runtime).
+- `FlowConfig.fromFile` and `!include` read files through a `readFile` function you pass in, so the
+  package runs on every runtime.
+- Config validation is hand-written and throws `ValidationError`, listing every problem found.
+- Placeholders render with `String()` (objects as JSON) instead of Python's `str()`.
+- Deprecated upstream APIs are not ported. `RESET_WITH_SUMMARY` is kept and logs a deprecation
+  warning once.
