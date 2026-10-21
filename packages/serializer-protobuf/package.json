@@ -2,6 +2,15 @@
   "name": "@pipedog/serializer-protobuf",
   "version": "0.4.0",
   "description": "Protobuf frame serializer (ProtobufFrameSerializer) for pipedog, wire-compatible with Pipecat's frames.proto.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "serializer",
+    "protobuf"
+  ],
   "license": "BSD-2-Clause",
   "repository": {
     "type": "git",

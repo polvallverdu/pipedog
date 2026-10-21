@@ -2,6 +2,18 @@
   "name": "@pipedog/google",
   "version": "0.4.0",
   "description": "Google services (Gemini, Cloud Speech-to-Text, Cloud Text-to-Speech) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "google",
+    "gemini",
+    "llm",
+    "stt",
+    "tts"
+  ],
   "license": "BSD-2-Clause",
   "repository": {
     "type": "git",

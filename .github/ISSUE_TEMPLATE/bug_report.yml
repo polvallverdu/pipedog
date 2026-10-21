@@ -1,0 +1,65 @@
+name: Bug report
+description: Something in pipedog behaves wrongly, differs from upstream Pipecat, or fails on a runtime.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For a security vulnerability, do not open an issue: see SECURITY.md.
+  - type: input
+    id: packages
+    attributes:
+      label: Packages and version
+      description: Which `@pipedog/*` packages, and which version.
+      placeholder: "@pipedog/core 0.4.0, @pipedog/openai 0.4.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      multiple: true
+      options:
+        - Bun
+        - Node.js
+        - Deno
+        - Cloudflare Workers
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: runtime-version
+    attributes:
+      label: Runtime version
+      placeholder: "Bun 1.4.2 / Node 24.1.0 / wrangler 4.x"
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include the error and stack trace, or the relevant logs. Remove API keys first.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: If you know how upstream Pipecat (Python) behaves in the same case, say so.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: The smallest pipeline or snippet that shows the problem.
+      render: ts
+    validations:
+      required: true
+  - type: input
+    id: provider
+    attributes:
+      label: Provider or transport involved
+      placeholder: "OpenAI STT, SmallWebRTC, Deepgram Flux..."
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else

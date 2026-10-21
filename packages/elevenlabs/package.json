@@ -1,7 +1,18 @@
 {
   "name": "@pipedog/elevenlabs",
   "version": "0.4.0",
-  "description": "ElevenLabs services (STT, Realtime STT, WebSocket and HTTP TTS, Text-to-Dialogue) for pipedog.",
+  "description": "ElevenLabs services (STT, Realtime STT, WebSocket and HTTP TTS) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "elevenlabs",
+    "tts",
+    "stt",
+    "speech"
+  ],
   "license": "BSD-2-Clause",
   "repository": {
     "type": "git",

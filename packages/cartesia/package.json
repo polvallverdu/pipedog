@@ -2,6 +2,17 @@
   "name": "@pipedog/cartesia",
   "version": "0.4.0",
   "description": "Cartesia services (STT, Ink-2 turn-based STT, WebSocket and HTTP TTS) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "cartesia",
+    "tts",
+    "stt",
+    "speech"
+  ],
   "license": "BSD-2-Clause",
   "repository": {
     "type": "git",
