@@ -40,6 +40,28 @@ Leave out `@pipedog/audio-smart-turn`, or end turns on silence explicitly:
 This answers sooner after a pause than Smart Turn does, so it interrupts users who pause to think more
 often.
 
+## Remote Smart Turn over HTTP
+
+If you can't run the model on the bot's host (a Worker, a small container), run Smart Turn as a
+service and let the bot send it the audio. `HttpSmartTurnAnalyzer` posts each candidate turn to an
+endpoint and reads the verdict back. It needs only `fetch`, so it works on every runtime, Cloudflare
+Workers included.
+
+<RuntimeMatrix pkg="@pipedog/audio-smart-turn" />
+
+<include cwd>snippets/turn_strategies.ts#http-smart-turn</include>
+
+It goes where the local analyzer does, in a `TurnAnalyzerUserTurnStopStrategy` (see
+[turn strategies](/docs/concepts/turn-strategies)); `params: new SmartTurnParams({ stopSecs, ... })` takes the same settings. It makes the same request as Pipecat's: a `POST` of
+the audio (up to `maxDurationSecs`, as a NumPy `.npy` float32 vector at the analyzer's sample rate) with
+`Content-Type: application/octet-stream`, and expects JSON with a `prediction` (1 when the user is
+done) and a `probability`. Any failure, a non-200 status, a timeout after `stopSecs` or a body that
+isn't JSON, is logged and counts as "not done", as upstream does. `fetch` replaces the `aiohttp`
+session; pass your own as the `fetch` option.
+
+Pipecat's older `LocalSmartTurnAnalyzerV2` and the Core ML variant need PyTorch or Core ML and are
+not ported: Smart Turn v3, the default above, replaces them.
+
 ## Provider
 
 Some speech-to-text services detect turns themselves. Use one of them and pass no VAD analyzer: the

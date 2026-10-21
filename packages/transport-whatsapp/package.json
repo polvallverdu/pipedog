@@ -56,6 +56,18 @@
     "upstream": [
       "src/pipecat/transports/whatsapp/api.py",
       "src/pipecat/transports/whatsapp/client.py"
-    ]
+    ],
+    "compat": {
+      "partialRuntimes": [
+        "workerd"
+      ],
+      "needs": {
+        "all": "A WhatsApp Business account with Calling enabled, an access token and a public HTTPS webhook URL.",
+        "bun": "A long-lived server that can use UDP (SmallWebRTC runs on werift).",
+        "node": "A long-lived server that can use UDP (SmallWebRTC runs on werift).",
+        "deno": "A long-lived server that can use UDP (SmallWebRTC runs on werift).",
+        "workerd": "Webhook verification, signature checks and API calls only. There is no WebRTC, so calls cannot be answered."
+      }
+    }
   }
 }

@@ -59,7 +59,11 @@
       "usesOptionalPeers": [
         "onnxruntime-node",
         "onnxruntime-web"
-      ]
+      ],
+      "needs": {
+        "all": "Local Smart Turn v3: onnxruntime-node or onnxruntime-web. HttpSmartTurnAnalyzer: only fetch and a Smart Turn endpoint.",
+        "workerd": "Local Smart Turn: pass the model's bytes (there is no filesystem). HttpSmartTurnAnalyzer needs nothing extra."
+      }
     }
   }
 }

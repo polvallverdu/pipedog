@@ -48,6 +48,12 @@
     ],
     "upstream": [
       "src/pipecat/audio/mixers/soundfile_mixer.py"
-    ]
+    ],
+    "compat": {
+      "needs": {
+        "all": "Nothing to install. WAV files only.",
+        "workerd": "Pass sounds as bytes or a URL: there is no filesystem to read a path from."
+      }
+    }
   }
 }

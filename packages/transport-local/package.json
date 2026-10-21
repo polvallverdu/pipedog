@@ -53,7 +53,12 @@
     "compat": {
       "unsupportedRuntimes": [
         "workerd"
-      ]
+      ],
+      "needs": {
+        "all": "sox or ffmpeg on the PATH, and a machine with audio devices.",
+        "deno": "Run with --allow-run.",
+        "workerd": "Not supported: Workers cannot start processes."
+      }
     }
   }
 }

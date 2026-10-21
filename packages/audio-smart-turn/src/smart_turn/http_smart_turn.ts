@@ -81,7 +81,8 @@ export class HttpSmartTurnAnalyzer extends BaseSmartTurn {
     super(options);
     this.#url = options.url;
     this.#headers = options.headers ?? {};
-    this.#fetch = options.fetch ?? ((...args) => globalThis.fetch(...args));
+    this.#fetch =
+      options.fetch ?? (((input, init) => globalThis.fetch(input, init)) as typeof fetch);
   }
 
   /** Serialize the audio array to bytes for HTTP transmission. */

@@ -1,0 +1,93 @@
+---
+title: RNNoise filter
+description: Suppress background noise in the user's audio with RNNoise, compiled to WebAssembly so it runs on Bun, Node, Deno and Cloudflare Workers.
+---
+
+## Overview
+
+`RNNoiseFilter` removes background noise from the user's audio before it reaches VAD and
+speech-to-text, using [RNNoise](https://gitlab.xiph.org/xiph/rnnoise), a small recurrent neural
+network. It is a port of Pipecat's `RNNoiseFilter`. Upstream calls the native `pyrnnoise` library;
+pipedog runs RNNoise 0.2 as **WebAssembly**, shipped inside the package, so there is nothing to
+install and it works on Cloudflare Workers too.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/audio-filters/rnnoise-filter">
+    Pipecat's documentation for the same filter.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/audio-rnnoise-filter/src">
+    `rnnoise_filter.ts`, `rnnoise.ts` and `engine.ts`.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/audio-rnnoise-filter
+```
+
+```ts
+import { RNNoiseFilter } from "@pipedog/audio-rnnoise-filter";
+```
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/audio-rnnoise-filter" />
+
+## Usage
+
+Set the filter as the transport's `audioInFilter`. It starts and stops with the transport.
+
+```ts
+import { RNNoiseFilter } from "@pipedog/audio-rnnoise-filter";
+import { TransportParams } from "@pipedog/core/transports/base_transport";
+
+const params = new TransportParams({
+  audioInEnabled: true,
+  audioInFilter: new RNNoiseFilter(),
+});
+```
+
+RNNoise works on 480-sample frames (10 ms) at 48 kHz. The filter buffers incoming audio into frames
+and, when the transport is not at 48 kHz, resamples in and out with the
+soxr-style stream resampler (`@pipedog/resampler-wasm`). A call
+returns the frames that completed, so the first calls can be empty, and the output lags the input by
+less than one frame.
+
+Send a `FilterEnableFrame` to switch the filter on and off while the bot runs:
+
+```ts
+import { FilterEnableFrame } from "@pipedog/core/frames/frames";
+
+await worker.queueFrame(new FilterEnableFrame({ enable: false }));
+```
+
+## Configuration
+
+`new RNNoiseFilter(options?)`:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `resamplerQuality` | `"VHQ" \| "HQ" \| "MQ" \| "LQ" \| "QQ"` | `"QQ"` | Resampler preset when the transport is not at 48 kHz. `"QQ"` has the lowest latency. |
+| `rnnoise` | `({ sampleRate }) => RNNoiseLike` | the bundled WASM build | Create your own denoiser, for example a fake in tests. |
+
+Lower-level pieces are exported too: `initRnnoise(source?)` loads the module from bytes, a
+`WebAssembly.Module`, a URL or a `Response` (on Workers only a module), `RNNoise` mirrors pyrnnoise's
+`denoise_chunk`, and `RnnoiseEngine.createState()` gives the raw 480-sample `processFrame`.
+
+## Cloudflare Workers
+
+workerd refuses to compile WebAssembly from bytes, so on Workers the package's `"workerd"` export
+condition imports `rnnoise.wasm` as a pre-compiled module. Wrangler's default rule for `.wasm` files
+does this; nothing else is needed. The module is 1.4 MB.
+
+## Differences from upstream
+
+- **WebAssembly instead of `pyrnnoise`.** The model is RNNoise 0.2, so the denoising is the same kind
+  of output, but it is not bit-identical. The module is the one built by
+  [`@jitsi/rnnoise-wasm`](https://github.com/jitsi/rnnoise-wasm) (Apache-2.0).
+- The `rnnoise` option and a protected `_createResampler()` hook replace the module-level patching
+  upstream's tests do.
+
+See the [package README](https://github.com/polvallverdu/pipedog/tree/main/packages/audio-rnnoise-filter)
+for the licenses of what it bundles.

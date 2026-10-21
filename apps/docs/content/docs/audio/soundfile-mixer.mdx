@@ -1,0 +1,100 @@
+---
+title: Soundfile mixer
+description: Mix WAV background sound into the bot's output audio with SoundfileMixer, in pure TypeScript on every runtime.
+---
+
+## Overview
+
+`SoundfileMixer` blends sound from files (office noise, hold music, a keyboard clatter) into the
+audio the transport sends to the user. It is a port of Pipecat's `SoundfileMixer`. Upstream reads the
+files with libsndfile; pipedog parses **WAV** in pure TypeScript, so the mixer runs on Bun, Node, Deno
+and Cloudflare Workers with nothing to install.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/utilities/audio/soundfile-mixer">
+    Pipecat's documentation for the same mixer.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/audio-soundfile-mixer/src">
+    `soundfile_mixer.ts` and the WAV reader `wav.ts`.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/audio-soundfile-mixer
+```
+
+```ts
+import { SoundfileMixer } from "@pipedog/audio-soundfile-mixer";
+```
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/audio-soundfile-mixer" />
+
+## Usage
+
+Give each sound a name, pick the default, and set the mixer as the transport's `audioOutMixer`:
+
+```ts
+import { SoundfileMixer } from "@pipedog/audio-soundfile-mixer";
+import { TransportParams } from "@pipedog/core/transports/base_transport";
+
+const mixer = new SoundfileMixer({
+  soundFiles: {
+    office: "./assets/office.wav", // a path (Bun, Node, Deno)
+    hold: "https://example.com/hold.wav", // a URL
+    // bytes work everywhere, Workers included: office: new Uint8Array(await bucket.get(...).arrayBuffer())
+  },
+  defaultSound: "office",
+  volume: 0.4,
+});
+
+const params = new TransportParams({ audioOutEnabled: true, audioOutMixer: mixer });
+```
+
+The files must be mono and have the output transport's sample rate (for example 16000 Hz). A file with
+another rate, or one that can't be read, is skipped with a log message, and audio passes through
+unchanged while its sound is missing.
+
+Change the sound, volume or looping while the bot runs, and turn mixing on and off, with frames:
+
+```ts
+import { MixerEnableFrame, MixerUpdateSettingsFrame } from "@pipedog/core/frames/frames";
+
+await worker.queueFrame(new MixerUpdateSettingsFrame({ settings: { sound: "hold", volume: 0.2, loop: false } }));
+await worker.queueFrame(new MixerEnableFrame({ enable: false }));
+```
+
+## Configuration
+
+`new SoundfileMixer(options)`:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `soundFiles` | `Record<string, SoundSource>` | required | Sound name to source: WAV bytes, a `URL`, an `http(s):`, `file:` or `data:` URL string, or a path. |
+| `defaultSound` | `string` | required | The sound to play first. |
+| `volume` | `number` | `0.4` | Mixing volume, 0.0 to 1.0. |
+| `mixing` | `boolean` | `true` | Whether mixing starts enabled. |
+| `loop` | `boolean` | `true` | Start the sound again when it ends. With `false`, audio passes through once it has played. |
+| `fileSystem` | `{ readFile(path) }` | `node:fs/promises` | How paths are read. Imported lazily, so Workers can use the mixer with bytes or URLs. |
+
+## Supported files
+
+WAV only: PCM 8, 16, 24 and 32 bit, IEEE float 32 and 64 bit, A-law and mu-law, including
+`WAVE_FORMAT_EXTENSIBLE` and RF64 headers. Samples are converted to 16-bit the way libsndfile does.
+FLAC, Ogg Vorbis and Opus, MP3, AIFF and the other formats libsndfile reads are rejected with an error
+that names the format. Convert them first:
+
+```bash
+ffmpeg -i office.mp3 -ar 16000 -ac 1 office.wav
+```
+
+## Differences from upstream
+
+- **WAV only** (above), where upstream accepts every libsndfile format.
+- **Sources can be bytes or URLs**, not only paths, and files are read with `await`, not
+  `asyncio.to_thread`.
+- A multi-channel file is accepted with a warning, and its interleaved samples play back as one
+  channel, as upstream's flat view of the array does.

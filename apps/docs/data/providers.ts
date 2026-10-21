@@ -1,13 +1,13 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// The provider catalog behind the Services, Transports and Serializers sections. The ported pages
+// The provider catalog behind the Services, Transports, Serializers and Audio sections. The ported pages
 // are written by hand; scripts/generate-providers.ts writes the "coming soon" pages, the folder
 // meta.json files and the overview tables from this file. Run `bun run providers:generate` in
 // apps/docs after changing it.
 
 export type Category = "llm" | "stt" | "tts" | "s2s" | "image" | "video";
-export type Section = Category | "transports" | "serializers";
+export type Section = Category | "transports" | "serializers" | "audio";
 
 export interface SectionInfo {
   /** Sidebar title. */
@@ -53,6 +53,12 @@ export const sections: Record<Section, SectionInfo> = {
     title: "Transports",
     description: "Move audio, video and messages between the user and the pipeline.",
     upstreamFolder: "transport",
+  },
+  audio: {
+    title: "Audio filters & mixers",
+    description:
+      "Clean up the user's audio before it reaches VAD and speech-to-text, and mix background sound into the bot's audio.",
+    upstreamFolder: "audio-filters",
   },
   serializers: {
     title: "Serializers",
@@ -878,6 +884,32 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/transport-livekit",
       classes: ["LiveKitTransport"],
     },
+    {
+      slug: "whatsapp",
+      name: "WhatsApp",
+      pkg: "@pipedog/transport-whatsapp",
+      classes: ["WhatsAppClient", "WhatsAppApi"],
+    },
+    {
+      slug: "local-audio",
+      name: "Local audio",
+      pkg: "@pipedog/transport-local",
+      classes: ["LocalAudioTransport"],
+    },
+  ],
+  audio: [
+    {
+      slug: "rnnoise-filter",
+      name: "RNNoise filter",
+      pkg: "@pipedog/audio-rnnoise-filter",
+      classes: ["RNNoiseFilter"],
+    },
+    {
+      slug: "soundfile-mixer",
+      name: "Soundfile mixer",
+      pkg: "@pipedog/audio-soundfile-mixer",
+      classes: ["SoundfileMixer"],
+    },
   ],
   serializers: [
     {
@@ -1182,23 +1214,67 @@ export const upcoming: UpcomingPage[] = [
     unblock: "Deferred until the spec and server-side JS support settle.",
     sources: [{ title: "MoQ JS library", href: "https://doc.moq.dev/js/" }],
   },
+  // Audio filters, mixers and VAD
   {
-    section: "transports",
-    slug: "whatsapp",
-    name: "WhatsApp",
-    about: "WhatsApp Business voice calls, over WebRTC.",
-    classes: ["WhatsAppClient"],
-    modules: ["transports/whatsapp/client.py", "transports/whatsapp/api.py"],
+    section: "audio",
+    slug: "krisp-viva-filter",
+    name: "Krisp VIVA",
+    about: "Krisp's voice isolation filter, VAD analyzer and turn analyzer.",
+    classes: ["KrispVivaFilter", "KrispVivaVadAnalyzer", "KrispVivaTurn"],
+    modules: [
+      "audio/filters/krisp_viva_filter.py",
+      "audio/vad/krisp_viva_vad.py",
+      "audio/turn/krisp_viva_turn.py",
+    ],
+    upstreamUrl:
+      "https://docs.pipecat.ai/api-reference/server/services/audio-filters/krisp-viva-filter",
+    status: "deferred",
+    reason:
+      "The Krisp VIVA SDK is proprietary. It isn't on public npm, and it needs a license and the model files from Krisp.",
+    unblock:
+      "Bring your own SDK: core already has the `KrispAudioSdk` seam (`audio/krisp_instance`), and `setKrispAudioSdk()` takes the SDK you obtained from Krisp. An optional package that wires it up is planned.",
+    sources: [
+      {
+        title: "Krisp VIVA in Pipecat",
+        href: "https://docs.pipecat.ai/pipecat/features/krisp-viva",
+      },
+    ],
   },
   {
-    section: "transports",
-    slug: "local-audio",
-    name: "Local audio",
-    about: "The machine's microphone and speakers, for development (PyAudio upstream).",
-    classes: ["LocalAudioTransport"],
-    modules: ["transports/local/audio.py"],
-    upstreamUrl:
-      "https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/transports/local/audio.py",
+    section: "audio",
+    slug: "aic-filter",
+    name: "ai-coustics",
+    about:
+      "ai-coustics speech enhancement (AICFilter) and the Quail voice activity detector (AICQuailVADAnalyzer).",
+    classes: ["AICFilter", "AICQuailVADAnalyzer"],
+    modules: ["audio/filters/aic_filter.py", "audio/vad/aic_quail_vad.py"],
+    upstreamUrl: "https://docs.pipecat.ai/api-reference/server/services/audio-filters/aic-filter",
+    status: "deferred",
+    reason:
+      "`@ai-coustics/aic-sdk` is a native addon for darwin and linux, or a browser WebAssembly build, and it needs a license key. Neither fits every pipedog runtime.",
+    unblock:
+      "Deferred until there is a package we can test without a license key, or someone contributes it as an optional package for Node and Bun.",
+    sources: [
+      {
+        title: "ai-coustics Node.js SDK",
+        href: "https://docs.ai-coustics.com/sdk/bindings/nodejs",
+      },
+    ],
+  },
+  {
+    section: "audio",
+    slug: "koala-filter",
+    name: "Koala",
+    about: "Picovoice Koala noise suppression (KoalaFilter).",
+    classes: ["KoalaFilter"],
+    modules: ["audio/filters/koala_filter.py"],
+    upstreamUrl: "https://docs.pipecat.ai/api-reference/server/services/audio-filters/koala-filter",
+    status: "deferred",
+    reason:
+      "Picovoice has no Node build of Koala. There is only `@picovoice/koala-web`, for the browser, and every build needs an AccessKey.",
+    unblock:
+      "Deferred until Picovoice ships a Node or server-side WebAssembly build, or someone ports it on top of `@picovoice/koala-web`.",
+    sources: [{ title: "Koala for web", href: "https://picovoice.ai/docs/quick-start/koala-web" }],
   },
 ];
 

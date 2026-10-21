@@ -52,7 +52,9 @@ const stale: string[] = [];
 
 /** The folder a section's pages live in, under content/docs. */
 function folder(section: Section): string {
-  return section === "transports" || section === "serializers" ? section : `services/${section}`;
+  return section === "transports" || section === "serializers" || section === "audio"
+    ? section
+    : `services/${section}`;
 }
 
 function pageUrl(section: Section, slug: string): string {
@@ -351,6 +353,8 @@ const intros: Record<Section, string> = {
     "A transport moves audio, video and messages between the user and the pipeline: `transport.input()` goes first in a pipeline and `transport.output()` near the end.",
   serializers:
     "A serializer converts frames to and from a wire format, so a WebSocket transport can speak a client's or a telephony provider's protocol.",
+  audio:
+    "An audio filter cleans up the user's audio before it reaches VAD and speech-to-text (set it as `audioInFilter` in the transport's params). An audio mixer blends background sound into the bot's audio (`audioOutMixer`).",
 };
 
 function sectionIndex(section: Section): string {
@@ -441,7 +445,7 @@ for (const category of categories) {
   await write(`services/${category}/index.mdx`, sectionIndex(category));
   await write(`services/${category}/meta.json`, sectionMeta(category, true));
 }
-for (const section of ["transports", "serializers"] as const) {
+for (const section of ["audio", "transports", "serializers"] as const) {
   await write(`${section}/index.mdx`, sectionIndex(section));
   await write(`${section}/meta.json`, sectionMeta(section, true));
 }

@@ -59,6 +59,12 @@
     ],
     "upstream": [
       "src/pipecat/audio/filters/rnnoise_filter.py"
-    ]
+    ],
+    "compat": {
+      "needs": {
+        "all": "Nothing to install: the WebAssembly module ships in the package.",
+        "workerd": "The bundler must import .wasm files as modules (wrangler's default rule)."
+      }
+    }
   }
 }

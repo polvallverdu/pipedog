@@ -368,7 +368,8 @@ export class WhatsAppApi {
 
   constructor(options: WhatsAppApiOptions) {
     this._phoneNumberId = options.phoneNumberId;
-    this._fetch = options.fetch ?? ((...args) => globalThis.fetch(...args));
+    this._fetch =
+      options.fetch ?? (((input, init) => globalThis.fetch(input, init)) as typeof fetch);
     this._baseUrl = options.baseUrl ?? WhatsAppApi.BASE_URL;
     this._whatsappUrl = `${this._baseUrl}${options.phoneNumberId}/calls`;
     this._whatsappToken = options.whatsappToken;
