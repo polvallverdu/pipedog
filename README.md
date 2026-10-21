@@ -157,8 +157,11 @@ from real runs by the compat harness (`bun run compat`), not by hand.
 | Deno | Yes | |
 | Cloudflare Workers | Yes, with `nodejs_compat` | No WebRTC (no UDP): use the WebSocket transport. Models are loaded from R2, KV or `fetch`, not bundled. See [Workers](https://polvallverdu.github.io/pipedog/docs/workers/). |
 
-Every package below is verified on all four, except `@pipedog/transport-smallwebrtc` (not Workers)
-and `@pipedog/aws`'s `SageMakerBidiClient` (HTTP/2, not Workers).
+Every package below is verified on all four, except `@pipedog/transport-smallwebrtc` (not Workers:
+no UDP) and `@pipedog/mcp` (a stdio tool for Bun and Node). A few entry points inside verified
+packages don't run on Workers: `@pipedog/aws`'s `SageMakerBidiClient` (HTTP/2), Google's gRPC
+Cloud Speech and Text-to-Speech services, and the servers that listen on a port (the runner's
+`main()` and `serve()`, `serveFetch`). Each package's README has its own runtime table.
 Details: [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/).
 
 ## Packages
@@ -193,7 +196,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/serializer-exotel`](packages/serializer-exotel) | `ExotelFrameSerializer` for Exotel's Voicebot media streams. |
 | [`@pipedog/serializer-vonage`](packages/serializer-vonage) | `VonageFrameSerializer` for the Vonage Audio Connector. |
 | [`@pipedog/serializer-genesys`](packages/serializer-genesys) | `GenesysAudioHookSerializer` for Genesys Cloud AudioHook. |
-| [`@pipedog/runner`](packages/runner) | Pipecat's runner, partially: the telephony helpers (`parseTelephonyWebsocket`, `CallData`) that detect the provider and parse a call's handshake. |
+| [`@pipedog/runner`](packages/runner) | Pipecat's development runner: `createTransport()` from the runner arguments, and `main()`, a dev server with the prebuilt browser client, SmallWebRTC signalling, and telephony webhooks and WebSockets for Twilio, Telnyx, Plivo and Exotel. Also a fetch handler (`createRunnerApp()`) to mount in your own server. |
 | [`@pipedog/audio-silero`](packages/audio-silero) | Silero VAD (`SileroVADAnalyzer`), with the upstream model included. |
 | [`@pipedog/audio-smart-turn`](packages/audio-smart-turn) | Local Smart Turn v3 end-of-turn detection, with the upstream model included. |
 | [`@pipedog/onnx`](packages/onnx) | Small ONNX inference backend: `onnxruntime-node` when installed, else `onnxruntime-web`, with a Workers variant. |
@@ -213,9 +216,9 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 | --- | --- |
 | [`smallwebrtc-voice-bot`](examples/smallwebrtc-voice-bot) | Voice assistant in the browser over SmallWebRTC, with OpenAI or Google Gemini services. Tested end to end in headless Chromium. |
 | [`websocket-voice-bot`](examples/websocket-voice-bot) | The same voice assistant over a WebSocket with protobuf frames, the format `@pipecat-ai/websocket-transport` speaks. Tested end to end in headless Chromium. |
-| [`twilio-phone-bot`](examples/twilio-phone-bot) | A phone bot on Twilio Media Streams, the TwiML webhook and the media WebSocket as one fetch handler (Deno, Workers). Tested with a scripted fake Twilio, in process and on Deno. |
-| [`workers-durable-voice-agent`](examples/workers-durable-voice-agent) | Parallel voice agents on Cloudflare Workers, one Durable Object per session, over WebSocket. |
-| [`framework-snippets`](examples/framework-snippets) | The same voice endpoints mounted in Bun, Deno, Elysia, Express, Hono, Next.js, Nuxt, SvelteKit and Vercel. |
+| [`twilio-phone-bot`](examples/twilio-phone-bot) | A phone bot on Twilio Media Streams, the TwiML webhook and the media WebSocket as one fetch handler (Bun or Node with `serveFetch`, Deno, Workers). Tested with a scripted fake Twilio, in process and on Deno. |
+| [`workers-durable-voice-agent`](examples/workers-durable-voice-agent) | Parallel voice agents on Cloudflare Workers, one Durable Object per session, over WebSocket. Tested end to end against workerd with parallel sessions. |
+| [`framework-snippets`](examples/framework-snippets) | The same voice endpoints mounted in Bun, Deno, Elysia, Express, Hono, Next.js, Nuxt, SvelteKit, TanStack Start and Vercel. |
 | [`test-mocks`](examples/test-mocks) | Mock OpenAI and Gemini APIs and a recorded question, used by the examples' tests. |
 
 ## Documentation
@@ -223,6 +226,10 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 - [Getting started](https://polvallverdu.github.io/pipedog/docs/) and
   [installation](https://polvallverdu.github.io/pipedog/docs/installation/)
 - [Voice bot over SmallWebRTC](https://polvallverdu.github.io/pipedog/docs/voice-bot/)
+- [Development runner](https://polvallverdu.github.io/pipedog/docs/runner/): `main()`, the
+  prebuilt client and phone calls, as in Pipecat's runner
+- [Telephony](https://polvallverdu.github.io/pipedog/docs/telephony/): Twilio, Telnyx, Plivo,
+  Exotel, Vonage and Genesys
 - [Examples](https://polvallverdu.github.io/pipedog/docs/examples/): every runnable example and its run command
 - [Turn detection](https://polvallverdu.github.io/pipedog/docs/turn-detection/): local models, VAD
   only, or on the provider's side
@@ -235,14 +242,25 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 
 ## Status
 
-pipedog is **early** (0.x). Expect breaking changes between minor versions.
+pipedog is 0.x: expect breaking changes between minor versions. Against the pinned upstream
+commit, 502 of Pipecat's 667 modules are ported (75%, 64% of the lines) and 244 of its 340 test
+files.
 
-- The core runtime is fully ported, and its upstream test suite is ported 1:1 and passing.
-- Only a handful of the upstream providers are ported so far (the packages above). Most of
-  Pipecat's services, transports (Daily, LiveKit and others), `flows` and the CLI are not.
-- Provider services are tested against mocks and recorded protocol fixtures. Tests that need real API
-  keys are skipped by default, as upstream does, so live providers are only lightly tested. Bug
-  reports from real use are very welcome.
+- **Core runtime: complete.** All 361 core modules are ported, and all 150 of core's upstream test
+  files are ported 1:1 and passing.
+- **Providers: the main ones.** Across 49 packages: OpenAI, Anthropic, Google, Azure, AWS (with Nova
+  Sonic), Deepgram, Cartesia, ElevenLabs, Inworld, Ultravox, 16 OpenAI-compatible providers (Groq,
+  Together, Mistral, xAI, DeepSeek, OpenRouter, Ollama and more), the WebSocket and SmallWebRTC
+  transports, six telephony serializers and the development runner.
+- **Not ported yet:** the Daily, LiveKit and other room transports, Pipecat Flows, the noise
+  filters (Krisp, RNNoise, Koala, AIC), evals, the CLI, the MCP client service, and 34 other
+  providers (AssemblyAI, Gladia, Speechmatics, Rime, NVIDIA and a long tail). See the
+  [roadmap](https://polvallverdu.github.io/pipedog/docs/roadmap/).
+- **Testing: mocks and recordings, not live providers yet.** Every provider is tested against mock
+  servers and recorded protocol vectors, and the examples run end to end against mock APIs.
+  Tests that need real API keys are skipped by default, as upstream does, so live providers are
+  only lightly exercised. Testing against the real providers is the next phase. Bug reports from
+  real use are very welcome.
 
 Per-package progress, test counts and verified runtimes: [`porting/STATUS.md`](porting/STATUS.md)
 (also [on the docs site](https://polvallverdu.github.io/pipedog/docs/contributing/status/)).
@@ -253,9 +271,9 @@ pipedog tracks one pinned Pipecat commit at a time.
 
 - [`upstream.json`](upstream.json) pins the upstream repository and commit. `bun run upstream`
   checks it out into `.upstream/pipecat`, and `bun run upstream bump` moves the pin.
-- [`porting/manifest.json`](porting/manifest.json) lists every upstream module and test with its
-  target package, TypeScript path, dependencies and status. [`porting/STATUS.md`](porting/STATUS.md)
-  is generated from it.
+- [`porting/manifest.json`](porting/manifest.json) lists every upstream module (667) and test file
+  (340) with its target package (105 in all, 43 of them ported at least in part), TypeScript path,
+  dependencies and status. [`porting/STATUS.md`](porting/STATUS.md) is generated from it.
 - [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) is the rulebook for how Python maps to TypeScript.
   Deliberate differences from upstream are marked `DIVERGENCE` in the code and listed in the manifest.
 

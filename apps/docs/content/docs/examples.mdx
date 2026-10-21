@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Runnable voice bots in the repository, over WebRTC, over a WebSocket, and on Cloudflare Durable Objects.
+description: Runnable voice bots in the repository, over WebRTC, over a WebSocket, on the phone, on Cloudflare Durable Objects, and mounted in each major framework.
 ---
 
 Each example is a complete project in the repository's
@@ -12,8 +12,13 @@ start any of them from the repository root.
 | --- | --- | --- |
 | [`smallwebrtc-voice-bot`](https://github.com/polvallverdu/pipedog/tree/main/examples/smallwebrtc-voice-bot) | `OPENAI_API_KEY=sk-... bun run --cwd examples/smallwebrtc-voice-bot start` | A voice assistant in the browser over SmallWebRTC, with OpenAI or Google Gemini services. |
 | [`websocket-voice-bot`](https://github.com/polvallverdu/pipedog/tree/main/examples/websocket-voice-bot) | `OPENAI_API_KEY=sk-... bun run --cwd examples/websocket-voice-bot start` | The same assistant over a WebSocket, with protobuf frames for `@pipecat-ai/websocket-transport`. |
-| [`twilio-phone-bot`](https://github.com/polvallverdu/pipedog/tree/main/examples/twilio-phone-bot) | `bun run --cwd examples/twilio-phone-bot start` (Deno) | A phone bot on Twilio Media Streams: the TwiML webhook and the media WebSocket as one fetch handler. See the [Twilio quickstart](/docs/telephony/twilio-quickstart). |
+| [`twilio-phone-bot`](https://github.com/polvallverdu/pipedog/tree/main/examples/twilio-phone-bot) | `OPENAI_API_KEY=sk-... PUBLIC_URL=https://... bun run --cwd examples/twilio-phone-bot start` (or `start:deno`) | A phone bot on Twilio Media Streams: the TwiML webhook and the media WebSocket as one fetch handler, served with `serveFetch` on Bun or Node, or on Deno and Workers. See the [Twilio quickstart](/docs/telephony/twilio-quickstart). |
 | [`workers-durable-voice-agent`](https://github.com/polvallverdu/pipedog/tree/main/examples/workers-durable-voice-agent) | `bun run --cwd examples/workers-durable-voice-agent dev` | Parallel voice agents on Cloudflare Workers, one Durable Object per session, over WebSocket. |
+| [`framework-snippets`](https://github.com/polvallverdu/pipedog/tree/main/examples/framework-snippets) | `bun test examples/framework-snippets` | The same voice endpoints mounted in Bun, Deno, Elysia, Express, Hono, Next.js, Nuxt, SvelteKit, TanStack Start and Vercel. See [Frameworks](/docs/frameworks). |
+
+The mock provider APIs and the recorded question the tests use are in
+[`test-mocks`](https://github.com/polvallverdu/pipedog/tree/main/examples/test-mocks). The tests
+need no API keys; running an example against the real providers does.
 
 The two browser bots serve their page on [http://localhost:7860](http://localhost:7860). Set
 `VOICE_PROVIDER=google` and `GOOGLE_API_KEY` to use Gemini instead of OpenAI. The Workers example

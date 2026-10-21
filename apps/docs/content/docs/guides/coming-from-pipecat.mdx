@@ -216,6 +216,33 @@ and register the second as a virtual base, so `instanceof` works for both.
 the same level methods (`trace`, `debug`, `info`, `warning`, `error`, `critical`).
 `logger.exception(msg)` is `logger.error(msg, e)`.
 
+## The development runner
+
+Pipecat's `pipecat.runner` is `@pipedog/runner`, with the same entry point: export a
+`bot(runnerArgs)` function and call `main()`. The flags (`-t webrtc`, `-t twilio`, `--proxy`,
+`--host`, `--port`, ...) are the same.
+
+| Python | TypeScript |
+|---|---|
+| `from pipecat.runner.run import main` | `import { main } from "@pipedog/runner/run"` |
+| `if __name__ == "__main__": main()` | `if (import.meta.main) await main();` |
+| `async def bot(runner_args: RunnerArguments)` | `export async function bot(runnerArgs: RunnerArguments)` |
+| `await create_transport(runner_args, transport_params)` | `await createTransport(runnerArgs, transportParams)`, from `@pipedog/runner/utils` |
+| `parse_telephony_websocket(websocket)` | `parseTelephonyWebsocket(websocket)` |
+| `from pipecat.runner.run import app; @app.get(...)` | `import { app } from "@pipedog/runner/run"; app.get(...)` |
+| `uvicorn.run(app)` | `serve(app)` from `@pipedog/runner/serve`, or `createRunnerApp()` and its `fetch` in your server |
+| `python bot.py -t webrtc` | `bun bot.ts -t webrtc` |
+
+The FastAPI app is a fetch handler, so the runner mounts in any framework. Daily, LiveKit, MOQ,
+the Vonage Video Connector and WhatsApp are recognized but fail with a clear message: their
+transports aren't ported yet. See [Development runner](/docs/runner) for the full mapping.
+
+## What isn't ported yet
+
+The core and the main providers are ported; Daily and LiveKit, Pipecat Flows, the noise filters,
+evals, the CLI, the MCP client service and a long tail of providers are not. The
+[roadmap](/docs/roadmap#whats-not-ported-yet) lists the gaps with their upstream module counts.
+
 ## Deprecated APIs are not ported
 
 Anything upstream marks deprecated (with `@deprecated`, `warn_deprecated`, or "will be removed in

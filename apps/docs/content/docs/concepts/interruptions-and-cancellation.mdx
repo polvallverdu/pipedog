@@ -55,9 +55,10 @@ A processor sees the interruption in `processFrame()` (after `super.processFrame
 cancelled the work in progress), and can override `protected async _startInterruption()` (calling `super._startInterruption()`
 first) for cleanup that must happen at that moment.
 
-<Callout title="Coming soon">
-  Turn strategies, user muting and interruption configuration (`enableInterruptions`, minimum
-  words, ...) are documented with the turn and aggregator modules as they land.
+<Callout title="Turn strategies and muting">
+  Turn strategies are covered in [Turn detection](/docs/concepts/turn-detection). User muting and
+  the other turn options are ported (`@pipedog/core/turns/user_mute`, `user_start`, `user_stop`)
+  with upstream's names, but don't have a page here yet; Pipecat's documentation for them applies.
 </Callout>
 
 ## Why JavaScript needs help

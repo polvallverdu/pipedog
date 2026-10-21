@@ -156,8 +156,9 @@ depend on.
   `LLMFullResponseEndFrame` in a custom processor (see
   [Frame processors](/docs/concepts/frame-processors#example-response-logger)).
 
-<Callout title="Coming soon">
+<Callout title="With services">
   Patterns that need services (injecting prompts with `LLMMessagesAppendFrame`, updating tools
-  with `LLMSetToolsFrame`, changing settings at runtime) will be documented with the provider
-  packages. The frames themselves already exist in `@pipedog/core/frames/frames`.
+  with `LLMSetToolsFrame`, changing settings at runtime) depend on the service: each provider page
+  says which of these frames it accepts, for example [OpenAI Realtime](/docs/services/s2s/openai) and
+  [Gemini Live](/docs/services/s2s/gemini-live). The frames are in `@pipedog/core/frames/frames`.
 </Callout>
