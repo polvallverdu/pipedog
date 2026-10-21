@@ -520,8 +520,8 @@ export class LLMService<
 
   /** Return the adapter class to instantiate for this service. */
   static _resolveAdapterClass(): LLMAdapterClass {
-    if (LLMService.adapterClass !== null) {
-      return LLMService.adapterClass;
+    if (this.adapterClass !== null) {
+      return this.adapterClass;
     }
     return OpenAILLMAdapter;
   }

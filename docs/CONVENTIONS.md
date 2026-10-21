@@ -263,6 +263,13 @@ See the top of `frames/frames.ts`.
 - `PyYAML` → [`yaml`](https://www.npmjs.com/package/yaml), only through `utils/yaml.ts`, which
   rebuilds PyYAML's `SafeLoader` (YAML 1.1 resolvers, per-class constructors) on its parser.
 - `Pillow` JPEG encoding → `utils/jpeg_encoder.ts` (baseline, no dependencies).
+- `json.dumps` / `json.loads` → `pyJsonDumps` / `pyJsonLoads` from `@pipedog/core/utils/py_json`
+  (Python separators, `ensure_ascii`, float repr, NaN/Infinity). Never `JSON.stringify` where the
+  output reaches a wire, a log line a test compares, or an LLM context. `base64.b64encode/decode`
+  → `bytesToBase64` / `base64ToBytes` from `@pipedog/core/utils/base64`. Don't write local copies.
+- New third-party dependencies: pin dev dependencies exactly, to a version published at least 14
+  days ago (`npm view <pkg> time`); the published range is `^<that version>`. Check the version
+  you pinned actually resolves in `bun.lock`.
 - Filesystem access (`aiofiles`, `pathlib`) → an injected reader or `fs` object
   (`node:fs/promises` satisfies `LocalFileSystem`); core never imports `node:fs`.
 
