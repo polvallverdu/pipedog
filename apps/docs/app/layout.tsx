@@ -17,7 +17,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="flex flex-col min-h-screen">
-        <RootProvider>
+        <RootProvider search={{ options: { type: "static" } }}>
           <Banner id="unofficial-notice">
             pipedog is an unofficial community port of Pipecat, not affiliated with Daily.
           </Banner>
