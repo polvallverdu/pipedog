@@ -7,11 +7,19 @@
 // give. The WebSocket endpoints must accept an upgrade. Deno isn't run here: its
 // snippet needs the Deno runtime.
 
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createApp, defineEventHandler, toWebHandler, toWebRequest } from "h3";
 
-// The agents started by the WebSocket tests read the key when they connect.
-process.env.OPENAI_API_KEY ??= "test-key";
+// The agents started by the WebSocket tests read the key when they connect. Set
+// it only for this file: other test files decide what to run from its presence.
+const savedKey = process.env.OPENAI_API_KEY;
+beforeAll(() => {
+  process.env.OPENAI_API_KEY = "test-key";
+});
+afterAll(() => {
+  if (savedKey === undefined) delete process.env.OPENAI_API_KEY;
+  else process.env.OPENAI_API_KEY = savedKey;
+});
 
 const EXPECTED = "sdp and type are required";
 

@@ -130,6 +130,26 @@ through the pipeline above.
 | Chat model and prompt    | `OpenAILLMSettings` in `bot.ts` | the service default, see the code |
 | Voice                    | `OpenAITTSService` settings     | `alloy`                           |
 
+## Tracing and alerts
+
+Both are off until you set them:
+
+| Variable | What it does |
+| --- | --- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | An OTLP/HTTP traces endpoint, such as `http://localhost:4318/v1/traces`. Each conversation is traced: its turns, and the speech-to-text, LLM and speech synthesis calls in them. |
+| `ERROR_WEBHOOK_URL` | Each pipeline error is POSTed there as JSON, with the conversation id, the processor and the error. The body has a `text` field, so a Slack-style incoming webhook takes it as is. |
+
+Alerts are sent once per distinct error, and at most five per conversation. Warnings and errors in
+the logs have credentials masked, so an error that quotes a URL with `?key=...` doesn't leak the key.
+The wiring is in the example's `src/observability.ts`.
+
+## Reconnection
+
+The browser SDK reconnects by itself. When the connection fails, or stays disconnected for five
+seconds, it opens a new peer connection for the same session (`restart_pc`). The bot keeps the
+pipeline and the conversation through it, so the call picks up where it was. This is how Pipecat
+behaves too. A session ends when the browser closes the connection, or when reconnecting gives up.
+
 ## Next steps
 
 - [Frames](/docs/concepts/frames) and [frame processors](/docs/concepts/frame-processors) explain the

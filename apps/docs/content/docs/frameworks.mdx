@@ -20,6 +20,38 @@ Two endpoints are mounted:
 The agent behind both is the same. It needs `OPENAI_API_KEY` in the environment, and it reads
 `OPENAI_BASE_URL` if you set one.
 
+## Authentication
+
+pipedog's endpoints don't authenticate: anyone who can reach them can start a session, on your
+provider keys. That's the same split as Pipecat, whose transports don't authenticate either; its
+development runner mints one-time tokens for its WebSocket endpoints, and production auth comes from
+the application or Pipecat Cloud. Put your own check in front of each endpoint, in the framework, so
+it runs before a session starts:
+
+```ts
+/** Rejects requests without a valid session token before the endpoint runs. */
+function requireSession(endpoint: (request: Request) => Promise<Response>) {
+  return async (request: Request): Promise<Response> => {
+    const url = new URL(request.url);
+    // Browsers can't set headers on a WebSocket, so a socket brings its token in the URL.
+    const token =
+      request.headers.get("authorization")?.replace(/^Bearer /, "") ??
+      url.searchParams.get("token");
+    if (!token || !(await verifySessionToken(token))) {
+      return new Response("unauthorized", { status: 401 });
+    }
+    return endpoint(request);
+  };
+}
+
+export const authedOffer = requireSession(offer);
+export const authedSocket = requireSession(socket);
+```
+
+`verifySessionToken` is yours: a signed token your app issues when it creates the session, short-lived
+and used once, as Pipecat's runner does. Add a cap on concurrent sessions and on session length there
+too, since each session spends provider credits.
+
 ## The endpoints
 
 <include cwd meta='title="shared/voice.ts"'>../../examples/framework-snippets/shared/voice.ts</include>

@@ -18,6 +18,7 @@ import { createWebBackend } from "./web.ts";
 export * from "./backend.ts";
 export * from "./model.ts";
 export * from "./native.ts";
+export * from "./shared.ts";
 export * from "./web.ts";
 
 export interface CreateOnnxBackendOptions {

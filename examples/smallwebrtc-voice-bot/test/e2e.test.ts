@@ -13,18 +13,24 @@
 // Needs a Chromium for playwright-core (`bunx playwright install chromium`, or
 // PIPEDOG_E2E_CHROMIUM=<path>); skipped when none is found.
 
-import { beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { trace } from "@opentelemetry/api";
 import { startMockGoogle } from "@pipedog/example-test-mocks/mock_google";
-import { startMockOpenAI } from "@pipedog/example-test-mocks/mock_openai";
+import {
+  type MockObservability,
+  startMockObservability,
+} from "@pipedog/example-test-mocks/mock_observability";
+import { type MockOpenAI, startMockOpenAI } from "@pipedog/example-test-mocks/mock_openai";
 import {
   ANSWER,
   type ProviderMock,
   SCRIPTED_QUESTION,
 } from "@pipedog/example-test-mocks/mock_provider";
-import type { Browser, BrowserContext } from "playwright-core";
+import { forceFlushTracing, shutdownTracing } from "@pipedog/tracing";
+import type { Browser, BrowserContext, Page } from "playwright-core";
 import type { VoiceProvider } from "../src/bot.ts";
 import { createServer } from "../src/server.ts";
 
@@ -158,46 +164,81 @@ async function waitFor(predicate: () => boolean, timeoutMs: number): Promise<voi
   }
 }
 
+// Tracing and error alerts go to a mock collector and webhook (see
+// src/observability.ts). Tracing is set up once per process, on the first session.
+let observability: MockObservability;
+beforeAll(() => {
+  observability = startMockObservability();
+  process.env.OTEL_EXPORTER_OTLP_ENDPOINT = observability.tracesUrl;
+  process.env.ERROR_WEBHOOK_URL = observability.webhookUrl;
+});
+afterAll(async () => {
+  // Leave the process as it was: other test files set up tracing themselves.
+  delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+  delete process.env.ERROR_WEBHOOK_URL;
+  await shutdownTracing();
+  trace.disable();
+  observability?.stop();
+});
+
+/**
+ * Serve the bot against `mock`, connect headless Chromium as the scripted user,
+ * run `check` on the connected page, and tear everything down.
+ */
+async function withSession(
+  provider: VoiceProvider,
+  mock: ProviderMock,
+  check: (page: Page, errors: string[]) => Promise<void>,
+): Promise<void> {
+  const { chromium } = await import("playwright-core");
+  const server = createServer({ provider, apiKey: "test-key", baseUrl: mock.baseUrl });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as AddressInfo;
+
+  const browser: Browser = await chromium.launch({
+    executablePath: chromiumPath!,
+    args: [
+      "--use-fake-device-for-media-stream",
+      "--use-fake-ui-for-media-stream",
+      `--use-file-for-fake-audio-capture=${paddedQuestionWav()}`,
+      "--autoplay-policy=no-user-gesture-required",
+    ],
+  });
+  let context: BrowserContext | null = null;
+  try {
+    context = await browser.newContext();
+    await context.route("https://esm.sh/**", (route) =>
+      route.fulfill({
+        contentType: "text/javascript",
+        body: route.request().url().includes("client-js") ? clientBundle : transportBundle,
+      }),
+    );
+    const page = await context.newPage();
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.addInitScript(captureRtcConnections);
+    await page.goto(`http://127.0.0.1:${port}/`);
+
+    await page.click("#connect");
+    await page.evaluate(() => (window as any).__audio.resume());
+    await page.waitForFunction(() =>
+      document.querySelector("#status")?.textContent?.startsWith("Connected"),
+    );
+    await check(page, errors);
+  } finally {
+    await context?.close();
+    await browser.close();
+    server.close();
+    mock.stop();
+  }
+}
+
 for (const provider of ["openai", "google"] as const) {
   test.skipIf(!chromiumPath)(
     `${provider}: the voice bot answers a spoken question in the browser`,
     async () => {
-      const { chromium } = await import("playwright-core");
       const mock = MOCKS[provider]();
-      const server = createServer({ provider, apiKey: "test-key", baseUrl: mock.baseUrl });
-      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-      const { port } = server.address() as AddressInfo;
-
-      const browser: Browser = await chromium.launch({
-        executablePath: chromiumPath!,
-        args: [
-          "--use-fake-device-for-media-stream",
-          "--use-fake-ui-for-media-stream",
-          `--use-file-for-fake-audio-capture=${paddedQuestionWav()}`,
-          "--autoplay-policy=no-user-gesture-required",
-        ],
-      });
-      let context: BrowserContext | null = null;
-      try {
-        context = await browser.newContext();
-        await context.route("https://esm.sh/**", (route) =>
-          route.fulfill({
-            contentType: "text/javascript",
-            body: route.request().url().includes("client-js") ? clientBundle : transportBundle,
-          }),
-        );
-        const page = await context.newPage();
-        const errors: string[] = [];
-        page.on("pageerror", (error) => errors.push(error.message));
-        await page.addInitScript(captureRtcConnections);
-        await page.goto(`http://127.0.0.1:${port}/`);
-
-        await page.click("#connect");
-        await page.evaluate(() => (window as any).__audio.resume());
-        await page.waitForFunction(() =>
-          document.querySelector("#status")?.textContent?.startsWith("Connected"),
-        );
-
+      await withSession(provider, mock, async (page, errors) => {
         // The bot greets the user, then answers the scripted question.
         await waitFor(() => mock.spoken.includes(ANSWER), 60_000);
 
@@ -216,13 +257,29 @@ for (const provider of ["openai", "google"] as const) {
         expect(mock.asked.some((question) => question.includes(SCRIPTED_QUESTION))).toBe(true);
 
         expect(errors).toEqual([]);
-      } finally {
-        await context?.close();
-        await browser.close();
-        server.close();
-        mock.stop();
-      }
+      });
+
+      // The conversation was traced.
+      await forceFlushTracing();
+      expect(observability.traces.length).toBeGreaterThan(0);
     },
     90_000,
   );
 }
+
+test.skipIf(!chromiumPath)(
+  "a pipeline error is posted to the error webhook",
+  async () => {
+    const mock = startMockOpenAI() as MockOpenAI;
+    mock.failChat = true;
+    const before = observability.alerts.length;
+    await withSession("openai", mock, async () => {
+      await waitFor(() => observability.alerts.length > before, 60_000);
+    });
+    const alert = observability.alerts[before]!;
+    expect(String(alert.text)).toContain("Voice bot error in conversation");
+    expect(typeof alert.conversationId).toBe("string");
+    expect(String(alert.error).length).toBeGreaterThan(0);
+  },
+  90_000,
+);

@@ -7,12 +7,17 @@ independent, so they run in parallel, and Cloudflare places each object on its o
 ```text
 client ──WebSocket──► Worker ──getByName(id)──► VoiceSession (Durable Object)
                                                    │ FastAPIWebsocketTransport
-                                                   │ Silero VAD, Smart Turn
-                                                   │ OpenAI transcription, chat, speech
+                                                   │ OpenAI realtime transcription (turns)
+                                                   │ OpenAI chat, speech
 ```
 
 Audio goes over the WebSocket as protobuf frames, the Pipecat wire format. WebRTC isn't available on
 Workers (it needs UDP), so this example uses the WebSocket transport.
+
+Turns are detected on OpenAI's side (realtime transcription with server VAD), so the Worker loads no
+local models. It's 818 KB gzipped. With Silero VAD and Smart Turn bundled it was 13.7 MB, over
+Cloudflare's 10 MB limit, and those models need about 100 MB of memory against a Durable Object's
+128 MB.
 
 ## Run it
 
@@ -34,7 +39,11 @@ microphone, and prints how much speech it received back:
 bun run --cwd examples/workers-durable-voice-agent client ws://127.0.0.1:8787/api/session/alice ../test-mocks/assets/capital_question.wav
 ```
 
-Run two clients with different session ids to see two agents running in parallel.
+Run two clients with different session ids to see two agents running in parallel. Run one again
+with the same id within ten minutes and it continues that conversation.
+
+Tracing and error alerts are off until you set `OTEL_EXPORTER_OTLP_ENDPOINT` and
+`ERROR_WEBHOOK_URL` (see `src/observability.ts`).
 
 ## Deploy it
 
@@ -56,7 +65,9 @@ the recorded question into two sessions at once and checks that each session get
 ## Files
 
 - `src/worker.ts`: the Worker. Routes each session to its Durable Object.
-- `src/voice_session.ts`: the Durable Object. Accepts the WebSocket and runs the agent for it.
+- `src/voice_session.ts`: the Durable Object. Accepts the WebSocket, runs the agent for it, and
+  keeps the conversation for ten minutes so a reconnecting client can resume it.
+- `src/observability.ts`: tracing and error alerts.
 - `src/bot.ts`: the pipeline, `runVoiceAgent(connection, env)`.
 - `client/`: the scripted user, and the WAV helper it uses.
-- `wrangler.jsonc`: the Durable Object binding, and the rule that bundles the models as data.
+- `wrangler.jsonc`: the Durable Object binding.

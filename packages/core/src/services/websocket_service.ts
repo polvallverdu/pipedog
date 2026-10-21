@@ -326,6 +326,31 @@ export class WebsocketClientConnection {
 }
 
 /**
+ * Open a websocket on Cloudflare Workers. Workers' WebSocket constructor can't
+ * send headers, which most services authenticate with, so the connection is
+ * made with `fetch()` and an `Upgrade: websocket` header, the Workers way to
+ * send them. The returned socket is open once accepted.
+ */
+async function connectWorkersWebSocket(
+  uri: string,
+  init: { headers?: Record<string, string>; protocols?: string[] },
+  openTimeout: number | null,
+): Promise<WebSocket> {
+  const headers: Record<string, string> = { ...(init.headers ?? {}), Upgrade: "websocket" };
+  if (init.protocols?.length) headers["Sec-WebSocket-Protocol"] = init.protocols.join(", ");
+  const response = await fetch(uri.replace(/^ws(s?):/i, "http$1:"), {
+    headers,
+    signal: openTimeout === null ? undefined : AbortSignal.timeout(openTimeout * 1000),
+  });
+  const ws = (response as Response & { webSocket?: WebSocket & { accept(): void } }).webSocket;
+  if (!ws) {
+    throw new Error(`websocket connection to ${uri} failed: HTTP ${response.status}`);
+  }
+  ws.accept();
+  return ws;
+}
+
+/**
  * Open a websocket connection (`websockets.asyncio.client.connect`).
  * Waiting for the opening handshake is a cancellation point; a cancelled or
  * timed-out attempt closes the socket.
@@ -341,9 +366,14 @@ export async function websocketConnect(
   if (options.additionalHeaders) init.headers = options.additionalHeaders;
   if (options.subprotocols) init.protocols = options.subprotocols;
 
+  const openTimeout = options.openTimeout === undefined ? WS_OPEN_TIMEOUT : options.openTimeout;
+
   let ws: WebSocket;
   if (options.webSocketFactory) {
     ws = await options.webSocketFactory(uri, init);
+  } else if (typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair === "function") {
+    // Cloudflare Workers.
+    ws = await connectWorkersWebSocket(uri, init, openTimeout);
   } else if (init.headers) {
     // Bun, Node (undici) and Deno accept an init object with headers.
     const WebSocketWithInit = WebSocket as unknown as new (
@@ -357,7 +387,6 @@ export async function websocketConnect(
 
   // Attach the listeners before the socket can deliver anything.
   const connection = new WebsocketClientConnection(ws, { closeTimeout: options.closeTimeout });
-  const openTimeout = options.openTimeout === undefined ? WS_OPEN_TIMEOUT : options.openTimeout;
 
   try {
     await suspend<void>((resolve, reject) => {

@@ -11,12 +11,6 @@
       "path": "../../packages/asyncio"
     },
     {
-      "path": "../../packages/audio-silero"
-    },
-    {
-      "path": "../../packages/audio-smart-turn"
-    },
-    {
       "path": "../../packages/core"
     },
     {
@@ -30,6 +24,9 @@
     },
     {
       "path": "../test-mocks"
+    },
+    {
+      "path": "../../packages/tracing"
     }
   ]
 }

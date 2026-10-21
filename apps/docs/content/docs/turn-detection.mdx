@@ -1,0 +1,76 @@
+---
+title: Turn detection
+description: Decide when the user has finished speaking, with local models, with VAD only, or on the provider's side.
+---
+
+A voice agent has to know when the user starts speaking, to stop talking, and when they've
+finished, to answer. pipedog does this in one of three ways. They differ in what runs on your
+server: two local models, one, or none.
+
+| Mode | Start of turn | End of turn | Runs locally |
+| --- | --- | --- | --- |
+| Local models (default) | Silero VAD | Smart Turn | ONNX runtime, two models |
+| VAD only | Silero VAD | silence | ONNX runtime, one model |
+| Provider | the STT service | the STT service | nothing |
+
+## Local models
+
+Silero VAD hears speech; Smart Turn listens to the end of each utterance and decides whether the user
+is done or only paused. This is Pipecat's default, and pipedog's:
+
+```ts
+import { SileroVADAnalyzer } from "@pipedog/audio-silero";
+
+const aggregators = new LLMContextAggregatorPair(context, {
+  userParams: new LLMUserAggregatorParams({ vadAnalyzer: new SileroVADAnalyzer() }),
+});
+```
+
+The default turn strategies use Smart Turn from `@pipedog/audio-smart-turn`, so install it next to
+`@pipedog/audio-silero`. Without it, turns end on silence (the VAD-only mode), and pipedog logs a
+warning once.
+
+Both models share one inference session per process: the first call loads them, and later calls
+reuse them. Measured on Bun with `onnxruntime-node`, the first call takes about 100 MB for the runtime
+and both models, and each further call about 1.3 MB.
+
+## VAD only
+
+Leave out `@pipedog/audio-smart-turn`, or end turns on silence explicitly:
+
+```ts
+import { SpeechTimeoutUserTurnStopStrategy } from "@pipedog/core/turns/user_stop/speech_timeout_user_turn_stop_strategy";
+import { UserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
+
+new LLMUserAggregatorParams({
+  vadAnalyzer: new SileroVADAnalyzer(),
+  userTurnStrategies: new UserTurnStrategies({ stop: [new SpeechTimeoutUserTurnStopStrategy()] }),
+});
+```
+
+This answers sooner after a pause than Smart Turn does, so it interrupts users who pause to think more
+often.
+
+## Provider
+
+Some speech-to-text services detect turns themselves. Use one of them and pass no VAD analyzer: the
+user aggregator follows the service's turn signals, and nothing runs locally.
+
+```ts
+import { OpenAIRealtimeSTTService } from "@pipedog/openai/stt";
+
+const stt = new OpenAIRealtimeSTTService({
+  apiKey: process.env.OPENAI_API_KEY!,
+  turnDetection: { type: "server_vad" },
+});
+const aggregators = new LLMContextAggregatorPair(context);
+```
+
+This is the mode for constrained hosts. The
+[Durable Objects example](/docs/workers) uses it: its Worker is 818 KB gzipped, against 13.7 MB with
+the local models, which is over Cloudflare's 10 MB limit for a Worker.
+
+Speech-to-text services with their own turn detection:
+
+- `OpenAIRealtimeSTTService` with `turnDetection: { type: "server_vad" }`.
+- Deepgram Flux and Cartesia's turn detection, once their packages are ported.

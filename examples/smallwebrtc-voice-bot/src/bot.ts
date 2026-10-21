@@ -7,7 +7,6 @@
 // services are OpenAI's, or Google Gemini's, chosen by `provider`.
 
 import { SileroVADAnalyzer } from "@pipedog/audio-silero";
-import { createLocalSmartTurnAnalyzerV3 } from "@pipedog/audio-smart-turn";
 import { LLMRunFrame } from "@pipedog/core/frames/frames";
 import { Pipeline } from "@pipedog/core/pipeline/pipeline";
 import { PipelineParams, PipelineWorker } from "@pipedog/core/pipeline/worker";
@@ -17,8 +16,6 @@ import {
   LLMUserAggregatorParams,
 } from "@pipedog/core/processors/aggregators/llm_response_universal";
 import { TransportParams } from "@pipedog/core/transports/base_transport";
-import { TurnAnalyzerUserTurnStopStrategy } from "@pipedog/core/turns/user_stop/turn_analyzer_user_turn_stop_strategy";
-import { UserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
 import { WorkerRunner } from "@pipedog/core/workers/runner";
 import { GeminiSTTService } from "@pipedog/google/gemini_live/stt";
 import { GoogleLLMService, GoogleLLMSettings } from "@pipedog/google/llm";
@@ -29,6 +26,7 @@ import { OpenAISTTService } from "@pipedog/openai/stt";
 import { OpenAITTSService } from "@pipedog/openai/tts";
 import type { SmallWebRTCConnection } from "@pipedog/transport-smallwebrtc/connection";
 import { SmallWebRTCTransport } from "@pipedog/transport-smallwebrtc/transport";
+import { reportErrors, startTracing } from "./observability.ts";
 
 export const SYSTEM_INSTRUCTION =
   "You are a helpful assistant in a voice conversation. Your responses will be spoken aloud, so avoid emojis, bullet points, or other formatting that can't be spoken. Respond to what the user said in a creative, helpful, and brief way.";
@@ -97,15 +95,10 @@ export async function runVoiceBot(
   const { stt, llm, tts } = createServices(options);
 
   const context = new LLMContext();
+  // Silero detects speech; the default turn strategies end the turn with Smart
+  // Turn (from @pipedog/audio-smart-turn).
   const aggregators = new LLMContextAggregatorPair(context, {
-    userParams: new LLMUserAggregatorParams({
-      vadAnalyzer: new SileroVADAnalyzer(),
-      userTurnStrategies: new UserTurnStrategies({
-        stop: [
-          new TurnAnalyzerUserTurnStopStrategy({ turnAnalyzer: createLocalSmartTurnAnalyzerV3() }),
-        ],
-      }),
-    }),
+    userParams: new LLMUserAggregatorParams({ vadAnalyzer: new SileroVADAnalyzer() }),
   });
 
   const pipeline = new Pipeline([
@@ -118,8 +111,12 @@ export async function runVoiceBot(
     aggregators.assistant(),
   ]);
 
+  const conversationId = crypto.randomUUID();
   const worker = new PipelineWorker(pipeline, {
     cancelOnIdleTimeout: false,
+    // Traced when OTEL_EXPORTER_OTLP_ENDPOINT is set; see observability.ts.
+    enableTracing: startTracing(),
+    conversationId,
     params: new PipelineParams({
       audioInSampleRate: INPUT_SAMPLE_RATE,
       audioOutSampleRate: OUTPUT_SAMPLE_RATE,
@@ -127,6 +124,8 @@ export async function runVoiceBot(
       enableUsageMetrics: true,
     }),
   });
+
+  reportErrors(worker, conversationId);
 
   const runner = new WorkerRunner({ handleSigint: false, handleSigterm: false });
   await runner.addWorkers(worker);

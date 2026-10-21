@@ -22,7 +22,7 @@
  * `sendBytes()`, `sendText()`, `headers`).
  */
 
-import { CancelledError, Future, Queue, TimeoutError, wait } from "@pipedog/asyncio";
+import { CancelledError, Future, Queue, TimeoutError, wait, waitFor } from "@pipedog/asyncio";
 
 /** A WebSocket message: text or binary. */
 export type WebsocketData = string | Uint8Array;
@@ -389,8 +389,8 @@ export interface WebsocketConnectOptions {
   /** Seconds to wait for the connection to open. Defaults to 10. */
   openTimeout?: number;
   /**
-   * Extra headers for the handshake. Bun, Node and Deno support them; browsers
-   * and Cloudflare Workers don't.
+   * Extra headers for the handshake. Bun, Node, Deno and Cloudflare Workers send
+   * them; browsers can't.
    */
   additionalHeaders?: Record<string, string> | null;
 }
@@ -402,8 +402,38 @@ export type WebsocketConnectFn = (
 ) => Promise<WebsocketConnection>;
 
 /**
+ * Open a client connection on Cloudflare Workers. Workers' `WebSocket`
+ * constructor can't send headers, which services need for authentication, so
+ * the connection is opened with `fetch()` and an `Upgrade: websocket` header,
+ * the Workers way to send them. The returned socket is open once accepted.
+ */
+async function workersConnect(
+  uri: string,
+  options: WebsocketConnectOptions,
+): Promise<WebsocketConnection> {
+  const url = uri.replace(/^ws(s?):/i, "http$1:");
+  let response: Response;
+  try {
+    response = await waitFor(
+      fetch(url, { headers: { ...(options.additionalHeaders ?? {}), Upgrade: "websocket" } }),
+      options.openTimeout ?? 10,
+    );
+  } catch (e) {
+    if (e instanceof TimeoutError) throw new TimeoutError(`timed out while opening ${uri}`);
+    throw e;
+  }
+  const ws = (response as Response & { webSocket?: WebSocketLike & { accept(): void } }).webSocket;
+  if (!ws) {
+    throw new ConnectionClosedError(1006, `WebSocket upgrade failed: HTTP ${response.status}`);
+  }
+  ws.accept();
+  return WebsocketConnection.fromWebSocket(ws);
+}
+
+/**
  * Open a client connection with the global `WebSocket`
- * (`websockets.asyncio.client.connect`).
+ * (`websockets.asyncio.client.connect`). On Cloudflare Workers it connects
+ * with `fetch()` instead, so `additionalHeaders` are sent there too.
  *
  * @throws TimeoutError if the connection doesn't open in time.
  */
@@ -411,6 +441,9 @@ export async function websocketConnect(
   uri: string,
   options: WebsocketConnectOptions = {},
 ): Promise<WebsocketConnection> {
+  if (typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair === "function") {
+    return workersConnect(uri, options);
+  }
   const WebSocketCtor = (globalThis as { WebSocket?: new (...args: unknown[]) => WebSocketLike })
     .WebSocket;
   if (!WebSocketCtor) {

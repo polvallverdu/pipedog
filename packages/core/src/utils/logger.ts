@@ -5,6 +5,8 @@
 // ported `logger.warning(...)` calls read the same. Replace the sink to route
 // logs elsewhere (pino, console.json, Workers logs...).
 
+import { redactSecrets } from "./security/redaction.ts";
+
 export const LOG_LEVELS = {
   TRACE: 5,
   DEBUG: 10,
@@ -25,6 +27,17 @@ export interface LogRecord {
 }
 
 export type LogSink = (record: LogRecord) => void;
+
+/** `error` with the credentials in its message and stack masked. */
+function redactError(error: unknown): unknown {
+  if (error instanceof Error) {
+    const masked = new Error(redactSecrets(error.message));
+    masked.name = error.name;
+    masked.stack = error.stack === undefined ? undefined : redactSecrets(error.stack);
+    return masked;
+  }
+  return typeof error === "string" ? redactSecrets(error) : error;
+}
 
 const consoleSink: LogSink = (record) => {
   const line = `${record.time.toISOString()} | ${record.level.padEnd(8)} | ${record.message}`;
@@ -71,7 +84,13 @@ class Logger {
 
   log(level: LogLevel, message: string, error?: unknown): void {
     if (LOG_LEVELS[level] < this.#level) return;
-    const record: LogRecord = { level, message, time: new Date(), error };
+    // DIVERGENCE: upstream masks credentials only in ErrorFrame. Warnings and
+    // errors often quote what failed, such as a URL with `?key=...`, so their
+    // text and attached error are masked here, for every sink.
+    const record: LogRecord =
+      LOG_LEVELS[level] >= LOG_LEVELS.WARNING
+        ? { level, message: redactSecrets(message), time: new Date(), error: redactError(error) }
+        : { level, message, time: new Date(), error };
     for (const sink of this.#sinks) sink(record);
   }
 

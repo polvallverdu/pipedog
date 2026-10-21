@@ -76,12 +76,25 @@ export type SmartTurnSessionFactory = (
   options: SmartTurnSessionOptions,
 ) => Promise<SmartTurnInferenceSession>;
 
-const notPortedSessionFactory: SmartTurnSessionFactory = async () => {
-  throw new Error(
-    "LocalSmartTurnAnalyzerV3: core has no ONNX runtime; use createLocalSmartTurnAnalyzerV3() " +
-      "from @pipedog/audio-smart-turn, or pass `createSession`",
-  );
+/** The model file upstream bundles, and the default `smartTurnModelPath`. */
+const DEFAULT_MODEL_NAME = "smart-turn-v3.2-cpu.onnx";
+
+// Core has no ONNX runtime, and can't depend on @pipedog/audio-smart-turn (which
+// depends on core), so it loads that package when it's installed. The specifier is
+// held in a variable so bundlers leave the import alone.
+const SMART_TURN_PACKAGE = "@pipedog/audio-smart-turn";
+
+/**
+ * The session factory used when none is passed: @pipedog/audio-smart-turn's,
+ * with its shipped model for the default model name.
+ */
+const packageSessionFactory: SmartTurnSessionFactory = async (modelPath, options) => {
+  const smartTurn = await import(SMART_TURN_PACKAGE);
+  const model = modelPath === DEFAULT_MODEL_NAME ? smartTurn.defaultSmartTurnModelUrl() : modelPath;
+  return smartTurn.onnxSmartTurnSessionFactory({ model })(modelPath, options);
 };
+
+let warnedFallback = false;
 
 export interface LocalSmartTurnAnalyzerV3Options extends BaseSmartTurnOptions {
   /**
@@ -91,7 +104,11 @@ export interface LocalSmartTurnAnalyzerV3Options extends BaseSmartTurnOptions {
   smartTurnModelPath?: string | null;
   /** The number of CPUs to use for inference. Defaults to 1. */
   cpuCount?: number;
-  /** Creates the ONNX inference session (injected runtime). */
+  /**
+   * Creates the ONNX inference session (injected runtime). Defaults to
+   * @pipedog/audio-smart-turn's, when that package is installed; without it,
+   * every turn is predicted complete, so turns end when the VAD hears silence.
+   */
   createSession?: SmartTurnSessionFactory;
 }
 
@@ -125,7 +142,8 @@ export class LocalSmartTurnAnalyzerV3 extends BaseSmartTurn {
   protected _smartTurnModelPath: string;
   protected _sessionOptions: SmartTurnSessionOptions;
   protected _createSession: SmartTurnSessionFactory;
-  protected _session: Promise<SmartTurnInferenceSession>;
+  #session: Promise<SmartTurnInferenceSession | null> | null = null;
+  #explicitFactory: boolean;
 
   constructor(options: LocalSmartTurnAnalyzerV3Options = {}) {
     super(options);
@@ -133,7 +151,7 @@ export class LocalSmartTurnAnalyzerV3 extends BaseSmartTurn {
     this._logData = envTruthy("PIPECAT_SMART_TURN_LOG_DATA", false);
 
     // Upstream loads the model bundled with the package by default.
-    this._smartTurnModelPath = options.smartTurnModelPath || "smart-turn-v3.2-cpu.onnx";
+    this._smartTurnModelPath = options.smartTurnModelPath || DEFAULT_MODEL_NAME;
 
     logger.debug(`Loading Local Smart Turn v3.x model from ${this._smartTurnModelPath}...`);
 
@@ -143,18 +161,43 @@ export class LocalSmartTurnAnalyzerV3 extends BaseSmartTurn {
       intraOpNumThreads: options.cpuCount ?? 1,
       graphOptimizationLevel: "all",
     };
-    this._createSession = options.createSession ?? notPortedSessionFactory;
+    this._createSession = options.createSession ?? packageSessionFactory;
+    this.#explicitFactory = options.createSession !== undefined;
+  }
 
-    // Session creation is async in JS; it starts now and is awaited on first
-    // prediction.
-    this._session = this._createSession(this._smartTurnModelPath, this._sessionOptions).then(
-      (session) => {
-        logger.debug("Loaded Local Smart Turn v3.x");
-        return session;
-      },
-    );
-    // Errors surface on first use; don't report an unhandled rejection now.
-    this._session.catch(() => {});
+  /**
+   * The inference session, loaded on first use: `null` when no runtime is
+   * available and turns fall back to the VAD.
+   *
+   * DIVERGENCE: upstream loads its model when the analyzer is created. Here it
+   * loads on the first prediction, so an analyzer that never runs (the default
+   * strategies replaced by a service's own turn detection) loads nothing. The
+   * runtime is a separate package; without it (or where it can't load, e.g. a
+   * bundle that leaves it out) turns end on the VAD's silence instead of
+   * failing. A factory passed in explicitly still fails loudly.
+   */
+  protected get _session(): Promise<SmartTurnInferenceSession | null> {
+    if (!this.#session) {
+      const loading = this._createSession(this._smartTurnModelPath, this._sessionOptions).then(
+        (session) => {
+          logger.debug("Loaded Local Smart Turn v3.x");
+          return session;
+        },
+      );
+      this.#session = this.#explicitFactory
+        ? loading
+        : loading.catch((e) => {
+            if (!warnedFallback) {
+              warnedFallback = true;
+              logger.warning(
+                "Smart Turn is unavailable, so user turns end when the VAD hears silence. Install " +
+                  `@pipedog/audio-smart-turn to detect the end of a turn from speech. (${e})`,
+              );
+            }
+            return null;
+          });
+    }
+    return this.#session;
   }
 
   /**
@@ -193,6 +236,11 @@ export class LocalSmartTurnAnalyzerV3 extends BaseSmartTurn {
 
   /** Predict end-of-turn using local ONNX model. */
   protected async _predictEndpoint(audioArray: Float32Array): Promise<SmartTurnPrediction> {
+    const session = await this._session;
+    if (session === null) {
+      // No runtime: the VAD's silence ends the turn.
+      return { prediction: 1, probability: 1 };
+    }
     const audioForLogging = audioArray;
     const actualRate = this._sampleRate || MODEL_SAMPLE_RATE;
 
@@ -215,7 +263,6 @@ export class LocalSmartTurnAnalyzerV3 extends BaseSmartTurn {
     };
 
     // Run ONNX inference
-    const session = await this._session;
     const output = await session.run({ input_features: inputFeatures });
 
     // Extract probability (ONNX model returns sigmoid probabilities)

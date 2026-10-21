@@ -27,6 +27,7 @@ import {
   float32Tensor,
   type OnnxBackend,
   type OnnxModelSource,
+  sharedSession,
 } from "@pipedog/onnx";
 
 /** The upstream model file name. */
@@ -47,6 +48,12 @@ export interface OnnxSmartTurnSessionFactoryOptions {
   model?: OnnxModelSource;
   /** The ONNX backend (default: `createOnnxBackend()`). */
   backend?: OnnxBackend | Promise<OnnxBackend>;
+  /**
+   * Share one inference session across analyzers for the same backend, model
+   * and options (default `true`). The model is stateless, so sharing is safe;
+   * it loads the model once instead of once per call.
+   */
+  shareSession?: boolean;
 }
 
 /**
@@ -60,7 +67,11 @@ export function onnxSmartTurnSessionFactory(
 ): SmartTurnSessionFactory {
   return async (modelPath, sessionOptions) => {
     const backend = await (options.backend ?? createOnnxBackend());
-    const session = await backend.createSession(options.model ?? modelPath, sessionOptions);
+    const model = options.model ?? modelPath;
+    const session =
+      options.shareSession === false
+        ? await backend.createSession(model, sessionOptions)
+        : await sharedSession(backend, model, sessionOptions);
     const output = session.outputNames[0] as string;
     return {
       async run(feeds) {
@@ -82,6 +93,8 @@ export interface CreateLocalSmartTurnAnalyzerV3Options
   model?: OnnxModelSource;
   /** The ONNX backend (default: `createOnnxBackend()`). */
   backend?: OnnxBackend | Promise<OnnxBackend>;
+  /** Share the inference session across analyzers (default `true`). */
+  shareSession?: boolean;
 }
 
 /**
@@ -93,7 +106,7 @@ export interface CreateLocalSmartTurnAnalyzerV3Options
 export function createLocalSmartTurnAnalyzerV3(
   options: CreateLocalSmartTurnAnalyzerV3Options = {},
 ): LocalSmartTurnAnalyzerV3 {
-  const { model, backend, ...analyzerOptions } = options;
+  const { model, backend, shareSession, ...analyzerOptions } = options;
   let source: OnnxModelSource | undefined = model;
   let label = analyzerOptions.smartTurnModelPath ?? undefined;
   if (source === undefined && !label) {
@@ -110,7 +123,7 @@ export function createLocalSmartTurnAnalyzerV3(
   return new LocalSmartTurnAnalyzerV3({
     ...analyzerOptions,
     smartTurnModelPath: label,
-    createSession: onnxSmartTurnSessionFactory({ model: source, backend }),
+    createSession: onnxSmartTurnSessionFactory({ model: source, backend, shareSession }),
   });
 }
 
