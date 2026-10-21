@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/asyncio",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "asyncio-style tasks, cancellation, queues and events for JavaScript runtimes (Bun, Node, Workers).",
   "keywords": [
     "pipecat",

@@ -1,5 +1,15 @@
 # @pipedog/asyncio
 
+## 0.5.0
+
+### Patch Changes
+
+- [#20](https://github.com/polvallverdu/pipedog/pull/20) [`566fb45`](https://github.com/polvallverdu/pipedog/commit/566fb45374cac73be72f2a83510a12b6b8041301) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Package READMEs on npm. `@pipedog/core`, `@pipedog/asyncio`, `@pipedog/openai`,
+  `@pipedog/anthropic`, `@pipedog/deepgram`, `@pipedog/cartesia`, `@pipedog/elevenlabs`,
+  `@pipedog/tracing` and `@pipedog/whisper` now ship a README with install steps, a usage snippet,
+  runtimes and links to the docs. Every package gains npm `keywords`, and the `@pipedog/elevenlabs`
+  description no longer lists Text-to-Dialogue, which is not ported yet.
+
 ## 0.4.0
 
 No changes in this release.

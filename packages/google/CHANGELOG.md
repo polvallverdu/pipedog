@@ -1,5 +1,19 @@
 # @pipedog/google
 
+## 0.5.0
+
+### Patch Changes
+
+- [#28](https://github.com/polvallverdu/pipedog/pull/28) [`70dce6f`](https://github.com/polvallverdu/pipedog/commit/70dce6fcf5ffefa49ef2c21f87bac6377f0d5a09) Thanks [@polvallverdu](https://github.com/polvallverdu)! - `GoogleLLMService` sends `frequencyPenalty` and `presencePenalty` when they are set.
+  `GeminiFileAPI.uploadFile()` takes the file's contents (a `Uint8Array`, an `ArrayBuffer`, a
+  `Blob` or a `ReadableStream`, with an optional `mimeType`) as well as a path, so uploads work on
+  Cloudflare Workers. A path on a runtime without `node:fs` throws an error that says what to pass
+  instead. `GeminiLiveLLMService` logs a warning when it drops an `LLMSetToolsFrame`. Comments and
+  docs now say that WebSocket auth headers are sent on Cloudflare Workers.
+- Updated dependencies [[`70dce6f`](https://github.com/polvallverdu/pipedog/commit/70dce6fcf5ffefa49ef2c21f87bac6377f0d5a09), [`566fb45`](https://github.com/polvallverdu/pipedog/commit/566fb45374cac73be72f2a83510a12b6b8041301)]:
+  - @pipedog/core@0.5.0
+  - @pipedog/asyncio@0.5.0
+
 ## 0.4.0
 
 ### Patch Changes

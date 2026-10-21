@@ -1,5 +1,13 @@
 # @pipedog/serializer-protobuf
 
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [[`70dce6f`](https://github.com/polvallverdu/pipedog/commit/70dce6fcf5ffefa49ef2c21f87bac6377f0d5a09), [`566fb45`](https://github.com/polvallverdu/pipedog/commit/566fb45374cac73be72f2a83510a12b6b8041301)]:
+  - @pipedog/core@0.5.0
+  - @pipedog/asyncio@0.5.0
+
 ## 0.4.0
 
 ### Patch Changes
