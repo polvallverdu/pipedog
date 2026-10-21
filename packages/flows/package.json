@@ -40,12 +40,18 @@
     "@pipedog/core": "workspace:*"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
     "@pipedog/anthropic": "workspace:*",
     "@pipedog/google": "workspace:*",
     "@pipedog/openai": "workspace:*"
   },
   "pipecat": {
-    "runtimes": [],
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
     "upstream": [
       "src/pipecat/flows"
     ]

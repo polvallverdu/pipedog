@@ -16,8 +16,10 @@
  * - Generation params are built as upstream builds them, as a dict with the
  *   Python SDK's snake_case keys (so `extra` and the thinking-default log
  *   lines carry over), and converted to the JS SDK's camelCase
- *   `GenerateContentConfig` when the request is sent (`_toGenerateContentConfig`).
- *   Nested values the caller supplies (tools, JSON schemas) are passed as they are.
+ *   `GenerateContentConfig` when the request is sent (`_toGenerateContentConfig`);
+ *   so are the top-level keys of each tool (`function_declarations`), which the
+ *   JS SDK would otherwise drop. Other nested values the caller supplies (JSON
+ *   schemas) are passed as they are.
  * - The JS SDK carries bytes as base64 strings: `inlineData.data` is decoded
  *   with `base64ToBytes` for `AssistantImageRawFrame.originalData`, and
  *   thought signatures are kept as the SDK gives them (base64 strings).
@@ -665,6 +667,11 @@ export class GoogleLLMService extends LLMService<GeminiLLMAdapter & BaseLLMAdapt
           thinkingConfig.thinkingLevel = thinkingConfig.thinkingLevel.toUpperCase();
         }
         config[camel] = thinkingConfig;
+      } else if (camel === "tools" && Array.isArray(value)) {
+        // The adapter builds each tool as upstream does, with snake_case keys
+        // (`function_declarations`); the JS SDK drops keys it does not know,
+        // so the tool's own keys are converted too.
+        config[camel] = value.map((tool) => (isPlainObject(tool) ? camelKeys(tool) : tool));
       } else {
         config[camel] = value;
       }
