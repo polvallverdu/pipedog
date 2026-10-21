@@ -1,0 +1,154 @@
+---
+title: Turn events & idle users
+description: The events the context aggregators emit around each turn, prompting a user who has gone quiet, and the observers that track turns and response latency.
+---
+
+The context aggregators emit an event at each step of a conversation turn. User events come from
+the user aggregator (`aggregators.user()`), assistant events from the assistant aggregator
+(`aggregators.assistant()`), both from an `LLMContextAggregatorPair`. Register handlers with
+`eventHandler()`; each handler receives the aggregator first.
+
+<include cwd>snippets/turn_events.ts#turn-events</include>
+
+## User events
+
+| Event | Arguments after the aggregator | Fires when |
+| --- | --- | --- |
+| `on_user_turn_started` | `strategy` | a start strategy starts a user turn |
+| `on_user_turn_inference_triggered` | `strategy` | a stop strategy has enough to run the LLM. Usually together with `on_user_turn_stopped`; before it, possibly more than once, when something else finalizes the turn (a [deferred](/docs/concepts/turn-strategies#deferring-the-end-of-a-turn) detector, or a speculative inference with [`EagerUserTurnStrategies`](/docs/concepts/turn-strategies#eageruserturnstrategies)) |
+| `on_user_turn_stopped` | `strategy`, `message: UserTurnStoppedMessage` | a stop strategy ends the turn. `message.content` is the transcript, `null` in realtime mode |
+| `on_user_turn_message_added` | `message: UserTurnMessageAddedMessage` | the user's text is written to the context. In realtime mode that happens when the assistant starts answering, so use this event there for the user's text |
+| `on_user_turn_stop_timeout` | | the turn ends because nothing happened for `userTurnStopTimeout` seconds; `on_user_turn_stopped` follows |
+| `on_user_turn_idle` | | the user stays silent for `userIdleTimeout` seconds after the bot finishes ([below](#idle-users)) |
+| `on_user_mute_started` | | the user becomes [muted](/docs/concepts/user-muting) |
+| `on_user_mute_stopped` | | the user is unmuted |
+| `on_user_backchannel` | `message: UserBackchannelMessage` | the user acknowledges the bot ("mhm") without interrupting it. The bot keeps talking and the text stays out of the context. Not while muted |
+
+`strategy` is the `BaseUserTurnStartStrategy` or `BaseUserTurnStopStrategy` that decided; for a turn
+ended by the stop timeout it is `null`.
+
+## Assistant events
+
+| Event | Arguments after the aggregator | Fires when |
+| --- | --- | --- |
+| `on_assistant_turn_started` | | the assistant starts generating a response |
+| `on_assistant_turn_stopped` | `message: AssistantTurnStoppedMessage` | the response is complete, interrupted, or the pipeline ends. Fires even when `content` is empty |
+| `on_assistant_thought` | `message: AssistantThoughtMessage` | a reasoning model produces a thought |
+| `on_assistant_backchannel` | `message: AssistantBackchannelMessage` | the assistant starts saying a backchannel ("Mm-hmm"), which stays out of the context and the turn events |
+| `on_summary_applied` | `summarizer`, `event: SummaryAppliedEvent` | context summarization succeeds |
+
+## Messages
+
+The message classes are exported from
+`@pipedog/core/processors/aggregators/llm_response_universal`. Timestamps are ISO 8601 strings.
+
+| Class | Fields |
+| --- | --- |
+| `UserTurnStoppedMessage` | `content: string \| null`, `timestamp` (turn start), `userId: string \| null` |
+| `UserTurnMessageAddedMessage` | `content: string`, `timestamp` (turn start), `userId` |
+| `UserBackchannelMessage` | `content`, `timestamp` (when it was said), `userId` |
+| `AssistantTurnStoppedMessage` | `content` (what was actually spoken, may be empty), `interrupted: boolean`, `timestamp` (turn start) |
+| `AssistantThoughtMessage` | `content`, `timestamp` (thought start) |
+| `AssistantBackchannelMessage` | `content`, `timestamp` |
+
+Because the assistant aggregator only commits what was spoken, `AssistantTurnStoppedMessage.content`
+for an interrupted turn holds the words the user actually heard.
+
+## Idle users
+
+Set `userIdleTimeout` (seconds; 0, the default, turns it off) and the user aggregator emits
+`on_user_turn_idle` when the user hasn't spoken for that long after the bot finished:
+
+- The timer starts when the bot stops speaking (`BotStoppedSpeakingFrame`).
+- It is cancelled when the user or the bot starts speaking.
+- It doesn't run while a user turn is in progress (an interruption also stops the bot) or while
+  function calls are pending.
+- It starts again after a user turn that ends with nothing to answer, such as background noise with
+  no transcript.
+- It fires again after each further timeout, so a handler can escalate.
+
+What to do is up to you. Prompting the LLM with a developer message lets the bot ask in its own
+words; after a few tries, say goodbye and end the session:
+
+<include cwd>snippets/turn_events.ts#idle</include>
+
+Resetting the count in `on_user_turn_started` keeps the escalation per silence. Timeouts of 5 to 10
+seconds suit most voice conversations.
+
+To change the timeout while the pipeline runs, queue a `UserIdleTimeoutUpdateFrame`:
+
+<include cwd>snippets/turn_events.ts#idle-update</include>
+
+The new timeout applies at once: a running timer restarts with it, and going from 0 to a positive
+value arms the timer right away if the bot is already waiting for the user.
+
+`UserTurnProcessor` (`@pipedog/core/turns/user_turn_processor`), the standalone processor that runs
+turn strategies outside an aggregator, takes the same `userIdleTimeout` and emits the same event.
+
+Not to be confused with the worker's `idleTimeoutSecs`, which cancels a pipeline that has stopped
+receiving frames altogether (see [Pipelines & workers](/docs/concepts/pipelines-and-workers)).
+
+## Turn tracking
+
+`TurnTrackingObserver` (`@pipedog/core/observers/turn_tracking_observer`) follows the conversation
+turn by turn, a turn being one user utterance and the bot's answer:
+
+- The first turn starts with the pipeline; later turns start when the user starts speaking.
+- A turn ends when the bot has stopped speaking and either the user speaks again or
+  `turnEndTimeoutSecs` (2.5 s) passes without more bot speech.
+- If the user speaks while the bot is talking, the turn ends as interrupted and a new one starts.
+- If the pipeline ends mid-turn, that turn ends as interrupted.
+
+Every `PipelineWorker` adds one unless `enableTurnTracking` is `false`, and exposes it as
+`worker.turnTrackingObserver`:
+
+<include cwd>snippets/turn_events.ts#turn-tracking</include>
+
+| Event | Arguments after the observer |
+| --- | --- |
+| `on_turn_started` | `turnNumber: number` |
+| `on_turn_ended` | `turnNumber: number`, `duration: number` (seconds), `wasInterrupted: boolean` |
+
+To change the timeout, add your own and turn the default off:
+
+<include cwd>snippets/turn_events.ts#turn-tracking-custom</include>
+
+<auto-type-table cwd path="../../packages/core/src/observers/turn_tracking_observer.ts" name="TurnTrackingObserverOptions" />
+
+With tracing on, the worker builds its turn spans from its own turn tracking observer (see
+[Metrics & tracing](/docs/concepts/metrics-and-tracing)), so `enableTurnTracking: false` also turns
+off the turn spans.
+
+## Response latency
+
+`UserBotLatencyObserver` (`@pipedog/core/observers/user_bot_latency_observer`) measures how long
+the user waits: from the user going silent (`VADUserStoppedSpeakingFrame`) to the bot starting to
+speak (`BotStartedSpeakingFrame`).
+
+<include cwd>snippets/turn_events.ts#latency</include>
+
+| Event | Arguments after the observer | Fires |
+| --- | --- | --- |
+| `on_latency_measured` | `seconds: number` | at each bot response to a user turn |
+| `on_first_bot_speech_latency` | `seconds: number` | once, from the client connecting to the bot's first speech |
+| `on_latency_breakdown` | `breakdown: LatencyBreakdown` | with either of the above |
+
+A `LatencyBreakdown` names where the time went: `contributions` splits the interval into the
+endpointing wait, transcription, LLM inference, speech synthesis and so on, `ttfb` lists each
+service's time to first byte, `userTurnSecs` how long turn detection held the turn after the user
+went silent, and `functionCalls` the time spent in tools. The per-service figures come from the
+services' metrics, so turn on `enableMetrics` in `PipelineParams`. `turnContributionLines()` formats
+it:
+
+```
+0.200s  endpointing wait     [config: VAD stop_secs]
+0.125s  transcription        [DeepgramSTTService#0]
+0.336s  LLM inference        [OpenAILLMService#0]
+0.359s  speech synthesis     [CartesiaTTSService#0]
+1.020s  TOTAL
+```
+
+<auto-type-table cwd path="../../packages/core/src/observers/user_bot_latency_observer.ts" name="UserBotLatencyObserverOptions" />
+
+With tracing enabled, the worker creates its own `UserBotLatencyObserver` for the turn spans; add
+another to the `observers` list for your own handlers, as above.

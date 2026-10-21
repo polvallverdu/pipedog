@@ -1,0 +1,118 @@
+---
+title: User muting
+description: Ignore the user's audio and transcripts while the bot greets them, runs a tool, or speaks, with built-in or custom mute strategies.
+---
+
+**User mute strategies** decide when the user aggregator ignores the user. While the user is
+muted, their audio, VAD events, transcripts and interruptions are dropped at the aggregator: the
+bot can't be interrupted, and whatever the user says meanwhile never reaches the context. The user is
+not muted by default.
+
+```ts
+import {
+  AlwaysUserMuteStrategy,
+  BaseUserMuteStrategy,
+  FirstSpeechUserMuteStrategy,
+  FunctionCallUserMuteStrategy,
+  MuteUntilFirstBotCompleteUserMuteStrategy,
+} from "@pipedog/core/turns/user_mute/index";
+```
+
+## Configuration
+
+Pass the strategies as `userMuteStrategies` on `LLMUserAggregatorParams`:
+
+<include cwd>snippets/user_mute.ts#configure</include>
+
+Every strategy sees every frame, and the user is muted while **any** of them says so. The example
+above mutes from the start of the session until the bot has finished its greeting, and again
+whenever a function call runs.
+
+## Built-in strategies
+
+| Strategy | Mutes | Use it to |
+| --- | --- | --- |
+| `MuteUntilFirstBotCompleteUserMuteStrategy` | from the start until the bot first finishes speaking | protect the greeting, including the silence before it |
+| `FirstSpeechUserMuteStrategy` | during the bot's first speech only | protect the greeting, but let the user speak before it starts |
+| `FunctionCallUserMuteStrategy` | while function calls run | keep the user from talking over a tool call |
+| `AlwaysUserMuteStrategy` | whenever the bot speaks | turn off barge-in completely |
+
+None takes options.
+
+### MuteUntilFirstBotCompleteUserMuteStrategy
+
+Mutes from the first frame, before the bot has said anything, and unmutes for good on the first
+`BotStoppedSpeakingFrame`. If the bot's first turn fails before it speaks (an `ErrorFrame` arrives
+before any `BotStartedSpeakingFrame`), it unmutes and logs a warning, so a failed greeting doesn't
+leave the user unable to talk.
+
+### FirstSpeechUserMuteStrategy
+
+Lets the user speak until the bot starts speaking, mutes them during that first speech, and unmutes
+for good when it ends. Later speech can be interrupted as usual.
+
+### FunctionCallUserMuteStrategy
+
+Mutes on `FunctionCallsStartedFrame` and tracks each call by its tool call ID; it unmutes once every
+call has a `FunctionCallResultFrame` or a `FunctionCallCancelFrame`.
+
+### AlwaysUserMuteStrategy
+
+Mutes on `BotStartedSpeakingFrame` and unmutes on `BotStoppedSpeakingFrame`, for the whole session:
+
+<include cwd>snippets/user_mute.ts#always</include>
+
+## What muting drops
+
+While muted, the user aggregator drops these frames instead of processing or forwarding them:
+`InputAudioRawFrame`, `VADUserStartedSpeakingFrame`, `VADUserStoppedSpeakingFrame`,
+`UserStartedSpeakingFrame`, `UserStoppedSpeakingFrame`, the `Proposed...` variants of those two,
+`InterimTranscriptionFrame`, `TranscriptionFrame`, `EagerTranscriptionFrame`, `UserBackchannelFrame`
+and `InterruptionFrame`. `StartFrame`, `EndFrame` and `CancelFrame` always pass, and are never
+handed to the strategies.
+
+The mute state is updated after each frame: the frame that makes a strategy mute (a
+`BotStartedSpeakingFrame`, say) still passes, and muting starts with the next one.
+
+Muting happens in the user aggregator, so processors before it (the STT service, for example) still
+receive the audio. To stop the speech-to-text service itself, push an `STTMuteFrame`.
+
+## Muting and interruptions
+
+Muting and disabling interruptions both keep the bot talking, but they treat the user's words
+differently:
+
+- **Muted:** what the user says over the bot is discarded. It is never transcribed into the
+  context, and the bot never answers it.
+- **Interruptions disabled** (`enableInterruptions: false` on the start strategies, see
+  [Interruptions](/docs/concepts/interruptions-and-cancellation#controlling-interruptions)): the
+  user's turn still starts and is transcribed, and the bot answers it once it has finished speaking.
+
+Use a mute strategy when the bot must finish and anything said over it should be ignored, and
+`enableInterruptions: false` when the bot should finish but still hear the user out.
+
+## Events
+
+The user aggregator emits `on_user_mute_started` when the user becomes muted and
+`on_user_mute_stopped` when they are unmuted, whichever strategy caused it, and broadcasts a
+`UserMuteStartedFrame` or `UserMuteStoppedFrame` through the pipeline at the same moment:
+
+<include cwd>snippets/user_mute.ts#events</include>
+
+## Writing a strategy
+
+Subclass `BaseUserMuteStrategy` (`@pipedog/core/turns/user_mute/base_user_mute_strategy`) and
+override `processFrame()`. Unlike turn strategies, a mute strategy doesn't return a
+`ProcessFrameResult`: it returns a boolean, `true` to mute. The user aggregator calls it with every
+frame it receives (except the lifecycle frames above), so it sees the frames that flow downstream
+to the aggregator and those broadcast upstream to it, such as the bot speaking frames, the function
+call frames and errors. Frames that only travel downstream after the aggregator, like the LLM's
+response frames, never reach it.
+
+This one mutes the user while the bot speaks, but only when the application asks for it, such as
+before reading terms that must be heard in full:
+
+<include cwd>snippets/user_mute.ts#custom</include>
+
+Mute strategies are `BaseObject`s, so override `setup()` and `cleanup()` (calling `super`) if the
+strategy needs tasks or resources; the aggregator calls both.

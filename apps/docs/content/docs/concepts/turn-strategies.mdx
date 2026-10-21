@@ -1,0 +1,348 @@
+---
+title: Turn strategies
+description: The start and stop strategies that decide when a user turn begins and ends, the presets that bundle them, and how to write your own.
+---
+
+The user aggregator decides when the user's turn starts and stops by asking a list of **turn
+strategies**. Start strategies watch for the user beginning to speak; stop strategies decide when
+they're done. You choose them with `userTurnStrategies` on `LLMUserAggregatorParams`.
+
+```ts
+import { UserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
+import { VADUserTurnStartStrategy /* , ... */ } from "@pipedog/core/turns/user_start/index";
+import { SpeechTimeoutUserTurnStopStrategy /* , ... */ } from "@pipedog/core/turns/user_stop/index";
+```
+
+## How a turn works
+
+**Turn start.** Every frame the user aggregator sees goes through the start strategies in order. The
+first one that fires starts the turn: the aggregator broadcasts a `UserStartedSpeakingFrame`,
+broadcasts an `InterruptionFrame` if the strategy has interruptions enabled (the default), and emits
+`on_user_turn_started`. A strategy returns `ProcessFrameResult.STOP` to keep later strategies from
+seeing the frame, or `CONTINUE` to pass it on.
+
+**Turn stop.** The stop strategies then see the same frames. When one decides the user is done, the
+aggregator broadcasts a `UserStoppedSpeakingFrame`, writes the user's transcript to the context,
+which runs the LLM, and emits `on_user_turn_stopped`.
+
+**Stop timeout.** A turn that sees no speech, transcript or other turn activity for
+`userTurnStopTimeout` seconds (default 5) ends anyway, after `on_user_turn_stop_timeout`. It is a
+safety net for a turn that never finalizes, not a way to tune responsiveness.
+
+To end a turn, a stop strategy needs two things:
+
+1. **A transcript.** Strategies that wait for the transcript (`waitForTranscript`, on by default)
+   hold the turn until speech-to-text delivers. This is usually the largest share of the delay.
+2. **Its own criterion**: a silence window, a turn model's verdict, a provider's signal, or the LLM's
+   verdict.
+
+| Stop strategy | Ends the turn when |
+| --- | --- |
+| `TurnAnalyzerUserTurnStopStrategy` (default) | Smart Turn predicts the user is done |
+| `SpeechTimeoutUserTurnStopStrategy` | a fixed silence after VAD reports the end of speech |
+| `ExternalUserTurnStopStrategy` | the STT service or another processor says so |
+| `FilterIncompleteUserTurnStrategies` | the LLM judges the utterance complete |
+| Your own | your own logic |
+
+To make the bot answer sooner or later, change the stop strategy (for example `userSpeechTimeout`).
+Leave the VAD's `stopSecs` (0.2 s by default) alone: it is a low-level threshold that the strategies
+already account for.
+
+### Where the waiting time goes
+
+- **VAD silence (`stopSecs`).** The VAD only reports that speech stopped after this much silence.
+- **Transcription.** Each STT service reports its p99 time to a final transcript (`ttfsP99Latency`);
+  the stop strategies use it as a deadline counted from the end of speech, and stop waiting early as
+  soon as the service marks a transcript as finalized. The VAD silence and the turn model's inference
+  fall within that deadline rather than adding to it.
+- **The silence window** of `SpeechTimeoutUserTurnStopStrategy` is the exception: it starts when
+  the VAD reports the end of speech, so the shortest answer after a pause is `stopSecs` plus
+  `userSpeechTimeout` (0.8 s by default).
+
+The built-in p99 values assume `stopSecs` of 0.2. The strategies warn when `stopSecs` reaches the
+service's p99, because that leaves no time to wait for the transcript.
+
+## Configuration
+
+These are the defaults, spelled out:
+
+<include cwd>snippets/turn_strategies.ts#explicit-defaults</include>
+
+`new UserTurnStrategies()` with no lists, or with empty ones, gets the same defaults:
+`defaultUserTurnStartStrategies()` (VAD, then transcription) and `defaultUserTurnStopStrategies()`
+(Smart Turn). Both functions are exported, so you can extend the defaults instead of repeating them.
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_turn_strategies.ts" name="UserTurnStrategiesOptions" />
+
+The other turn options on `LLMUserAggregatorParams`:
+
+<auto-type-table cwd path="../../packages/core/src/processors/aggregators/llm_response_universal.ts" name="LLMUserAggregatorParamsOptions" />
+
+`vadAnalyzer` produces the VAD frames; `VADUserTurnStartStrategy` is what turns them into a turn
+start. They are separate things, and the VAD analyzer is set on the aggregator, not the transport.
+`userMuteStrategies` is covered in [User muting](/docs/concepts/user-muting) and `userIdleTimeout`
+in [Turn events & idle users](/docs/concepts/turn-events#idle-users).
+
+## Start strategies
+
+Every start strategy accepts `enableInterruptions` (default `true`): whether starting a turn
+interrupts the bot. Set it to `false` and the bot keeps talking while the user speaks; what the user
+said is still transcribed, and answered after the bot finishes.
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_start/base_user_turn_start_strategy.ts" name="BaseUserTurnStartStrategyOptions" />
+
+### VADUserTurnStartStrategy
+
+Starts the turn as soon as the VAD hears speech (`VADUserStartedSpeakingFrame`). The most responsive
+option, and the first default. It needs a `vadAnalyzer` on the aggregator, and has no options of its
+own.
+
+### TranscriptionUserTurnStartStrategy
+
+Starts the turn when a transcript arrives. It is the second default, a fallback for speech the VAD
+misses (a soft voice, for example) but the STT service still transcribes.
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_start/transcription_user_turn_start_strategy.ts" name="TranscriptionUserTurnStartStrategyOptions" />
+
+### MinWordsUserTurnStartStrategy
+
+Starts the turn only once the user has said `minWords` words, so a quick "okay" or "uh-huh" doesn't
+cut the bot off. The minimum applies only while the bot is speaking; when the bot is silent, one word
+starts a turn. Shorter transcripts during bot speech are discarded and never reach the context.
+
+Use it **instead of** the VAD start strategy, which would open the turn on the first sound:
+
+<include cwd>snippets/turn_strategies.ts#min-words</include>
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_start/min_words_user_turn_start_strategy.ts" name="MinWordsUserTurnStartStrategyOptions" />
+
+### WakePhraseUserTurnStartStrategy
+
+Ignores the user until they say a wake phrase, then lets the conversation run until `timeout`
+seconds pass with no activity. While asleep it returns `STOP` for every frame, so the strategies after
+it never see anything, and transcripts that don't contain the phrase are dropped from the
+aggregation. Matching ignores case and punctuation ("Hey, pipedog!" matches "hey pipedog").
+
+Put it first, ahead of the strategies it gates:
+
+<include cwd>snippets/turn_strategies.ts#wake-phrase</include>
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_start/wake_phrase_user_turn_start_strategy.ts" name="WakePhraseUserTurnStartStrategyOptions" />
+
+It emits `on_wake_phrase_detected(strategy, phrase)` and `on_wake_phrase_timeout(strategy)`, and
+exposes its current `state` (`"idle"` or `"awake"`). With `singleActivation: true` the phrase is
+needed before every turn: activity no longer extends the window, which closes `timeout` seconds after
+the phrase.
+
+### KrispVivaIPUserTurnStartStrategy
+
+Uses Krisp's Interruption Prediction model to tell a real interruption from a backchannel ("uh-huh",
+"yeah"). When the VAD hears speech it feeds the audio to the model, and starts a turn only if the
+model's probability exceeds `threshold`. Pair it with `TranscriptionUserTurnStartStrategy` as a
+fallback.
+
+<Callout type="warn" title="Bring your own Krisp SDK">
+  Krisp ships a native Python SDK and no JavaScript binding, so pipedog ports the strategy's logic
+  but not the model runtime. Out of the box the constructor throws, because the Krisp SDK isn't
+  there. To use it, register a binding with `setKrispAudioSdk()` from
+  `@pipedog/core/audio/krisp_instance` and subclass the strategy to override `_createIpSession()`,
+  which returns a `KrispIpSession`.
+</Callout>
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_start/krisp_viva_ip_user_turn_start_strategy.ts" name="KrispVivaIPUserTurnStartStrategyOptions" />
+
+`modelPath` must end in `.kef`. It and `apiKey` fall back to the `KRISP_VIVA_IP_MODEL_PATH` and
+`KRISP_VIVA_API_KEY` environment variables.
+
+### ExternalUserTurnStartStrategy
+
+Lets another component decide when the turn starts. It understands two frames:
+
+- `ProposedUserStartedSpeakingFrame`: a service with its own turn detection proposes a turn start.
+  This strategy accepts it, pushes the `UserStartedSpeakingFrame` and interrupts the bot (if
+  `enableInterruptions`). Subclass it to change when a proposal opens a turn.
+- `UserStartedSpeakingFrame`: the turn was already decided and announced elsewhere, for example by a
+  shared `UserTurnProcessor` feeding several aggregators. This strategy adopts it and emits nothing,
+  so the turn isn't announced twice.
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_start/external_user_turn_start_strategy.ts" name="ExternalUserTurnStartStrategyOptions" />
+
+## Stop strategies
+
+### TurnAnalyzerUserTurnStopStrategy
+
+The default. Feeds audio, VAD and transcription frames to a turn analyzer, Smart Turn v3 here, which
+predicts from the audio whether the user has finished or only paused. Once it says the turn is
+complete, the strategy waits for the transcript: it ends the turn on a finalized transcript, or when
+the STT service's p99 latency has passed since the end of speech.
+
+<include cwd>snippets/turn_strategies.ts#smart-turn</include>
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_stop/turn_analyzer_user_turn_stop_strategy.ts" name="TurnAnalyzerUserTurnStopStrategyOptions" />
+
+`createLocalSmartTurnAnalyzerV3()` from `@pipedog/audio-smart-turn` builds the analyzer with the
+ONNX runtime and the model shipped with that package. Its options:
+
+<auto-type-table cwd path="../../packages/audio-smart-turn/src/index.ts" name="CreateLocalSmartTurnAnalyzerV3Options" />
+
+`params` takes a `SmartTurnParams` (`@pipedog/core/audio/turn/smart_turn/base_smart_turn`):
+`stopSecs` (3 s, the longest silence before the analyzer gives up waiting and calls the turn
+complete), `preSpeechMs` (500 ms of audio kept from before speech starts) and `maxDurationSecs`
+(8 s, the longest segment the model sees).
+
+`waitForTranscript: false` ends the turn as soon as the model says so, without waiting for text. Use
+it when the turn model drives a speech-to-speech service that hears the audio itself;
+`LLMContextAggregatorPair` sets it for you in realtime mode.
+
+### SpeechTimeoutUserTurnStopStrategy
+
+Ends the turn after a fixed silence. After the VAD reports the end of speech it runs two timers, and
+ends the turn when both have finished and a transcript has arrived:
+
+- `userSpeechTimeout` (0.6 s): how long the user may pause and carry on. It always runs in full, and
+  is the knob for responsiveness.
+- The STT timer: the service's p99 time to a final transcript. A finalized transcript ends it early.
+
+If the service finalizes its transcripts, the turn ends `userSpeechTimeout` after the VAD stop. If a
+transcript arrives without any VAD stop (no VAD analyzer, for instance), `userSpeechTimeout` measures
+the silence since the last transcript instead.
+
+<include cwd>snippets/turn_strategies.ts#speech-timeout</include>
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_stop/speech_timeout_user_turn_stop_strategy.ts" name="SpeechTimeoutUserTurnStopStrategyOptions" />
+
+### ExternalUserTurnStopStrategy
+
+The stop-side counterpart of `ExternalUserTurnStartStrategy`. On a `ProposedUserStoppedSpeakingFrame`
+it decides, and pushes the `UserStoppedSpeakingFrame` itself, holding the turn open until the
+transcript arrives if `waitForTranscript`. On a `UserStoppedSpeakingFrame` decided elsewhere it adopts
+the decision and emits nothing. To shift the timing, subclass it and override
+`triggerUserTurnStopped()`.
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_stop/external_user_turn_stop_strategy.ts" name="ExternalUserTurnStopStrategyOptions" />
+
+### EagerUserTurnStopStrategy
+
+For STT services that predict the end of a turn before committing to it. It starts generating a
+response on the prediction (an `EagerTranscriptionFrame`), so the gap before the committed end of
+turn is spent generating instead of waiting. The response is held back by the LLM service's
+speculation gate and discarded if the user resumes speaking, if the committed transcript doesn't match
+the predicted one, or if the prediction goes unresolved for `speculationTimeout` seconds. Nothing from
+a discarded speculation reaches the user or the context, and the context always records the committed
+transcript.
+
+It extends `ExternalUserTurnStopStrategy`. Install it with
+[`EagerUserTurnStrategies`](#eageruserturnstrategies) rather than directly.
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_stop/eager_user_turn_stop_strategy.ts" name="EagerUserTurnStopStrategyOptions" />
+
+`matchPolicy` is a `NormalizedMatch` by default, which ignores case, punctuation and apostrophes, or
+an `ExactMatch`; subclass `EagerMatchPolicy` and implement `matches(eager, final)` for your own rule.
+
+### ExternalUserTurnCompletionStopStrategy
+
+Ends the turn whenever a `UserTurnInferenceCompletedFrame` arrives, whoever sends it: an LLM with
+completion markers, an STT service, your own classifier. Pair it with detectors wrapped in
+`deferred(...)`, which still trigger inference but leave the end of the turn to this strategy. A
+completion that arrives while the user is speaking again is ignored, so a late verdict can't end the
+turn and talk over them. If nothing ever sends the frame, `userTurnStopTimeout` ends the turn; raise
+it if your producer is slow.
+
+### LLMTurnCompletionUserTurnStopStrategy
+
+A completion strategy that asks the LLM to judge. At start it enables `filterIncompleteUserTurns` on
+the LLM (on every LLM behind an `LLMSwitcher`, too), which makes the LLM begin each response with a
+marker: `●` complete, `◐` cut off mid-thought, `○` needs more time. Only `●` ends the turn; on the
+other two the LLM service waits and re-prompts on its own. This is what
+[`FilterIncompleteUserTurnStrategies`](#filterincompleteuserturnstrategies) installs.
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_stop/llm_turn_completion_user_turn_stop_strategy.ts" name="LLMTurnCompletionUserTurnStopStrategyOptions" />
+
+### Deferring the end of a turn
+
+`deferred(strategy)` wraps a stop strategy so that it still triggers inference
+(`on_user_turn_inference_triggered`) but never ends the turn (`on_user_turn_stopped`); another
+strategy in the list ends it. The usual pairing is a deferred detector followed by a completion
+strategy:
+
+<include cwd>snippets/turn_strategies.ts#filter-incomplete</include>
+
+## Presets
+
+### ExternalUserTurnStrategies
+
+An `ExternalUserTurnStartStrategy` and an `ExternalUserTurnStopStrategy`, for turns decided by a
+service with its own turn detection, a speech-to-speech service or a shared `UserTurnProcessor`.
+Services with turn detection (`DeepgramFluxSTTService`, `CartesiaTurnsSTTService`,
+`OpenAIRealtimeSTTService` with server VAD) recommend it to the aggregator on their own when you
+don't pass `userTurnStrategies`.
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_turn_strategies.ts" name="ExternalUserTurnStrategiesOptions" />
+
+<Callout type="warn">
+  A service routes its `shouldInterrupt` option to the strategies it recommends. If you set
+  `shouldInterrupt: false` on the service but also pass `new ExternalUserTurnStrategies()` yourself,
+  interruptions are back on. Leave `userTurnStrategies` out, or pass `enableInterruptions: false`.
+</Callout>
+
+A VAD analyzer on the aggregator is optional here: it adds STT metrics but isn't needed for turns.
+
+### EagerUserTurnStrategies
+
+`ExternalUserTurnStrategies` with an [`EagerUserTurnStopStrategy`](#eageruserturnstopstrategy) as
+the only stop strategy. The service owns turn detection, so this replaces the detector chain rather
+than extending it: a local detector alongside would run a second inference for the same turn.
+
+<include cwd>snippets/turn_strategies.ts#eager</include>
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_turn_strategies.ts" name="EagerUserTurnStrategiesOptions" />
+
+STT services that predict turns take `enableEagerEndOfTurn: true` (off by default, since every
+prediction costs an inference, including the ones the service withdraws) and recommend this preset
+themselves.
+
+### FilterIncompleteUserTurnStrategies
+
+Keeps the start strategies and the stop detectors (the defaults, or yours), wraps each detector in
+`deferred(...)`, and appends an `LLMTurnCompletionUserTurnStopStrategy` as the one that ends the
+turn. `on_user_turn_stopped` fires only once the LLM answers `●`.
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_turn_strategies.ts" name="FilterIncompleteUserTurnStrategiesOptions" />
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_turn_completion_mixin.ts" name="UserTurnCompletionConfigOptions" />
+
+## Turns with no transcript
+
+A turn can start on the VAD and end without a transcript: a cough, background noise, speech the STT
+service couldn't make out. Nothing is written to the context, and by default:
+
+- if the turn **interrupted the bot** (or came before the bot first finished speaking), the LLM runs
+  once with a developer message, so the bot asks the user to repeat or picks up where it left off;
+- if the bot **was waiting** for the user, the turn goes unanswered.
+
+`emptyUserTurn` changes this; `null` leaves every such turn unanswered.
+
+<include cwd>snippets/turn_strategies.ts#empty-turn</include>
+
+<auto-type-table cwd path="../../packages/core/src/turns/empty_user_turn.ts" name="EmptyUserTurnConfigOptions" />
+
+Recovery is skipped while the user is muted or a function call is pending, and with a realtime LLM
+service, which hears the audio itself.
+
+## Writing a strategy
+
+Subclass `BaseUserTurnStartStrategy` or `BaseUserTurnStopStrategy` and override `processFrame()`.
+It sees every frame that reaches the user aggregator and returns a `ProcessFrameResult`
+(`@pipedog/core/turns/types`): `STOP` to keep the strategies after it from seeing the frame,
+`CONTINUE` to let them. When the strategy decides, it calls:
+
+- start strategies: `triggerUserTurnStarted()`, or `triggerResetAggregation()` to drop the text
+  gathered so far (what `MinWordsUserTurnStartStrategy` does with a too-short transcript);
+- stop strategies: `triggerUserTurnStopped()`, which triggers inference and ends the turn, or
+  `triggerUserTurnInferenceTriggered()` and `triggerUserTurnFinalized()` separately.
+
+<include cwd>snippets/turn_strategies.ts#custom-start</include>
+
+Override `handleUserTurnStarted()` and `handleUserTurnStopped()` to reset per-turn state; the
+controller calls them on every strategy at each turn boundary, whichever strategy caused it.
+`setup()` and `cleanup()` run with the aggregator, and `this.taskManager` creates tasks for timers.
