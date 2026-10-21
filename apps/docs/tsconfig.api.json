@@ -9,5 +9,5 @@
     "sourceMap": false,
     "types": []
   },
-  "include": ["../../packages/asyncio/src", "../../packages/core/src"]
+  "include": ["../../packages/*/src"]
 }

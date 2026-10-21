@@ -1,0 +1,90 @@
+---
+title: OpenAI
+description: Text-to-speech with OpenAITTSService, streaming 24 kHz PCM from OpenAI's speech API.
+---
+
+## Overview
+
+- **`OpenAITTSService`**: sends each sentence to OpenAI's speech API (`audio.speech`) and streams
+  the reply back as raw 24 kHz PCM. Supports the `gpt-4o-mini-tts` instructions and speed
+  controls.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/openai">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/openai/src">
+    `packages/openai/src/tts.ts`.
+  </Card>
+  <Card title="OpenAI docs" href="https://platform.openai.com/docs/guides/text-to-speech">
+    Models, voices and instructions.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/openai
+```
+
+```ts
+import { OpenAITTSService } from "@pipedog/openai/tts";
+```
+
+## Prerequisites
+
+- An OpenAI account and an API key from the [OpenAI dashboard](https://platform.openai.com/api-keys).
+- Pass the key as `apiKey`. If you leave it out, the OpenAI SDK reads `OPENAI_API_KEY`. The
+  examples read it from `OPENAI_API_KEY`.
+
+## OpenAITTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/openai/src/tts.ts" name="OpenAITTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new OpenAITTSService.Settings({...})`
+(`OpenAITTSSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gpt-4o-mini-tts"` | Speech model. |
+| `voice` | `string` | `"alloy"` | One of `alloy`, `ash`, `ballad`, `cedar`, `coral`, `echo`, `fable`, `marin`, `nova`, `onyx`, `sage`, `shimmer`, `verse`. |
+| `language` | `null` | `null` | Not used by this service. |
+| `instructions` | `string \| null` | `null` | How the voice should speak (tone, pace, accent). |
+| `speed` | `number \| null` | `null` | Speed, 0.25 to 4.0. `null` leaves OpenAI's default (1.0). |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-openai.ts#usage</include>
+
+Change the voice or speed mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-openai.ts#update</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_tts_request` | A synthesis request is about to be made. |
+
+This comes from the `TTSService` base class.
+
+### Notes
+
+- Requests `response_format: "pcm"` and emits `TTSAudioRawFrame`s (mono, `chunkSize` bytes each)
+  between `TTSStartedFrame` and `TTSStoppedFrame`.
+- OpenAI only returns 24 kHz audio. Set `sampleRate: 24000` (or a 24 kHz pipeline output rate);
+  any other rate logs a warning, and the frames are still labelled with that rate.
+- An unknown voice, or a request OpenAI rejects, produces an `ErrorFrame` instead of audio.
+- `httpClient` replaces the SDK's `fetch`, for example to set a longer request timeout.
+
+## Runtime notes
+
+- The client is the `openai` JS SDK over `fetch`. The audio is read from the response body
+  stream, so it works on Bun, Node, Deno and Cloudflare Workers.
+- `httpClient` takes a `fetch` function where upstream takes an httpx client.
+- The deprecated `OpenAITTSService.InputParams` and the `voice`, `model`, `instructions`,
+  `speed` and `params` constructor options are not ported. Use `settings`.

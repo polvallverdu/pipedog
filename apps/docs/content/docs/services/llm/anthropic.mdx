@@ -1,0 +1,140 @@
+---
+title: Anthropic
+description: Claude models with streaming, function calling, thinking and prompt caching through AnthropicLLMService.
+---
+
+## Overview
+
+`AnthropicLLMService` runs Claude models through the Anthropic Messages API. It streams text,
+calls functions, supports thinking and prompt caching, and accepts any client with the same
+`beta.messages.create()` shape.
+
+- **`AnthropicLLMService`**: the LLM service, with `AnthropicLLMSettings` for runtime-updatable
+  settings and `AnthropicThinkingConfig` for thinking.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/llm/anthropic">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/anthropic/src">
+    `packages/anthropic/src/llm.ts` and `anthropic_adapter.ts`.
+  </Card>
+  <Card title="Anthropic docs" href="https://docs.anthropic.com/en/api/messages">
+    The Messages API, models, thinking and prompt caching.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/anthropic
+```
+
+```ts
+import { AnthropicLLMService, AnthropicThinkingConfig } from "@pipedog/anthropic/llm";
+```
+
+The package depends on the official `@anthropic-ai/sdk`, which is installed with it.
+
+## Prerequisites
+
+- An Anthropic account and an API key from the [Anthropic Console](https://console.anthropic.com).
+- Pass the key as `apiKey`. The examples read it from `ANTHROPIC_API_KEY`.
+
+## AnthropicLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/anthropic/src/llm.ts" name="AnthropicLLMServiceOptions" />
+
+`apiKey` is required even when you pass your own `client`, which doesn't use it.
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new AnthropicLLMService.Settings({...})`. Any
+setting you leave out keeps the default below. `null` means the field is not sent, so Anthropic
+uses its own default.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"claude-sonnet-4-6"` | Claude model id. |
+| `systemInstruction` | `string \| null` | `null` | System prompt. |
+| `maxTokens` | `number \| null` | `4096` | Maximum tokens to generate. |
+| `temperature` | `number \| null` | `null` | Sampling temperature. Sent through `extra_body`. |
+| `topK` | `number \| null` | `null` | Top-k sampling. Sent through `extra_body`. |
+| `topP` | `number \| null` | `null` | Top-p sampling. Sent through `extra_body`. |
+| `enablePromptCaching` | `boolean` | `false` | Add cache-control markers to the system prompt and recent messages. |
+| `systemPromptCacheTtl` | `"5m" \| "1h" \| null` | `null` (Anthropic: 5 minutes) | Lifetime of the system prompt's cache entry when caching is on. |
+| `thinking` | `AnthropicThinkingConfig \| null` | `null` | Thinking configuration. See below. |
+| `effort` | `"low" \| "medium" \| "high" \| "xhigh" \| "max" \| null` | `null` | Sent as `output_config.effort`. `null` uses the model's default. |
+| `useProviderThinkingDefault` | `boolean` | `false` | Run at Anthropic's default when neither `thinking` nor `effort` is set. |
+| `extra` | `Record<string, unknown>` | `{}` | Extra request parameters, merged into the request. |
+
+`frequencyPenalty`, `presencePenalty` and `seed` exist on the base `LLMSettings` and default to
+`null`; the Anthropic API does not use them.
+
+### AnthropicThinkingConfig
+
+<auto-type-table cwd path="../../packages/anthropic/src/llm.ts" name="AnthropicThinkingConfigOptions" />
+
+When the model thinks, the service emits `LLMThoughtStartFrame`, `LLMThoughtTextFrame` and
+`LLMThoughtEndFrame`. Claude 4.7 and later return empty thinking text unless `display` is
+`"summarized"`.
+
+### Usage
+
+<include cwd meta='title="llm.ts"'>snippets/services/llm-anthropic.ts#usage</include>
+
+Adaptive thinking with readable thinking text:
+
+<include cwd>snippets/services/llm-anthropic.ts#thinking</include>
+
+Change settings mid-call with an `LLMUpdateSettingsFrame`:
+
+<include cwd>snippets/services/llm-anthropic.ts#update</include>
+
+### Event handlers
+
+Inherited from `LLMService`:
+
+| Event | Description |
+|---|---|
+| `on_completion_timeout` | A completion request timed out. |
+| `on_function_calls_started` | Function calls arrived and are about to run. |
+| `on_function_calls_cancelled` | One or more running function calls were cancelled. |
+
+### Notes
+
+- Consumes `LLMContextFrame` and emits `LLMFullResponseStartFrame`, `LLMTextFrame`s and
+  `LLMFullResponseEndFrame`. An `LLMEnablePromptCachingFrame` turns prompt caching on or off.
+- When neither `thinking` nor `effort` is set, the service sends the lowest thinking setting
+  Anthropic documents for the model, for the fastest responses: `thinking: { type: "disabled" }`
+  on most Claude 4 and 5 models, `"between_tools"` on Claude Sonnet 5.5, and `effort: "low"` on
+  Claude Opus 5.5 and Fable models. It logs what it sent. A Claude model not in that list runs at
+  Anthropic's default, with a warning. Set `useProviderThinkingDefault: true` to skip this.
+- Bedrock and Vertex model ids (`us.anthropic.claude-sonnet-5-...`, `claude-sonnet-5@...`) and
+  dated snapshots are matched to their model's entry.
+- Models from the 4.6 generation on reject assistant prefill. For those, the service adds a
+  trailing user message when the context ends with an assistant message.
+- `runInference` accepts a `responseSchema`. It is sent as `output_config.format` and needs a 4.5
+  model or later.
+- With `retryOnTimeout: true`, the first attempt is limited to `retryTimeoutSecs` (5 by default).
+  If it times out, the request is retried once with no timeout.
+- The service logs a warning when Claude stops for a reason other than a normal end, such as
+  `max_tokens` or a refusal. The text that arrived is still passed on.
+- Token usage metrics include cache creation, cache read and reasoning tokens.
+
+## Runtime notes
+
+- `@anthropic-ai/sdk` is fetch-based and runs on Bun, Node, Deno and Cloudflare Workers.
+- `client` takes any object with a `beta.messages.create(params, { signal })` method, such as
+  `AnthropicBedrock` or `AnthropicVertex` from Anthropic's Bedrock and Vertex SDKs (not
+  dependencies of this package).
+- The Python SDK's `NOT_GIVEN` has no JS counterpart: sampling settings and `thinking` use `null`
+  for "not sent". An explicit `null` sampling value is left out of the request, where upstream
+  sends JSON `null`.
+- The JS SDK has no `extra_body` option. pipedog merges `extra_body` into the request JSON itself,
+  as the Python SDK does.
+- The JS SDK has no `RequestTooLargeError`; a 413 is recognized by its status.
+- Not ported: the deprecated `AnthropicLLMService.InputParams` and the `model` / `params`
+  constructor arguments. Use `settings`.

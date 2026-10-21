@@ -1,0 +1,42 @@
+---
+title: Docs for AI tools
+description: Read these docs from an LLM or coding agent, with llms.txt, llms-full.txt and a Markdown version of every page.
+---
+
+Every page of these docs is also available as plain Markdown, for LLMs and coding agents. The
+Markdown is generated at build time from the same source as the HTML, so it is always in sync.
+
+## llms.txt
+
+[`/llms.txt`](https://polvallverdu.github.io/pipedog/llms.txt) is the index: every page, by
+section, with its title, its description and a link to its Markdown. It follows the
+[llms.txt](https://llmstxt.org) convention. Give an agent this URL first, so it can pick the pages
+it needs.
+
+[`/llms-full.txt`](https://polvallverdu.github.io/pipedog/llms-full.txt) is every page in one
+file, for tools that take one big context.
+
+## A page as Markdown
+
+Add `.md` to a page's URL:
+
+| Page | Markdown |
+|---|---|
+| `/pipedog/docs/` | `/pipedog/docs.md` |
+| `/pipedog/docs/concepts/frames/` | `/pipedog/docs/concepts/frames.md` |
+| `/pipedog/docs/services/stt/deepgram/` | `/pipedog/docs/services/stt/deepgram.md` |
+
+Each file starts with the page's title, description and URL. Option tables are rendered as
+Markdown tables, and code samples are inlined from the type-checked snippets.
+
+## On every page
+
+The buttons under each page title:
+
+- **Copy page** copies the page's Markdown to the clipboard.
+- **Open** has the Markdown view, the page's source on GitHub, and links that open ChatGPT, Claude,
+  Cursor or Scira with a prompt to read the page.
+
+## MCP server
+
+MCP server: coming soon (`@pipedog/mcp`).

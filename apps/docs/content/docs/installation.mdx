@@ -3,23 +3,24 @@ title: Installation
 description: Add pipedog to a Bun, Node, Deno or Cloudflare Workers project.
 ---
 
-pipedog is split into packages, like Pipecat's optional extras:
+pipedog is split into packages, like Pipecat's optional extras. They are published on npm under
+the `@pipedog` scope, all at the same version (0.4.0 at the time of writing): upgrade them together.
 
 | Package | What |
 |---|---|
 | `@pipedog/asyncio` | asyncio semantics for JavaScript: tasks, cooperative cancellation, queues, events |
 | `@pipedog/core` | frames, processors, pipelines, workers, bus, observers, RTVI, base services and transports |
 | `@pipedog/tracing` | OpenTelemetry setup (`setupTracing()`, OTLP and console exporters), like `pipecat-ai[tracing]` |
-| `@pipedog/<provider>` | one package per service provider, transport, serializer or audio model (being ported) |
+| `@pipedog/audio-silero`, `@pipedog/audio-smart-turn` | Silero VAD and Smart Turn, the local turn detection models |
+| `@pipedog/openai`, `@pipedog/google`, `@pipedog/anthropic` | LLM, speech and realtime services |
+| `@pipedog/deepgram`, `@pipedog/cartesia`, `@pipedog/elevenlabs`, `@pipedog/whisper` | speech-to-text and text-to-speech |
+| `@pipedog/langchain` | the LangChain processor |
+| `@pipedog/transport-websocket`, `@pipedog/transport-smallwebrtc` | transports |
+| `@pipedog/serializer-protobuf`, `@pipedog/serializer-rtvi-client`, `@pipedog/serializer-telnyx` | serializers |
 
-Where Python installs `pipecat-ai[deepgram,openai]`, you will add `@pipedog/core` plus
-`@pipedog/deepgram` and `@pipedog/openai`.
-
-<Callout type="warn" title="Not on npm yet">
-  The packages are not published yet (they are at version `0.0.0`). Until they are, use them from
-  a checkout of the repository, as shown under [From source](#from-source). The commands below are
-  what installing will look like once they are published.
-</Callout>
+Where Python installs `pipecat-ai[deepgram,openai]`, you add `@pipedog/core` plus
+`@pipedog/deepgram` and `@pipedog/openai`. [Services](/docs/services) lists every provider and its
+package, and [Transports](/docs/transports) the transports.
 
 ## Package managers
 
@@ -50,12 +51,12 @@ Where Python installs `pipecat-ai[deepgram,openai]`, you will add `@pipedog/core
 
 - **Bun**, **Node.js** 22 or later, **Deno**, or **Cloudflare Workers** (with the
   `nodejs_compat` compatibility flag, which provides `AsyncLocalStorage`).
-- The sources are TypeScript written with erasable syntax only (no `enum`, `namespace` or
-  parameter properties), so Bun and Deno run them directly, Node runs them with its built-in type
-  stripping (in a workspace; Node does not strip types under `node_modules`), and bundlers such as
-  wrangler or esbuild compile them without extra configuration.
-- If you type-check with `tsc`, use `"moduleResolution": "Bundler"` (or `"NodeNext"`) and
-  `"allowImportingTsExtensions": true`.
+- The npm packages ship compiled JavaScript (ES modules) with `.d.ts` types, so every runtime and
+  bundler loads them as they are.
+- From source, the packages are TypeScript written with erasable syntax only (no `enum`,
+  `namespace` or parameter properties), so Bun and Deno run them directly and Node runs them with
+  its built-in type stripping. If you type-check against the sources with `tsc`, use
+  `"moduleResolution": "Bundler"` (or `"NodeNext"`) and `"allowImportingTsExtensions": true`.
 
 ## Imports
 
@@ -75,8 +76,9 @@ import { WorkerRunner } from "@pipedog/core/workers/runner";
 
 ## From source
 
-pipedog is a Bun monorepo. Clone it, install, and add your app as a workspace (for example
-under `examples/`), depending on the packages with `workspace:*`:
+To work on pipedog itself, or to run unreleased changes: pipedog is a Bun monorepo. Clone it,
+install, and add your app as a workspace (for example under `examples/`), depending on the packages
+with `workspace:*`:
 
 ```bash
 bun install

@@ -21,7 +21,7 @@ export default function HomePage() {
           Quickstart
         </Link>
         <Link
-          href="/docs/coming-from-pipecat"
+          href="/docs/guides/coming-from-pipecat"
           className="rounded-lg border px-5 py-2.5 font-medium"
         >
           Coming from Pipecat (Python)

@@ -1,0 +1,113 @@
+---
+title: LangChain
+description: Run a LangChain.js runnable as the pipeline's LLM step with LangchainProcessor.
+---
+
+## Overview
+
+`LangchainProcessor` puts a [LangChain.js](https://js.langchain.com) runnable where an LLM service
+would sit in the pipeline. It takes the latest user message from the context, streams it through
+the runnable and pushes the output as text frames.
+
+- **`LangchainProcessor`**: a frame processor that wraps any `Runnable` from `@langchain/core`: a
+  prompt piped into a chat model, a chain with message history, or a compiled LangGraph graph.
+
+<Cards>
+  <Card title="Upstream source" href="https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/processors/frameworks/langchain.py">
+    Pipecat's `LangchainProcessor`. Upstream has no service page for it.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/langchain/src">
+    `packages/langchain/src/langchain.ts`.
+  </Card>
+  <Card title="LangChain.js docs" href="https://js.langchain.com/docs/introduction">
+    Runnables, chat models and LangGraph.
+  </Card>
+</Cards>
+
+## Installation
+
+`@langchain/core` is a peer dependency (`^1.0.0`): `@pipedog/langchain` imports from it but does
+not install it, so you pick the version. Add the chat model integration you use as well.
+
+```bash
+bun add @pipedog/langchain @langchain/core @langchain/openai
+```
+
+```ts
+import { LangchainProcessor } from "@pipedog/langchain/langchain";
+```
+
+## Prerequisites
+
+- Whatever your runnable needs. With `ChatOpenAI` that is an OpenAI API key in `OPENAI_API_KEY`.
+- The processor itself needs no key.
+
+## LangchainProcessor
+
+### Configuration
+
+The constructor is `new LangchainProcessor(chain, options)`. `chain` is a `Runnable` from
+`@langchain/core/runnables`. The processor calls only its `stream(input, config)` method.
+
+<auto-type-table cwd path="../../packages/langchain/src/langchain.ts" name="LangchainProcessorOptions" />
+
+What the runnable receives:
+
+- **input**: `{ [transcriptKey]: text }`, where `text` is the trimmed content of the last context
+  message. With the default key that is `{ input: "..." }`, so a prompt template should use an
+  `{input}` variable.
+- **config**: `{ configurable: { session_id }, signal }`. `session_id` is the value passed to
+  `setParticipantId()` (`null` until then), which is what `RunnableWithMessageHistory` reads.
+  `signal` aborts the stream when the pipeline is interrupted or cancelled.
+
+What it must yield: strings or `AIMessageChunk`s. A chunk's string `content` becomes the frame
+text. List content (multimodal) is turned into text with `JSON.stringify`. Any other value
+becomes an empty `TextFrame`.
+
+### Usage
+
+Build the runnable with LangChain:
+
+```ts title="chain.ts"
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { ChatOpenAI } from "@langchain/openai";
+
+const prompt = ChatPromptTemplate.fromMessages([
+  ["system", "You are a helpful voice assistant. Keep answers short."],
+  ["human", "{input}"],
+]);
+
+export const chain = prompt.pipe(new ChatOpenAI({ model: "gpt-4o-mini" }));
+```
+
+Then wrap it in the processor, in place of an LLM service:
+
+<include cwd meta='title="langchain.ts"'>snippets/services/llm-langchain.ts#usage</include>
+
+<Callout type="info">
+  The block that builds the chain is not type-checked by the docs build, since the docs app does
+  not install `@langchain/core`. The processor block is.
+</Callout>
+
+### Notes
+
+- Consumes `LLMContextFrame`. Every other frame passes through.
+- The last message must be a standard message with string content. A provider-specific message
+  (`LLMSpecificMessage`) or list content is not sent to the chain: the context frame is passed on
+  instead.
+- For each run it pushes `LLMFullResponseStartFrame`, one `TextFrame` per streamed chunk (with
+  `includesInterFrameSpaces` set) and `LLMFullResponseEndFrame`. The end frame is pushed even when
+  the chain throws.
+- A chain error is pushed upstream as an `ErrorFrame` (`Unknown error occurred: ...`).
+- A compiled LangGraph graph is a `Runnable`, so it works here too. Its default `stream()` yields
+  state updates, not text, so wrap it (for example in a `RunnableLambda` that returns the final
+  message) or stream with `streamMode: "messages"`. The package tests show both.
+
+## Runtime notes
+
+- Each step of the stream is a cancellation point, so an interruption stops the chain mid-stream.
+  The iterator is closed in a `finally` block.
+- Upstream logs a warning on Python's `GeneratorExit`. That branch has no JS equivalent and is not
+  ported.
+- The package targets Bun, Node, Deno and Cloudflare Workers, and uses no runtime-specific APIs.
+  Whether a chain runs on a given runtime depends on the LangChain integrations it uses.

@@ -1,0 +1,108 @@
+---
+title: Whisper
+description: BaseWhisperSTTService, the base class for speech-to-text over Whisper-compatible transcription APIs. The local WhisperSTTService is not ported.
+---
+
+## Overview
+
+`@pipedog/whisper` holds the shared base for services that call a Whisper-style transcription
+API (OpenAI's `/v1/audio/transcriptions` and compatible servers).
+
+- **`BaseWhisperSTTService`**: a segmented STT service. It sends each speech segment, cut by the
+  pipeline's VAD, as a WAV file and pushes the transcript. It owns an OpenAI SDK client, settings,
+  language mapping, metrics and error handling. Subclasses implement `_transcribe()`.
+  [`OpenAISTTService`](/docs/services/stt/openai) extends it.
+
+<Callout type="warn">
+  Pipecat's Whisper page documents `WhisperSTTService` and `WhisperSTTServiceMLX`, which run
+  Whisper models locally (faster-whisper, MLX). They are not ported to pipedog yet
+  (`services/whisper/stt.py` and `utils.py` are still to do). This page covers only the base
+  class for Whisper-compatible APIs.
+</Callout>
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/whisper">
+    Pipecat's page, for the local Whisper services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/whisper/src">
+    `packages/whisper/src/base_stt.ts`.
+  </Card>
+  <Card title="OpenAI docs" href="https://platform.openai.com/docs/guides/speech-to-text">
+    The transcription API that Whisper-compatible servers follow.
+  </Card>
+</Cards>
+
+## Installation
+
+To use a Whisper-compatible server through OpenAI's service, install `@pipedog/openai`. Install
+`@pipedog/whisper` to subclass the base yourself.
+
+```bash
+bun add @pipedog/openai @pipedog/whisper
+```
+
+```ts
+import { OpenAISTTService } from "@pipedog/openai/stt";
+import { BaseWhisperSTTService, type Transcription } from "@pipedog/whisper/base_stt";
+```
+
+## Prerequisites
+
+- A Whisper-compatible transcription endpoint and its API key, if it needs one. The examples read
+  it from `WHISPER_API_KEY`.
+- VAD in the pipeline (on the user aggregator): segments are cut where the VAD starts and stops.
+
+## BaseWhisperSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/whisper/src/base_stt.ts" name="BaseWhisperSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new BaseWhisperSTTService.Settings({...})`. The
+base leaves every field unset; subclasses set their own defaults (`OpenAISTTService` uses
+`"gpt-transcribe"` and `Language.EN`).
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string \| null` | `null` | Transcription model. |
+| `language` | `Language \| null` | `null` | Transcription language. |
+| `prompt` | `string \| null` | `null` | Text to guide the style, or to continue a previous segment. |
+| `temperature` | `number \| null` | `null` | Sampling temperature, 0 to 1. |
+
+### Usage
+
+The base class cannot be used on its own: its `_transcribe()` throws. To point at a
+Whisper-compatible endpoint, pass `baseUrl` to `OpenAISTTService`:
+
+<include cwd meta='title="whisper.ts"'>snippets/services/stt-whisper.ts#usage</include>
+
+For an endpoint that needs a different request, subclass the base and implement `_transcribe()`
+with the OpenAI client it built from `apiKey`, `baseUrl` and `httpClient`:
+
+<include cwd>snippets/services/stt-whisper.ts#subclass</include>
+
+### Notes
+
+- Emits one `TranscriptionFrame` per segment, with the API response as `result`. There are no
+  interim results.
+- Empty transcripts are logged and dropped. With `pushEmptyTranscripts: true` they are pushed,
+  so the bot can move on when the VAD fired but nobody spoke.
+- A transcription error is pushed as an `ErrorFrame`.
+- Languages map to Whisper's codes. A language not in the map falls back to its base code (`en`
+  from `en-US`) with a warning.
+- Set the static `_requiresApiKey` to `true` in a subclass for a provider other than OpenAI.
+  Without it, a missing key makes the OpenAI client fall back to `OPENAI_API_KEY` and send it to
+  that provider.
+
+## Runtime notes
+
+- The HTTP client is the `openai` JS SDK, which uses `fetch` and runs on Bun, Node, Deno and
+  Cloudflare Workers. `httpClient` replaces its `fetch`, for a longer timeout for example.
+  Upstream takes an httpx client, so its `Timeout` and connection limits do not carry over.
+- The deprecated `model`, `language`, `prompt` and `temperature` constructor options are not
+  ported. Use `settings`.
+- Not ported yet: the local `WhisperSTTService` and `WhisperSTTServiceMLX`
+  (`services/whisper/stt.py`), and `GroqSTTService` (`services/groq/stt.py`), the other upstream
+  service built on this base.

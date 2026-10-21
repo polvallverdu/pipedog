@@ -1,0 +1,79 @@
+---
+title: Cloudflare Workers
+description: Serve the pipedog WebSocket endpoint from a Worker, with one Durable Object per session.
+---
+
+Workers upgrade a WebSocket from fetch, so `websocketFetchHandler` works there as it is. Workers
+have no UDP, so the WebRTC offer doesn't: audio goes over the WebSocket, as protobuf frames.
+
+A voice session is a long-lived connection with state, so each one runs in its own Durable Object.
+The Worker routes each request to an object by session name. The full guide, with turn detection,
+reconnection and limits, is [Voice agents on Workers and Durable Objects](/docs/deployment/cloudflare-workers).
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai
+```
+
+The packages aren't on npm yet; see [Installation](/docs/installation) for using them from a
+checkout. The Worker needs the `nodejs_compat` compatibility flag.
+
+## The shape
+
+```text
+client ──WebSocket──► Worker ──getByName(id)──► VoiceSession (Durable Object)
+                                                   │ FastAPIWebsocketTransport
+                                                   │ OpenAI realtime transcription (turns)
+                                                   │ chat, speech synthesis
+```
+
+The Durable Object turns a connection into a fetch handler and returns its result from `fetch`:
+
+```ts
+import { DurableObject } from "cloudflare:workers";
+import { websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
+
+export class VoiceSession extends DurableObject<Env> {
+  readonly #handler = websocketFetchHandler((connection) => runVoiceAgent(connection, this.env));
+
+  override fetch(request: Request): Promise<Response> {
+    return this.#handler(request);
+  }
+}
+```
+
+The Worker routes each session to an object by name. The same name always reaches the same object:
+
+```ts
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const id = new URL(request.url).pathname.split("/")[3];
+    return env.VOICE_SESSION.getByName(id).fetch(request);
+  },
+} satisfies ExportedHandler<Env>;
+```
+
+`runVoiceAgent` builds the pipeline on the connection with `FastAPIWebsocketTransport`. It detects
+turns on the provider's side, not with Silero and Smart Turn: the local models don't fit in a
+Worker's size limit.
+
+## Run it
+
+The complete example is
+[`examples/workers-durable-voice-agent`](https://github.com/polvallverdu/pipedog/tree/main/examples/workers-durable-voice-agent):
+
+```bash
+cd examples/workers-durable-voice-agent
+echo "OPENAI_API_KEY=sk-..." > .dev.vars
+bun run dev
+```
+
+Its tests run against workerd through `wrangler dev`. To deploy, see
+[Run it](/docs/deployment/cloudflare-workers#run-it) in the full guide.
+
+## Authentication
+
+The Worker has no auth. Check the session in the Worker's `fetch` before it reaches the Durable
+Object, as in [Authentication](/docs/frameworks#authentication). Browsers can't set headers on a
+WebSocket, so take the token from the URL.

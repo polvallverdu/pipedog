@@ -1,0 +1,173 @@
+---
+title: Gemini Live
+description: Real-time speech-to-speech with GeminiLiveLLMService over the Gemini Live API, with server or local VAD, tools, thinking and the Gemini File API.
+---
+
+## Overview
+
+`GeminiLiveLLMService` connects to the Gemini Live API over a WebSocket. It takes user audio
+(and text and video), and returns spoken audio, transcripts and tool calls, so one service
+replaces the STT, LLM and TTS stages of a pipeline.
+
+- **`GeminiLiveLLMService`**: the Live session, with server-side or local VAD, function calling,
+  thinking, context window compression, session resumption and Google Search grounding.
+- **`GeminiVADParams`** and **`ContextWindowCompressionParams`**: settings objects for VAD and
+  compression.
+- **`GeminiFileAPI`**: a client for the Gemini File API (upload, get, list, delete), available
+  as `llm.fileApi`.
+
+For Vertex AI, see [Gemini Live on Vertex AI](/docs/services/s2s/gemini-live-vertex).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/s2s/gemini-live">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/google/src/gemini_live">
+    `packages/google/src/gemini_live/llm.ts` and `file_api.ts`.
+  </Card>
+  <Card title="Gemini Live API docs" href="https://ai.google.dev/gemini-api/docs/live">
+    Models, voices, VAD and session management.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/google
+```
+
+```ts
+import {
+  ContextWindowCompressionParams,
+  GeminiLiveLLMService,
+  GeminiVADParams,
+} from "@pipedog/google/gemini_live/llm";
+import { GeminiFileAPI } from "@pipedog/google/gemini_live/file_api";
+```
+
+## Prerequisites
+
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
+- Pass the key as `apiKey`. The examples read it from `GOOGLE_API_KEY`.
+
+## GeminiLiveLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/gemini_live/llm.ts" name="GeminiLiveLLMServiceOptions" />
+
+### Settings
+
+Passed as `settings: new GeminiLiveLLMService.Settings({...})`. They are sent when the session
+connects. Changing them later stores the new values but doesn't apply them to the open session
+(a warning names the settings that didn't take effect).
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"models/gemini-3.8-live"` | Gemini Live model. |
+| `voice` | `string` | `"Charon"` | Voice name. |
+| `language` | `Language \| string` | `"en-US"` | Language. A `Language` value is sent as Gemini's locale code (`Language.ES` as `"es-ES"`). |
+| `modalities` | `GeminiModalities` | `GeminiModalities.AUDIO` | Response modality. `TEXT` logs a warning: recent models may not support it. |
+| `mediaResolution` | `GeminiMediaResolution` | `GeminiMediaResolution.UNSPECIFIED` | Video input resolution. |
+| `vad` | `GeminiVADParams \| null` | `null` (server VAD on) | Voice activity detection. |
+| `turnCoverage` | `TurnCoverage \| null` | `null` (model default) | Which realtime input a user turn covers. |
+| `contextWindowCompression` | `ContextWindowCompressionParams` | `{}` (off) | Context window compression. |
+| `thinking` | `ThinkingConfig` | `{}` | Thinking configuration. Thinking models get `thinkingLevel: "LOW"` when none is set. |
+| `enableAffectiveDialog` | `boolean` | `false` | Affective dialog. |
+| `proactivity` | `ProactivityConfig` | `{}` | Proactivity configuration. |
+| `maxTokens` | `number \| null` | `4096` | Maximum output tokens. |
+| `temperature`, `topK`, `topP`, `seed` | `number \| null` | `null` | Sampling settings. Gemini treats `seed` as best effort. |
+
+`GeminiVADParams`:
+
+<auto-type-table cwd path="../../packages/google/src/gemini_live/llm.ts" name="GeminiVADParamsOptions" />
+
+`ContextWindowCompressionParams`:
+
+<auto-type-table cwd path="../../packages/google/src/gemini_live/llm.ts" name="ContextWindowCompressionParamsOptions" />
+
+### Usage
+
+<include cwd meta='title="gemini-live.ts"'>snippets/services/s2s-gemini-live.ts#usage</include>
+
+Compression and thinking:
+
+<include cwd>snippets/services/s2s-gemini-live.ts#settings</include>
+
+Local VAD. Disable server-side VAD and configure a VAD analyzer on the user aggregator; the
+service then sends activity start and end signals to Gemini and replays a short pre-roll of
+audio (`userAudioPrerollSecs`) so the start of speech isn't clipped:
+
+<include cwd>snippets/services/s2s-gemini-live.ts#local-vad</include>
+
+### Methods
+
+| Method | Description |
+|---|---|
+| `setAudioInputPaused(paused)` | Stop (`true`) or resume (`false`) sending input audio. |
+| `setVideoInputPaused(paused)` | Stop or resume sending video frames. |
+| `setModelModalities(modalities)` | Set the response modality. |
+| `setLanguage(language)` | Set the language. |
+| `fileApi` | The `GeminiFileAPI` client, created on first access. |
+
+### Gemini File API
+
+Upload a file, then reference its `uri` in a `file_data` content part of a context message:
+
+<include cwd>snippets/services/s2s-gemini-live.ts#file-api</include>
+
+`GeminiFileAPI` has `uploadFile(filePath, displayName?)`, `getFile(name)`,
+`listFiles(pageSize?, pageToken?)` and `deleteFile(name)`. Each returns the parsed JSON response
+(or `true` for `deleteFile`) and throws when the API returns an error. To build one yourself:
+
+<auto-type-table cwd path="../../packages/google/src/gemini_live/file_api.ts" name="GeminiFileAPIOptions" />
+
+### Event handlers
+
+Inherited from `LLMService`.
+
+| Event | Description |
+|---|---|
+| `on_function_calls_started` | Function calls were received and are about to run. |
+| `on_function_calls_cancelled` | In-progress function calls were cancelled. |
+
+### Notes
+
+- Bot audio comes out as `TTSStartedFrame`, `TTSAudioRawFrame`s and `TTSStoppedFrame`, with the
+  bot's transcript as `LLMTextFrame`s and `TTSTextFrame`s. User transcripts come out as
+  `TranscriptionFrame`s, aggregated into sentences with a 0.5 second fallback timeout.
+- With server-side VAD, the service emits no `UserStartedSpeakingFrame` or
+  `UserStoppedSpeakingFrame`. Processors that depend on them (RTVI user speaking events, user
+  idle and mute handling, turn recording) do nothing unless the user aggregator has a VAD
+  analyzer. `LLMContextAggregatorPair` detects this service, so context writes are correct
+  either way.
+- Tools in the context take precedence over `tools` given at construction. Tools can't change
+  mid-session: `LLMSetToolsFrame` is dropped.
+- Functions registered with `cancelOnInterruption: false` use Gemini's `NON_BLOCKING` tool
+  behavior on models that support it (3.8 and later, and pre-3.0). On Gemini 3.x models before
+  3.8, the service logs an error and pushes an error the first time one is used.
+- Grounding metadata (for example from a Google Search tool) produces an
+  `LLMSearchResponseFrame`, as with [`GoogleLLMService`](/docs/services/llm/google#notes).
+- Video frames are throttled to one per second and sent as JPEG.
+- The service reconnects after a connection error, resuming the session with the last
+  resumption handle. After three consecutive failures it reports an error and stops.
+- An `EndFrame` waits for the bot's turn to finish, for at most 30 seconds.
+- On thinking models, a turn that Gemini reports as still in progress is held open, so a reply
+  spanning several `turn_complete` messages is one assistant turn.
+- A new system instruction or tools from the context make the service reconnect the session.
+
+## Runtime notes
+
+The client is `GoogleGenAI` from `@google/genai`, which opens the Live API over the global
+`WebSocket`. Server messages arrive through the SDK's callbacks and are fed to the service's
+receive task, so socket errors go through the same reconnect path as upstream.
+
+`GeminiFileAPI` uses the global `fetch` (injectable with `fetch`). `uploadFile()` reads the
+file with the injected `fs`, or imports `node:fs/promises` on first use, which works on Bun,
+Node and Deno but not on Cloudflare Workers.
+
+`historyConfig` is set on the connect config as upstream does, but `@google/genai` 2.27 does
+not forward it in the setup message.
+
+The deprecated upstream `InputParams` class and the `model`, `voiceId` and `params`
+constructor options are not ported; use `settings`.

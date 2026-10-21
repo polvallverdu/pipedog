@@ -1,0 +1,157 @@
+---
+title: ElevenLabs
+description: Text-to-speech with ElevenLabsTTSService (multi-context WebSocket) and ElevenLabsHttpTTSService (HTTP streaming), both with word timestamps.
+---
+
+## Overview
+
+ElevenLabs turns text into speech with its Flash, Turbo, Multilingual and v3 models. pipedog
+ports both of Pipecat's ElevenLabs text-to-speech services:
+
+- **`ElevenLabsTTSService`**: streams over ElevenLabs' multi-context WebSocket API
+  (`multi-stream-input`), with word-level timestamps and per-turn audio contexts.
+- **`ElevenLabsHttpTTSService`**: posts each request to the `stream/with-timestamps` HTTP
+  endpoint and streams the audio and alignment back.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/elevenlabs">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/elevenlabs/src">
+    `packages/elevenlabs/src/tts.ts` and `tts_base.ts`.
+  </Card>
+  <Card title="ElevenLabs docs" href="https://elevenlabs.io/docs/api-reference/text-to-speech">
+    Voices, models and voice settings.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/elevenlabs
+```
+
+```ts
+import { ElevenLabsHttpTTSService, ElevenLabsTTSService } from "@pipedog/elevenlabs/tts";
+```
+
+## Prerequisites
+
+- An ElevenLabs account and an API key from the
+  [ElevenLabs dashboard](https://elevenlabs.io/app/settings/api-keys).
+- A voice id from the ElevenLabs voice library. There is no default voice.
+- Pass the key as `apiKey`. The examples read it from `ELEVENLABS_API_KEY`.
+
+## ElevenLabsTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/elevenlabs/src/tts.ts" name="ElevenLabsTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new ElevenLabsTTSService.Settings({...})`. Any
+setting you leave out keeps the default below. `null` means the field is not sent, so ElevenLabs
+uses its own default.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"eleven_flash_v2_5"` | ElevenLabs model id. |
+| `voice` | `string \| null` | `null` | Voice id. Set one: there is no default. |
+| `language` | `Language \| null` | `null` | Synthesis language. Sent only to models that take a language code. |
+| `stability` | `number \| null` | `null` | Voice stability, 0.0 to 1.0. |
+| `similarityBoost` | `number \| null` | `null` | Similarity boost, 0.0 to 1.0. |
+| `style` | `number \| null` | `null` | Style exaggeration, 0.0 to 1.0. |
+| `useSpeakerBoost` | `boolean \| null` | `null` | Speaker boost. |
+| `speed` | `number \| null` | `null` | Speaking speed, 0.7 to 1.2. |
+| `applyTextNormalization` | `"auto" \| "on" \| "off" \| null` | `null` | Text normalization mode. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-elevenlabs.ts#usage</include>
+
+Token streaming:
+
+<include cwd>snippets/services/tts-elevenlabs.ts#token</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-elevenlabs.ts#update</include>
+
+### Event handlers
+
+Inherited from `TTSService`:
+
+| Event | Description |
+|---|---|
+| `on_connected` | Connected to ElevenLabs. |
+| `on_disconnected` | Disconnected from ElevenLabs. |
+| `on_connection_error` | The connection failed. |
+| `on_tts_request` | A text chunk is about to be sent for synthesis. |
+
+### Notes
+
+- The service does not push the LLM's text frames itself. It builds `TTSTextFrame`s from
+  ElevenLabs' word alignment, so the context only records words the user actually heard.
+- Text is aggregated into sentences by default. `autoMode` left `null` is `true` in sentence
+  mode and `false` in token mode, where ElevenLabs' chunk scheduler needs to gather enough text.
+- Changing `voice`, `model` or `language` reconnects, since they are part of the WebSocket URL.
+  Changing `stability`, `similarityBoost`, `style`, `useSpeakerBoost` or `speed` closes the
+  current audio context, so the next one opens with the new voice settings.
+- `language` is checked against the model's language list. A model that takes no language code,
+  or doesn't cover the language, gets none, and this is logged.
+- The output format is chosen from the sample rate: 8000, 16000, 22050, 24000, 32000, 44100 or
+  48000 Hz. Any other rate falls back to `pcm_24000` with a warning.
+- `pronunciationTransformIpa()` renders IPA as SSML `<phoneme>` tags. Only `eleven_flash_v2`
+  and `eleven_turbo_v2` read them, and this service also needs `enableSsmlParsing: true`.
+  Otherwise the transform is skipped.
+- Other settings changes (such as `applyTextNormalization`) are not applied mid-call and are
+  logged as unhandled, unless a URL change reconnects at the same time.
+
+## ElevenLabsHttpTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/elevenlabs/src/tts.ts" name="ElevenLabsHttpTTSServiceOptions" />
+
+### Settings
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"eleven_flash_v2_5"` | ElevenLabs model id. |
+| `voice` | `string \| null` | `null` | Voice id. Set one: there is no default. |
+| `language` | `Language \| null` | `null` | Synthesis language. |
+| `optimizeStreamingLatency` | `number \| null` | `null` | Latency optimization level, 0 to 4. |
+| `stability` | `number \| null` | `null` | Voice stability, 0.0 to 1.0. |
+| `similarityBoost` | `number \| null` | `null` | Similarity boost, 0.0 to 1.0. |
+| `style` | `number \| null` | `null` | Style exaggeration, 0.0 to 1.0. |
+| `useSpeakerBoost` | `boolean \| null` | `null` | Speaker boost. |
+| `speed` | `number \| null` | `null` | Speaking speed, 0.25 to 4.0. |
+| `applyTextNormalization` | `"auto" \| "on" \| "off" \| null` | `null` | Text normalization mode. |
+
+### Usage
+
+<include cwd meta='title="http.ts"'>snippets/services/tts-elevenlabs.ts#http</include>
+
+### Notes
+
+- Word timestamps come from the `with-timestamps` endpoint, so this service also emits
+  `TTSTextFrame`s aligned with playback.
+- Earlier text in the turn is sent as `previous_text`, for continuity between requests.
+- `enableLogging: false` turns on ElevenLabs' zero retention mode (enterprise only).
+- IPA pronunciations (`pronunciationTransformIpa()`) work with `eleven_flash_v2` and
+  `eleven_turbo_v2` only.
+
+## Runtime notes
+
+- `ElevenLabsTTSService` uses the global `WebSocket` and sends the key as an `xi-api-key` header
+  on the handshake. That works on Bun, Node and Deno, and on Cloudflare Workers, where the socket
+  is opened through `fetch`. Upstream sets a 16 MB message size limit; the standard `WebSocket`
+  has none.
+- `ElevenLabsHttpTTSService` uses `fetch`. Upstream's required `aiohttp_session` is replaced by
+  an optional `fetch` option (the global `fetch` by default).
+- Not ported: the deprecated `PronunciationDictionaryLocator`, the `InputParams` classes and the
+  `voiceId`, `model`, `params`, `pronunciationDictionaryLocators` and `aggregateSentences`
+  constructor options. Use `settings` and `textAggregationMode`.
+- `ElevenLabsDialogueTTSService` (upstream `services/elevenlabs/dialogue`, Text to Dialogue) is
+  not ported yet.

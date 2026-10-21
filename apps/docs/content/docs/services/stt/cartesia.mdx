@@ -1,0 +1,167 @@
+---
+title: Cartesia
+description: Streaming speech-to-text with CartesiaSTTService (Ink) and CartesiaTurnsSTTService (Ink-2, with server-side turn detection and eager end of turn).
+---
+
+## Overview
+
+Cartesia streams transcripts over a WebSocket. pipedog ports both of Pipecat's Cartesia
+speech-to-text services:
+
+- **`CartesiaSTTService`**: Cartesia's live STT API (`/stt/websocket`), with interim and final
+  transcripts, runtime model and language switching, and keyterms on ink-2 models.
+- **`CartesiaTurnsSTTService`**: Cartesia's turn-based Streaming ASR v2 API
+  (`/stt/turns/websocket`, Ink-2). The server decides when the user's turn starts and ends, with
+  optional eager end-of-turn predictions.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/cartesia">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/cartesia/src">
+    `packages/cartesia/src/stt.ts` and `turns/stt.ts`.
+  </Card>
+  <Card title="Cartesia docs" href="https://docs.cartesia.ai/api-reference/stt/stt">
+    STT models, keyterms and turn detection.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/cartesia
+```
+
+```ts
+import { CartesiaSTTService } from "@pipedog/cartesia/stt";
+import { CartesiaTurnsSTTService } from "@pipedog/cartesia/turns/stt";
+```
+
+## Prerequisites
+
+- A Cartesia account and an API key from the [Cartesia playground](https://play.cartesia.ai).
+- Pass the key as `apiKey`. The examples read it from `CARTESIA_API_KEY`.
+
+## CartesiaSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/cartesia/src/stt.ts" name="CartesiaSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new CartesiaSTTService.Settings({...})`. Any
+setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"ink-whisper"` | Cartesia STT model. |
+| `language` | `Language` | `Language.EN` | Transcription language. |
+| `keyterm` | `string[] \| null` | `null` | Terms to bias transcription towards. Only `ink-2` and `ink-preview` models use them. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-cartesia.ts#usage</include>
+
+Keyterms, on an ink-2 model:
+
+<include cwd>snippets/services/stt-cartesia.ts#keyterms</include>
+
+Change settings mid-call with an `STTUpdateSettingsFrame`. The service reconnects with the new
+settings:
+
+<include cwd>snippets/services/stt-cartesia.ts#update</include>
+
+### Event handlers
+
+Inherited from `STTService`:
+
+| Event | Description |
+|---|---|
+| `on_connected` | Connected to Cartesia. |
+| `on_disconnected` | Disconnected from Cartesia. |
+| `on_connection_error` | The connection failed. |
+
+### Notes
+
+- Emits `InterimTranscriptionFrame` while the user speaks and `TranscriptionFrame` for final
+  results. A `VADUserStoppedSpeakingFrame` makes it send `finalize`, which flushes a final result.
+- Cartesia closes a socket after 3 minutes without messages. The service sends silence as a
+  keepalive (after 120 s idle, checked every 30 s).
+- A settings change reconnects. While the user is speaking, the reconnect waits until they stop.
+- Keyterms set for a model other than `ink-2` or `ink-preview` are ignored with a warning.
+  Cartesia accepts at most 100 keyterms totaling 1200 characters; extra ones are dropped with a
+  warning.
+- `baseUrl` takes a bare host (`"api.cartesia.ai"`) or a URL with a scheme
+  (`"ws://localhost:8000"`).
+
+## CartesiaTurnsSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/cartesia/src/turns/stt.ts" name="CartesiaTurnsSTTServiceOptions" />
+
+### Settings
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"ink-2"` | Cartesia model. Cannot change at runtime. |
+| `language` | `Language \| null` | `null` | Not used: ink-2 is English-only. Emitted frames carry `Language.EN`. |
+| `keyterm` | `string[] \| null` | `null` | Terms to bias transcription towards. |
+| `turnStartThreshold` | `number \| null` | `null` (Cartesia: 0.8) | Likelihood above which the server emits `turn.start`. Range 0.5 to 0.9. |
+| `turnEagerEndThreshold` | `number \| null` | `null` (Cartesia: 0.6) | Likelihood below which the server emits `turn.eager_end`. Range 0.3 to 0.8. |
+| `turnEndThreshold` | `number \| null` | `null` (Cartesia: 0.3) | Likelihood below which the server emits `turn.end`. Range 0.05 to 0.5. |
+| `turnEndTimeoutMs` | `number \| null` | `null` (Cartesia: 5600) | Wait after the user stops speaking before `turn.end`. Range 640 to 11200. |
+
+Keep the thresholds in order: `turnStartThreshold` > `turnEagerEndThreshold` > `turnEndThreshold`.
+Changing `keyterm` or a `turn*` setting at runtime reconnects. A `model` or `language` update is
+reported as unhandled.
+
+### Usage
+
+<include cwd meta='title="turns.ts"'>snippets/services/stt-cartesia-turns.ts#usage</include>
+
+With eager end of turn:
+
+<include cwd>snippets/services/stt-cartesia-turns.ts#eager</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_turn_start` | The server detected the start of a turn. |
+| `on_turn_update` | A transcript update for the turn in progress. |
+| `on_turn_eager_end` | The server predicted the end of the turn. |
+| `on_turn_resume` | The user kept speaking after an eager end. |
+| `on_turn_end` | The final transcript for the turn. |
+
+`on_connected`, `on_disconnected` and `on_connection_error` are inherited from `STTService`.
+
+### Notes
+
+- The server drives turns: `turn.start` broadcasts a `ProposedUserStartedSpeakingFrame`,
+  `turn.update` pushes an `InterimTranscriptionFrame`, and `turn.end` pushes a
+  `TranscriptionFrame` and broadcasts a `ProposedUserStoppedSpeakingFrame`. Transcripts are
+  cumulative per turn. There is no `finalize` command.
+- The service recommends `ExternalUserTurnStrategies` to the user aggregator, or
+  `EagerUserTurnStrategies` with `enableEagerEndOfTurn`, so no local VAD or smart-turn model is
+  needed. Passing your own `userTurnStrategies` overrides this. See
+  [Turn detection](/docs/concepts/turn-detection).
+- With `enableEagerEndOfTurn: true`, `turn.eager_end` pushes an `EagerTranscriptionFrame` that
+  starts a response early. `turn.resume` pushes an `EagerEndOfTurnCancelFrame`. The early
+  response is dropped if the user resumes or the final transcript differs. It is off by default
+  because every prediction costs an inference.
+- `shouldInterrupt` (default `true`) decides whether the start of a turn interrupts the bot.
+- If audio stops after a `turn.start`, a watchdog sends silence so the turn does not hang. The
+  idle threshold is `max(chunkDuration * 2, watchdogMinTimeout)`, with `watchdogMinTimeout`
+  defaulting to 0.5 s.
+- The service waits up to 10 s for Cartesia's `connected` message after the handshake.
+
+## Runtime notes
+
+Both services use the global `WebSocket` and send the key as an `X-API-Key` header on the
+handshake. The Bun, Node and Deno `WebSocket` support handshake headers, and on Cloudflare
+Workers the socket is opened through `fetch` with an `Upgrade` header. A standard `WebSocket`
+does not expose the handshake response, so the `X-Request-ID` header that upstream logs on
+connect is always logged as `None`. The deprecated `CartesiaLiveOptions` class and the
+`liveOptions` constructor option are not ported; use `settings`.

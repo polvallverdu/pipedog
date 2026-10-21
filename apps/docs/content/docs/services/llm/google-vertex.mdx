@@ -1,0 +1,108 @@
+---
+title: Google Vertex AI
+description: Gemini models on Vertex AI with GoogleVertexLLMService, authenticated with a service account or Application Default Credentials.
+---
+
+## Overview
+
+`GoogleVertexLLMService` runs Gemini models through Vertex AI instead of the Gemini API. It
+extends [`GoogleLLMService`](/docs/services/llm/google), so streaming, tools, thinking, safety
+settings and grounding work the same way. Only authentication and the endpoint differ.
+
+- **`GoogleVertexLLMService`**: Gemini on Vertex AI, with a Google Cloud project, a location and
+  service account credentials or Application Default Credentials (ADC).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/llm/google-vertex">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/google/src/vertex">
+    `packages/google/src/vertex/llm.ts`.
+  </Card>
+  <Card title="Vertex AI docs" href="https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/inference">
+    The Vertex AI generative inference API.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/google
+```
+
+```ts
+import { GoogleVertexLLMService } from "@pipedog/google/vertex/llm";
+```
+
+## Prerequisites
+
+- A Google Cloud project with the Vertex AI API enabled.
+- A service account with access to Vertex AI, as a key file or a JSON string, or ADC
+  (`gcloud auth application-default login`, or the attached service account on GCP).
+- The examples read `GOOGLE_CLOUD_PROJECT_ID`, and `GOOGLE_APPLICATION_CREDENTIALS` (a key file
+  path) or `GOOGLE_CREDENTIALS_JSON` (the key itself).
+
+## GoogleVertexLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/vertex/llm.ts" name="GoogleVertexLLMServiceOptions" />
+
+### Settings
+
+`GoogleVertexLLMService.Settings` has the same fields and defaults as
+[`GoogleLLMService.Settings`](/docs/services/llm/google#settings): the default model is
+`"gemini-3.6-flash"`, `maxTokens` is `4096`, and the other settings start as `null`.
+
+### Usage
+
+<include cwd meta='title="vertex.ts"'>snippets/services/llm-google-vertex.ts#usage</include>
+
+With the service account key as a JSON string:
+
+<include cwd>snippets/services/llm-google-vertex.ts#credentials</include>
+
+With Application Default Credentials and a regional endpoint:
+
+<include cwd>snippets/services/llm-google-vertex.ts#adc</include>
+
+### Authentication
+
+The service picks credentials in this order:
+
+1. `credentials`: a service account key as a JSON string. It is parsed in the constructor.
+2. `credentialsPath`: the path to a key file, read by the client.
+3. Neither: Application Default Credentials.
+
+All three go to `@google/genai` as `googleAuthOptions` with the `cloud-platform` scope, and
+google-auth-library inside the SDK loads the key file, finds ADC and refreshes the access token
+as it expires.
+
+<Callout type="info">
+Upstream loads the credentials and refreshes a token in the constructor, so missing ADC fails
+there with "No valid credentials provided.". Here loading a file, finding ADC and refreshing a
+token are asynchronous, so they happen on the first request, and missing credentials surface
+as an error from that request.
+</Callout>
+
+### Event handlers
+
+The same as [`GoogleLLMService`](/docs/services/llm/google#event-handlers).
+
+### Notes
+
+- Passing `apiKey` throws: Vertex AI takes `credentials`, `credentialsPath` or ADC.
+- `projectId` is required. `location` defaults to `"global"`, the only location that serves
+  the Gemini 3 series. Regional endpoints (`"us-east4"`, `"us-central1"`, ...) serve the
+  Gemini 2.5 series.
+- The Vertex adapter also accepts `gs://` file URLs in the context: Vertex reads them through
+  its own IAM.
+
+## Runtime notes
+
+Authentication goes through google-auth-library, which only the Node build of `@google/genai`
+supports. `GoogleVertexLLMService` runs on Bun, Node and Deno, not on Cloudflare Workers. On
+Workers, use [`GoogleLLMService`](/docs/services/llm/google) with a Gemini API key.
+
+The deprecated upstream `model`, `params` and `systemInstruction` constructor options are not
+ported; use `settings`.

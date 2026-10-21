@@ -1,0 +1,146 @@
+---
+title: ElevenLabs
+description: Speech-to-text with ElevenLabsSTTService (segmented uploads) and ElevenLabsRealtimeSTTService (WebSocket streaming).
+---
+
+## Overview
+
+ElevenLabs Scribe transcribes speech. pipedog ports both of Pipecat's ElevenLabs speech-to-text
+services:
+
+- **`ElevenLabsSTTService`**: uploads each speech segment, cut by the pipeline's VAD, to
+  ElevenLabs' `/v1/speech-to-text` endpoint and pushes the transcript it gets back.
+- **`ElevenLabsRealtimeSTTService`**: streams audio over ElevenLabs' realtime WebSocket API, with
+  partial and committed transcripts. Segments are committed by the pipeline's VAD or by
+  ElevenLabs' own.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/elevenlabs">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/elevenlabs/src">
+    `packages/elevenlabs/src/stt.ts`.
+  </Card>
+  <Card title="ElevenLabs docs" href="https://elevenlabs.io/docs/capabilities/speech-to-text">
+    Scribe models, languages and the realtime API.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/elevenlabs
+```
+
+```ts
+import {
+  CommitStrategy,
+  ElevenLabsRealtimeSTTService,
+  ElevenLabsSTTService,
+} from "@pipedog/elevenlabs/stt";
+```
+
+## Prerequisites
+
+- An ElevenLabs account and an API key from the
+  [ElevenLabs dashboard](https://elevenlabs.io/app/settings/api-keys).
+- Pass the key as `apiKey`. The examples read it from `ELEVENLABS_API_KEY`.
+
+## ElevenLabsSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/elevenlabs/src/stt.ts" name="ElevenLabsSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new ElevenLabsSTTService.Settings({...})`. Any
+setting you leave out keeps the default below. `null` means the field is not sent, so ElevenLabs
+uses its own default.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"scribe_v2"` | Scribe model. |
+| `language` | `Language \| null` | `Language.EN` | Transcription language. `null` lets ElevenLabs detect it. |
+| `tagAudioEvents` | `boolean \| null` | `null` | Include audio events such as (laughter) in the transcript. |
+| `keyterms` | `string[] \| null` | `null` | Terms to bias transcription towards. |
+| `noVerbatim` | `boolean \| null` | `null` | Drop filler words, false starts and non-speech sounds. `scribe_v2` only. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-elevenlabs.ts#usage</include>
+
+### Notes
+
+- A segmented service: it needs VAD in the pipeline (on the user aggregator). Audio between
+  the VAD's start and stop is sent as one WAV upload, padded with a little trailing silence.
+- Transcription runs in the background, so audio keeps flowing while a segment is transcribed.
+- Emits one `TranscriptionFrame` per segment, with the language code ElevenLabs returns.
+  There are no interim results.
+
+## ElevenLabsRealtimeSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/elevenlabs/src/stt.ts" name="ElevenLabsRealtimeSTTServiceOptions" />
+
+### Settings
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"scribe_v2_realtime"` | Scribe realtime model. |
+| `language` | `Language \| null` | `null` (auto-detect) | Transcription language. |
+| `keyterms` | `string[] \| null` | `null` | Terms to bias transcription towards. |
+| `noVerbatim` | `boolean \| null` | `null` | Drop filler words, false starts and non-speech sounds. |
+| `vadSilenceThresholdSecs` | `number \| null` | `null` | Silence before ElevenLabs' VAD commits, 0.3 to 3.0 s. `CommitStrategy.VAD` only. |
+| `vadThreshold` | `number \| null` | `null` | VAD sensitivity, 0.1 to 0.9 (lower is more sensitive). `CommitStrategy.VAD` only. |
+| `minSpeechDurationMs` | `number \| null` | `null` | Minimum speech duration, 50 to 2000 ms. `CommitStrategy.VAD` only. |
+| `minSilenceDurationMs` | `number \| null` | `null` | Minimum silence duration, 50 to 2000 ms. `CommitStrategy.VAD` only. |
+| `filterBackgroundAudio` | `boolean \| null` | `null` | Filter background audio before transcription. |
+
+### Usage
+
+<include cwd meta='title="realtime.ts"'>snippets/services/stt-elevenlabs.ts#realtime</include>
+
+With ElevenLabs' VAD committing segments:
+
+<include cwd>snippets/services/stt-elevenlabs.ts#realtime-vad</include>
+
+Change settings mid-call with an `STTUpdateSettingsFrame`. The service reconnects with the new
+settings:
+
+<include cwd>snippets/services/stt-elevenlabs.ts#update</include>
+
+### Event handlers
+
+Inherited from `STTService`:
+
+| Event | Description |
+|---|---|
+| `on_connected` | Connected to ElevenLabs. |
+| `on_disconnected` | Disconnected from ElevenLabs. |
+| `on_connection_error` | The connection failed. |
+
+### Notes
+
+- Emits `InterimTranscriptionFrame` for partial transcripts and `TranscriptionFrame` for
+  committed ones.
+- With `CommitStrategy.MANUAL` (the default), a `VADUserStoppedSpeakingFrame` makes the service
+  send a commit, so the pipeline's VAD decides where segments end. With `CommitStrategy.VAD`,
+  ElevenLabs decides, using the `vad*` and `min*DurationMs` settings.
+- The audio format is chosen from the sample rate: 8000, 16000, 22050, 24000, 44100 or 48000 Hz.
+  Any other rate falls back to `pcm_16000` with a warning.
+- The service sends silence as a keepalive after 10 s without audio (checked every 5 s).
+- Error messages from ElevenLabs (authentication, quota, rate limit, throttled commits, session
+  time limit and others) are pushed as errors.
+- `baseUrl` is a bare host and defaults to `"api.elevenlabs.io"`.
+
+## Runtime notes
+
+- `ElevenLabsSTTService` uploads with `fetch` and `FormData`. Upstream's required
+  `aiohttp_session` is replaced by an optional `fetch` option (the global `fetch` by default).
+- `ElevenLabsRealtimeSTTService` uses the global `WebSocket` and sends the key as an
+  `xi-api-key` header on the handshake. That works on Bun, Node and Deno, and on Cloudflare
+  Workers, where the socket is opened through `fetch`.
+- Not ported: the deprecated `InputParams` classes and the `model` / `params` constructor
+  options. Use `settings`.

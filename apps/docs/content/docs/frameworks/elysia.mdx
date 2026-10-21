@@ -1,0 +1,48 @@
+---
+title: Elysia
+description: Mount the pipedog WebRTC offer endpoint in an Elysia app on Bun.
+---
+
+Elysia runs on Bun. The offer is a route that passes Elysia's web `Request` to `offer`. This snippet
+mounts only the offer.
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn elysia
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+
+## Files
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`voice.ts` re-exports it:
+
+<include cwd meta='title="voice.ts"'>../../examples/framework-snippets/elysia/voice.ts</include>
+
+<include cwd meta='title="server.ts"'>../../examples/framework-snippets/elysia/server.ts</include>
+
+## Run it
+
+```bash
+OPENAI_API_KEY=sk-... bun server.ts
+```
+
+It listens on port 3000, at `POST /api/offer`.
+
+## Deploy
+
+Run it as a long-lived Bun process on a host that allows UDP traffic, for the offer's media.
+
+## WebSocket
+
+Elysia has its own WebSocket route API (`.ws()`), which this snippet doesn't use. To serve WebSocket
+sessions, wire `.ws()` to a `WebsocketConnection` the way the [Bun](/docs/frameworks/bun) snippet
+does, or run the Bun snippet next to this app.
+
+## Authentication
+
+The route has no auth. Wrap `offer` with a session check before it runs, or use an Elysia
+`beforeHandle` hook, as in [Authentication](/docs/frameworks#authentication).

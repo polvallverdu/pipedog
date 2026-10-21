@@ -1,0 +1,144 @@
+---
+title: Deepgram
+description: Streaming speech-to-text with DeepgramSTTService (Nova) and DeepgramFluxSTTService (Flux, with model-side turn detection).
+---
+
+## Overview
+
+Deepgram streams transcripts over a WebSocket. pipedog ports both of Pipecat's Deepgram
+speech-to-text services:
+
+- **`DeepgramSTTService`**: Deepgram's `/v1/listen` API (Nova models), with interim results,
+  smart formatting, keyterms and the other Deepgram query options.
+- **`DeepgramFluxSTTService`**: Deepgram Flux (`/v2/listen`), which also detects the end of the
+  user's turn, with optional eager end-of-turn events.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/deepgram">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/deepgram/src">
+    `packages/deepgram/src/stt.ts` and `flux/stt.ts`.
+  </Card>
+  <Card title="Deepgram docs" href="https://developers.deepgram.com/docs">
+    Models, languages and query parameters.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/deepgram
+```
+
+```ts
+import { DeepgramSTTService } from "@pipedog/deepgram/stt";
+import { DeepgramFluxSTTService } from "@pipedog/deepgram/flux/stt";
+```
+
+## Prerequisites
+
+- A Deepgram account and an API key from the [Deepgram console](https://console.deepgram.com).
+- Pass the key as `apiKey`. The examples read it from `DEEPGRAM_API_KEY`.
+
+## DeepgramSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/deepgram/src/stt.ts" name="DeepgramSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new DeepgramSTTService.Settings({...})`. Any
+setting you leave out keeps the default below. Other Deepgram query parameters can go in `extra`.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"nova-3-general"` | Deepgram model. |
+| `language` | `Language` | `Language.EN` | Transcription language. |
+| `interimResults` | `boolean` | `true` | Emit `InterimTranscriptionFrame`s. |
+| `punctuate` | `boolean` | `true` | Add punctuation. |
+| `smartFormat` | `boolean` | `false` | Smart formatting. |
+| `endpointing` | `number \| false \| null` | `null` | Endpointing sensitivity in ms, or `false` to disable. |
+| `utteranceEndMs` | `number \| null` | `null` | Silence in ms before an utterance-end event. |
+| `keyterm` | `string \| string[] \| null` | `null` | Keyterms to boost. |
+| `keywords` | `string \| string[] \| null` | `null` | Keywords to boost. |
+| `diarize` | `boolean` | `false` | Speaker diarization. |
+| `detectEntities` | `boolean` | `false` | Named entity detection. |
+| `dictation` | `boolean` | `false` | Dictation mode. |
+| `numerals` | `boolean` | `false` | Spoken numbers as numerals. |
+| `profanityFilter` | `boolean \| null` | `null` | Filter profanity. |
+| `redact` | `string \| string[] \| null` | `null` | Redaction types. |
+| `replace` | `string \| string[] \| null` | `null` | Word replacement rules. |
+| `search` | `string \| string[] \| null` | `null` | Search terms to highlight. |
+| `version` | `string \| null` | `null` | Model version; `null` leaves Deepgram on `"latest"`. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-deepgram.ts#usage</include>
+
+Change settings mid-call with an `STTUpdateSettingsFrame`. The service reconnects with the new
+settings:
+
+<include cwd>snippets/services/stt-deepgram.ts#update</include>
+
+### Notes
+
+- Emits `InterimTranscriptionFrame` while the user speaks and `TranscriptionFrame` for final
+  results. A `VADUserStoppedSpeakingFrame` from the user aggregator's VAD makes it finalize early.
+- `sampleRate` defaults to the pipeline's input rate.
+- If the connection keeps failing quickly (an invalid key, say), the service stops retrying and
+  pushes an error.
+
+## DeepgramFluxSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/deepgram/src/flux/stt.ts" name="DeepgramFluxSTTServiceOptions" />
+
+### Settings
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"flux-general-en"` | Flux model; `"flux-general-multi"` for multilingual. |
+| `eagerEotThreshold` | `number \| null` | `null` (off) | Threshold for eager end-of-turn and turn-resumed events. |
+| `eotThreshold` | `number \| null` | `null` (Deepgram: 0.7) | End-of-turn confidence to finish a turn. |
+| `eotTimeoutMs` | `number \| null` | `null` (Deepgram: 5000) | Finish a turn this long after speech, regardless of confidence. |
+| `keyterm` | `string[]` | `[]` | Keyterms to boost. |
+| `minConfidence` | `number \| null` | `null` | Minimum confidence to emit a `TranscriptionFrame`. |
+| `numerals` | `boolean \| null` | `null` | Spoken numbers as numerals. |
+| `profanityFilter` | `boolean \| null` | `null` | Mask profanity. |
+| `redact` | `string \| null` | `null` | `"numbers"` or `"aggressive_numbers"`. Changing it reconnects. |
+| `languageHints` | `Language[] \| null` | `null` | Bias detection (`flux-general-multi` only). |
+
+### Usage
+
+<include cwd meta='title="flux.ts"'>snippets/services/stt-deepgram-flux.ts#usage</include>
+
+Multilingual, with language hints:
+
+<include cwd>snippets/services/stt-deepgram-flux.ts#multilingual</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_start_of_turn` | Deepgram detected the start of speech. |
+| `on_end_of_turn` | Deepgram detected the end of the turn. |
+| `on_eager_end_of_turn` | Deepgram predicted the end of the turn (with `eagerEotThreshold`). |
+| `on_turn_resumed` | The user kept speaking after an eager end of turn. |
+| `on_update` | A transcript update for the turn in progress. |
+
+### Notes
+
+- Emits an `InterimTranscriptionFrame` on every Flux update and a `TranscriptionFrame` at the end
+  of the turn.
+- Flux needs `linear16` audio, which is what pipedog transports produce.
+
+## Runtime notes
+
+Both services use the global `WebSocket` and send the key as an `Authorization` header on the
+handshake. That works on Bun, Node, Deno and Cloudflare Workers (where the socket is opened
+through `fetch`). Pass `webSocketFactory` to open the socket some other way, through a proxy for
+example. A standard `WebSocket` doesn't expose the HTTP status of a refused handshake, so
+`DeepgramApiError` is only raised when the runtime's error carries one.

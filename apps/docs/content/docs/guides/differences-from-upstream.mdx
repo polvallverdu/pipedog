@@ -1,0 +1,194 @@
+---
+title: Differences from upstream
+description: Where pipedog behaves differently from Pipecat (Python), and why.
+---
+
+pipedog aims for 1:1 behavior with Pipecat: the same frames in the same order, the same lifecycle
+and the same wire formats. Where JavaScript or the runtimes force a difference, the code marks it
+with a `DIVERGENCE` comment. This page collects them.
+
+It covers behavior. For how names and APIs map (camelCase, options objects, enums and so on), see
+[Coming from Pipecat](/docs/guides/coming-from-pipecat).
+
+## Across the codebase
+
+These differences apply everywhere, not to one module. They come from the porting rules in
+`docs/CONVENTIONS.md` and the "Porting notes" at the top of the provider source files.
+
+| Area | Upstream | pipedog | Why |
+|---|---|---|---|
+| Threads | `ThreadPoolExecutor` and `run_in_executor` run blocking work in a thread. | The work runs inline (async) or in an injected runner. | There are no threads on Cloudflare Workers. Keep per-call CPU low there. |
+| asyncio | Python's `asyncio`. | `@pipedog/asyncio` keeps asyncio's semantics, scheduling included. | So ported code interleaves exactly as upstream. See [Interruptions & cancellation](/docs/concepts/interruptions-and-cancellation). |
+| Context variables | `contextvars` carry state into tasks. | Core has none (no `node:async_hooks` outside `@pipedog/asyncio`). State is recorded per task instead. | Core stays runtime-agnostic. One visible effect is listed under [LLM tools](#llm-tools-and-direct-functions). |
+| HTTP clients | `aiohttp` sessions and `httpx` clients. | The global `fetch`, or a `fetch` option. | `fetch` exists on every runtime. |
+| Provider SDKs | The provider's Python SDK. | The provider's JS SDK when it works over `fetch` or `WebSocket` (for example `openai`, `@google/genai`, `@langchain/core`). Otherwise a small client over `fetch` or the global `WebSocket`. Node SDKs only where the provider offers nothing but gRPC streaming. | So each service runs on as many runtimes as the provider allows. |
+| Bytes | `bytes`. | `Uint8Array`, never `Buffer`. | `Buffer` is a Node API. Core imports no `node:*` modules except `node:async_hooks`. |
+| Filesystem | `aiofiles`, `pathlib`. | An injected reader or `fs` object (`node:fs/promises` satisfies it). | Core never imports `node:fs`. |
+| WebSocket handshake | The `websockets` package exposes the handshake response. | A standard `WebSocket` does not, so response headers and the HTTP status of a refused handshake are not available. | The standard API has no access to them. Affected services are listed below. |
+| Deprecated APIs | Kept until removal, with warnings. | Not ported: deprecated classes, aliases, parameters and fields are left out. | pipedog starts without the deprecated surface. Each module's dropped items are in its `notes` in `porting/manifest.json`. |
+| Pillow | Decodes and encodes images. | Built-in or injectable decoders and encoders (for example `utils/jpeg_encoder.ts`, an `imageDecoder` option). | No native dependencies. |
+| `GRPC_ENABLE_FORK_SUPPORT` | Set to false at import by the Google services. | Not set. | There is no fork in JS. |
+
+## Core
+
+### Utils
+
+- **`NOT_GIVEN` is truthy.** Upstream's sentinel is falsy, so `value or default` treats a missing
+  value as absent. JavaScript objects are always truthy, so use `isGiven(value) ? value : fallback`.
+  `packages/core/src/utils/types.ts`
+- **Timeout exceptions.** Upstream lists httpx `TimeoutException`. Here `TIMEOUT_EXCEPTIONS` holds
+  the asyncio `TimeoutError`, and `isTimeoutException` also recognizes the `DOMException` named
+  "TimeoutError" that a `fetch` aborted by `AbortSignal.timeout()` rejects with.
+  `packages/core/src/utils/http.ts`
+- **Connection limits.** Upstream's `connection_limits` returns an httpx `Limits` instance.
+  `fetch` has no such object, so `connectionLimits` returns the plain options for an SDK or agent
+  that reads them field by field. `packages/core/src/utils/http.ts`
+- **Markdown filter.** Upstream converts Markdown to HTML with the Python-Markdown package. Core
+  takes no runtime dependencies, so it uses a small built-in converter that follows
+  Python-Markdown's rules for common constructs. Exotic Markdown (reference links, nested lists)
+  may convert differently. `packages/core/src/utils/text/markdown_text_filter.ts`
+
+### Logging
+
+- **Secrets are masked in warnings and errors.** Upstream masks credentials only in `ErrorFrame`.
+  pipedog masks the message and attached error of every `WARNING` or higher log record, for every
+  sink, because these often quote what failed, such as a URL with `?key=...`.
+  `packages/core/src/utils/logger.ts`
+
+### Workers and runner
+
+- **Signal handlers.** SIGINT and SIGTERM handlers are installed through the host's `process.on`
+  when there is one (Bun, Node, Deno). On runtimes without process signals (Workers) they are a
+  no-op. `packages/core/src/workers/runner.ts`
+- **Garbage collection.** JS has no `gc.collect()` count or `gc.garbage`. The runner calls the
+  global `gc()` when the runtime exposes one (for example Node or Deno with `--expose-gc`), and
+  skips it otherwise. `packages/core/src/workers/runner.ts`
+- **Backend capabilities.** Upstream overrides `PipelineWorker.capabilities` with a plain dict.
+  TypeScript does not allow an override of a different type, so the backend's capabilities are
+  `backendCapabilities`, and `PipelineWorker.capabilities` keeps its meaning.
+  `packages/core/src/workers/llm/backend_llm_worker.ts`
+
+### LLM tools and direct functions
+
+- **Direct function schemas.** JavaScript has no runtime type hints or docstrings. Parameter names,
+  and which ones are required (no default value), are read from the function's source. The
+  description and parameter types come from optional `DirectFunctionMetadata` attached to the
+  function. Parameters without metadata get an any-type schema. Minified functions lose their
+  parameter names, so direct functions must ship unminified.
+  `packages/core/src/adapters/schemas/direct_function.ts`
+- **Collected tools are unbound.** `_collectTools` returns the methods found on the prototype
+  chain, not bound methods, because a bound function does not expose the source its schema is
+  read from. `LLMWorker` binds each one when it registers it.
+  `packages/core/src/workers/llm/tool_decorator.ts`
+- **Tool-call state does not reach spawned tasks.** Upstream's `_IN_TOOL_CALL` is a context
+  variable. Here the worker running a tool is recorded per task, so a task the tool handler spawns
+  (with `gather` or `createTask`) does not inherit it, and frames queued from such a task are not
+  held. `packages/core/src/workers/llm/llm_worker.ts`
+
+### Turn analyzers and VAD
+
+- **Smart Turn loads lazily.** Upstream loads the model when the analyzer is created. pipedog
+  loads it on the first prediction, so an unused analyzer loads nothing. Without the inference
+  runtime package (or where it can't load), turns end on the VAD's silence instead of failing. A
+  factory passed in explicitly still fails loudly.
+  `packages/core/src/audio/turn/smart_turn/local_smart_turn_v3.ts`
+  See [Turn detection](/docs/concepts/turn-detection).
+- **Silero sessions are shared.** Upstream loads one session per model. pipedog shares sessions by
+  default, since a bot builds one VAD per call. Pass `shareSession: false` for a session of its
+  own. `packages/audio-silero/src/silero.ts`
+
+## Providers
+
+### Anthropic
+
+- **Explicit `null` sampling values are omitted.** The Python SDK's `NOT_GIVEN` has no JS
+  counterpart, so `temperature`, `topK`, `topP` and `thinking` store `null` for "not sent". An
+  explicit `null` is left out of the request, where upstream would send JSON `null`.
+  `packages/anthropic/src/llm.ts`
+
+### Cartesia
+
+- **`fetch` replaces `aiohttp_session`.** `CartesiaHttpTTSService` posts with the global `fetch`,
+  or the `fetch` option. `packages/cartesia/src/tts.ts`
+- **No handshake headers.** The standard `WebSocket` does not expose the handshake response, so
+  the `X-Request-ID` header upstream logs on connect is always reported as `None`.
+  `packages/cartesia/src/stt.ts`
+
+### Deepgram
+
+- **`fetch` replaces `aiohttp_session`.** `DeepgramHttpTTSService` takes an optional `fetch`
+  where upstream requires a shared `aiohttp_session`. `packages/deepgram/src/tts.ts`
+- **No Python SDK.** STT uses a minimal `DeepgramClient` that speaks the same `/v1/listen`
+  WebSocket protocol. `DeepgramApiError` is raised only when the runtime's error carries the
+  handshake status; otherwise a refused handshake is retried until the quick-failure tracker gives
+  up. `packages/deepgram/src/stt.ts`
+- **No `dg-*` headers.** The TTS service cannot log the `dg-*` response headers upstream logs on
+  connect. Query values use JS number formatting, so `speed=1.0` is written `speed=1`.
+  `packages/deepgram/src/tts.ts`
+
+### ElevenLabs
+
+- **`fetch` replaces `aiohttp_session`.** `ElevenLabsHttpTTSService` and `ElevenLabsSTTService`
+  take an optional `fetch` where upstream requires an `aiohttp_session`.
+  `packages/elevenlabs/src/tts.ts`, `packages/elevenlabs/src/stt.ts`
+- **No message size setting.** Upstream sets a 16 MB max WebSocket message size for large audio
+  responses. The standard `WebSocket` has no message size limit to set.
+  `packages/elevenlabs/src/tts_base.ts`
+
+### Google
+
+- **Credentials resolve later.** Upstream resolves credentials (and, for STT, the project ID) in
+  the constructor. Reading a key file, finding Application Default Credentials and refreshing a
+  token are asynchronous in JS, so they happen on first connect or first request. A missing
+  credential surfaces then (as "No valid credentials provided.", or for Cloud TTS as a synthesis
+  error). Inline `credentials` are still checked in the constructor. `packages/google/src/stt.ts`, `packages/google/src/vertex/llm.ts`,
+  `packages/google/src/gemini_live/vertex/llm.ts`, `packages/google/src/tts.ts`
+- **`clientOptions` (pipedog-only).** The Cloud STT and TTS services accept extra client options,
+  merged over the ones derived from `location` and the credentials. Upstream builds its client
+  from those alone. `packages/google/src/stt.ts`, `packages/google/src/tts.ts`
+- **gRPC services need Node or Bun.** Cloud Speech streaming and Cloud TTS go through the Node
+  SDKs (`@google-cloud/speech`, `@google-cloud/text-to-speech`), loaded lazily. Vertex services
+  authenticate through google-auth-library and run on Bun, Node and Deno, not Workers. See
+  [Runtimes](/docs/guides/runtimes).
+- **Image decoding is injectable.** Upstream decodes inline images with Pillow. Here that is the
+  `imageDecoder` option; the default throws "not ported yet", so without one an image response
+  surfaces as an error. `packages/google/src/llm.ts`, `packages/google/src/image.ts`
+
+### LangChain
+
+- **List content is JSON.** When a chunk's `content` is a list, upstream stringifies it with
+  Python's `str()`. pipedog uses JSON. `packages/langchain/src/langchain.ts`
+
+### OpenAI
+
+- **`fetch` replaces `aiohttp_session`.** `OpenAIImageGenService` downloads hosted results with
+  the global `fetch`, or the `fetch` option. `packages/openai/src/image.ts`
+- **`decodeImage` (pipedog-only).** Upstream decodes with Pillow. PNGs are decoded with `fast-png`
+  by default, and `decodeImage` can decode other formats. `packages/openai/src/image.ts`
+- **`httpClient` is a `fetch`.** Upstream takes an httpx client. Here `httpClient` is the SDK's
+  `fetch` option, so httpx connection limits do not carry over.
+  `packages/openai/src/tts.ts`, `packages/whisper/src/base_stt.ts`
+- **Tool message content is JSON.** In the Responses adapter, non-string tool content is written
+  as JSON for objects, where upstream uses Python's `str()` (a Python repr).
+  `packages/openai/src/open_ai_responses_adapter.ts`
+
+## Transports
+
+- **SmallWebRTC completes pending writes on stop.** Upstream leaves queued writes pending when a
+  track stops, so a write in progress when the peer connection is replaced (`restart_pc`) waits
+  for the output transport's write timeout and the pipeline fails. pipedog completes them.
+  `packages/transport-smallwebrtc/src/transport.ts`
+- **SmallWebRTC uses werift.** Upstream is written against aiortc. pipedog wraps werift, a pure
+  TypeScript WebRTC stack, in the subset of aiortc's API upstream uses.
+  `packages/transport-smallwebrtc/src/rtc.ts`
+- **WebSocket transports bring their own socket.** Upstream sits on the `websockets` package and
+  Starlette's `WebSocket`. pipedog's transports sit on a runtime-agnostic `WebsocketConnection`.
+  The FastAPI transport takes any socket your server accepted, on any runtime. Workers can't
+  listen on a port, so use `FastAPIWebsocketTransport` with a `WebSocketPair` there.
+  `packages/transport-websocket/src/socket.ts`, `packages/transport-websocket/src/fastapi.ts`
+
+## Reporting a difference
+
+If pipedog behaves differently from Pipecat and this page doesn't list it, please
+[open an issue](https://github.com/polvallverdu/pipedog/issues) with the upstream behavior, what
+pipedog does, and a small reproduction. See [Contributing](/docs/contributing) to send a fix.

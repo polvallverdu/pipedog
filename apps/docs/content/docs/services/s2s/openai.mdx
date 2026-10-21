@@ -1,0 +1,116 @@
+---
+title: OpenAI Realtime
+description: Speech-to-speech with OpenAIRealtimeLLMService, over OpenAI's Realtime API WebSocket.
+---
+
+## Overview
+
+- **`OpenAIRealtimeLLMService`**: one WebSocket session with OpenAI's Realtime API, which hears
+  the user's audio and answers with audio. It replaces the STT, LLM and TTS services in a
+  pipeline. It supports function calling, transcripts of both sides, video input and the
+  reasoning-capable Realtime models.
+
+For OpenAI's full-duplex live model, see [OpenAI Live](/docs/services/s2s/openai-live).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/s2s/openai">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/openai/src/realtime">
+    `packages/openai/src/realtime/llm.ts` and `events.ts`.
+  </Card>
+  <Card title="OpenAI docs" href="https://platform.openai.com/docs/guides/realtime-websocket">
+    The Realtime API over WebSocket.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/openai
+```
+
+```ts
+import { OpenAIRealtimeLLMService } from "@pipedog/openai/realtime/llm";
+import { SessionProperties } from "@pipedog/openai/realtime/events";
+```
+
+`@pipedog/openai/realtime/events` holds the session classes (`SessionProperties`,
+`AudioConfiguration`, `AudioInput`, `AudioOutput`, `InputAudioTranscription`, `TurnDetection`,
+`SemanticTurnDetection`, `Reasoning`, ...) and the client and server event models.
+
+## Prerequisites
+
+- An OpenAI account and an API key from the [OpenAI dashboard](https://platform.openai.com/api-keys).
+- Pass the key as `apiKey` (required). The examples read it from `OPENAI_API_KEY`.
+
+## OpenAIRealtimeLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/openai/src/realtime/llm.ts" name="OpenAIRealtimeLLMServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new OpenAIRealtimeLLMService.Settings({...})`
+(`OpenAIRealtimeLLMSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gpt-realtime-2.1"` | Realtime model. Fixed for the session: it goes in the connection URL. |
+| `systemInstruction` | `string \| null` | `null` | Instructions. Kept in sync with `sessionProperties.instructions`. |
+| `sessionProperties` | `SessionProperties` | `new SessionProperties({})` | Session config: output modalities, audio input and output, tools, tool choice, max output tokens, reasoning, and so on. |
+| `temperature`, `maxTokens`, `topP`, `topK`, `frequencyPenalty`, `presencePenalty`, `seed` | `number \| null` | `null` | Not used by the Realtime API. |
+| `filterIncompleteUserTurns` | `boolean` | `false` | Filter incomplete user turns. |
+| `userTurnCompletionConfig` | `UserTurnCompletionConfig \| null` | `null` | Turn completion config used with `filterIncompleteUserTurns`. |
+
+A `sessionProperties` in an update replaces the stored one as a whole. Top-level `model` and
+`systemInstruction` win over the same fields inside it.
+
+### Usage
+
+<include cwd meta='title="realtime.ts"'>snippets/services/s2s-openai.ts#usage</include>
+
+Change the instructions mid-call with an `LLMUpdateSettingsFrame`. A change to
+`systemInstruction` or `sessionProperties` is sent as a `session.update`; other fields are
+ignored with a warning:
+
+<include cwd>snippets/services/s2s-openai.ts#update</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_conversation_item_created` | A conversation item was added. Called with the item id and the item. |
+| `on_conversation_item_updated` | A conversation item changed (a transcript arrived, for example). Called with the item id and the item, or `null`. |
+
+### Notes
+
+- Consumes `InputAudioRawFrame` (resampled to 24 kHz), `InputImageRawFrame` (at most one per
+  second, at the `videoFrameDetail` level), `LLMContextFrame`, `LLMMessagesAppendFrame` and
+  `LLMSetToolsFrame`. Emits `TTSAudioRawFrame`, `TTSTextFrame` and `LLMTextFrame` for the bot,
+  and `InterimTranscriptionFrame` / `TranscriptionFrame` for the user.
+- With OpenAI's server-side turn detection (the session default), the service broadcasts
+  proposed user turn frames from the server's speech events and asks the user aggregator for
+  `ExternalUserTurnStrategies`, so no local VAD is needed. `LLMContextAggregatorPair` detects
+  that this is a realtime service.
+- For locally driven turns, set `turnDetection: false` in `AudioInput` and add a VAD to the user
+  aggregator. After an interruption the input buffer is cleared and the last
+  `userAudioPrerollSecs` of audio is replayed, so the start of the user's speech isn't lost.
+  Don't run a local VAD with server-side turn detection on: both would send turn frames.
+- `setAudioInputPaused()`, `setVideoInputPaused()` and `setVideoFrameDetail()` change input at
+  runtime. `sendClientEvent()` sends any Realtime client event, and
+  `retrieveConversationItem()` fetches an item by id.
+- `reasoning` in `sessionProperties` is only sent to models recognized as reasoning-capable
+  (`gpt-realtime-2`, `gpt-realtime-2.1`); otherwise it is dropped with a warning, since the
+  server would reject the whole update.
+
+## Runtime notes
+
+- The socket is opened with `websocketConnect()` from core and the key is sent as an
+  `Authorization` header. Bun, Node and Deno send it from the global `WebSocket`; on Cloudflare
+  Workers core opens the socket through `fetch`.
+- Video frames are encoded with core's `encodeImage()` (upstream uses Pillow).
+- The deprecated `model` and `sessionProperties` constructor options are not ported. Use
+  `settings: new OpenAIRealtimeLLMService.Settings({ model, sessionProperties })`.
+- Not ported yet: `AzureRealtimeLLMService` (the Azure OpenAI variant of this service).

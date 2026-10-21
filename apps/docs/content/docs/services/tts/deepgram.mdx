@@ -1,0 +1,188 @@
+---
+title: Deepgram
+description: Text-to-speech with DeepgramTTSService (Aura over WebSocket), DeepgramHttpTTSService (Aura over HTTP) and DeepgramFluxTTSService (Flux).
+---
+
+## Overview
+
+pipedog ports three of Pipecat's Deepgram text-to-speech services:
+
+- **`DeepgramTTSService`**: Deepgram Aura over a WebSocket (`/v1/speak`). Streams audio as text
+  arrives and clears Deepgram's buffer on interruption.
+- **`DeepgramHttpTTSService`**: Deepgram Aura over HTTP. One `POST` per sentence, with the audio
+  streamed back in the response body.
+- **`DeepgramFluxTTSService`**: Deepgram Flux over a WebSocket (`/v2/speak`). Streams LLM tokens
+  as they arrive and keeps acoustic state across turns on one connection.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/deepgram">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/deepgram/src">
+    `packages/deepgram/src/tts.ts`, `flux/tts.ts` and `flux/tts_base.ts`.
+  </Card>
+  <Card title="Deepgram docs" href="https://developers.deepgram.com/docs/tts-models">
+    Aura and Flux voices and voice controls.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/deepgram
+```
+
+```ts
+import { DeepgramHttpTTSService, DeepgramTTSService } from "@pipedog/deepgram/tts";
+import { DeepgramFluxTTSService } from "@pipedog/deepgram/flux/tts";
+```
+
+## Prerequisites
+
+- A Deepgram account and an API key from the [Deepgram console](https://console.deepgram.com).
+  Flux needs a key with Flux TTS access.
+- Pass the key as `apiKey`. The examples read it from `DEEPGRAM_API_KEY`.
+
+## DeepgramTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/deepgram/src/tts.ts" name="DeepgramTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new DeepgramTTSService.Settings({...})`. Any
+setting you leave out keeps the default below. `DeepgramHttpTTSService` uses the same settings
+class.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `voice` | `string` | `"aura-2-helena-en"` | Aura voice. Sent to Deepgram as the `model` query parameter. |
+| `model` | `string \| null` | `null` | Kept in sync with `voice` when the voice changes, for metrics. |
+| `language` | `Language \| null` | `null` | Used to split text into sentences. Not sent to Deepgram. |
+| `speed` | `number \| null` | `null` | Speech-rate multiplier, from 0.7 to 1.5. `null` leaves Aura at its default rate. Aura-2 English and Spanish voices only. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-deepgram.ts#usage</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`. Any change closes the WebSocket and
+reconnects with the new settings:
+
+<include cwd>snippets/services/tts-deepgram.ts#update</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The WebSocket to Deepgram is open. |
+| `on_disconnected` | The WebSocket to Deepgram closed. |
+| `on_connection_error` | Connecting failed. Receives the error message. |
+| `on_tts_request` | A TTS request is about to be made. Receives the context ID and the text. |
+
+### Notes
+
+- `encoding` must be `"linear16"`, `"mulaw"` or `"alaw"`; anything else throws in the
+  constructor. The received bytes go into `TTSAudioRawFrame`s as they are, so only `"linear16"`
+  plays correctly in a pipedog pipeline.
+- Text is sent with `Speak` messages. The service sends `Flush` when the LLM response ends, and
+  emits `TTSStoppedFrame` when Deepgram answers with `Flushed`.
+- On interruption it sends `Clear`, so Deepgram drops its text buffer and stops sending audio.
+- `sampleRate` defaults to the pipeline's output rate.
+- Aura-2 reads inline pronunciations. `formatPronunciation(word, ipa)` renders one as Deepgram's
+  inline object, and returns `null` when the IPA is empty or too long for the word (over 128
+  characters, or over 10 times the word's length with a floor of 15).
+
+## DeepgramHttpTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/deepgram/src/tts.ts" name="DeepgramHttpTTSServiceOptions" />
+
+### Settings
+
+Same settings and defaults as [`DeepgramTTSService`](#settings).
+
+### Usage
+
+<include cwd meta='title="http.ts"'>snippets/services/tts-deepgram.ts#http</include>
+
+### Notes
+
+- Each request is a `POST` to `{baseUrl}/v1/speak` with `container=none`. A status other than 200
+  becomes an `ErrorFrame` with the response body.
+- The response body is read as a stream and cut into sample-aligned `TTSAudioRawFrame`s, so audio
+  starts before the whole response has arrived.
+- Upstream requires an `aiohttp_session`. Here `fetch` is optional and defaults to the global
+  `fetch`.
+
+## DeepgramFluxTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/deepgram/src/flux/tts.ts" name="DeepgramFluxTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new DeepgramFluxTTSService.Settings({...})`.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `voice` | `string` | `"flux-heather-en"` | Flux voice, `flux-{voice}-{language}`. Sent as the `model` query parameter. |
+| `model` | `string \| null` | synced to `voice` | Always set to `voice`, for metrics. |
+| `language` | `Language \| null` | `null` | Used to split text into sentences. Not sent to Deepgram. |
+| `speed` | `number \| null` | `null` | Speech-rate multiplier, 0.5 to 1.5 in steps of 0.05. `null` leaves Flux at its default rate. |
+| `expressivity` | `-2 \| -1 \| 0 \| 1 \| 2 \| null` | `null` | Expressive range, calm to animated. `null` leaves Flux at its default range. |
+
+### Usage
+
+<include cwd meta='title="flux.ts"'>snippets/services/tts-deepgram.ts#flux</include>
+
+Flux streams LLM tokens by default (`TextAggregationMode.TOKEN`). To aggregate text into
+sentences first:
+
+<include cwd>snippets/services/tts-deepgram.ts#flux-sentence</include>
+
+A `speed` change is applied to the open connection with a Flux `Configure` message, so the
+cross-turn acoustic state is kept. Any other change (`voice`, `expressivity`, `language`)
+reconnects:
+
+<include cwd>snippets/services/tts-deepgram.ts#flux-speed</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The WebSocket to Flux is open. |
+| `on_disconnected` | The WebSocket to Flux closed. |
+| `on_connection_error` | Connecting failed, or the receive loop reported an error. Receives the error message. |
+| `on_tts_request` | A TTS request is about to be made. Receives the context ID and the text. |
+
+### Notes
+
+- Audio is always requested as `linear16`. Supported sample rates are 8000, 16000, 24000, 32000,
+  44100 and 48000 Hz. Another rate only logs a warning on connect.
+- On interruption the service sends `Interrupt`, which ends the active turn without closing the
+  connection. `Flush` ends a turn when the LLM response is done.
+- Clearing `speed` (setting it to `null`) sends `Configure` with `speed: 1.0`, Flux's default.
+- Disconnecting closes the socket without a `Close` message: in Flux, `Close` asks the server to
+  finish the active turn's audio first.
+- `formatPronunciation` is left at the base implementation, so words are spoken as written. Flux
+  rejects inline pronunciations on a connection whose speed is not 1.0.
+- `tag` adds one `tag` query parameter per entry, for Deepgram usage reports.
+
+## Runtime notes
+
+`DeepgramTTSService` and `DeepgramFluxTTSService` use the global `WebSocket` and send the key as an
+`Authorization: Token <key>` header on the handshake. That works on Bun, Node, Deno and Cloudflare
+Workers (where the socket is opened through `fetch`). Pass `webSocketFactory` to open the socket
+some other way, through a proxy for example. A standard `WebSocket` does not expose the handshake's
+response headers, so the `dg-*` headers upstream logs on connect are not available.
+
+`DeepgramHttpTTSService` only needs `fetch`, available on all four runtimes.
+
+Query values use JS number formatting, so `speed: 1.0` is sent as `speed=1`. The deprecated
+`voice` constructor option is not ported; use `settings.voice`.
+
+Not ported yet: `DeepgramSageMakerTTSService` and `DeepgramFluxSageMakerTTSService` (AWS
+SageMaker endpoints).

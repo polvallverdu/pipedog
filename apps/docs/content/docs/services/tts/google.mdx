@@ -1,0 +1,195 @@
+---
+title: Google
+description: Text-to-speech with GoogleTTSService (Cloud TTS streaming), GoogleHttpTTSService (Cloud TTS with SSML) and GeminiTTSService (Gemini TTS models).
+---
+
+## Overview
+
+pipedog ports Pipecat's three Google text-to-speech services:
+
+- **`GoogleTTSService`**: Google Cloud Text-to-Speech streaming synthesis, for low latency.
+  Supports Chirp 3 HD and Journey voices, and Chirp 3 custom voices through a voice cloning key.
+- **`GoogleHttpTTSService`**: Cloud Text-to-Speech unary synthesis. Works with every Google voice
+  (Standard, WaveNet, Neural2, ...) and builds SSML for pitch, rate, volume, emphasis, gender and
+  style on voices that accept it.
+- **`GeminiTTSService`**: Gemini TTS models, with style prompts, expressive tags and
+  multi-speaker output. Runs against Cloud Text-to-Speech (service account) or the Gemini API
+  (API key).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/google">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/google/src">
+    `packages/google/src/tts.ts`.
+  </Card>
+  <Card title="Cloud Text-to-Speech docs" href="https://cloud.google.com/text-to-speech/docs">
+    Voices, SSML and Gemini TTS on Google Cloud.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/google
+```
+
+The Cloud Text-to-Speech classes (and the Cloud backend of `GeminiTTSService`) also need the
+Node SDK, an optional peer dependency:
+
+```bash
+bun add @google-cloud/text-to-speech
+```
+
+```ts
+import { GeminiTTSService, GoogleHttpTTSService, GoogleTTSService } from "@pipedog/google/tts";
+```
+
+## Prerequisites
+
+- **Cloud Text-to-Speech**: a Google Cloud project with the Text-to-Speech API enabled, and a
+  service account key (file or JSON string) or Application Default Credentials (ADC). The
+  examples read `GOOGLE_APPLICATION_CREDENTIALS` (a key file path) or `GOOGLE_CREDENTIALS_JSON`
+  (the key itself).
+- **Gemini API backend of `GeminiTTSService`**: a Gemini API key from
+  [Google AI Studio](https://aistudio.google.com/apikey), read from `GOOGLE_API_KEY`.
+
+## GoogleTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/tts.ts" name="GoogleTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new GoogleTTSService.Settings({...})`.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string \| null` | `null` | Not used by the streaming request. |
+| `voice` | `string` | `"en-US-Chirp3-HD-Charon"` | Chirp 3 HD or Journey voice name. |
+| `language` | `Language \| string` | `"en-US"` | Voice language. |
+| `speakingRate` | `number \| null` | `null` | Speaking rate, 0.25 to 2.0. Out-of-range updates are ignored with a warning. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-google.ts#usage</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-google.ts#update</include>
+
+### Notes
+
+- With `voiceCloningKey`, the request uses that Chirp 3 custom voice instead of `voice`.
+- Audio is requested as PCM at the pipeline's output sample rate.
+
+## GoogleHttpTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/tts.ts" name="GoogleHttpTTSServiceOptions" />
+
+### Settings
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string \| null` | `null` | Not used by the request. |
+| `voice` | `string` | `"en-US-Chirp3-HD-Charon"` | Any Google voice name. |
+| `language` | `Language \| string` | `"en-US"` | Voice language. |
+| `pitch` | `string \| null` | `null` | SSML pitch, e.g. `"+2st"`, `"-50%"`. |
+| `rate` | `string \| null` | `null` | SSML prosody rate, e.g. `"slow"`, `"125%"` (non-Chirp voices). |
+| `speakingRate` | `number \| null` | `null` | Audio config rate, 0.25 to 2.0 (Chirp and Journey voices). |
+| `volume` | `string \| null` | `null` | SSML volume, e.g. `"loud"`, `"+6dB"`. |
+| `emphasis` | `"strong" \| "moderate" \| "reduced" \| "none" \| null` | `null` | SSML emphasis. |
+| `gender` | `"male" \| "female" \| "neutral" \| null` | `null` | Voice gender. |
+| `googleStyle` | `"apologetic" \| "calm" \| "empathetic" \| "firm" \| "lively" \| null` | `null` | Google voice style. |
+
+### Usage
+
+<include cwd meta='title="http.ts"'>snippets/services/tts-google.ts#http</include>
+
+### Notes
+
+- Chirp and Journey voices (matched by name) don't accept SSML, so the service sends plain text
+  and the SSML settings have no effect, including on the default voice. Use `speakingRate` for
+  them. Other voices get SSML, with the text XML-escaped.
+
+## GeminiTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/tts.ts" name="GeminiTTSServiceOptions" />
+
+### Settings
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gemini-3.1-flash-tts-preview"` | Gemini TTS model. This default works on both backends. |
+| `voice` | `string` | `"Kore"` | A Gemini voice (`GeminiTTSService.AVAILABLE_VOICES`) or a custom `voice_...` ID. |
+| `language` | `Language \| string` | `"en-US"` | Voice language. |
+| `prompt` | `string \| null` | `null` | Style instructions. See the backend notes below. |
+| `multiSpeaker` | `boolean` | `false` | Multi-speaker output (Cloud backend only). |
+| `speakerConfigs` | `GeminiSpeakerConfig[] \| null` | `null` | `{ speaker_alias, speaker_id? }` entries for multi-speaker mode. |
+
+### Usage
+
+With the Gemini API backend:
+
+<include cwd meta='title="gemini-tts.ts"'>snippets/services/tts-google-gemini.ts#usage</include>
+
+With the Cloud Text-to-Speech backend and a style prompt:
+
+<include cwd>snippets/services/tts-google-gemini.ts#cloud</include>
+
+Multi-speaker (Cloud backend only):
+
+<include cwd>snippets/services/tts-google-gemini.ts#multi-speaker</include>
+
+### Notes
+
+- **Backend selection**: `useGenai` wins when set. Otherwise passing `apiKey` selects the Gemini
+  API backend and leaving it out selects Cloud Text-to-Speech. With the Gemini API backend and
+  no `apiKey`, the key falls back to `GOOGLE_API_KEY`. The env var alone never switches the
+  backend.
+- **Gemini API backend**: no multi-speaker output (a warning is logged and one speaker is used).
+  `prompt` works only with Gemini 3.8 TTS models, sent as a `speechMetadata.style` annotation;
+  other models ignore it with a warning.
+- **Model names differ by backend.** Cloud Text-to-Speech takes `gemini-3.1-flash-tts-preview`,
+  `gemini-2.5-flash-tts`, `gemini-2.5-flash-lite-preview-tts` and `gemini-2.5-pro-tts`. The
+  Gemini API takes `gemini-3.8-flash-tts`, `gemini-3.8-flash-lite-tts`,
+  `gemini-3.1-flash-tts-preview`, `gemini-2.5-flash-preview-tts` and
+  `gemini-2.5-pro-preview-tts`.
+- Gemini 3.8 TTS models treat the text as a verbatim transcript. Put momentary vocal events
+  inline as angle-bracket tags (`<laugh>`, `<sigh>`, `<short pause>`) and sustained style in
+  `prompt`.
+- Gemini TTS outputs 24 kHz audio (`GeminiTTSService.GOOGLE_SAMPLE_RATE`). Any other sample
+  rate logs a warning.
+- A voice that is neither in `AVAILABLE_VOICES` nor a `voice_...` ID logs a warning and is used
+  anyway.
+
+## Event handlers
+
+All three services inherit the `TTSService` events, for example `on_tts_request`
+(`contextId`, `text`), called for each text sent for synthesis.
+
+## Runtime notes
+
+Cloud Text-to-Speech streaming is gRPC only, so `GoogleTTSService`, `GoogleHttpTTSService` and
+the Cloud backend of `GeminiTTSService` use the Node SDK `@google-cloud/text-to-speech`. It is
+imported on the first request, so importing the module is safe everywhere, but these classes
+need Node or Bun. The SDK sits behind the `GoogleCloudTTSClient` interface; override
+`_createClient()` to supply another client. `clientOptions` (pipedog only) is merged into the
+SDK's `TextToSpeechClient` options.
+
+The Gemini API backend of `GeminiTTSService` uses `@google/genai` over `fetch` and runs on
+Bun, Node, Deno and Cloudflare Workers.
+
+<Callout type="info">
+`credentials` is parsed in the constructor, as upstream does. With `credentialsPath` or ADC, the
+SDK resolves credentials on the first request, so a missing credential surfaces as a synthesis
+error rather than as upstream's constructor error.
+</Callout>
+
+The deprecated upstream `InputParams` classes, the `params`, `voiceId` and (Gemini) `model`
+constructor options, and the `GoogleStreamTTSSettings` alias are not ported.

@@ -1,0 +1,129 @@
+---
+title: Overview
+description: Mount a pipedog voice agent in SvelteKit, Hono, Bun, Next.js, TanStack Start, Cloudflare Workers, Express, Elysia, Nuxt, Deno or Vercel.
+---
+
+pipedog's voice endpoints are fetch handlers: a function from a `Request` to a `Response`. Each
+framework only has to route a request to them. Every snippet in this section is in
+[`examples/framework-snippets`](https://github.com/polvallverdu/pipedog/tree/main/examples/framework-snippets),
+and the test suite there mounts each one and checks it.
+
+## The two endpoints
+
+- **`offer`**: WebRTC signalling for [SmallWebRTC](/docs/transports/smallwebrtc). The browser POSTs
+  its SDP offer and gets the answer. The media then runs over UDP, so the server has to be a
+  long-lived process, not a serverless function.
+- **`socket`**: a WebSocket with protobuf audio frames, for clients that stream audio over a socket
+  (see [WebSocket](/docs/transports/websocket)). It works wherever the runtime can upgrade a request
+  from fetch. Where it can't, the framework's page says where to mount it instead.
+
+The agent behind both is the same: speech in, OpenAI transcription, chat and speech synthesis,
+speech out, as in the [voice bot guide](/docs/voice-bot). It needs
+`OPENAI_API_KEY` in the environment, and it reads `OPENAI_BASE_URL` if you set one. Silero detects
+speech, and the default turn strategies end the turn with Smart Turn (see
+[Turn detection](/docs/concepts/turn-detection)).
+
+Every framework page imports the endpoints from this module:
+
+<include cwd meta='title="shared/voice.ts"'>../../examples/framework-snippets/shared/voice.ts</include>
+
+The module builds the agent with `runAgent` from `shared/agent.ts`, which is the pipeline above.
+
+## Authentication
+
+pipedog's endpoints don't authenticate: anyone who can reach them can start a session, on your
+provider keys. That's the same split as Pipecat, whose transports don't authenticate either; its
+development runner mints one-time tokens for its WebSocket endpoints, and production auth comes from
+the application or Pipecat Cloud. Put your own check in front of each endpoint, in the framework, so
+it runs before a session starts:
+
+```ts
+/** Rejects requests without a valid session token before the endpoint runs. */
+function requireSession(endpoint: (request: Request) => Promise<Response>) {
+  return async (request: Request): Promise<Response> => {
+    const url = new URL(request.url);
+    // Browsers can't set headers on a WebSocket, so a socket brings its token in the URL.
+    const token =
+      request.headers.get("authorization")?.replace(/^Bearer /, "") ??
+      url.searchParams.get("token");
+    if (!token || !(await verifySessionToken(token))) {
+      return new Response("unauthorized", { status: 401 });
+    }
+    return endpoint(request);
+  };
+}
+
+export const authedOffer = requireSession(offer);
+export const authedSocket = requireSession(socket);
+```
+
+`verifySessionToken` is yours: a signed token your app issues when it creates the session, short-lived
+and used once, as Pipecat's runner does. Add a cap on concurrent sessions and on session length there
+too, since each session spends provider credits.
+
+## Compare
+
+| Framework | Runtime(s) | `offer` (WebRTC) | `socket` (WebSocket) | Serverless? | Tested how |
+| --- | --- | --- | --- | --- | --- |
+| [SvelteKit](/docs/frameworks/sveltekit) | Node, Bun, Deno (`adapter-node` or similar) | Yes | Not in the snippet | No | Route handler called directly |
+| [Hono](/docs/frameworks/hono) | Bun (Node and Workers with other adapters) | Yes | Yes, with `hono/bun` | No | Served with `Bun.serve`, both routes |
+| [Bun](/docs/frameworks/bun) | Bun | Yes | Yes | No | Served with `Bun.serve`, both routes |
+| [Next.js](/docs/frameworks/nextjs) | Node | Yes | No, mount it elsewhere | No | Route handler called directly |
+| [TanStack Start](/docs/frameworks/tanstack-start) | Node, Bun | Yes | No, mount it elsewhere | No | Server route handler called directly |
+| [Cloudflare Workers](/docs/frameworks/cloudflare-workers) | workerd | No, no UDP | Yes, in a Durable Object | Yes | Its own example, run against workerd |
+| [Express](/docs/frameworks/express) | Node, Bun | Yes | Not in the snippet | No | `app.listen`, then fetch |
+| [Elysia](/docs/frameworks/elysia) | Bun | Yes | Not in the snippet | No | `app.handle` |
+| [Nuxt](/docs/frameworks/nuxt) | Node, Bun, Deno (Nitro presets) | Yes | Not in the snippet | No | Handler mounted on h3 |
+| [Deno](/docs/frameworks/deno) | Deno | Yes | Yes | No | `deno run`, both routes, when Deno is installed |
+| [Vercel](/docs/frameworks/vercel) | Bun runtime on Vercel Functions | Route mounted, UDP media untested | Yes | Yes | Served with `Bun.serve`, both routes |
+
+## What is tested
+
+The test suite runs on Bun, and runs the Deno snippet with Deno when it's installed. It checks two
+things for each snippet: the offer route reaches pipedog's handler (a framework's own 404 wouldn't
+return pipedog's message), and the WebSocket route accepts an upgrade where the snippet mounts one.
+The Next.js, TanStack Start, Nuxt and SvelteKit route files are called as the handlers they export;
+the others run as servers. The Cloudflare Workers example has its own tests, which run against
+workerd through `wrangler dev`.
+
+Not tested here: a deployment on any of these hosts, a full TanStack Start, Next.js, Nuxt or
+SvelteKit build, and the WebRTC media on the serverless hosts (Vercel, Next.js on Vercel, Nuxt's
+serverless presets), which the UDP requirement rules out.
+
+## Frameworks
+
+<Cards>
+  <Card title="SvelteKit" href="/docs/frameworks/sveltekit">
+    A `+server.ts` route for the offer.
+  </Card>
+  <Card title="Hono" href="/docs/frameworks/hono">
+    The offer and a WebSocket route, on Bun.
+  </Card>
+  <Card title="Bun" href="/docs/frameworks/bun">
+    `Bun.serve` with the offer and a WebSocket upgrade.
+  </Card>
+  <Card title="Next.js" href="/docs/frameworks/nextjs">
+    A route handler on the Node.js runtime.
+  </Card>
+  <Card title="TanStack Start" href="/docs/frameworks/tanstack-start">
+    A server route for the offer.
+  </Card>
+  <Card title="Cloudflare Workers" href="/docs/frameworks/cloudflare-workers">
+    A WebSocket agent per session, in a Durable Object.
+  </Card>
+  <Card title="Express" href="/docs/frameworks/express">
+    The offer through `nodeRequestListener`.
+  </Card>
+  <Card title="Elysia" href="/docs/frameworks/elysia">
+    The offer as an Elysia route.
+  </Card>
+  <Card title="Nuxt" href="/docs/frameworks/nuxt">
+    A Nitro server route for the offer.
+  </Card>
+  <Card title="Deno" href="/docs/frameworks/deno">
+    `Deno.serve` with both endpoints.
+  </Card>
+  <Card title="Vercel" href="/docs/frameworks/vercel">
+    A Bun server on Vercel Functions.
+  </Card>
+</Cards>

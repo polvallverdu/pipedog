@@ -1,0 +1,147 @@
+---
+title: Cartesia
+description: Text-to-speech with CartesiaTTSService (WebSocket, word timestamps) and CartesiaHttpTTSService (HTTP), configured with GenerationConfig.
+---
+
+## Overview
+
+Cartesia's Sonic models turn text into speech. pipedog ports both of Pipecat's Cartesia
+text-to-speech services:
+
+- **`CartesiaTTSService`**: streams over Cartesia's WebSocket API. Audio arrives as it is
+  generated, with word-level timestamps that keep the spoken text in step with playback.
+- **`CartesiaHttpTTSService`**: posts each request to Cartesia's `/tts/bytes` HTTP endpoint and
+  gets the audio back in one piece, without word timestamps.
+- **`GenerationConfig`**: volume, speed and emotion for sonic-3 series models, shared by both.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/cartesia">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/cartesia/src">
+    `packages/cartesia/src/tts.ts`.
+  </Card>
+  <Card title="Cartesia docs" href="https://docs.cartesia.ai/api-reference/tts/tts">
+    Voices, models, SSML tags and pronunciation dictionaries.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/cartesia
+```
+
+```ts
+import {
+  CartesiaEmotion,
+  CartesiaHttpTTSService,
+  CartesiaTTSService,
+  GenerationConfig,
+} from "@pipedog/cartesia/tts";
+```
+
+## Prerequisites
+
+- A Cartesia account and an API key from the [Cartesia playground](https://play.cartesia.ai).
+- A voice id from the Cartesia voice library. There is no default voice.
+- Pass the key as `apiKey`. The examples read it from `CARTESIA_API_KEY`.
+
+## CartesiaTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/cartesia/src/tts.ts" name="CartesiaTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new CartesiaTTSService.Settings({...})`. Both
+services use the same settings class.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"sonic-3.6"` | Cartesia TTS model. |
+| `voice` | `string \| null` | `null` | Voice id. Set one: there is no default. |
+| `language` | `Language` | `Language.EN` | Synthesis language. |
+| `generationConfig` | `GenerationConfig \| null` | `null` | Volume, speed and emotion. See below. |
+| `pronunciationDictId` | `string \| null` | `null` | Cartesia pronunciation dictionary id. |
+
+### GenerationConfig
+
+<auto-type-table cwd path="../../packages/cartesia/src/tts.ts" name="GenerationConfigOptions" />
+
+Fields left `null` are not sent. `CartesiaEmotion` lists the emotion names Cartesia supports.
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-cartesia.ts#usage</include>
+
+Token streaming and a generation config:
+
+<include cwd>snippets/services/tts-cartesia.ts#generation</include>
+
+SSML tag helpers and IPA pronunciations:
+
+<include cwd>snippets/services/tts-cartesia.ts#tags</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-cartesia.ts#update</include>
+
+### Event handlers
+
+Inherited from `TTSService`:
+
+| Event | Description |
+|---|---|
+| `on_connected` | Connected to Cartesia. |
+| `on_disconnected` | Disconnected from Cartesia. |
+| `on_connection_error` | The connection failed. |
+| `on_tts_request` | A text chunk is about to be sent for synthesis. |
+
+### Notes
+
+- The service does not push the LLM's text frames itself. It builds `TTSTextFrame`s from
+  Cartesia's word timestamps, so the context only records words the user actually heard.
+- Text is aggregated into sentences by default. `TextAggregationMode.TOKEN` streams tokens
+  directly for lower latency.
+- `maxBufferDelayMs` sets Cartesia's server-side buffer. Left `null`, it is `0` in sentence mode
+  (no double buffering) and unset in token mode (Cartesia's 3000 ms default).
+- A `voice`, `model` or `language` change takes effect from the next sentence, which opens a new
+  Cartesia context.
+- Static helpers build Cartesia SSML tags for text transforms: `SPELL`, `EMOTION_TAG`,
+  `PAUSE_TAG`, `VOLUME_TAG` and `SPEED_TAG`. Text inside `<spell>` tags is never split across
+  aggregates.
+- `pronunciationTransformIpa()` turns IPA into Cartesia inline phonemes. Register it last in
+  `textTransforms` so later transforms don't rewrite its markup.
+
+## CartesiaHttpTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/cartesia/src/tts.ts" name="CartesiaHttpTTSServiceOptions" />
+
+### Settings
+
+Same as [`CartesiaTTSService`](#settings), with the same defaults.
+
+### Usage
+
+<include cwd meta='title="http.ts"'>snippets/services/tts-cartesia.ts#http</include>
+
+### Notes
+
+- Each request returns its audio in one piece. Use it when streaming does not matter.
+- `baseUrl` defaults to `"https://api.cartesia.ai"`.
+
+## Runtime notes
+
+- `CartesiaTTSService` uses the global `WebSocket` and sends the key as an `X-API-Key` header on
+  the handshake. The Bun, Node and Deno `WebSocket` support handshake headers, and on Cloudflare
+  Workers the socket is opened through `fetch`.
+- `CartesiaHttpTTSService` uses the global `fetch` unless you pass `fetch`. That option replaces
+  upstream's `aiohttp_session`.
+- The Cartesia API version header is pinned to `2026-03-01`. Upstream's `cartesia_version`
+  option is not ported.
+- Not ported: the deprecated `voiceId`, `model`, `params` (`InputParams`) and
+  `aggregateSentences` constructor options. Use `settings` and `textAggregationMode`.

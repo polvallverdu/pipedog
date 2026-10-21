@@ -1,0 +1,287 @@
+---
+title: WebSocket
+description: WebSocket transports with FastAPIWebsocketTransport (bring your own socket), SingleClientWebsocketServerTransport, WebsocketClientTransport and RTVIClientTransport, plus endpoint helpers for each runtime.
+---
+
+## Overview
+
+`@pipedog/transport-websocket` carries frames over a WebSocket, encoded by a
+[serializer](/docs/serializers/protobuf). It ports Pipecat's four WebSocket transports, and adds
+the helpers that accept a socket on each runtime:
+
+- **`FastAPIWebsocketTransport`**: runs a pipeline on a socket your server already accepted.
+  Upstream takes the socket a FastAPI endpoint accepted; here it takes a `WebsocketConnection`
+  from any runtime. This is the one to use for a web server, a Worker or telephony.
+- **`SingleClientWebsocketServerTransport`**: starts its own WebSocket server and serves one
+  client at a time. For local development and single-session bots.
+- **`WebsocketClientTransport`**: connects out to a WebSocket server.
+- **`RTVIClientTransport`**: a `WebsocketClientTransport` that speaks RTVI as a client to a bot.
+- **`WebsocketConnection`**: the runtime-agnostic socket all four transports talk to.
+- Endpoint helpers that produce a `WebsocketConnection`: `websocketFetchHandler` (fetch
+  handlers), `websocketServe` (listen on a port) and `honoWebsocket` (Hono).
+
+<Callout type="info">
+  For a browser voice client, WebRTC handles network loss and jitter better. See
+  [SmallWebRTC](/docs/transports/smallwebrtc). WebSockets fit server-to-server links, telephony and
+  runtimes without UDP, such as Cloudflare Workers.
+</Callout>
+
+<Cards>
+  <Card title="Upstream: FastAPI WebSocket" href="https://docs.pipecat.ai/api-reference/server/services/transport/fastapi-websocket">
+    Pipecat's page for `FastAPIWebsocketTransport`.
+  </Card>
+  <Card title="Upstream: WebSocket server" href="https://docs.pipecat.ai/api-reference/server/services/transport/websocket-server">
+    Pipecat's page for the WebSocket server transport.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/transport-websocket/src">
+    `fastapi.ts`, `server.ts`, `client.ts`, `rtvi_client.ts`, `socket.ts`, `fetch.ts`, `serve.ts`
+    and `hono.ts`.
+  </Card>
+  <Card title="Cloudflare Workers" href="/docs/deployment/cloudflare-workers">
+    Running a voice agent in a Durable Object over a WebSocket.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/transport-websocket
+```
+
+To use `websocketServe` or `SingleClientWebsocketServerTransport` on Node, also install the `ws`
+package (an optional peer dependency):
+
+```bash
+npm install ws
+```
+
+```ts
+import {
+  FastAPIWebsocketParams,
+  FastAPIWebsocketTransport,
+} from "@pipedog/transport-websocket/fastapi";
+import {
+  SingleClientWebsocketServerParams,
+  SingleClientWebsocketServerTransport,
+} from "@pipedog/transport-websocket/server";
+import { WebsocketClientParams, WebsocketClientTransport } from "@pipedog/transport-websocket/client";
+import { RTVIClientTransport } from "@pipedog/transport-websocket/rtvi_client";
+import { WebsocketConnection } from "@pipedog/transport-websocket/socket";
+import { websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
+import { websocketServe } from "@pipedog/transport-websocket/serve";
+import { honoWebsocket } from "@pipedog/transport-websocket/hono";
+```
+
+The package depends on `@pipedog/serializer-protobuf` and `@pipedog/serializer-rtvi-client`, the
+default serializers of the two client transports.
+
+## Prerequisites
+
+- A serializer that matches the other end: `ProtobufFrameSerializer` for Pipecat's WebSocket
+  clients, a telephony serializer such as [Telnyx](/docs/serializers/telnyx) for phone calls.
+- For `allowedOrigins`, the list of origins allowed to connect, or the `PIPECAT_ALLOWED_ORIGINS`
+  environment variable (comma-separated).
+
+## FastAPIWebsocketTransport
+
+### Configuration
+
+`new FastAPIWebsocketTransport(websocket, params, options?)`. `websocket` is any object that
+implements the `FastAPIWebSocket` interface; a `WebsocketConnection` does. `params` is a
+`FastAPIWebsocketParams`:
+
+<auto-type-table cwd path="../../packages/transport-websocket/src/fastapi.ts" name="FastAPIWebsocketParamsOptions" />
+
+`options`:
+
+<auto-type-table cwd path="../../packages/transport-websocket/src/fastapi.ts" name="FastAPIWebsocketTransportOptions" />
+
+### Usage
+
+Build the transport inside a function that takes the accepted connection. The endpoint helpers
+below call it once per connection:
+
+<include cwd meta='title="bot.ts"'>snippets/services/transport-websocket.ts#usage</include>
+
+On Cloudflare Workers, Durable Objects and Deno, `websocketFetchHandler` turns it into a fetch
+handler, `(Request) => Promise<Response>`. It answers 426 to a request that is not a WebSocket
+upgrade:
+
+<include cwd>snippets/services/transport-websocket.ts#fetch</include>
+
+On Bun, Node and Deno, `websocketServe` listens on a host and port with the runtime's own server:
+
+<include cwd>snippets/services/transport-websocket.ts#serve</include>
+
+With Hono, `honoWebsocket` returns the events that Hono's `upgradeWebSocket()` expects, on any
+Hono adapter. Pass the upgrade request's headers so `allowedOrigins` can be checked:
+
+<include cwd>snippets/services/transport-websocket.ts#hono</include>
+
+```ts title="app.ts"
+app.get(
+  "/ws",
+  upgradeWebSocket((c) => honoEvents(c.req.raw)),
+);
+```
+
+A full Hono app, and the same bot mounted in Express, Next.js, SvelteKit and other frameworks, is
+in [`examples/framework-snippets`](https://github.com/polvallverdu/pipedog/tree/main/examples/framework-snippets).
+See also [Frameworks](/docs/frameworks).
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_client_connected` | The input transport started. Receives the socket. |
+| `on_client_disconnected` | The peer closed the socket (not when the transport closes it). Receives the socket. |
+| `on_session_timeout` | `sessionTimeout` seconds passed since the transport started. Receives the socket. |
+
+### Notes
+
+- The constructor throws if `allowedOrigins` is non-empty and the socket's `Origin` header is
+  missing or not listed. The caller closes the socket in that case; `websocketFetchHandler`,
+  `websocketServe` and `honoWebsocket` log the error and close it for you.
+- When the input starts it pushes a `ClientConnectedFrame`, then reads messages and deserializes
+  them with `serializer`. Without a serializer, incoming messages are dropped and nothing is sent.
+- Output audio is paced to real time. `fixedAudioPacketSize` cuts raw PCM into fixed-size
+  packets, for media endpoints that need strict framing. `addWavHeader` wraps each chunk in a WAV
+  header.
+- `wsCloseTimeout` (default 0.5 seconds) bounds how long a disconnect waits for the peer to
+  acknowledge the close, so a dead peer does not stall shutdown.
+
+## SingleClientWebsocketServerTransport
+
+### Configuration
+
+`new SingleClientWebsocketServerTransport(params, options?)`. `params` is a
+`SingleClientWebsocketServerParams`:
+
+<auto-type-table cwd path="../../packages/transport-websocket/src/server.ts" name="SingleClientWebsocketServerParamsOptions" />
+
+`options`:
+
+<auto-type-table cwd path="../../packages/transport-websocket/src/server.ts" name="SingleClientWebsocketServerTransportOptions" />
+
+### Usage
+
+<include cwd meta='title="server.ts"'>snippets/services/transport-websocket-server.ts#usage</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_websocket_ready` | The server is listening. |
+| `on_client_connected` | A client connected. Receives the `WebsocketConnection`. |
+| `on_client_disconnected` | The client disconnected. Receives the `WebsocketConnection`. |
+| `on_session_timeout` | `sessionTimeout` seconds passed since the client connected. Receives the `WebsocketConnection`. |
+
+### Notes
+
+- One client at a time. While a client is connected, a new connection is closed with code 1013
+  and the existing client is kept.
+- The server starts when the pipeline starts, with `options.serve` (default `websocketServe`).
+  Pass your own `WebsocketServe` function to listen some other way.
+- A non-empty `allowedOrigins` is passed to the server as `origins`; other origins get HTTP 403.
+- The server closes only after both the input and the output have finished, so output still
+  being flushed after the `EndFrame` is not cut off.
+- The deprecated `WebsocketServer*` aliases are not ported. Use the `SingleClientWebsocketServer*`
+  names.
+
+## WebsocketClientTransport
+
+### Configuration
+
+`new WebsocketClientTransport(uri, params?)`. `params` is a `WebsocketClientParams`:
+
+<auto-type-table cwd path="../../packages/transport-websocket/src/client.ts" name="WebsocketClientParamsOptions" />
+
+### Usage
+
+<include cwd meta='title="client.ts"'>snippets/services/transport-websocket-client.ts#usage</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | Connected to the server. Receives the `WebsocketConnection`. |
+| `on_disconnected` | The connection closed. Receives the `WebsocketConnection`. |
+
+### Notes
+
+- `serializer` defaults to `ProtobufFrameSerializer`. `addWavHeader` defaults to `true` here,
+  unlike the server transports.
+- The connection opens with `websocketConnect`, which uses the global `WebSocket`, and on
+  Cloudflare Workers opens the socket through `fetch` so `additionalHeaders` are sent there too.
+  Browsers can't send handshake headers.
+
+## RTVIClientTransport
+
+`new RTVIClientTransport(uri, params?)`, with the same `WebsocketClientParams`. It connects to a
+bot that runs an RTVI server transport, such as an eval harness, and exchanges frames with it.
+
+### Usage
+
+<include cwd meta='title="rtvi.ts"'>snippets/services/transport-websocket-client.ts#rtvi</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | Connected to the bot. |
+| `on_disconnected` | The connection closed. |
+| `on_bot_ready` | The bot answered the `client-ready` message with `bot-ready`. |
+
+### Notes
+
+- `serializer` defaults to [`RTVIClientSerializer`](/docs/serializers/rtvi-client).
+- `addWavHeader` is always set to `false`: an RTVI audio message carries bare PCM.
+- On connect it sends an RTVI `client-ready` message. `botReady` turns `true` once `bot-ready`
+  arrives.
+
+## WebsocketConnection
+
+The socket the transports talk to. It exposes both APIs the upstream transports use: the
+`websockets` one (`state`, `recv()`, `send()`, `close()`, async iteration) and the Starlette one
+(`clientState`, `applicationState`, `receive()`, `sendBytes()`, `sendText()`, `headers`). Build one
+in either of two ways:
+
+- `WebsocketConnection.fromWebSocket(ws, options)` wraps a standard `WebSocket`: the global
+  client, the server side of a Cloudflare `WebSocketPair`, Deno's upgraded socket or a Node `ws`
+  socket.
+- `new WebsocketConnection(sink, options)` wraps anything else that can send and close. Report
+  what arrives with `feedMessage()` and `feedClose()`. Bun's `ServerWebSocket`, whose events
+  arrive through `Bun.serve` handlers, works this way:
+
+<include cwd meta='title="bun.ts"'>snippets/services/transport-websocket.ts#bun</include>
+
+Options for both:
+
+<auto-type-table cwd path="../../packages/transport-websocket/src/socket.ts" name="WebsocketConnectionOptions" />
+
+Options for `websocketServe`:
+
+<auto-type-table cwd path="../../packages/transport-websocket/src/serve.ts" name="WebsocketServeOptions" />
+
+## Runtime notes
+
+| | Bun | Node | Deno | Cloudflare Workers |
+|---|---|---|---|---|
+| `FastAPIWebsocketTransport` | yes | yes | yes | yes |
+| `websocketFetchHandler` | no (upgrade on `Bun.serve`) | no | yes (`Deno.upgradeWebSocket`) | yes (`WebSocketPair`) |
+| `websocketServe` | yes (`Bun.serve`) | yes (`ws` peer) | yes (`Deno.serve`) | no |
+| `honoWebsocket` | yes | yes (`@hono/node-ws`) | yes | yes |
+| `SingleClientWebsocketServerTransport` | yes | yes (`ws` peer) | yes | no |
+| `WebsocketClientTransport`, `RTVIClientTransport` | yes | yes | yes | yes |
+
+- `websocketFetchHandler` throws on Bun and Node, which upgrade on their own server. Use
+  `websocketServe`, `honoWebsocket` or a `WebsocketConnection` sink there.
+- `websocketServe` throws on Cloudflare Workers, which can't listen on a port. Closing the server
+  closes the open connections with code 1001 and waits for their handlers.
+- Both fetch and Hono helpers copy the request headers during the upgrade: on Deno the request is
+  closed once upgraded, and reading it then throws.
+- Each connection's handler runs in its own task, and the connection closes when the handler
+  returns or throws.
+
+Not ported yet: the `WebsocketServer*` deprecated aliases (by design) and the eval harness's
+FastAPI transport (`pipecat.evals.fastapi_transport`).

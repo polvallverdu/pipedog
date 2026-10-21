@@ -16,4 +16,13 @@ const config = {
   serverExternalPackages: ["typescript"],
 };
 
+// The build moves each page's Markdown to /docs/<slug>.md (scripts/markdown-files.ts). A static
+// export can't rewrite, so only `next dev` serves those URLs through a rewrite.
+if (process.env.NODE_ENV === "development") {
+  config.rewrites = async () => [
+    { source: "/docs.md", destination: "/llms.mdx/docs/content.md" },
+    { source: "/docs/:slug*.md", destination: "/llms.mdx/docs/:slug*/content.md" },
+  ];
+}
+
 export default withMDX(config);

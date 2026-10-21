@@ -1,0 +1,62 @@
+---
+title: Node, Bun and Deno servers
+description: Run a pipedog voice agent as a long-lived server process, with SmallWebRTC or WebSocket sessions.
+---
+
+A server process is the most flexible host: it runs both transports, local turn detection models,
+and any framework. The [voice bot guide](/docs/voice-bot) builds one with SmallWebRTC, and
+[Frameworks](/docs/frameworks) mounts the same endpoints in SvelteKit, Hono, Next.js and others.
+
+## The process
+
+Each session runs in the same process, as its own pipeline and `PipelineWorker`. Start one per
+connection, from the endpoint handler, and end it when the client disconnects:
+
+```ts
+transport.eventHandler("on_client_disconnected", async () => {
+  await runner.cancel();
+});
+```
+
+The shared agent in
+[`examples/framework-snippets/shared/agent.ts`](https://github.com/polvallverdu/pipedog/blob/main/examples/framework-snippets/shared/agent.ts)
+does exactly this. Pass `handleSigint: false` and `handleSigterm: false` to each session's
+`WorkerRunner`, so one session doesn't take the process's signals; handle shutdown in the server.
+
+## Runtimes
+
+- **Bun** runs the agent and upgrades WebSockets in `Bun.serve`. See [Bun](/docs/frameworks/bun).
+- **Node.js** 22 or later. Use a framework's Node adapter (Express, Hono's `@hono/node-server`,
+  SvelteKit's `adapter-node`), or `nodeRequestListener` from
+  `@pipedog/transport-smallwebrtc/http` for a plain `node:http` server.
+- **Deno** serves both endpoints with `Deno.serve`. See [Deno](/docs/frameworks/deno).
+
+## SmallWebRTC in production
+
+SmallWebRTC is a peer-to-peer WebRTC connection between the browser and your server. The media
+runs over UDP, so:
+
+- the server needs UDP reachable from clients, on the ports the WebRTC stack picks;
+- behind NAT, give the transport ICE servers (STUN, and TURN for restrictive networks);
+- one server holds every session's media, so scale by adding servers and routing sessions to them.
+
+See [SmallWebRTC](/docs/transports/smallwebrtc) for the transport's options.
+
+## WebSocket in production
+
+WebSocket sessions need only TCP, so they pass through ordinary load balancers and proxies. Keep
+idle timeouts on the proxy longer than a call, or send keepalives. Each socket stays on the server
+that accepted it for its lifetime. See [WebSocket](/docs/transports/websocket).
+
+## Containers
+
+A container image needs the runtime and your app. If you use local turn detection
+(`@pipedog/audio-silero`, `@pipedog/audio-smart-turn`), the ONNX models load at startup from a
+path or URL you give them; bake them into the image or download them on start. See
+[Turn detection](/docs/concepts/turn-detection).
+
+## Sizing
+
+Each session decodes, resamples and encodes audio, and keeps provider connections open. Measure
+CPU and memory per session under real load, and cap concurrent sessions per process. Provider rate
+limits often bind before CPU does.

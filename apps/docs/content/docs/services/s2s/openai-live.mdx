@@ -1,0 +1,136 @@
+---
+title: OpenAI Live
+description: Full-duplex speech-to-speech with OpenAILiveLLMService, which delegates work to a backend model through ResponsesDelegation or ClientDelegation.
+---
+
+## Overview
+
+- **`OpenAILiveLLMService`**: a session with OpenAI's Live API. The live model (`gpt-live-1`)
+  listens and speaks at the same time. It decides when to answer, when to stop when the user
+  talks over it, and when to delegate work (search, reasoning, tool use) to a backend text model
+  while the conversation goes on. There is no client-side turn detection or response trigger:
+  the pipeline streams audio in and plays audio out.
+
+Where delegated work runs is set with `delegation`:
+
+- **`ResponsesDelegation`** (`OpenAILiveLLMService.ResponsesDelegation`): OpenAI hosts the
+  backend model on the Responses API. Its function calls run here, with the handlers registered
+  for the tools in the pipeline's `LLMContext`.
+- **`ClientDelegation`** (`OpenAILiveLLMService.ClientDelegation`): a `BackendLLMWorker` that
+  runs any pipedog LLM service is the backend.
+- `null` (the default): client delegation with no backend. Delegated requests are declined.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/s2s/openai-live">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/openai/src/live">
+    `packages/openai/src/live/llm.ts` and `events.ts`.
+  </Card>
+  <Card title="OpenAI docs" href="https://developers.openai.com/api/docs/guides/live">
+    The Live API guide.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/openai
+```
+
+```ts
+import { ClientDelegation, OpenAILiveLLMService, ResponsesDelegation } from "@pipedog/openai/live/llm";
+import { BackendLLMWorker } from "@pipedog/core/workers/llm/backend_llm_worker";
+```
+
+## Prerequisites
+
+- An OpenAI account and a project API key from the [OpenAI dashboard](https://platform.openai.com/api-keys).
+- Pass the key as `apiKey` (required). The examples read it from `OPENAI_API_KEY`.
+
+## OpenAILiveLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/openai/src/live/llm.ts" name="OpenAILiveLLMServiceOptions" />
+
+`ResponsesDelegation` options:
+
+<auto-type-table cwd path="../../packages/openai/src/live/llm.ts" name="ResponsesDelegationOptions" />
+
+`ClientDelegation` options:
+
+<auto-type-table cwd path="../../packages/openai/src/live/llm.ts" name="ClientDelegationOptions" />
+
+### Settings
+
+Settings passed as `settings: new OpenAILiveLLMService.Settings({...})` (`OpenAILiveLLMSettings`).
+`model`, `voice`, `store` and `systemInstruction` are fixed once the session has started.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gpt-live-1"` | Live model. |
+| `systemInstruction` | `string \| null` | `null` | Instructions, used when the context has no leading system message. |
+| `voice` | `string \| null` | `null` | Output voice, for example `"marin"` or `"cedar"`. `null` leaves it to the API. |
+| `store` | `boolean \| null` | `null` | Keep the session for 30 days (recording and forking). The API default is `false`; it needs a project whose data policy allows it. |
+| `temperature`, `maxTokens`, `topP`, `topK`, `frequencyPenalty`, `presencePenalty`, `seed` | `number \| null` | `null` | Not used by the live model. |
+| `filterIncompleteUserTurns` | `boolean` | `false` | Filter incomplete user turns. |
+| `userTurnCompletionConfig` | `UserTurnCompletionConfig \| null` | `null` | Turn completion config used with `filterIncompleteUserTurns`. |
+
+The backend model of a `ResponsesDelegation` takes an `OpenAIResponsesLLMService.Settings`
+(see [OpenAI Responses](/docs/services/llm/openai-responses)). `model` is required.
+`systemInstruction` becomes the backend's instructions, `maxCompletionTokens` its
+`max_output_tokens`, `reasoning` is sent when set, and `extra` is merged into the delegation
+config. The sampling fields, `topK`, `maxTokens` and the user turn fields are dropped with a
+warning.
+
+### Usage
+
+<include cwd meta='title="live.ts"'>snippets/services/s2s-openai-live.ts#usage</include>
+
+Client delegation, with a pipedog LLM service as the backend:
+
+<include cwd>snippets/services/s2s-openai-live.ts#client</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_session_started` | The session is ready for audio. Called with the session resource. |
+| `on_delegation_created` | The model delegated work. Called with the delegation item. |
+
+### Notes
+
+- The session starts on the first `LLMContextFrame` (usually queued as an `LLMRunFrame`). The
+  context's leading system message (or `systemInstruction`) becomes the instructions, and the
+  other text messages seed the session as prior conversation.
+- Audio input is resampled to 24 kHz. The bot's audio comes out as `SpeechOutputAudioRawFrame`s
+  between `TTSStartedFrame` and `TTSStoppedFrame`, with `LLMTextFrame` / `TTSTextFrame` for its
+  words and `InterimTranscriptionFrame` / `TranscriptionFrame` for the user's.
+- The service proposes user turns from the API's transcript turns and asks for
+  `ExternalUserTurnStrategies({ enableInterruptions: false })`. No `InterruptionFrame` is
+  broadcast: the model handles being talked over itself, and a delegation keeps running. So
+  every tool behaves as `cancelOnInterruption: false`; use `cancellableByLlm: true` for tools the
+  model should be able to cancel.
+- Unlike the Realtime services, it is not flagged as a realtime service for the aggregators. It
+  closes each user turn itself once the user falls quiet, so the user aggregator writes the turn
+  to the context before any tool calls it triggers.
+- With `ClientDelegation`, each delegation is sent to the backend with the transcript since the
+  previous one, and delegations run one at a time. A backend worker given as an object is added
+  as a child of the pipeline worker at setup, so the pipeline must run under a `WorkerRunner`
+  (see [pipelines and workers](/docs/concepts/pipelines-and-workers)). The backend's output is
+  appended to the session as spoken commentary or as silent context, by its `prefersSpoken`
+  flag.
+- An `LLMUpdateSettingsFrame` is not sent to the session: the service logs a warning for each
+  changed field. `resetConversation()` drops the session and opens a new one from the current context.
+- Constructing a `ResponsesDelegation` without `settings.model`, or the service without a
+  `model`, throws.
+
+## Runtime notes
+
+- The socket is opened with `websocketConnect()` from core, and the key is sent as an
+  `Authorization` header. Bun, Node and Deno send it from the global `WebSocket`; on Cloudflare
+  Workers core opens the socket through `fetch`. `webSocketFactory` (a pipedog addition) lets
+  you open it some other way.
+- The backend model's `OpenAIResponsesReasoningConfig` is sent as its set fields (`effort`,
+  `summary`, `mode`).

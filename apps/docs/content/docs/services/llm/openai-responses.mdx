@@ -1,0 +1,155 @@
+---
+title: OpenAI Responses
+description: OpenAI's Responses API with OpenAIResponsesLLMService (WebSocket) and OpenAIResponsesHttpLLMService (HTTP), including reasoning models.
+---
+
+## Overview
+
+The Responses API is OpenAI's newer interface for text generation, tools and reasoning models.
+pipedog ports both of Pipecat's Responses services:
+
+- **`OpenAIResponsesLLMService`**: keeps a WebSocket open to `wss://api.openai.com/v1/responses`.
+  It sends only the new input items with `previous_response_id` when it can, which lowers latency
+  in long, tool-heavy conversations. This is the recommended variant for voice.
+- **`OpenAIResponsesHttpLLMService`**: the same service over HTTP streaming, through the OpenAI
+  SDK. It sends the full context on every turn.
+
+Both store nothing on OpenAI's side (`store: false`). For Chat Completions, see
+[OpenAI](/docs/services/llm/openai).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/llm/openai-responses">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/openai/src/responses">
+    `packages/openai/src/responses/llm.ts`.
+  </Card>
+  <Card title="OpenAI docs" href="https://platform.openai.com/docs/api-reference/responses">
+    The Responses API reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/openai
+```
+
+```ts
+import {
+  OpenAIResponsesHttpLLMService,
+  OpenAIResponsesLLMService,
+  OpenAIResponsesReasoningConfig,
+} from "@pipedog/openai/responses/llm";
+```
+
+## Prerequisites
+
+- An OpenAI account and an API key from the [OpenAI dashboard](https://platform.openai.com/api-keys).
+- Pass the key as `apiKey`. If you leave it out, both services read `OPENAI_API_KEY`. The
+  examples read it from `OPENAI_API_KEY`.
+
+## OpenAIResponsesLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/openai/src/responses/llm.ts" name="OpenAIResponsesLLMServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new OpenAIResponsesLLMService.Settings({...})`
+(`OpenAIResponsesLLMSettings`). Both services share them. Any setting you leave out keeps the
+default below. Fields marked "not sent" are left out of the request, so OpenAI's own default
+applies.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gpt-4.1"` | Model. |
+| `systemInstruction` | `string \| null` | `null` | Sent as `instructions`. |
+| `temperature` | `number` | not sent | Sampling temperature. |
+| `topP` | `number` | not sent | Nucleus sampling. |
+| `maxCompletionTokens` | `number` | not sent | Sent as `max_output_tokens`. |
+| `reasoning` | `OpenAIResponsesReasoningConfig \| null` | `null` | Reasoning config, for reasoning models. See below. |
+| `frequencyPenalty`, `presencePenalty`, `seed`, `topK`, `maxTokens` | `number \| null` | `null` | Not part of the Responses request. |
+| `filterIncompleteUserTurns` | `boolean` | `false` | Filter incomplete user turns. |
+| `userTurnCompletionConfig` | `UserTurnCompletionConfig \| null` | `null` | Turn completion config used with `filterIncompleteUserTurns`. |
+| `extra` | `Record<string, unknown>` | `{}` | Extra request fields, merged in after the fields above. |
+
+`OpenAIResponsesReasoningConfig` (also `OpenAIResponsesLLMService.ReasoningConfig`) takes:
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `effort` | `"none" \| "minimal" \| "low" \| "medium" \| "high" \| "xhigh" \| "max" \| string \| null` | `null` | Reasoning effort. `null` leaves it to the model. |
+| `summary` | `"auto" \| "concise" \| "detailed" \| string \| null` | `null` | Reasoning summary to return. `null` asks for none. |
+| `mode` | `"standard" \| "pro" \| string \| null` | `null` | Reasoning mode, for models that have one. |
+
+### Usage
+
+<include cwd meta='title="responses.ts"'>snippets/services/llm-openai-responses.ts#usage</include>
+
+A reasoning model, with a reasoning summary:
+
+<include cwd>snippets/services/llm-openai-responses.ts#reasoning</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_completion_timeout` | A completion timed out. |
+| `on_function_calls_started` | The model asked for one or more function calls. |
+| `on_function_calls_cancelled` | Function calls were cancelled. |
+| `on_connection_error` | The WebSocket failed (WebSocket variant only). |
+
+These come from the `LLMService` and `WebsocketLLMService` base classes.
+
+### Notes
+
+- Runs a response for each `LLMContextFrame`, between an `LLMFullResponseStartFrame` and an
+  `LLMFullResponseEndFrame`, and streams the reply as `LLMTextFrame`s.
+- `wsUrl` sets the WebSocket endpoint. `baseUrl` only affects the HTTP client the service uses
+  for `runInference`.
+- When the context still starts with what was sent last time, only the new items go out, with
+  `previous_response_id`. After a reconnect, or when the server no longer has the previous
+  response, the service sends the full context again. It also reconnects and retries when it
+  hits OpenAI's 60 minute connection limit.
+- With `reasoning` left `null`, the service sends the lowest effort OpenAI documents for a
+  known reasoning model (for example `"none"` for `gpt-5.4`, `"low"` for `o3`), for the fastest
+  replies, and logs what it sent. Set `useProviderThinkingDefault` to keep OpenAI's default.
+  `gpt-4.1`, the default model, does not reason.
+- Reasoning summaries come out as `LLMThoughtStartFrame`, `LLMThoughtTextFrame` and
+  `LLMThoughtEndFrame` (the assistant aggregator's `on_assistant_thought` event). The encrypted
+  reasoning is kept in the context and sent back on later turns.
+- `serviceTier` accepts `"auto"`, `"default"`, `"flex"`, `"scale"`, `"fast"`, `"priority"` and
+  `"ultrafast"`.
+
+## OpenAIResponsesHttpLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/openai/src/responses/llm.ts" name="BaseOpenAIResponsesLLMServiceOptions" />
+
+### Settings
+
+Same as `OpenAIResponsesLLMService` above.
+
+### Usage
+
+<include cwd meta='title="responses-http.ts"'>snippets/services/llm-openai-responses.ts#http</include>
+
+### Notes
+
+- Each turn sends the whole context. Over HTTP, `previous_response_id` needs `store: true`,
+  which turns on OpenAI-side conversation storage, so this variant doesn't use it.
+- `retryOnTimeout` and `retryTimeoutSecs` work as in [OpenAI](/docs/services/llm/openai): one
+  re-issue when the first attempt produces nothing in time.
+
+## Runtime notes
+
+- `OpenAIResponsesHttpLLMService` uses the `openai` JS SDK over `fetch`, which works on Bun,
+  Node, Deno and Cloudflare Workers.
+- `OpenAIResponsesLLMService` sends the key as an `Authorization` header on the WebSocket
+  handshake. Bun, Node and Deno send it from the global `WebSocket`; on Cloudflare Workers core
+  opens the socket through `fetch`.
+- Upstream's mixin base `_BaseOpenAIResponsesLLMService` is a class-factory mixin here
+  (`BaseOpenAIResponsesLLMServiceMixin`). `instanceof _BaseOpenAIResponsesLLMService` holds for
+  both services.

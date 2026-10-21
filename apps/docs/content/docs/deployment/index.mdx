@@ -1,0 +1,49 @@
+---
+title: Deployment overview
+description: Where a pipedog voice agent can run in production, and which transport each host allows.
+---
+
+A voice agent is a long-lived session: it holds a pipeline, a conversation and a connection for the
+whole call. That shapes where it can run. The transport decides most of it:
+
+- **SmallWebRTC** sends media over UDP. It needs a long-lived server process with UDP reachable:
+  Bun, Node or Deno on a VM, a container or a bare-metal host.
+- **WebSocket** sends audio frames over TCP. It runs on the same servers, and also on Cloudflare
+  Workers and Durable Objects, and on Vercel's Bun runtime.
+
+| Host | Runtime | SmallWebRTC | WebSocket | Page |
+|---|---|---|---|---|
+| VM, container, bare metal | Bun, Node, Deno | Yes | Yes | [Servers](/docs/deployment/servers) |
+| Cloudflare Workers + Durable Objects | workerd | No (no UDP) | Yes | [Cloudflare Workers](/docs/deployment/cloudflare-workers) |
+| Vercel Functions | Bun runtime | No (no UDP) | Yes | [Vercel](/docs/deployment/vercel) |
+| Serverless functions without WebSockets | any | No | No | Signalling only |
+
+Pipecat's own deployment guides (Fly.io, Cerebrium, Modal, Pipecat Cloud) assume a Python process
+per session. The same patterns apply to a pipedog server: one process (or one Durable Object) per
+session, and a cap on concurrent sessions.
+
+## Before you deploy
+
+- **Authenticate the endpoints.** pipedog's endpoints don't authenticate. Put a check in front of
+  them, as in [Frameworks: Authentication](/docs/frameworks#authentication).
+- **Provider keys stay on the server.** Services read their keys from options you pass; read them
+  from the environment or the host's secret store, never from the client.
+- **Turn detection and size.** Local Silero VAD and Smart Turn load ONNX models (about 100 MB of
+  runtime and models). On Workers, use provider-side turn detection instead. See
+  [Turn detection](/docs/concepts/turn-detection).
+- **Tracing.** Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export spans. See
+  [Metrics & tracing](/docs/concepts/metrics-and-tracing).
+- **Runtimes.** The [compatibility table](/docs/guides/runtimes) lists where each package is
+  verified.
+
+<Cards>
+  <Card title="Servers" href="/docs/deployment/servers">
+    Bun, Node or Deno, with SmallWebRTC and WebSocket.
+  </Card>
+  <Card title="Cloudflare Workers" href="/docs/deployment/cloudflare-workers">
+    One Durable Object per session, over WebSocket.
+  </Card>
+  <Card title="Vercel" href="/docs/deployment/vercel">
+    WebSocket sessions on Vercel Functions with the Bun runtime.
+  </Card>
+</Cards>

@@ -1,0 +1,15 @@
+{
+  "title": "Serializers",
+  "pages": [
+    "index",
+    "protobuf",
+    "rtvi-client",
+    "telnyx",
+    "---Coming soon---",
+    "exotel",
+    "genesys",
+    "plivo",
+    "twilio",
+    "vonage"
+  ]
+}

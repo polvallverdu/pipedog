@@ -1,0 +1,53 @@
+---
+title: Express
+description: Mount the pipedog WebRTC offer endpoint in an Express 5 app.
+---
+
+Express 5 mounts the offer through `nodeRequestListener`, which turns a fetch handler into a Node
+request listener. This snippet mounts only the offer.
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn express
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+
+## Files
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`voice.ts` re-exports it:
+
+<include cwd meta='title="voice.ts"'>../../examples/framework-snippets/express/voice.ts</include>
+
+<include cwd meta='title="server.ts"'>../../examples/framework-snippets/express/server.ts</include>
+
+Don't add `express.json()` in front of the route: the offer reads the body itself, and a body parser
+would consume it first.
+
+## Run it
+
+```bash
+OPENAI_API_KEY=sk-... node server.ts
+```
+
+It listens on port 3000. `bun server.ts` works too. Node runs the TypeScript with its built-in type
+stripping, in a workspace; see [Runtimes](/docs/guides/runtimes).
+
+## Deploy
+
+Run it as a long-lived Node or Bun process on a host that allows UDP traffic, for the offer's media.
+
+## WebSocket
+
+This snippet mounts only the offer. To serve WebSocket sessions too, listen on a second port with
+`websocketServe` from `@pipedog/transport-websocket/serve` (on Node it needs the `ws` package), or
+run a [Bun](/docs/frameworks/bun) or [Deno](/docs/frameworks/deno) server for it. See
+[WebSocket](/docs/transports/websocket).
+
+## Authentication
+
+The route has no auth. Wrap `offer` with a session check before `nodeRequestListener`, or add an
+Express middleware in front of the route, as in [Authentication](/docs/frameworks#authentication).

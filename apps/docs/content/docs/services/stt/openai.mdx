@@ -1,0 +1,147 @@
+---
+title: OpenAI
+description: Speech-to-text with OpenAISTTService (segmented, Audio API) and OpenAIRealtimeSTTService (streaming, Realtime API, optional server VAD).
+---
+
+## Overview
+
+pipedog ports both of Pipecat's OpenAI speech-to-text services:
+
+- **`OpenAISTTService`**: transcribes each speech segment with the Audio API
+  (`audio.transcriptions`). It waits for the user to stop speaking, then sends the segment as a
+  WAV file. Works with the GPT transcription models and Whisper (`whisper-1`).
+- **`OpenAIRealtimeSTTService`**: streams audio over a WebSocket to the Realtime API in
+  transcription-only mode, with interim results. Turns come from a local VAD (the default) or
+  from OpenAI's server-side VAD.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/openai">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/openai/src">
+    `packages/openai/src/stt.ts`.
+  </Card>
+  <Card title="OpenAI docs" href="https://platform.openai.com/docs/guides/speech-to-text">
+    Transcription models and languages.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/openai
+```
+
+```ts
+import { OpenAIRealtimeSTTService, OpenAISTTService } from "@pipedog/openai/stt";
+```
+
+`OpenAISTTService` builds on `BaseWhisperSTTService` from `@pipedog/whisper`, which
+`@pipedog/openai` depends on.
+
+## Prerequisites
+
+- An OpenAI account and an API key from the [OpenAI dashboard](https://platform.openai.com/api-keys).
+- Pass the key as `apiKey`. `OpenAISTTService` falls back to `OPENAI_API_KEY` when you leave it
+  out; `OpenAIRealtimeSTTService` requires it. The examples read it from `OPENAI_API_KEY`.
+
+## OpenAISTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/openai/src/stt.ts" name="OpenAISTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new OpenAISTTService.Settings({...})`
+(`OpenAISTTSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gpt-transcribe"` | Transcription model, for example `"whisper-1"`. |
+| `language` | `Language` | `Language.EN` | Transcription language. |
+| `prompt` | `string \| null` | `null` | Text that guides the style, or continues a previous segment. |
+| `temperature` | `number \| null` | `null` | Sampling temperature, 0 to 1. |
+| `keywords` | `string[] \| null` | `null` | Words or phrases to guide transcription. Supported by `"gpt-transcribe"`. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-openai.ts#usage</include>
+
+Whisper, keeping empty transcripts:
+
+<include cwd>snippets/services/stt-openai.ts#whisper</include>
+
+### Notes
+
+- A segmented service: it needs a VAD (in the user aggregator) to mark where each segment ends,
+  then pushes one `TranscriptionFrame` per segment. There are no interim results.
+- `pushEmptyTranscripts: true` pushes a `TranscriptionFrame` even when nothing was transcribed,
+  so the bot can go on when the VAD fired on noise.
+- With `includeProbMetrics: true`, GPT transcription models report per-token logprobs and
+  Whisper models per-segment logprobs. Diarization models report none, with a warning.
+- `httpClient` replaces the SDK's `fetch`, for example to set a longer request timeout.
+
+## OpenAIRealtimeSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/openai/src/stt.ts" name="OpenAIRealtimeSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new OpenAIRealtimeSTTService.Settings({...})`
+(`OpenAIRealtimeSTTSettings`).
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gpt-realtime-whisper"` | Transcription model. |
+| `language` | `Language` | `Language.EN` | Transcription language, sent as its ISO-639-1 code. |
+| `prompt` | `string \| null` | `null` | Text that guides the style. Not supported by `"gpt-realtime-whisper"`, so it is dropped (with a warning) for that model. |
+| `noiseReduction` | `"near_field" \| "far_field" \| null` | `null` | Noise reduction for close or distant microphones. `null` turns it off. |
+| `delay` | `"minimal" \| "low" \| "medium" \| "high" \| "xhigh" \| null` | `null` | How long the model waits before emitting text, trading latency for accuracy. Only `"gpt-realtime-whisper"`. |
+
+### Usage
+
+<include cwd meta='title="realtime.ts"'>snippets/services/stt-openai-realtime.ts#usage</include>
+
+Server-side VAD. OpenAI detects the turns, so the pipeline needs no local VAD:
+
+<include cwd>snippets/services/stt-openai-realtime.ts#server-vad</include>
+
+Settings sent mid-call with an `STTUpdateSettingsFrame` are applied with a `session.update` on
+the open session.
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The WebSocket connected. |
+| `on_disconnected` | The WebSocket closed. |
+| `on_connection_error` | The connection failed. |
+
+### Notes
+
+- Emits `InterimTranscriptionFrame`s as text arrives and a `TranscriptionFrame` for each
+  completed segment.
+- `turnDetection` defaults to `false`: a local VAD drives turns, and each
+  `VADUserStoppedSpeakingFrame` commits the audio buffer so the server transcribes the segment.
+- With `turnDetection: { type: "server_vad" }`, the service broadcasts
+  `ProposedUserStartedSpeakingFrame` and `ProposedUserStoppedSpeakingFrame` from the server's
+  speech events, and asks the user aggregator for `ExternalUserTurnStrategies` (unless you pass
+  your own `userTurnStrategies`). `shouldInterrupt` (default `true`) decides whether those turns
+  interrupt the bot. Server VAD needs a model with turn detection: `gpt-transcribe` has it,
+  `gpt-realtime-whisper` does not. See [turn detection](/docs/concepts/turn-detection).
+- Audio is sent as 24 kHz 16-bit mono PCM. Other input rates are resampled.
+- The [Cloudflare Workers example](/docs/deployment/cloudflare-workers) uses this service with
+  server VAD, so the Worker loads no local VAD model.
+
+## Runtime notes
+
+- `OpenAISTTService` uses the `openai` JS SDK over `fetch`. It works on Bun, Node, Deno and
+  Cloudflare Workers.
+- `OpenAIRealtimeSTTService` sends the key as an `Authorization` header on the WebSocket
+  handshake. Bun, Node and Deno send it from the global `WebSocket`; on Cloudflare Workers core
+  opens the socket through `fetch`.
+- The deprecated `model`, `language`, `prompt`, `temperature` and `noiseReduction` constructor
+  options are not ported. Use `settings`.
