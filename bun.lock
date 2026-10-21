@@ -14,6 +14,7 @@
         "@pipedog/audio-soundfile-mixer": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/onnx": "workspace:*",
+        "@pipedog/transport-local": "workspace:*",
         "@pipedog/transport-smallwebrtc": "workspace:*",
         "@pipedog/transport-whatsapp": "workspace:*",
         "@types/bun": "1.4.3",
@@ -743,6 +744,14 @@
         "@livekit/rtc-node",
       ],
     },
+    "packages/transport-local": {
+      "name": "@pipedog/transport-local",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
     "packages/transport-smallwebrtc": {
       "name": "@pipedog/transport-smallwebrtc",
       "version": "0.6.1",
@@ -1389,6 +1398,8 @@
     "@pipedog/transport-heygen": ["@pipedog/transport-heygen@workspace:packages/transport-heygen"],
 
     "@pipedog/transport-livekit": ["@pipedog/transport-livekit@workspace:packages/transport-livekit"],
+
+    "@pipedog/transport-local": ["@pipedog/transport-local@workspace:packages/transport-local"],
 
     "@pipedog/transport-smallwebrtc": ["@pipedog/transport-smallwebrtc@workspace:packages/transport-smallwebrtc"],
 

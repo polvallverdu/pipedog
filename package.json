@@ -37,6 +37,7 @@
     "@pipedog/audio-soundfile-mixer": "workspace:*",
     "@pipedog/core": "workspace:*",
     "@pipedog/onnx": "workspace:*",
+    "@pipedog/transport-local": "workspace:*",
     "@pipedog/transport-smallwebrtc": "workspace:*",
     "@pipedog/transport-whatsapp": "workspace:*",
     "@types/bun": "1.4.3",

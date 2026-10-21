@@ -13265,9 +13265,9 @@
         "pyaudio"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "LocalAudioTransport in @pipedog/transport-local. Bun, Node, Deno only (spawns processes; workerd n/a, recorded as unsupportedRuntimes). DIVERGENCE: PyAudio replaced by sox or ffmpeg child processes (Bun.spawn / Deno.Command / node:child_process) piping raw s16le PCM; clear LocalAudioToolNotFoundError when neither is installed; input_device_index/output_device_index -> inputDevice/outputDevice (names in the tool's terms); tool + spawner options added; the processes start in start() not setup(); output paces writes with a sleep like the other non-blocking outputs. Upstream has no tests: test/test_local_audio.test.ts uses a fake spawner; compat smoke runs the real spawner (cat). A real microphone/speaker was not exercised."
     },
     {
       "module": "pipecat.transports.local.tk",
