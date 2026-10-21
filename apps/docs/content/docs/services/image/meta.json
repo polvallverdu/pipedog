@@ -1,4 +1,4 @@
 {
   "title": "Image generation",
-  "pages": ["index", "openai", "google", "---Coming soon---", "azure"]
+  "pages": ["index", "openai", "google", "azure"]
 }

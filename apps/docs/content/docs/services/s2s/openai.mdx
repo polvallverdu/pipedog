@@ -113,4 +113,5 @@ ignored with a warning:
 - Video frames are encoded with core's `encodeImage()` (upstream uses Pillow).
 - The deprecated `model` and `sessionProperties` constructor options are not ported. Use
   `settings: new OpenAIRealtimeLLMService.Settings({ model, sessionProperties })`.
-- Not ported yet: `AzureRealtimeLLMService` (the Azure OpenAI variant of this service).
+- For realtime models deployed on Azure, see
+  [`AzureRealtimeLLMService`](/docs/services/s2s/azure-realtime).

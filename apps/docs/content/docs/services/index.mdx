@@ -7,7 +7,7 @@ description: "Every pipedog service by category: ported, and coming soon from Pi
 
 Services are frame processors that call an AI provider. pipedog ports them from Pipecat with the same
 class names and options (in camelCase), one package per provider: `@pipedog/openai`,
-`@pipedog/deepgram` and so on. 57 service pages are ported so far. The "coming soon"
+`@pipedog/deepgram` and so on. 63 service pages are ported so far. The "coming soon"
 pages link to Pipecat's docs and to a port request.
 
 Each service page follows the same layout as Pipecat's: overview, installation, configuration
@@ -21,6 +21,7 @@ Chat models that turn the conversation context into a response. [All llm service
 |---|---|---|---|
 | [OpenAI](/docs/services/llm/openai) | `OpenAILLMService` | `@pipedog/openai` | Ported |
 | [OpenAI Responses](/docs/services/llm/openai-responses) | `OpenAIResponsesLLMService`, `OpenAIResponsesHttpLLMService` | `@pipedog/openai` | Ported |
+| [Azure OpenAI](/docs/services/llm/azure) | `AzureLLMService` | `@pipedog/azure` | Ported |
 | [Anthropic](/docs/services/llm/anthropic) | `AnthropicLLMService` | `@pipedog/anthropic` | Ported |
 | [Google Gemini](/docs/services/llm/google) | `GoogleLLMService` | `@pipedog/google` | Ported |
 | [Google Vertex AI](/docs/services/llm/google-vertex) | `GoogleVertexLLMService` | `@pipedog/google` | Ported |
@@ -43,7 +44,6 @@ Chat models that turn the conversation context into a response. [All llm service
 | [SambaNova](/docs/services/llm/sambanova) | `SambaNovaLLMService` | `@pipedog/sambanova` | Ported |
 | [Together AI](/docs/services/llm/together) | `TogetherLLMService` | `@pipedog/together` | Ported |
 | [xAI Grok](/docs/services/llm/grok) | `GrokLLMService` | `@pipedog/xai` | Ported |
-| [Azure OpenAI](/docs/services/llm/azure) | `AzureLLMService` | | Coming soon |
 | [NVIDIA](/docs/services/llm/nvidia) | `NvidiaLLMService` | | Coming soon |
 | [Sarvam AI](/docs/services/llm/sarvam) | `SarvamLLMService` | | Coming soon |
 
@@ -60,13 +60,13 @@ Transcribe the user's speech into TranscriptionFrames. [All speech-to-text servi
 | [ElevenLabs](/docs/services/stt/elevenlabs) | `ElevenLabsSTTService`, `ElevenLabsRealtimeSTTService` | `@pipedog/elevenlabs` | Ported |
 | [AWS Transcribe](/docs/services/stt/aws) | `AWSTranscribeSTTService` | `@pipedog/aws` | Ported |
 | [AWS SageMaker (bidi client)](/docs/services/stt/aws-sagemaker) | `SageMakerBidiClient` | `@pipedog/aws` | Ported |
+| [Azure Speech](/docs/services/stt/azure) | `AzureSTTService` | `@pipedog/azure` | Ported |
 | [Whisper (base)](/docs/services/stt/whisper) | `BaseWhisperSTTService` | `@pipedog/whisper` | Ported |
 | [Groq](/docs/services/stt/groq) | `GroqSTTService` | `@pipedog/groq` | Ported |
 | [Mistral](/docs/services/stt/mistral) | `MistralSTTService` | `@pipedog/mistral` | Ported |
 | [Together AI](/docs/services/stt/together) | `TogetherSTTService` | `@pipedog/together` | Ported |
 | [xAI](/docs/services/stt/xai) | `XAISTTService` | `@pipedog/xai` | Ported |
 | [AssemblyAI](/docs/services/stt/assemblyai) | `AssemblyAISTTService`, `AssemblyAISyncSTTService` | | Coming soon |
-| [Azure Speech](/docs/services/stt/azure) | `AzureSTTService` | | Coming soon |
 | [Gladia](/docs/services/stt/gladia) | `GladiaSTTService` | | Coming soon |
 | [NVIDIA Riva](/docs/services/stt/nvidia) | `NvidiaSTTService`, `NvidiaSegmentedSTTService` | | Coming soon |
 | [Sarvam AI](/docs/services/stt/sarvam) | `SarvamSTTService`, `SarvamRealtimeSTTService` | | Coming soon |
@@ -90,7 +90,7 @@ Turn the bot's text into audio frames. [All text-to-speech services](/docs/servi
 | [xAI](/docs/services/tts/xai) | `XAITTSService`, `XAIHttpTTSService` | `@pipedog/xai` | Ported |
 | [Inworld](/docs/services/tts/inworld) | `InworldTTSService`, `InworldHttpTTSService` | `@pipedog/inworld` | Ported |
 | [AWS Polly](/docs/services/tts/aws) | `AWSPollyTTSService` | `@pipedog/aws` | Ported |
-| [Azure Speech](/docs/services/tts/azure) | `AzureTTSService`, `AzureHttpTTSService` | | Coming soon |
+| [Azure Speech](/docs/services/tts/azure) | `AzureTTSService`, `AzureHttpTTSService` | `@pipedog/azure` | Ported |
 | [Fish Audio](/docs/services/tts/fish) | `FishAudioTTSService` | | Coming soon |
 | [Hume](/docs/services/tts/hume) | `HumeTTSService` | | Coming soon |
 | [NVIDIA Riva](/docs/services/tts/nvidia) | `NvidiaTTSService` | | Coming soon |
@@ -113,7 +113,8 @@ Realtime models that take audio in and give audio out, in one service. [All spee
 | [Ultravox](/docs/services/s2s/ultravox) | `UltravoxRealtimeLLMService` | `@pipedog/ultravox` | Ported |
 | [xAI Grok Realtime](/docs/services/s2s/grok) | `GrokRealtimeLLMService` | `@pipedog/xai` | Ported |
 | [AWS Nova Sonic](/docs/services/s2s/aws) | `AWSNovaSonicLLMService` | `@pipedog/aws` | Ported |
-| [Azure Voice Live](/docs/services/s2s/azure-voice-live) | `AzureVoiceLiveLLMService`, `AzureRealtimeLLMService` | | Coming soon |
+| [Azure Voice Live](/docs/services/s2s/azure-voice-live) | `AzureVoiceLiveLLMService` | `@pipedog/azure` | Ported |
+| [Azure OpenAI Realtime](/docs/services/s2s/azure-realtime) | `AzureRealtimeLLMService` | `@pipedog/azure` | Ported |
 
 ## Image generation
 
@@ -123,7 +124,7 @@ Generate images from text prompts. [All image generation services](/docs/service
 |---|---|---|---|
 | [OpenAI](/docs/services/image/openai) | `OpenAIImageGenService` | `@pipedog/openai` | Ported |
 | [Google](/docs/services/image/google) | `GoogleImageGenService` | `@pipedog/google` | Ported |
-| [Azure OpenAI](/docs/services/image/azure) | `AzureImageGenServiceREST` | | Coming soon |
+| [Azure OpenAI](/docs/services/image/azure) | `AzureImageGenServiceREST` | `@pipedog/azure` | Ported |
 
 ## Video avatars
 

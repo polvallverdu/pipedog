@@ -4,6 +4,7 @@
     "index",
     "openai",
     "openai-responses",
+    "azure",
     "anthropic",
     "google",
     "google-vertex",
@@ -27,7 +28,6 @@
     "together",
     "grok",
     "---Coming soon---",
-    "azure",
     "nvidia",
     "sarvam"
   ]
