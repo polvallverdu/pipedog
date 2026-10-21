@@ -2,6 +2,17 @@
   "name": "@pipedog/onnx",
   "version": "0.4.0",
   "description": "A tiny ONNX inference backend for pipedog models (Silero VAD, Smart Turn): onnxruntime-node when installed, else onnxruntime-web (WASM), with a Cloudflare Workers variant.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "onnx",
+    "onnxruntime",
+    "inference",
+    "wasm"
+  ],
   "license": "BSD-2-Clause",
   "repository": {
     "type": "git",

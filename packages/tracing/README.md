@@ -1,0 +1,44 @@
+# @pipedog/tracing
+
+OpenTelemetry setup for pipedog. `@pipedog/core` already holds the port of Pipecat's tracing (the
+conversation and turn spans, and the `stt`, `llm` and `tts` service spans) and needs only
+`@opentelemetry/api`. This package adds what upstream's `pipecat-ai[tracing]` extra brings in: the
+OpenTelemetry SDK, an OTLP/HTTP exporter, and `setupTracing()`.
+
+A port of Pipecat's `pipecat.utils.tracing.setup` (`setup_tracing(service_name, exporter,
+console_export)` becomes `setupTracing({ serviceName, exporter, consoleExport })`).
+
+## Install
+
+```sh
+bun add @pipedog/core @pipedog/asyncio @pipedog/tracing @opentelemetry/api
+```
+
+`@opentelemetry/api` is a peer dependency (`^1.3.0`), so the app and core share one copy.
+
+## Usage
+
+```ts
+import { OTLPTraceExporter, setupTracing } from "@pipedog/tracing";
+
+setupTracing({
+  serviceName: "my-voice-bot",
+  exporter: new OTLPTraceExporter({ url: "http://localhost:4318/v1/traces" }),
+});
+// then: new PipelineWorker(pipeline, { enableTracing: true })
+```
+
+`forceFlushTracing()` and `shutdownTracing()` flush and stop the exporter, for example before a
+short-lived process exits.
+
+## Runtimes
+
+Bun, Node.js 22+, Deno and Cloudflare Workers. On Workers, flush before the request ends; the docs
+show how.
+
+## Links
+
+- Docs: [metrics and tracing](https://polvallverdu.github.io/pipedog/docs/concepts/metrics-and-tracing/)
+- [pipedog README](https://github.com/polvallverdu/pipedog#readme)
+- License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
+  [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

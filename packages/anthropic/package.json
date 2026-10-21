@@ -2,6 +2,16 @@
   "name": "@pipedog/anthropic",
   "version": "0.4.0",
   "description": "Anthropic services (Claude LLM) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "anthropic",
+    "claude",
+    "llm"
+  ],
   "license": "BSD-2-Clause",
   "repository": {
     "type": "git",

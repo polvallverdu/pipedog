@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://polvallverdu.github.io/pipedog/
+    about: Guides (voice bot, turn detection, Workers, frameworks) and the API reference.
+  - name: Porting status
+    url: https://polvallverdu.github.io/pipedog/docs/contributing/status/
+    about: Which upstream Pipecat modules and tests are ported, per package.
+  - name: Report a security vulnerability
+    url: https://github.com/polvallverdu/pipedog/security/advisories/new
+    about: Report vulnerabilities privately, not in a public issue.

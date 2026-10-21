@@ -2,6 +2,16 @@
   "name": "@pipedog/whisper",
   "version": "0.4.0",
   "description": "Base speech-to-text service for Whisper-compatible APIs, shared by the pipedog STT services that speak the Whisper protocol.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "whisper",
+    "stt",
+    "speech"
+  ],
   "license": "BSD-2-Clause",
   "repository": {
     "type": "git",

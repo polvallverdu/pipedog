@@ -2,6 +2,17 @@
   "name": "@pipedog/asyncio",
   "version": "0.4.0",
   "description": "asyncio-style tasks, cancellation, queues and events for JavaScript runtimes (Bun, Node, Workers).",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "asyncio",
+    "cancellation",
+    "tasks",
+    "queue"
+  ],
   "license": "BSD-2-Clause",
   "repository": {
     "type": "git",

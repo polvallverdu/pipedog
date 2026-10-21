@@ -1,0 +1,49 @@
+name: Feature or port request
+description: Ask for an upstream Pipecat module (a service, transport, serializer...) to be ported, or for a new feature.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before asking for a port, check [porting/STATUS.md](https://github.com/polvallverdu/pipedog/blob/main/porting/STATUS.md)
+        to see whether it is already ported or in progress.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of request
+      options:
+        - Port an upstream module
+        - New feature (not in upstream)
+        - Runtime support (Bun, Node, Deno, Workers)
+        - Docs
+    validations:
+      required: true
+  - type: input
+    id: upstream
+    attributes:
+      label: Upstream module
+      description: For a port, the Pipecat module path or package.
+      placeholder: "src/pipecat/services/azure/tts.py"
+  - type: textarea
+    id: use-case
+    attributes:
+      label: What you want to do
+      description: The use case, and what is missing today.
+    validations:
+      required: true
+  - type: dropdown
+    id: runtimes
+    attributes:
+      label: Runtimes you need it on
+      multiple: true
+      options:
+        - Bun
+        - Node.js
+        - Deno
+        - Cloudflare Workers
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to work on this myself (see CONTRIBUTING.md).

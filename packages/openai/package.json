@@ -2,6 +2,18 @@
   "name": "@pipedog/openai",
   "version": "0.4.0",
   "description": "OpenAI services (LLM, Responses, Realtime, Live, STT, TTS, image) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "openai",
+    "llm",
+    "stt",
+    "tts",
+    "realtime-api"
+  ],
   "license": "BSD-2-Clause",
   "repository": {
     "type": "git",

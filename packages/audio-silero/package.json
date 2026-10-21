@@ -2,6 +2,17 @@
   "name": "@pipedog/audio-silero",
   "version": "0.4.0",
   "description": "Silero VAD (SileroVADAnalyzer) for pipedog, with the upstream silero_vad.onnx model included. Runs on onnxruntime-node or onnxruntime-web via @pipedog/onnx.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "vad",
+    "silero",
+    "onnx",
+    "voice-activity-detection"
+  ],
   "license": "BSD-2-Clause AND MIT",
   "repository": {
     "type": "git",
