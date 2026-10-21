@@ -243,9 +243,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported 1:1; tool schemas serialized with pyJsonDumps."
     },
     {
       "module": "pipecat.adapters.services.azure_voice_live_adapter",
@@ -299,9 +299,9 @@
         "test_get_llm_invocation_params.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Inline bytes kept as Uint8Array; the service base64-encodes them on the wire as boto3 does."
     },
     {
       "module": "pipecat.adapters.services.deepseek_adapter",
@@ -6884,9 +6884,9 @@
       "tests": [
         "test_aws_credentials.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "InvokeAgentRuntime through a SigV4-signed fetch, with a UUID session-id header; all runtimes. DIVERGENCE: no default credential chain (credentialsProvider); SSE lines are buffered across body chunks and a single-part body is read whole."
     },
     {
       "module": "pipecat.services.aws.llm",
@@ -6926,9 +6926,9 @@
         "test_llm_token_usage_totals.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Raw HTTP Converse/ConverseStream with SigV4 on WebCrypto, event stream decoded to botocore-shaped dicts. All runtimes. Deprecated InputParams and model/params/stop_sequences args not ported. DIVERGENCE: client_config not ported (no botocore retries or 300 s timeouts); no default credential chain (credentialsProvider instead)."
     },
     {
       "module": "pipecat.services.aws.nova_sonic",
@@ -6942,9 +6942,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Empty __init__."
     },
     {
       "module": "pipecat.services.aws.nova_sonic.llm",
@@ -6983,9 +6983,9 @@
       "tests": [
         "test_realtime_intermediate_results.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: InvokeModelWithBidirectionalStream goes over Bedrock's WebSocket endpoint by default (SigV4 presign plus chained event signing, byte-identical to @aws-sdk/middleware-websocket), so it runs on Bun/Node/Deno/Workers; transport 'http2' uses the optional peer @aws-sdk/client-bedrock-runtime (Node/Bun). Credentials are optional, falling back to env and then credentialsProvider. ready.wav is embedded as base64. Not ported (deprecated): Params, and the model/voice_id/params/system_instruction init args. InvalidStateError handling dropped."
     },
     {
       "module": "pipecat.services.aws.nova_sonic.session_continuation",
@@ -7002,9 +7002,9 @@
         "pydantic"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Streams are a BidirectionalStream interface (closeInput = input_stream.close); createTask/cancelTask take functions."
     },
     {
       "module": "pipecat.services.aws.sagemaker",
@@ -7018,9 +7018,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Empty __init__."
     },
     {
       "module": "pipecat.services.aws.sagemaker.bidi_client",
@@ -7044,9 +7044,9 @@
       "tests": [
         "test_sagemaker_bidi_client.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "HTTP/2 duplex through the optional peer @aws-sdk/client-sagemaker-runtime-http2, imported lazily (Node, Bun; not Workers). Injectable SageMakerRuntimeHTTP2ClientLike client. JS SDK event shapes. Credentials come from explicit keys, env or credentialsProvider instead of EnvironmentCredentialsResolver. The classifier also reads the JS SDK's metadata, name and retryable fields."
     },
     {
       "module": "pipecat.services.aws.stt",
@@ -7079,9 +7079,9 @@
         "test_aws_credentials.py",
         "test_aws_stt_language.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Transcribe WebSocket API with a SigV4 presigned URL (WebCrypto); all runtimes. DIVERGENCE: no default credential chain (options/env/credentialsProvider); only the Origin handshake header is sent. endpointUrl is a pipedog addition. Deprecated language option not ported."
     },
     {
       "module": "pipecat.services.aws.tts",
@@ -7112,9 +7112,9 @@
       "tests": [
         "test_aws_credentials.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Polly REST /v1/speech through a SigV4-signed fetch; all runtimes. DIVERGENCE: no default credential chain (credentialsProvider); every request failure becomes an ErrorFrame. Deprecated InputParams/voice_id/params not ported."
     },
     {
       "module": "pipecat.services.aws.utils",
@@ -7130,9 +7130,9 @@
       "tests": [
         "test_aws_credentials.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "SigV4 on WebCrypto (sigv4.ts) and a full event-stream codec with CRC32 (event_stream.ts); getPresignedUrl/getRequestUrl are async and take an optional date. DIVERGENCE: no botocore default credential chain; services take a credentialsProvider (aws_session.ts) instead. decodeEvent throws EventStreamError instead of AssertionError."
     },
     {
       "module": "pipecat.services.azure",
@@ -16853,8 +16853,8 @@
         "pipecat.services.aws.llm"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "ClientError/EventStreamError -> AWSServiceError(code, status)."
     },
     {
       "file": "tests/test_aws_credentials.py",
@@ -16869,8 +16869,8 @@
         "pipecat.services.aws.utils"
       ],
       "needsModules": 136,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "Botocore-chain cases become credentialsProvider cases (renewal is checked through the signing keys of a fake fetch)."
     },
     {
       "file": "tests/test_aws_stt_language.py",
@@ -16882,8 +16882,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "1:1."
     },
     {
       "file": "tests/test_azure_stt.py",
@@ -19762,7 +19762,7 @@
       ],
       "needsModules": 139,
       "status": "todo",
-      "notes": "Partial: the Inworld section (TestInworldRealtimeIntermediateResults, 4 pass) is in packages/inworld/test/test_realtime_intermediate_results.test.ts and the Ultravox section (TestUltravoxIntermediateResults, 5 pass) in packages/ultravox/test/test_realtime_intermediate_results.test.ts; the other providers' sections are still to be ported with their packages."
+      "notes": "Partial: the Inworld section (TestInworldRealtimeIntermediateResults, 4 pass) is in packages/inworld/test/test_realtime_intermediate_results.test.ts, the Ultravox section (TestUltravoxIntermediateResults, 5 pass) in packages/ultravox/test/test_realtime_intermediate_results.test.ts, and the Nova Sonic section (4 pass) in packages/aws/test/test_realtime_intermediate_results.test.ts; the other providers' sections are still to be ported with their packages."
     },
     {
       "file": "tests/test_realtime_service_tool_sync.py",
@@ -20210,8 +20210,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 144,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "Client and classifier tests ported with fakes and the real SDK error classes. 8 service tests are todo: they need deepgram.sagemaker.stt/tts, deepgram.flux.sagemaker.stt/tts and nvidia.sagemaker.stt/tts."
     },
     {
       "file": "tests/test_sambanova_llm.py",

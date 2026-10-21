@@ -1,0 +1,77 @@
+{
+  "name": "@pipedog/aws",
+  "version": "0.5.0",
+  "description": "AWS services (Bedrock LLM, Transcribe STT, Polly TTS, Nova Sonic, AgentCore, SageMaker) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "aws",
+    "bedrock",
+    "transcribe",
+    "polly",
+    "nova-sonic",
+    "sagemaker",
+    "llm",
+    "stt",
+    "tts"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/aws"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/aws#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1147.0",
+    "@aws-sdk/client-sagemaker-runtime-http2": "^3.1147.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-bedrock-runtime": {
+      "optional": true
+    },
+    "@aws-sdk/client-sagemaker-runtime-http2": {
+      "optional": true
+    }
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/adapters/services/aws_nova_sonic_adapter.py",
+      "src/pipecat/adapters/services/bedrock_adapter.py",
+      "src/pipecat/services/aws"
+    ]
+  },
+  "devDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "3.1147.0",
+    "@aws-sdk/client-sagemaker-runtime-http2": "3.1147.0"
+  }
+}
