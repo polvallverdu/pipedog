@@ -794,6 +794,12 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["UltravoxRealtimeLLMService"],
     },
     {
+      slug: "grok",
+      name: "xAI Grok Realtime",
+      pkg: "@pipedog/xai",
+      classes: ["GrokRealtimeLLMService"],
+    },
+    {
       slug: "aws",
       name: "AWS Nova Sonic",
       pkg: "@pipedog/aws",
@@ -1049,14 +1055,6 @@ export const upcoming: UpcomingPage[] = [
     about: "Azure's realtime speech-to-speech APIs: Voice Live, and OpenAI Realtime on Azure.",
     classes: ["AzureVoiceLiveLLMService", "AzureRealtimeLLMService"],
     modules: ["services/azure/voice_live/llm.py", "services/azure/realtime/llm.py"],
-  },
-  {
-    section: "s2s",
-    slug: "grok",
-    name: "xAI Grok Realtime",
-    about: "xAI's realtime voice API.",
-    classes: ["GrokRealtimeLLMService"],
-    modules: ["services/xai/realtime/llm.py"],
   },
   // Image
   {

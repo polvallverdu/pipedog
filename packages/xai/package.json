@@ -1,7 +1,7 @@
 {
   "name": "@pipedog/xai",
   "version": "0.5.0",
-  "description": "xAI services (Grok LLM, STT, TTS) for pipedog.",
+  "description": "xAI services (Grok LLM, STT, TTS, Voice Agent realtime) for pipedog.",
   "keywords": [
     "pipecat",
     "pipedog",
@@ -53,7 +53,9 @@
     "upstream": [
       "src/pipecat/services/xai/llm.py",
       "src/pipecat/services/xai/stt.py",
-      "src/pipecat/services/xai/tts.py"
+      "src/pipecat/services/xai/tts.py",
+      "src/pipecat/services/xai/realtime",
+      "src/pipecat/adapters/services/grok_realtime_adapter.py"
     ]
   }
 }
