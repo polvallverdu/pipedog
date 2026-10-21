@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/langchain",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "LangChain integration (LangchainProcessor) for pipedog.",
   "license": "BSD-2-Clause",
   "repository": {
