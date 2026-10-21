@@ -157,7 +157,8 @@ from real runs by the compat harness (`bun run compat`), not by hand.
 | Deno | Yes | |
 | Cloudflare Workers | Yes, with `nodejs_compat` | No WebRTC (no UDP): use the WebSocket transport. Models are loaded from R2, KV or `fetch`, not bundled. See [Workers](https://polvallverdu.github.io/pipedog/docs/workers/). |
 
-Every package below is verified on all four, except `@pipedog/transport-smallwebrtc` (not Workers).
+Every package below is verified on all four, except `@pipedog/transport-smallwebrtc` (not Workers)
+and `@pipedog/aws`'s `SageMakerBidiClient` (HTTP/2, not Workers).
 Details: [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/).
 
 ## Packages
@@ -177,6 +178,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/elevenlabs`](packages/elevenlabs) | ElevenLabs services: STT, Realtime STT, WebSocket and HTTP TTS. |
 | [`@pipedog/inworld`](packages/inworld) | Inworld services: Realtime speech-to-speech, WebSocket and HTTP TTS. |
 | [`@pipedog/ultravox`](packages/ultravox) | Ultravox realtime speech-to-speech service. |
+| [`@pipedog/aws`](packages/aws) | AWS services: Bedrock LLM, Transcribe STT, Polly TTS, Nova Sonic, AgentCore, and the SageMaker streaming client. |
 | [`@pipedog/whisper`](packages/whisper) | Base STT service for Whisper-compatible APIs, shared by the services that speak that protocol. |
 | [`@pipedog/langchain`](packages/langchain) | LangChain integration (`LangchainProcessor`). |
 | [`@pipedog/transport-smallwebrtc`](packages/transport-smallwebrtc) | Peer-to-peer WebRTC transport (werift, Opus via WASM) for the Pipecat browser SDK's `SmallWebRTCTransport`. |

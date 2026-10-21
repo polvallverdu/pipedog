@@ -1,0 +1,80 @@
+---
+title: AWS AgentCore
+description: Run an Amazon Bedrock AgentCore agent in the pipeline, in place of an LLM, with AWSAgentCoreProcessor.
+---
+
+## Overview
+
+`AWSAgentCoreProcessor` sends the conversation to an agent hosted on Amazon Bedrock AgentCore
+Runtime and pushes the agent's replies as `LLMTextFrame`s, so it sits where an LLM service would:
+after the user context aggregator, before TTS.
+
+- On each `LLMContextFrame` it builds a payload from the context and calls
+  `InvokeAgentRuntime`.
+- Each line the agent streams back is turned into text and pushed as an `LLMTextFrame`, between
+  `LLMFullResponseStartFrame` and `LLMFullResponseEndFrame`. A response is closed when no new text
+  arrives for 1 second.
+
+<Cards>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/aws/src">
+    `packages/aws/src/agent_core.ts`.
+  </Card>
+  <Card title="AgentCore docs" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-invoke-agent.html">
+    Deploying and invoking AgentCore Runtime agents.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/aws
+```
+
+```ts
+import { AWSAgentCoreProcessor } from "@pipedog/aws/agent_core";
+```
+
+## Prerequisites
+
+- An agent deployed to AgentCore Runtime, and its ARN.
+- An IAM identity allowed `bedrock-agentcore:InvokeAgentRuntime`.
+- Keys, in this order of precedence:
+  1. `awsAccessKey`, `awsSecretKey` and `awsSessionToken`.
+  2. The `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` environment
+     variables.
+  3. A `credentialsProvider` function, called for every request.
+
+  The region comes from `awsRegion`, else `AWS_REGION`, else `us-east-1`.
+
+## AWSAgentCoreProcessor
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/aws/src/agent_core.ts" name="AWSAgentCoreProcessorOptions" />
+
+### Usage
+
+<include cwd meta='title="agent.ts"'>snippets/services/llm-aws-agentcore.ts#usage</include>
+
+By default the payload is `{"prompt": "<text>"}`, from the last message when it is a user or
+system message, and each response line is read as `{"response": "<text>"}`. Change both with the
+transformers:
+
+<include cwd>snippets/services/llm-aws-agentcore.ts#transformers</include>
+
+A transformer that returns `null` skips the call (for the payload) or the line (for the output).
+
+### Notes
+
+- Each call gets a new `X-Amzn-Bedrock-AgentCore-Runtime-Session-Id`, as botocore generates one.
+- A streamed `text/event-stream` response is split into lines as they arrive, joining a line
+  split across two chunks. Lines must start with `data: `, which is stripped before the output
+  transformer sees them. Any other response is read whole and passed to the transformer once.
+- The `LLMContextFrame` is consumed. Other frames pass through unchanged.
+
+## Runtime notes
+
+- Runs on Bun, Node, Deno and Cloudflare Workers: `POST /runtimes/{arn}/invocations` with `fetch`,
+  signed with SigV4 on WebCrypto.
+- There is no default AWS credential chain. Use keys, the environment, or `credentialsProvider`.
+- `endpointUrl` and `fetch` replace the AgentCore host and the global `fetch`.

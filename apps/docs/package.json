@@ -16,6 +16,7 @@
     "@pipedog/anthropic": "workspace:*",
     "@pipedog/asyncio": "workspace:*",
     "@pipedog/audio-silero": "workspace:*",
+    "@pipedog/aws": "workspace:*",
     "@pipedog/baseten": "workspace:*",
     "@pipedog/cartesia": "workspace:*",
     "@pipedog/cerebras": "workspace:*",

@@ -1,0 +1,80 @@
+---
+title: AWS SageMaker (bidirectional streaming)
+description: SageMakerBidiClient, the HTTP/2 bidirectional streaming client for speech models hosted on Amazon SageMaker endpoints.
+---
+
+## Overview
+
+`SageMakerBidiClient` streams data to and from a SageMaker real-time endpoint with
+`InvokeEndpointWithBidirectionalStream`. Upstream, it is the transport under the SageMaker
+variants of the Deepgram and NVIDIA speech services. Those services are not ported yet, but the
+client is, so you can talk to a model on your own endpoint.
+
+- `startSession()` opens the stream, retrying throttling and transient failures with jittered
+  backoff (not 401 or 403).
+- `sendAudioChunk()`, `sendText()`, `sendJson()` and `sendData()` send payload parts.
+- `receiveResponse()` returns the next response event, or `null` once the stream has closed.
+- `closeSession()` ends the input stream.
+- `classifySagemakerBidiError()` sorts an error into an `ErrorCategory`, so a service can tell
+  bad credentials from a busy endpoint.
+
+<Cards>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/aws/src/sagemaker">
+    `packages/aws/src/sagemaker/bidi_client.ts`.
+  </Card>
+  <Card title="SageMaker docs" href="https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints-test-endpoints.html">
+    Invoking real-time endpoints, including bidirectional streams.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/aws @aws-sdk/client-sagemaker-runtime-http2
+```
+
+```ts
+import { SageMakerBidiClient } from "@pipedog/aws/sagemaker/bidi_client";
+```
+
+`@aws-sdk/client-sagemaker-runtime-http2` is an optional peer dependency, loaded on the first
+`startSession()`. It is needed only by this client.
+
+## Prerequisites
+
+- A SageMaker endpoint serving a model that supports bidirectional streaming (for example
+  Deepgram from the AWS Marketplace).
+- An IAM identity allowed `sagemaker:InvokeEndpointWithBidirectionalStream`.
+- Keys from `awsAccessKeyId`, `awsSecretAccessKey` and `awsSessionToken`, else the `AWS_*`
+  environment variables, else a `credentialsProvider` function.
+
+## SageMakerBidiClient
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/aws/src/sagemaker/bidi_client.ts" name="SageMakerBidiClientOptions" />
+
+### Usage
+
+<include cwd meta='title="sagemaker.ts"'>snippets/services/stt-aws-sagemaker.ts#usage</include>
+
+### Notes
+
+- Requests go to `https://runtime.sagemaker.<region>.amazonaws.com:8443`, or `endpointUrl`.
+- Events use the JS SDK's shapes: requests are `{ PayloadPart: { Bytes, DataType } }`, and
+  `receiveResponse()` returns the SDK's `ResponseStreamEvent`.
+- A failed start throws `SageMakerBidiSessionError`, with the AWS error ID, the HTTP status and
+  the number of attempts.
+
+## Runtime notes
+
+- The API needs a full-duplex HTTP/2 stream, which `fetch` cannot do and Cloudflare Workers do
+  not offer. The default client is the AWS SDK on Node's `http2`: it runs on Node and Bun. Deno is
+  untested, and Workers are not supported.
+- Importing the package never loads the SDK, so the rest of `@pipedog/aws` keeps working on
+  Workers.
+- Pass `client` (any object with `invokeEndpointWithBidirectionalStream(input)`) to use another
+  transport, or a fake in tests.
+- Not ported yet: the SageMaker services that use it (`DeepgramSageMakerSTTService`,
+  `DeepgramSageMakerTTSService`, the Flux variants, `NvidiaSageMakerSTTService` and
+  `NvidiaSageMakerTTSService`).

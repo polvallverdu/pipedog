@@ -492,6 +492,18 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["GoogleVertexLLMService"],
     },
     {
+      slug: "aws",
+      name: "AWS Bedrock",
+      pkg: "@pipedog/aws",
+      classes: ["AWSBedrockLLMService"],
+    },
+    {
+      slug: "aws-agentcore",
+      name: "AWS AgentCore",
+      pkg: "@pipedog/aws",
+      classes: ["AWSAgentCoreProcessor"],
+    },
+    {
       slug: "langchain",
       name: "LangChain",
       pkg: "@pipedog/langchain",
@@ -536,6 +548,18 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["ElevenLabsSTTService", "ElevenLabsRealtimeSTTService"],
     },
     {
+      slug: "aws",
+      name: "AWS Transcribe",
+      pkg: "@pipedog/aws",
+      classes: ["AWSTranscribeSTTService"],
+    },
+    {
+      slug: "aws-sagemaker",
+      name: "AWS SageMaker (bidi client)",
+      pkg: "@pipedog/aws",
+      classes: ["SageMakerBidiClient"],
+    },
+    {
       slug: "whisper",
       name: "Whisper (base)",
       pkg: "@pipedog/whisper",
@@ -574,6 +598,7 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/inworld",
       classes: ["InworldTTSService", "InworldHttpTTSService"],
     },
+    { slug: "aws", name: "AWS Polly", pkg: "@pipedog/aws", classes: ["AWSPollyTTSService"] },
   ],
   s2s: [
     {
@@ -611,6 +636,12 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "Ultravox",
       pkg: "@pipedog/ultravox",
       classes: ["UltravoxRealtimeLLMService"],
+    },
+    {
+      slug: "aws",
+      name: "AWS Nova Sonic",
+      pkg: "@pipedog/aws",
+      classes: ["AWSNovaSonicLLMService"],
     },
   ],
   image: [
@@ -688,14 +719,6 @@ export const upcoming: UpcomingPage[] = [
   },
   {
     section: "llm",
-    slug: "aws",
-    name: "AWS Bedrock",
-    about: "Foundation models (Claude, Llama, Nova and others) through Amazon Bedrock.",
-    classes: ["AWSBedrockLLMService"],
-    modules: ["services/aws/llm.py"],
-  },
-  {
-    section: "llm",
     slug: "groq",
     name: "Groq",
     about: "Fast inference of open models on Groq's LPUs, with an OpenAI-compatible API.",
@@ -750,14 +773,6 @@ export const upcoming: UpcomingPage[] = [
     about: "Speech recognition from Azure AI Speech.",
     classes: ["AzureSTTService"],
     modules: ["services/azure/stt.py"],
-  },
-  {
-    section: "stt",
-    slug: "aws",
-    name: "AWS Transcribe",
-    about: "Streaming speech recognition from Amazon Transcribe.",
-    classes: ["AWSTranscribeSTTService"],
-    modules: ["services/aws/stt.py"],
   },
   {
     section: "stt",
@@ -850,14 +865,6 @@ export const upcoming: UpcomingPage[] = [
   },
   {
     section: "tts",
-    slug: "aws",
-    name: "AWS Polly",
-    about: "Speech synthesis from Amazon Polly.",
-    classes: ["AWSPollyTTSService"],
-    modules: ["services/aws/tts.py"],
-  },
-  {
-    section: "tts",
     slug: "groq",
     name: "Groq",
     about: "Speech synthesis served by Groq.",
@@ -945,14 +952,6 @@ export const upcoming: UpcomingPage[] = [
     modules: ["services/sarvam/tts.py"],
   },
   // Speech-to-speech
-  {
-    section: "s2s",
-    slug: "aws",
-    name: "AWS Nova Sonic",
-    about: "Amazon Nova Sonic, a speech-to-speech model on Amazon Bedrock.",
-    classes: ["AWSNovaSonicLLMService"],
-    modules: ["services/aws/nova_sonic/llm.py"],
-  },
   {
     section: "s2s",
     slug: "azure-voice-live",
@@ -1175,10 +1174,5 @@ export const unportedVariants: { name: string; classes: string[]; modules: strin
     name: "NVIDIA on SageMaker",
     classes: ["NvidiaSageMakerSTTService", "NvidiaSageMakerTTSService"],
     modules: ["services/nvidia/sagemaker/"],
-  },
-  {
-    name: "AWS AgentCore",
-    classes: ["AWSAgentCoreProcessor"],
-    modules: ["services/aws/agent_core.py"],
   },
 ];
