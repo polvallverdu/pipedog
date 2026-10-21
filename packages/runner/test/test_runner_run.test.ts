@@ -4,14 +4,16 @@
 //
 // Ported from pipecat: tests/test_runner_run.py
 
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { sleep } from "@pipedog/asyncio";
 import type { FileStorage } from "@pipedog/core/utils/file_storage";
 import { LocalFileStorage } from "@pipedog/core/utils/file_storage";
 import { isOriginAllowed } from "@pipedog/core/utils/security/allowed_origins";
 import type { Namespace } from "../src/argparse.ts";
+import { generateSessionTokens, livekitCredentials } from "../src/livekit.ts";
 import {
   _deps,
   _extractWsToken,
@@ -35,7 +37,7 @@ import {
   RunnerApp,
 } from "../src/run.ts";
 import { serve } from "../src/serve.ts";
-import type { RunnerArguments } from "../src/types.ts";
+import { LiveKitRunnerArguments, type RunnerArguments } from "../src/types.ts";
 
 const realDeps = { ..._deps };
 afterEach(() => {
@@ -110,12 +112,12 @@ describe("TestRunnerRun", () => {
     expect(_transportRoutesEnabled("vonage")).toBe(true);
   });
 
-  test("pipedog: the real environment enables webrtc, telephony and websocket only", () => {
+  test("pipedog: the real environment enables webrtc, livekit, telephony and websocket only", () => {
     expect(_transportRoutesEnabled("webrtc")).toBe(true);
+    expect(_transportRoutesEnabled("livekit")).toBe(true);
     expect(_transportRoutesEnabled("telephony")).toBe(true);
     expect(_transportRoutesEnabled("websocket")).toBe(true);
     expect(_transportRoutesEnabled("daily")).toBe(false);
-    expect(_transportRoutesEnabled("livekit")).toBe(false);
     expect(_transportRoutesEnabled("moq")).toBe(false);
   });
 
@@ -300,7 +302,7 @@ describe("TestRunnerRun", () => {
         "   → Open: http://localhost:7860\n" +
         "   → Enabled transports: telephony, websocket\n" +
         "   → Disabled transports: daily (not ported to pipedog yet), " +
-        "livekit (not ported to pipedog yet), " +
+        "livekit (install @pipedog/transport-livekit), " +
         "webrtc (install @pipedog/transport-smallwebrtc), " +
         "moq (not ported to pipedog yet)\n" +
         "   → Allowed origins: all (no restriction)\n" +
@@ -566,13 +568,101 @@ describe("TestRunBotSessionCleanup", () => {
 });
 
 describe("TestLiveKitRunnerRoutes", () => {
-  // pipecat.runner.livekit is not ported (the LiveKit transport isn't); upstream
-  // skips these too when the livekit package is missing.
-  test.todo("test_livekit_credentials_raises_when_unconfigured (needs pipecat.runner.livekit)");
-  test.todo("test_livekit_credentials_returns_configured_values (needs pipecat.runner.livekit)");
-  test.todo(
-    "test_generate_session_tokens_suffixes_identity_with_session_id (needs pipecat.runner.livekit)",
-  );
+  const LIVEKIT_ENV = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "LIVEKIT_ROOM_NAME"];
+  let saved: Record<string, string | undefined> = {};
+  beforeEach(() => {
+    saved = Object.fromEntries(LIVEKIT_ENV.map((k) => [k, process.env[k]]));
+    for (const k of LIVEKIT_ENV) delete process.env[k];
+  });
+  afterEach(() => {
+    for (const k of LIVEKIT_ENV) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  });
+
+  test("test_livekit_credentials_raises_when_unconfigured", () => {
+    expect(() => livekitCredentials()).toThrow("LIVEKIT_URL");
+  });
+
+  test("test_livekit_credentials_returns_configured_values", () => {
+    const env = {
+      LIVEKIT_URL: "wss://test.livekit.cloud",
+      LIVEKIT_API_KEY: "key",
+      LIVEKIT_API_SECRET: "secret",
+    };
+    Object.assign(process.env, env);
+    const [url, apiKey, apiSecret] = livekitCredentials();
+    expect([url, apiKey, apiSecret]).toEqual([env.LIVEKIT_URL, "key", "secret"]);
+  });
+
+  test("test_generate_session_tokens_suffixes_identity_with_session_id", async () => {
+    // Regression: fixed identities collide across concurrent sessions sharing
+    // a room (e.g. a fixed LIVEKIT_ROOM_NAME), evicting the earlier participant.
+    const [agentToken1, userToken1] = await generateSessionTokens(
+      "shared-room",
+      crypto.randomUUID(),
+      "key",
+      "secret",
+    );
+    const [agentToken2, userToken2] = await generateSessionTokens(
+      "shared-room",
+      crypto.randomUUID(),
+      "key",
+      "secret",
+    );
+
+    const identity = (token: string): string => {
+      const payload = token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/");
+      return JSON.parse(atob(payload)).sub;
+    };
+
+    const identities = new Set([
+      identity(agentToken1),
+      identity(userToken1),
+      identity(agentToken2),
+      identity(userToken2),
+    ]);
+    // every session/role pair should have a unique identity
+    expect(identities.size).toBe(4);
+  });
+
+  test("pipedog: /start for livekit mints tokens and starts the bot as the agent", async () => {
+    Object.assign(process.env, {
+      LIVEKIT_URL: "wss://test.livekit.cloud",
+      LIVEKIT_API_KEY: "key",
+      LIVEKIT_API_SECRET: "secret",
+    });
+    const app = new RunnerApp();
+    const started: LiveKitRunnerArguments[] = [];
+    app.setBotModule({
+      bot: async (runnerArgs: unknown) => {
+        started.push(runnerArgs as LiveKitRunnerArguments);
+      },
+    });
+    _setupUnifiedStartRoute(app, { transport: null, ice_servers: [] }, {});
+    routesEnabled(true);
+
+    const response = await post(app, "/start", { transport: "livekit", body: { a: 1 } });
+
+    expect(response.status).toBe(200);
+    const result = await response.json();
+    expect(result.url).toBe("wss://test.livekit.cloud");
+    expect(typeof result.token).toBe("string");
+    expect(typeof result.sessionId).toBe("string");
+    for (let i = 0; i < 50 && started.length === 0; i++) await sleep(0.01);
+    expect(started.length).toBe(1);
+    const runnerArgs = started[0]!;
+    expect(runnerArgs).toBeInstanceOf(LiveKitRunnerArguments);
+    expect(runnerArgs.url).toBe("wss://test.livekit.cloud");
+    expect(runnerArgs.roomName).toMatch(/^pipecat-[0-9a-f]{8}$/);
+    expect(runnerArgs.sessionId).toBe(result.sessionId);
+    expect(runnerArgs.body).toEqual({ a: 1 });
+    const claims = (token: string) =>
+      JSON.parse(atob(token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/")));
+    expect(claims(runnerArgs.token).video).toMatchObject({ roomJoin: true, agent: true });
+    expect(claims(result.token).sub).toBe(`User-${result.sessionId.slice(0, 8)}`);
+  });
 });
 
 /** Unit tests for the HMAC WebSocket session token helpers. */
@@ -1118,7 +1208,7 @@ describe("pipedog: unported transports", () => {
     const app = new RunnerApp();
     _setupUnifiedStartRoute(app, { transport: null, ice_servers: [] }, {});
     routesEnabled(true);
-    const response = await post(app, "/start", { transport: "livekit" });
+    const response = await post(app, "/start", { transport: "daily" });
     expect(response.status).toBe(400);
     expect((await response.json()).detail).toContain("not ported to pipedog yet");
   });

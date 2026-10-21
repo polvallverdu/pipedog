@@ -54,8 +54,10 @@ pipedog publishes 49 packages: those 43, plus six with no upstream counterpart (
 - **Speech providers**: Inworld TTS, alongside the Deepgram, Cartesia, ElevenLabs, Google, Azure
   and AWS speech services above.
 - **Transports**: [WebSocket](/docs/transports/websocket) (server, client, fetch handlers, and
-  `serveFetch` for WebSocket upgrades on Bun, Node and Deno) and
-  [SmallWebRTC](/docs/transports/smallwebrtc).
+  `serveFetch` for WebSocket upgrades on Bun, Node and Deno),
+  [SmallWebRTC](/docs/transports/smallwebrtc) and [LiveKit](/docs/transports/livekit).
+- **Video avatars**: [HeyGen](/docs/services/video/heygen) (LiveAvatar and Interactive Avatar),
+  as a service and as a transport.
 - **Serializers**: [Protobuf](/docs/serializers/protobuf),
   [RTVI client](/docs/serializers/rtvi-client), and the telephony serializers for
   [Twilio](/docs/serializers/twilio), [Telnyx](/docs/serializers/telnyx),
@@ -70,21 +72,21 @@ pipedog publishes 49 packages: those 43, plus six with no upstream counterpart (
 
 ## What's not ported yet
 
-165 upstream modules (36% of the lines) and 96 test files are still to do. Every upstream provider
+157 upstream modules (34% of the lines) and 94 test files are still to do. Every upstream provider
 that isn't ported has a "coming soon" page, or a row on
 [Other upstream providers](/docs/services/other-upstream). The main gaps, with their remaining
 upstream modules:
 
 | Gap | Modules | What it is |
 |---|---|---|
-| Transports | 16 | [Daily](/docs/transports/daily) (with its runner routes and dial-in), [LiveKit](/docs/transports/livekit), [local audio](/docs/transports/local-audio), the [Vonage Video Connector](/docs/transports/vonage), [WhatsApp](/docs/transports/whatsapp), and the HeyGen, Tavus, LemonSlice and MoQ transports. |
+| Transports | 13 | [Daily](/docs/transports/daily) (with its runner routes and dial-in), [local audio](/docs/transports/local-audio), the [Vonage Video Connector](/docs/transports/vonage), [WhatsApp](/docs/transports/whatsapp), and the Tavus, LemonSlice and MoQ transports. |
 | Evals | 31 | `pipecat.evals`, Pipecat's harness for evaluating bots (`@pipedog/evals`). |
 | CLI | 17 | The `pipecat` command line tool (`@pipedog/cli`). |
 | Pipecat Flows | 8 | Structured conversation flows (`@pipedog/flows`). |
 | Audio filters and analyzers | 12 | Noise filters (Krisp VIVA, RNNoise, Koala, AIC), Krisp and AIC VAD and turn models, the soundfile mixer, and Smart Turn v2, CoreML and HTTP (Smart Turn v3, the default, is ported). |
 | Extensions | 5 | The IVR navigator and voicemail detector in `pipecat.extensions` (`@pipedog/extensions`). |
 | MCP client service | 1 | `pipecat.services.mcp_service`, which gives an LLM the tools of an MCP server (`@pipedog/mcp-client`). Not to be confused with [`@pipedog/mcp`](/docs/guides/llms#mcp-server), the docs server, which exists. |
-| Providers with a page | 30 | 12 providers: AssemblyAI, Gladia, NVIDIA (LLM, Riva STT and TTS), Sarvam AI, Soniox, Speechmatics, Fish Audio, Hume, Rime, and the HeyGen, Simli and Tavus video avatars. |
+| Providers with a page | 25 | 11 providers: AssemblyAI, Gladia, NVIDIA (LLM, Riva STT and TTS), Sarvam AI, Soniox, Speechmatics, Fish Audio, Hume, Rime, and the Simli and Tavus video avatars. |
 | Long-tail providers | 24 | 22 smaller providers, from Async to XTTS, listed on [Other upstream providers](/docs/services/other-upstream). |
 | Variants of ported providers | 10 | Deepgram and NVIDIA on SageMaker, ElevenLabs Dialogue, local Whisper. |
 | Message buses | 3 | The Redis and pgmq buses (`@pipedog/bus-redis`, `@pipedog/bus-pgmq`). |
@@ -109,8 +111,8 @@ means it is possible, but needs vendor SDKs or keys, or waits on a moving spec. 
 | Koala (Picovoice) noise suppression | Deferred | There is no Node build, only `@picovoice/koala-web` (WASM, for browsers), and it needs an AccessKey. | It will be ported if users ask: [open a request](https://github.com/polvallverdu/pipedog/issues/new?template=feature_request.yml). | `@picovoice/koala-web` on npm |
 | Tk local transport, Smart Turn v2 and Smart Turn CoreML | Skipped | Skipped on purpose. Tk is a desktop GUI, and both Smart Turn variants are superseded by v3, which is ported. | Nothing planned. Open a request if you have a use for one. | |
 
-These are not blocked, and are in progress: LiveKit and HeyGen (Node first, not on Workers),
-WhatsApp calling, local audio, RNNoise, the WAV mixer and HTTP Smart Turn.
+These are not blocked, and are in progress: WhatsApp calling, local audio, RNNoise, the WAV mixer
+and HTTP Smart Turn.
 
 Contributions are welcome on any of these, especially the portable parts (the REST helpers for
 Daily, Tavus and LemonSlice) and the bring-your-own-SDK packages. Open a request with the

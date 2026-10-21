@@ -10,9 +10,9 @@
  * These types are used by the development runner to pass transport-specific
  * information to bot functions.
  *
- * The deprecated `EvalRunnerArguments` is not ported. The Daily, LiveKit,
- * Vonage and MOQ argument classes are kept for API parity; their transports
- * are not ported, so `createTransport` rejects them.
+ * The deprecated `EvalRunnerArguments` is not ported. The Daily, Vonage and
+ * MOQ argument classes are kept for API parity; their transports are not
+ * ported, so `createTransport` rejects them.
  */
 
 import type { Event as AsyncioEvent } from "@pipedog/asyncio";
@@ -540,11 +540,7 @@ export interface LiveKitRunnerArgumentsOptions extends RunnerArgumentsOptions {
   token: string;
 }
 
-/**
- * LiveKit transport session arguments for the runner.
- *
- * Kept for API parity: the LiveKit transport is not ported to pipedog yet.
- */
+/** LiveKit transport session arguments for the runner. */
 export class LiveKitRunnerArguments extends RunnerArguments {
   roomName: string;
   url: string;

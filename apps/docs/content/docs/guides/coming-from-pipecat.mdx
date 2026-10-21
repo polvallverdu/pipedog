@@ -233,13 +233,13 @@ Pipecat's `pipecat.runner` is `@pipedog/runner`, with the same entry point: expo
 | `uvicorn.run(app)` | `serve(app)` from `@pipedog/runner/serve`, or `createRunnerApp()` and its `fetch` in your server |
 | `python bot.py -t webrtc` | `bun bot.ts -t webrtc` |
 
-The FastAPI app is a fetch handler, so the runner mounts in any framework. Daily, LiveKit, MOQ,
-the Vonage Video Connector and WhatsApp are recognized but fail with a clear message: their
+The FastAPI app is a fetch handler, so the runner mounts in any framework. Daily, MOQ, the
+Vonage Video Connector and WhatsApp are recognized but fail with a clear message: their
 transports aren't ported yet. See [Development runner](/docs/runner) for the full mapping.
 
 ## What isn't ported yet
 
-The core and the main providers are ported; Daily and LiveKit, Pipecat Flows, the noise filters,
+The core and the main providers are ported; Daily, Pipecat Flows, the noise filters,
 evals, the CLI, the MCP client service and a long tail of providers are not. The
 [roadmap](/docs/roadmap#whats-not-ported-yet) lists the gaps with their upstream module counts.
 

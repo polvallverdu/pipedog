@@ -26,7 +26,8 @@ bun add @pipedog/runner
 
 It brings the SmallWebRTC and WebSocket transports and the Telnyx, Twilio, Plivo and Exotel
 serializers. On Node, also install `ws` for the WebSocket routes (`npm install ws`); Bun and Deno
-need nothing else.
+need nothing else. For `-t livekit`, add `@pipedog/transport-livekit` and `@livekit/rtc-node` (see
+[LiveKit](/docs/transports/livekit)).
 
 ## A bot
 
@@ -56,6 +57,7 @@ if (import.meta.main) {
 ```bash
 bun bot.ts -t webrtc                         # open http://localhost:7860
 bun bot.ts -t telnyx --proxy mybot.ngrok.io  # point the Telnyx number at https://mybot.ngrok.io/
+bun bot.ts -t livekit                        # POST /start returns a LiveKit room URL and user token
 bun bot.ts                                   # every ported transport at once
 ```
 
@@ -69,7 +71,7 @@ bun bot.ts                                   # every ported transport at once
 |---|---|
 | `GET /` | Redirects to `/client/`. |
 | `GET /client/` | The prebuilt Pipecat client (see below). |
-| `POST /start` | Starts a session: `{"transport": "webrtc", "enableDefaultIceServers": true, "body": {...}}`. Returns `sessionId` and `iceConfig` for WebRTC, `wsUrl` (and `token` with `--ws-auth token`) for telephony and plain WebSocket. |
+| `POST /start` | Starts a session: `{"transport": "webrtc", "enableDefaultIceServers": true, "body": {...}}`. Returns `sessionId` and `iceConfig` for WebRTC, `url`, `token` and `sessionId` for LiveKit, `wsUrl` (and `token` with `--ws-auth token`) for telephony and plain WebSocket. |
 | `GET /status` | The transports this runner serves. |
 | `POST`, `PATCH /api/offer` | SmallWebRTC offers and ICE candidates; a known `pc_id` renegotiates (and `restart_pc` restarts) the existing peer connection. |
 | `/sessions/{id}/api/offer` | The same, for a session from `/start` (Pipecat Cloud's proxy shape); its `/start` body becomes `runnerArgs.body`. |
@@ -181,8 +183,9 @@ serve another build.
 | `await create_transport(runner_args, transport_params)` | `await createTransport(runnerArgs, transportParams)` |
 | `"webrtc": lambda: TransportParams(audio_in_enabled=True)` | `webrtc: () => new TransportParams({ audioInEnabled: true })` |
 | `"telnyx": lambda: FastAPIWebsocketParams(...)` | `telnyx: () => new FastAPIWebsocketParams({ ... })` |
-| `SmallWebRTCRunnerArguments`, `WebSocketRunnerArguments` | same names, from `@pipedog/runner/types` |
-| `DailyRunnerArguments`, `LiveKitRunnerArguments`, `VonageRunnerArguments`, `MOQRunnerArguments` | same names (types only; the transports are not ported) |
+| `SmallWebRTCRunnerArguments`, `WebSocketRunnerArguments`, `LiveKitRunnerArguments` | same names, from `@pipedog/runner/types` |
+| `DailyRunnerArguments`, `VonageRunnerArguments`, `MOQRunnerArguments` | same names (types only; the transports are not ported) |
+| `from pipecat.runner.livekit import configure, generate_session_tokens` | `import { configure, generateSessionTokens } from "@pipedog/runner/livekit"` (async) |
 | `runner_args.call_data.call_id` / `call_data["call_id"]` | `runnerArgs.callData?.callId` / `callData.getItem("call_id")` |
 | `runner_args.transport_type` | `runnerArgs.transportType` |
 | `runner_args.body`, `session_id`, `handle_sigint`, `cli_args` | `body`, `sessionId`, `handleSigint`, `cliArgs` |
@@ -195,7 +198,8 @@ serve another build.
 | `python bot.py -t webrtc` | `bun bot.ts -t webrtc` |
 | `-t twilio -x mybot.ngrok.io` | the same flags |
 | `--host`, `--port`, `--esp32`, `--ice-servers`, `--ws-auth`, `--allowed-origins`, `-u`, `-f`, `--runner-body`, `-v` | the same flags |
-| `-t daily`, `-d`, `-t livekit`, `-t moq`, `-t vonage`, `--whatsapp` | recognized; fail with "not ported to pipedog yet" |
+| `-t livekit` | the same: `/start` mints tokens from `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` (and `LIVEKIT_ROOM_NAME`) |
+| `-t daily`, `-d`, `-t moq`, `-t vonage`, `--whatsapp` | recognized; fail with "not ported to pipedog yet" |
 | `.env` loaded with `load_dotenv(override=True)` | the same |
 
 ## A migrated bot: bot.py to bot.ts

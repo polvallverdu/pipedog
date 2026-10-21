@@ -446,7 +446,7 @@ export class TelephonyCallEndedError extends TelephonyHandshakeError {
 
 /**
  * Raised when the runner arguments select a transport pipedog has not ported
- * (Daily, LiveKit, Vonage Video Connector, MOQ, evals). Plays the part of the
+ * (Daily, Vonage Video Connector, MOQ, evals). Plays the part of the
  * `ImportError` upstream raises when the transport's extra isn't installed.
  */
 export class TransportNotPortedError extends Error {
@@ -587,7 +587,7 @@ export async function _createTelephonyTransport(
  * @throws TransportParamsError If the transport key is missing from `transportParams`
  *   or the runner arguments type is unsupported.
  * @throws TelephonyCallEndedError If the caller hung up before the telephony handshake.
- * @throws TransportNotPortedError For Daily, LiveKit, Vonage and MOQ arguments.
+ * @throws TransportNotPortedError For Daily, Vonage and MOQ arguments.
  *
  * @example
  * const transportParams = {
@@ -655,8 +655,19 @@ export async function createTransport(
     return await _createTelephonyTransport(runnerArgs.websocket, params, transportType, callData);
   }
   if (runnerArgs instanceof LiveKitRunnerArguments) {
-    _getTransportParams("livekit", transportParams);
-    throw new TransportNotPortedError("livekit", "pipecat.transports.livekit");
+    const params = _getTransportParams("livekit", transportParams);
+    // Loaded by name: @pipedog/transport-livekit is an optional peer, and its
+    // media SDK is a native addon that doesn't run everywhere.
+    const moduleName = "@pipedog/transport-livekit/transport";
+    const { LiveKitTransport } = (await import(
+      moduleName
+    )) as typeof import("@pipedog/transport-livekit/transport");
+    return new LiveKitTransport({
+      url: runnerArgs.url,
+      token: runnerArgs.token,
+      roomName: runnerArgs.roomName,
+      params,
+    });
   }
   if (runnerArgs instanceof VonageRunnerArguments) {
     throw new TransportNotPortedError("vonage", "pipecat.transports.vonage.video_connector");

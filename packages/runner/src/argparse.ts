@@ -162,6 +162,22 @@ export class ArgumentParser {
    * @throws ArgumentError For an unknown flag, a missing value or a bad choice.
    */
   parseArgs(argv: readonly string[]): Namespace {
+    return this.#parse(argv, null);
+  }
+
+  /**
+   * Parse the flags this parser knows and return the other arguments, as
+   * Python's `parse_known_args`.
+   *
+   * @returns The namespace and the arguments it didn't recognize.
+   * @throws ArgumentError For a missing value or a bad choice.
+   */
+  parseKnownArgs(argv: readonly string[]): [Namespace, string[]] {
+    const extras: string[] = [];
+    return [this.#parse(argv, extras), extras];
+  }
+
+  #parse(argv: readonly string[], extras: string[] | null): Namespace {
     const namespace = this.#defaults();
     for (let i = 0; i < argv.length; i++) {
       let token = argv[i]!;
@@ -174,7 +190,11 @@ export class ArgumentParser {
         throw new HelpRequested(this.formatHelp());
       }
       const found = this.#find(token);
-      if (!found) throw new ArgumentError(`unrecognized arguments: ${argv[i]}`);
+      if (!found) {
+        if (extras === null) throw new ArgumentError(`unrecognized arguments: ${argv[i]}`);
+        extras.push(argv[i]!);
+        continue;
+      }
       const { argument, negated } = found;
       const takesValue = argument.action === "store";
       if (!takesValue && inline !== null) {

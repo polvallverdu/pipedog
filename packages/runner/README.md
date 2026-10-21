@@ -19,8 +19,13 @@ runner keeps its shape. Export `bot(runnerArgs)`, call `main()`, and pick the tr
   is a `TelephonyCallEndedError`, with `runnerArgs.handshake` set to
   `{ status: "closed", messagesReceived }`.
 - The runner arguments: `RunnerArguments`, `SmallWebRTCRunnerArguments`,
-  `WebSocketRunnerArguments`, and, for API parity, `DailyRunnerArguments`,
-  `LiveKitRunnerArguments`, `VonageRunnerArguments` and `MOQRunnerArguments`.
+  `WebSocketRunnerArguments`, `LiveKitRunnerArguments`, and, for API parity,
+  `DailyRunnerArguments`, `VonageRunnerArguments` and `MOQRunnerArguments`.
+- `@pipedog/runner/livekit`: LiveKit access tokens (`generateToken`, `generateTokenWithAgent`,
+  `generateSessionTokens`, `configure`), signed with `livekit-server-sdk`. With `-t livekit`,
+  `POST /start` mints a bot and a user token and starts the bot with `LiveKitRunnerArguments`;
+  `createTransport()` then needs `@pipedog/transport-livekit` (an optional peer) and
+  `@livekit/rtc-node`.
 - `parseTelephonyWebsocket()`, `telephonyHandshake()` and the `CallData` types.
 
 ```sh
@@ -73,7 +78,7 @@ unmodified in `prebuilt/` (release 1.3.0, BSD-2-Clause, Copyright (c) 2025–202
 
 ## Differences from upstream
 
-- Daily (`-t daily`, `--direct`, the dial-in webhook), LiveKit, MOQ, the Vonage Video Connector
+- Daily (`-t daily`, `--direct`, the dial-in webhook), MOQ, the Vonage Video Connector
   (`-t vonage`) and WhatsApp aren't ported: selecting them fails with a clear message. Their
   argument classes exist for type parity. The MOQ flags and the deprecated `--folder` and
   `-t eval` aren't ported.
