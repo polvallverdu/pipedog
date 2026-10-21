@@ -71,10 +71,17 @@ Change settings mid-call with an `STTUpdateSettingsFrame`:
 
 ### Notes
 
-- `targetStreamingDelayMs` trades latency for accuracy, when set.
+- `targetStreamingDelayMs` trades latency for accuracy, when set. It is sent in the
+  `session.update` message (`target_streaming_delay_ms`); Mistral accepts 80 to 1200, or 2400,
+  and recommends 480.
+- The service waits for `session.created` before it sends the session settings, as Mistral's
+  SDK does.
 - Any settings change reconnects.
 
 ## Runtime notes
 
 - The WebSocket goes through the core `websocketConnect` (upstream uses the `mistralai` SDK's realtime connection). It works on Bun, Node, Deno and Cloudflare Workers.
-- The realtime wire format is written from Mistral's API as we know it and is only tested against a local fake. Report a bug if the real service disagrees.
+- The protocol follows Mistral's SDK (`mistralai` 3.3.0 and `@mistralai/mistralai` 3.1.0,
+  `extra/realtime`) and the [realtime transcription docs](https://docs.mistral.ai/studio/audio/speech-to-text/transcribe-in-realtime).
+  `input_audio.flush` and `transcription.language` are in the SDK but not in the docs.
+- Tested against a local fake that follows that protocol, not against Mistral itself.

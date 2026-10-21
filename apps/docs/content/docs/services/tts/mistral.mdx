@@ -70,4 +70,8 @@ Change settings mid-call with an `TTSUpdateSettingsFrame`:
 ## Runtime notes
 
 - Requests go through `fetch`, with the Server-Sent Events parsed in the service (upstream uses the `mistralai` SDK). It works on Bun, Node, Deno and Cloudflare Workers.
-- The event format is written from Mistral's API as we know it and is only tested against a local fake. Report a bug if the real service disagrees.
+- The request and events follow Mistral's SDK (`@mistralai/mistralai` 3.1.0,
+  `audioSpeechComplete`) and the [streaming docs](https://docs.mistral.ai/studio/audio/text-to-speech/stream-speech):
+  `speech.audio.delta` events with base64 `audio_data`, then `speech.audio.done`. The float32
+  layout of `"pcm"` audio comes from upstream Pipecat's conversion; Mistral's docs don't state it.
+- Tested against a local fake, not against Mistral itself.

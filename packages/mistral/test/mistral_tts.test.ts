@@ -34,7 +34,12 @@ const CHUNK_A = [0, 0.5, -0.5, 1, -1];
 const CHUNK_B = [2, -2, 0.25];
 
 let server: ReturnType<typeof Bun.serve>;
-const requests: { path: string; authorization: string | null; body: any }[] = [];
+const requests: {
+  path: string;
+  authorization: string | null;
+  accept: string | null;
+  body: any;
+}[] = [];
 let failNext = false;
 
 beforeAll(() => {
@@ -45,6 +50,7 @@ beforeAll(() => {
       requests.push({
         path: url.pathname,
         authorization: request.headers.get("authorization"),
+        accept: request.headers.get("accept"),
         body: await request.json(),
       });
       if (failNext) {
@@ -99,6 +105,8 @@ test("streams the speech request and converts float32 PCM to int16", async () =>
   const request = requests.at(-1)!;
   expect(request.path).toBe("/v1/audio/speech");
   expect(request.authorization).toBe("Bearer mistral-key");
+  // As the SDK asks for a stream (audioSpeechComplete: Accept text/event-stream).
+  expect(request.accept).toBe("text/event-stream");
   expect(request.body).toEqual({
     input: "Bonjour.",
     model: "voxtral-mini-tts-2603",
