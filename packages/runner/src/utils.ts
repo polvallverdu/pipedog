@@ -613,7 +613,12 @@ export async function createTransport(
   }
   if (runnerArgs instanceof SmallWebRTCRunnerArguments) {
     const params = _getTransportParams("webrtc", transportParams);
-    const { SmallWebRTCTransport } = await import("@pipedog/transport-smallwebrtc/transport");
+    // Loaded by name, so bundles for Cloudflare Workers (where WebRTC can't run)
+    // don't pull in the WebRTC stack.
+    const moduleName = "@pipedog/transport-smallwebrtc/transport";
+    const { SmallWebRTCTransport } = (await import(
+      moduleName
+    )) as typeof import("@pipedog/transport-smallwebrtc/transport");
     return new SmallWebRTCTransport(runnerArgs.webrtcConnection, params);
   }
   if (runnerArgs instanceof WebSocketRunnerArguments) {
