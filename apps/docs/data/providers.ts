@@ -605,6 +605,12 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["OpenAIResponsesLLMService", "OpenAIResponsesHttpLLMService"],
     },
     {
+      slug: "azure",
+      name: "Azure OpenAI",
+      pkg: "@pipedog/azure",
+      classes: ["AzureLLMService"],
+    },
+    {
       slug: "anthropic",
       name: "Anthropic",
       pkg: "@pipedog/anthropic",
@@ -693,6 +699,12 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["SageMakerBidiClient"],
     },
     {
+      slug: "azure",
+      name: "Azure Speech",
+      pkg: "@pipedog/azure",
+      classes: ["AzureSTTService"],
+    },
+    {
       slug: "whisper",
       name: "Whisper (base)",
       pkg: "@pipedog/whisper",
@@ -755,6 +767,12 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["InworldTTSService", "InworldHttpTTSService"],
     },
     { slug: "aws", name: "AWS Polly", pkg: "@pipedog/aws", classes: ["AWSPollyTTSService"] },
+    {
+      slug: "azure",
+      name: "Azure Speech",
+      pkg: "@pipedog/azure",
+      classes: ["AzureTTSService", "AzureHttpTTSService"],
+    },
   ],
   s2s: [
     {
@@ -805,10 +823,28 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/aws",
       classes: ["AWSNovaSonicLLMService"],
     },
+    {
+      slug: "azure-voice-live",
+      name: "Azure Voice Live",
+      pkg: "@pipedog/azure",
+      classes: ["AzureVoiceLiveLLMService"],
+    },
+    {
+      slug: "azure-realtime",
+      name: "Azure OpenAI Realtime",
+      pkg: "@pipedog/azure",
+      classes: ["AzureRealtimeLLMService"],
+    },
   ],
   image: [
     { slug: "openai", name: "OpenAI", pkg: "@pipedog/openai", classes: ["OpenAIImageGenService"] },
     { slug: "google", name: "Google", pkg: "@pipedog/google", classes: ["GoogleImageGenService"] },
+    {
+      slug: "azure",
+      name: "Azure OpenAI",
+      pkg: "@pipedog/azure",
+      classes: ["AzureImageGenServiceREST"],
+    },
   ],
   video: [],
   transports: [
@@ -903,14 +939,6 @@ export const upcoming: UpcomingPage[] = [
   // LLM
   {
     section: "llm",
-    slug: "azure",
-    name: "Azure OpenAI",
-    about: "OpenAI models hosted on Microsoft Azure, through the OpenAI-compatible API.",
-    classes: ["AzureLLMService"],
-    modules: ["services/azure/llm.py"],
-  },
-  {
-    section: "llm",
     slug: "nvidia",
     name: "NVIDIA",
     about: "Models served by NVIDIA NIM.",
@@ -926,14 +954,6 @@ export const upcoming: UpcomingPage[] = [
     modules: ["services/sarvam/llm.py"],
   },
   // STT
-  {
-    section: "stt",
-    slug: "azure",
-    name: "Azure Speech",
-    about: "Speech recognition from Azure AI Speech.",
-    classes: ["AzureSTTService"],
-    modules: ["services/azure/stt.py"],
-  },
   {
     section: "stt",
     slug: "assemblyai",
@@ -983,14 +1003,6 @@ export const upcoming: UpcomingPage[] = [
     modules: ["services/sarvam/stt.py"],
   },
   // TTS
-  {
-    section: "tts",
-    slug: "azure",
-    name: "Azure Speech",
-    about: "Neural voices from Azure AI Speech.",
-    classes: ["AzureTTSService", "AzureHttpTTSService"],
-    modules: ["services/azure/tts.py"],
-  },
   {
     section: "tts",
     slug: "speechmatics",
@@ -1048,23 +1060,7 @@ export const upcoming: UpcomingPage[] = [
     modules: ["services/sarvam/tts.py"],
   },
   // Speech-to-speech
-  {
-    section: "s2s",
-    slug: "azure-voice-live",
-    name: "Azure Voice Live",
-    about: "Azure's realtime speech-to-speech APIs: Voice Live, and OpenAI Realtime on Azure.",
-    classes: ["AzureVoiceLiveLLMService", "AzureRealtimeLLMService"],
-    modules: ["services/azure/voice_live/llm.py", "services/azure/realtime/llm.py"],
-  },
   // Image
-  {
-    section: "image",
-    slug: "azure",
-    name: "Azure OpenAI",
-    about: "Image generation with OpenAI models on Azure.",
-    classes: ["AzureImageGenServiceREST"],
-    modules: ["services/azure/image.py"],
-  },
   // Video
   {
     section: "video",

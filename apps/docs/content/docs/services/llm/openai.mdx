@@ -128,6 +128,6 @@ These come from the `LLMService` base class.
   the request JSON just before it is sent, as the Python client does.
 - The deprecated `model` and `params` constructor options and `BaseOpenAILLMService.InputParams`
   are not ported. Use `settings`.
-- Not ported yet: `AzureLLMService` (Azure OpenAI) and the dedicated subclasses for other
-  OpenAI-compatible providers. Until they land, `OpenAILLMService` with `baseUrl` covers most of
-  them.
+- For Azure OpenAI, use [`AzureLLMService`](/docs/services/llm/azure). Other OpenAI-compatible
+  providers have their own subclasses where ported (see [LLM](/docs/services/llm)); for the
+  rest, `OpenAILLMService` with `baseUrl` covers most of them.

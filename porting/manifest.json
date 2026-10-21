@@ -271,9 +271,9 @@
         "test_azure_voice_live_adapter.py",
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/azure/src/azure_voice_live_adapter.ts. Packed-history text uses JSON.stringify(..., null, 2), as the OpenAI realtime adapter port (pyJsonDumps has no indent)."
     },
     {
       "module": "pipecat.adapters.services.bedrock_adapter",
@@ -7164,9 +7164,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/azure/src/common.ts. AzureTokenProvider is () => Promise<string>."
     },
     {
       "module": "pipecat.services.azure.image",
@@ -7188,9 +7188,9 @@
         "aiohttp"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/azure/src/image.ts. DIVERGENCE: fetch (option) replaces the required aiohttp_session; PNG decoded with decodePngToRgb (decodeImage option) and the frame format is always RGB (upstream: Pillow's mode). Deprecated image_size and model init params not ported."
     },
     {
       "module": "pipecat.services.azure.llm",
@@ -7215,9 +7215,9 @@
         "test_llm_token_usage_live.py",
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/azure/src/llm.ts. v1 surface uses the openai SDK's OpenAI client, the dated surface AzureOpenAI. createClient() reads endpoint/tokenProvider from the constructor options (it runs inside the parent constructor). With a token provider the key is passed as null (the JS client rejects both). Deprecated model and api_version init params not ported."
     },
     {
       "module": "pipecat.services.azure.realtime",
@@ -7231,9 +7231,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Empty __init__."
     },
     {
       "module": "pipecat.services.azure.realtime.llm",
@@ -7253,9 +7253,9 @@
         "websockets"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/azure/src/realtime/llm.ts. Socket via core websocketConnect with api-key / Authorization: Bearer headers."
     },
     {
       "module": "pipecat.services.azure.stt",
@@ -7285,9 +7285,9 @@
       "tests": [
         "test_azure_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/azure/src/stt.ts. DIVERGENCE: no Speech SDK; talks the Speech WebSocket protocol (/speech/recognition/conversation/cognitiveservices/v1, format=simple) directly, with profanity, segmentation silence timeout, language and cid as query params like the JS SDK. _speechConfig is an AzureSpeechConfig stand-in with setProfanity/setProperty. Connects in start() (sample rate known), reconnects on audio after a drop; non-1000 close reported via _onHandleCanceled; callbacks are awaited from the receive task. Key sent as Ocp-Apim-Subscription-Key header and query param. Deprecated language init param not ported."
     },
     {
       "module": "pipecat.services.azure.tts",
@@ -7317,9 +7317,9 @@
       "tests": [
         "test_azure_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/azure/src/tts.ts. DIVERGENCE: no Speech SDK. AzureTTSService speaks the synthesis WebSocket protocol (tts/cognitiveservices/websocket/v1: speech.config, synthesis.context with word boundaries, ssml; audio, audio.metadata, turn.end); audio duration computed from PCM received; interruption closes the socket (upstream stop_speaking_async). AzureHttpTTSService uses REST /cognitiveservices/v1 with raw-*-16bit-mono-pcm, so no 44-byte WAV strip. Handlers are synchronous with putNowait. Deprecated voice, params/InputParams, aggregate_sentences not ported."
     },
     {
       "module": "pipecat.services.azure.voice_live",
@@ -7339,9 +7339,9 @@
         "test_azure_voice_live_text_turns.py",
         "test_azure_voice_live_tools.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Empty __init__."
     },
     {
       "module": "pipecat.services.azure.voice_live.events",
@@ -7368,9 +7368,9 @@
         "test_azure_voice_live_text_turns.py",
         "test_azure_voice_live_tools.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/azure/src/voice_live/events.ts. Models extend BaseModel from @pipedog/openai/realtime/events (camelCase fields, snake_case wire; only required fields and type literals validated). Dict voices become models only through modelValidate()."
     },
     {
       "module": "pipecat.services.azure.voice_live.llm",
@@ -7410,9 +7410,9 @@
         "test_azure_voice_live_tools.py",
         "test_realtime_tool_result_encoding.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/azure/src/voice_live/llm.ts. DIVERGENCE: socket opened through a protected _websocketConnect() wrapper (tests override it instead of patching the module function); failed response.done status_details logged as JSON (pyJsonDumps) instead of Python str()."
     },
     {
       "module": "pipecat.services.baseten",
@@ -16895,8 +16895,8 @@
         "pipecat.services.azure.stt"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "10 pass, 0 fail, 0 skip, 0 todo. AzureSpeechConfig prototype spied in place of SDK SpeechConfig."
     },
     {
       "file": "tests/test_azure_tts.py",
@@ -16907,8 +16907,8 @@
         "pipecat.services.azure.tts"
       ],
       "needsModules": 130,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "11 pass, 0 fail, 0 skip, 0 todo. Idle-loop wakeup tests check a getter parked in one task is woken from another (no threads)."
     },
     {
       "file": "tests/test_azure_voice_live_adapter.py",
@@ -16922,8 +16922,8 @@
         "pipecat.processors.aggregators.llm_context"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "12 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_azure_voice_live_events.py",
@@ -16935,8 +16935,8 @@
         "pipecat.services.azure.voice_live.events"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_azure_voice_live_frames.py",
@@ -16953,8 +16953,8 @@
         "pipecat.services.azure.voice_live.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "40 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_azure_voice_live_service.py",
@@ -16972,8 +16972,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "47 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_azure_voice_live_text_turns.py",
@@ -16987,8 +16987,8 @@
         "pipecat.services.azure.voice_live.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "11 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_azure_voice_live_tools.py",
@@ -17004,8 +17004,8 @@
         "pipecat.services.azure.voice_live.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_backend_llm_worker.py",
@@ -19279,8 +19279,8 @@
         "pipecat.services.xai.llm"
       ],
       "needsModules": 149,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "52 pass, 0 fail, 0 skip, 7 todo (Inception, Sarvam and Nvidia not ported). The subclass walk covers the exports of @pipedog/openai, @pipedog/azure and the ported OpenAI-compatible provider packages, imported by relative path."
     },
     {
       "file": "tests/test_openai_compatible_extra_body.py",
@@ -19792,8 +19792,8 @@
         "pipecat.services.xai.realtime.llm"
       ],
       "needsModules": 134,
-      "status": "todo",
-      "notes": "Partial: the Inworld section (1 pass) is in packages/inworld/test/test_realtime_tool_result_encoding.test.ts and the xAI section (1 pass) in packages/xai/test/test_realtime_tool_result_encoding.test.ts; the other providers' sections are still to be ported."
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo. In packages/azure/test; the Inworld and xAI sections also live in their own packages' copies of this test."
     },
     {
       "file": "tests/test_realtime_tool_sync.py",

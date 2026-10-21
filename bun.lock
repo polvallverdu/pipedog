@@ -26,6 +26,7 @@
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/audio-silero": "workspace:*",
         "@pipedog/aws": "workspace:*",
+        "@pipedog/azure": "workspace:*",
         "@pipedog/baseten": "workspace:*",
         "@pipedog/cartesia": "workspace:*",
         "@pipedog/cerebras": "workspace:*",
@@ -240,6 +241,16 @@
         "@aws-sdk/client-bedrock-runtime",
         "@aws-sdk/client-sagemaker-runtime-http2",
       ],
+    },
+    "packages/azure": {
+      "name": "@pipedog/azure",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+        "openai": "^6.49.0",
+      },
     },
     "packages/baseten": {
       "name": "@pipedog/baseten",
@@ -1140,6 +1151,8 @@
     "@pipedog/audio-smart-turn": ["@pipedog/audio-smart-turn@workspace:packages/audio-smart-turn"],
 
     "@pipedog/aws": ["@pipedog/aws@workspace:packages/aws"],
+
+    "@pipedog/azure": ["@pipedog/azure@workspace:packages/azure"],
 
     "@pipedog/baseten": ["@pipedog/baseten@workspace:packages/baseten"],
 

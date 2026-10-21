@@ -17,6 +17,7 @@
     "@pipedog/asyncio": "workspace:*",
     "@pipedog/audio-silero": "workspace:*",
     "@pipedog/aws": "workspace:*",
+    "@pipedog/azure": "workspace:*",
     "@pipedog/baseten": "workspace:*",
     "@pipedog/cartesia": "workspace:*",
     "@pipedog/cerebras": "workspace:*",

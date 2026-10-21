@@ -1,0 +1,60 @@
+{
+  "name": "@pipedog/azure",
+  "version": "0.5.0",
+  "description": "Azure services (OpenAI LLM, Realtime, Voice Live, Speech STT and TTS, image) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "azure",
+    "azure-openai",
+    "voice-live",
+    "llm",
+    "stt",
+    "tts",
+    "speech"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/azure"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/azure#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/openai": "workspace:*",
+    "openai": "^6.49.0"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/services/azure",
+      "src/pipecat/adapters/services/azure_voice_live_adapter.py"
+    ]
+  }
+}

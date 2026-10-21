@@ -1,0 +1,91 @@
+---
+title: Azure OpenAI Realtime
+description: Speech-to-speech with OpenAI's realtime models deployed on Azure, with AzureRealtimeLLMService.
+---
+
+## Overview
+
+- **`AzureRealtimeLLMService`**: [`OpenAIRealtimeLLMService`](/docs/services/s2s/openai) pointed
+  at an Azure OpenAI deployment of a realtime model (`gpt-realtime` and friends). The session,
+  events, function calling, transcripts and turn handling are those of the OpenAI service; this
+  class changes the URL and the authentication.
+
+It speaks Azure's v1 realtime API (`/openai/v1/realtime`), whose protocol is OpenAI's. URLs with
+a dated `api-version` serve the older preview protocol, which this service doesn't implement: it
+logs a warning when given one.
+
+For Azure's own speech-to-speech API, with Azure voices, avatars and noise suppression, see
+[Azure Voice Live](/docs/services/s2s/azure-voice-live).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/s2s/azure">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/azure/src/realtime">
+    `packages/azure/src/realtime/llm.ts`.
+  </Card>
+  <Card title="Azure docs" href="https://learn.microsoft.com/en-us/azure/ai-foundry/openai/how-to/realtime-audio-websockets">
+    The realtime API over WebSocket on Azure.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/azure
+```
+
+```ts
+import { AzureRealtimeLLMService } from "@pipedog/azure/realtime/llm";
+import { SessionProperties } from "@pipedog/openai/realtime/events";
+```
+
+The session classes come from `@pipedog/openai/realtime/events`, which `@pipedog/azure`
+installs.
+
+## Prerequisites
+
+- An Azure OpenAI (or Azure AI Foundry) resource with a realtime model deployed.
+- The resource's API key, or a Microsoft Entra ID identity with access to it. The examples read
+  the key from `AZURE_OPENAI_API_KEY`.
+
+## AzureRealtimeLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/azure/src/realtime/llm.ts" name="AzureRealtimeLLMServiceOptions" />
+
+### Settings
+
+`AzureRealtimeLLMService.Settings` (`AzureRealtimeLLMSettings`) has the same fields and defaults
+as [`OpenAIRealtimeLLMSettings`](/docs/services/s2s/openai#settings). `model` must be your
+deployment's name: it is appended to `baseUrl` as `?model=<deployment>`.
+
+### Usage
+
+<include cwd meta='title="realtime.ts"'>snippets/services/s2s-azure-realtime.ts#usage</include>
+
+With Microsoft Entra ID instead of a key:
+
+<include cwd>snippets/services/s2s-azure-realtime.ts#entra</include>
+
+### Event handlers
+
+The same as [`OpenAIRealtimeLLMService`](/docs/services/s2s/openai#event-handlers):
+`on_conversation_item_created` and `on_conversation_item_updated`.
+
+### Notes
+
+- With an API key the socket sends it as the `api-key` header. With `tokenProvider`, the token
+  is fetched before each connection and sent as `Authorization: Bearer <token>`. One of the two
+  is required.
+- A `baseUrl` that already has a query string is used as given, so you can name the deployment
+  (or other parameters) yourself.
+- Frames, turn detection, pre-roll and video input behave as in the
+  [OpenAI Realtime notes](/docs/services/s2s/openai#notes).
+
+## Runtime notes
+
+- The socket is opened with `websocketConnect()` from core, which sends the auth header from the
+  global `WebSocket` on Bun, Node and Deno, and through `fetch` on Cloudflare Workers.
+- Browsers can't set WebSocket headers, so this service is for servers.
