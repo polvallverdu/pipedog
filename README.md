@@ -170,6 +170,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/asyncio`](packages/asyncio) | asyncio semantics for JavaScript: tasks, cooperative cancellation, queues, events. |
 | [`@pipedog/openai`](packages/openai) | OpenAI services: LLM, Responses, Realtime, STT, TTS, image. |
 | [`@pipedog/anthropic`](packages/anthropic) | Anthropic Claude LLM service. |
+| [`@pipedog/baseten`](packages/baseten), [`@pipedog/cerebras`](packages/cerebras), [`@pipedog/crusoe`](packages/crusoe), [`@pipedog/deepseek`](packages/deepseek), [`@pipedog/fireworks`](packages/fireworks), [`@pipedog/nebius`](packages/nebius), [`@pipedog/novita`](packages/novita), [`@pipedog/ollama`](packages/ollama), [`@pipedog/openrouter`](packages/openrouter), [`@pipedog/perplexity`](packages/perplexity), [`@pipedog/qwen`](packages/qwen), [`@pipedog/sambanova`](packages/sambanova) | OpenAI-compatible LLM services, one package per provider, each a small subclass of `OpenAILLMService`. |
 | [`@pipedog/google`](packages/google) | Google services: Gemini (LLM, Live), Cloud Speech-to-Text, Cloud Text-to-Speech. |
 | [`@pipedog/deepgram`](packages/deepgram) | Deepgram services: STT, TTS, Flux STT and TTS. |
 | [`@pipedog/cartesia`](packages/cartesia) | Cartesia services: STT, Ink-2 turn-based STT, WebSocket and HTTP TTS. |

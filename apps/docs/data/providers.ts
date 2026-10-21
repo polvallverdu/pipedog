@@ -73,7 +73,397 @@ export interface PortedPage {
   classes: string[];
 }
 
-/** Pages written by hand, in sidebar order. */
+export interface CompatibleLlmLink {
+  title: string;
+  href: string;
+  text: string;
+}
+
+/**
+ * An LLM service that subclasses OpenAILLMService for an OpenAI-compatible provider. Their pages
+ * are nearly identical, so scripts/generate-providers.ts writes them from this data; the usage
+ * samples are hand-written in snippets/services/llm-<slug>.ts.
+ */
+export interface CompatibleLlmPage {
+  /** File name under content/docs/services/llm/, and Pipecat's page slug. */
+  slug: string;
+  /** Display name. */
+  name: string;
+  /** The pipedog package. */
+  pkg: string;
+  /** The service class, in `<pkg>/llm`. */
+  cls: string;
+  /** Its settings class, in `<pkg>/llm`. */
+  settings: string;
+  /** What the provider is, in one sentence (ends with a period). */
+  about: string;
+  /** The default `baseUrl`. */
+  baseUrl: string;
+  /** The default model. */
+  model: string;
+  /** Other models to try, besides the default. */
+  models: string[];
+  /** The environment variable the samples read the API key from; null when no key is needed. */
+  env: string | null;
+  /** How to get an account and key, one sentence of Markdown. */
+  account: string;
+  /** Provider docs, for the Cards. */
+  links: CompatibleLlmLink[];
+  /** Whether "developer" messages are sent as is (else they are sent as "user" messages). */
+  developerRole: boolean;
+  /** Settings rows beyond the OpenAI ones (Markdown table rows). */
+  settingsRows?: string[];
+  /** The adapter class the service uses, in `<pkg>/<adapter.module>`, when not OpenAI's. */
+  adapter?: { cls: string; module: string; about: string };
+  /** Extra usage regions of the snippet, with the sentence that introduces each. */
+  usage?: { region: string; intro: string }[];
+  /** Provider-specific notes (Markdown bullets, without the leading dash). */
+  notes: string[];
+}
+
+export const compatibleLlm: CompatibleLlmPage[] = [
+  {
+    slug: "baseten",
+    name: "Baseten",
+    pkg: "@pipedog/baseten",
+    cls: "BasetenLLMService",
+    settings: "BasetenLLMSettings",
+    about:
+      "Baseten's Model APIs serve open-weights models (GLM, Kimi, DeepSeek, Nemotron, gpt-oss) over an OpenAI-compatible API, and dedicated deployments run your own model on your own GPUs.",
+    baseUrl: "https://inference.baseten.co/v1",
+    model: "zai-org/GLM-5.3",
+    models: [],
+    env: "BASETEN_API_KEY",
+    account:
+      "A Baseten account and an API key from the [Baseten console](https://app.baseten.co/).",
+    links: [
+      {
+        title: "Baseten docs",
+        href: "https://docs.baseten.co/",
+        text: "Model APIs and deployments.",
+      },
+    ],
+    developerRole: false,
+    usage: [
+      {
+        region: "dedicated",
+        intro:
+          "A dedicated deployment: point `baseUrl` at its `/sync/v1` URL and set `model` to the model it serves.",
+      },
+    ],
+    notes: [
+      'Baseten\'s message roles are system, user, assistant and tool, so "developer" messages are sent as "user" messages.',
+    ],
+  },
+  {
+    slug: "cerebras",
+    name: "Cerebras",
+    pkg: "@pipedog/cerebras",
+    cls: "CerebrasLLMService",
+    settings: "CerebrasLLMSettings",
+    about: "Cerebras serves open models with fast inference on its own hardware.",
+    baseUrl: "https://api.cerebras.ai/v1",
+    model: "gpt-oss-120b",
+    models: [],
+    env: "CEREBRAS_API_KEY",
+    account:
+      "A Cerebras account and an API key from the [Cerebras platform](https://cloud.cerebras.ai/).",
+    links: [
+      {
+        title: "Cerebras docs",
+        href: "https://inference-docs.cerebras.ai/api-reference/chat-completions",
+        text: "The chat completions API reference.",
+      },
+    ],
+    developerRole: true,
+    usage: [
+      {
+        region: "extra",
+        intro: "Cerebras-only request fields, such as `reasoning_effort`, go in `extra`:",
+      },
+    ],
+    notes: [
+      "Cerebras honors `max_tokens`, `max_completion_tokens` and the penalties, so they are sent when set.",
+    ],
+  },
+  {
+    slug: "crusoe",
+    name: "Crusoe",
+    pkg: "@pipedog/crusoe",
+    cls: "CrusoeLLMService",
+    settings: "CrusoeLLMSettings",
+    about: "Crusoe Cloud's Managed Inference serves open models through an OpenAI-compatible API.",
+    baseUrl: "https://api.inference.crusoecloud.com/v1/",
+    model: "openai/gpt-oss-120b",
+    models: [],
+    env: "CRUSOE_API_KEY",
+    account: "A Crusoe Cloud account and an API key from [Crusoe](https://crusoe.ai/).",
+    links: [{ title: "Crusoe", href: "https://crusoe.ai/", text: "Crusoe Cloud and its docs." }],
+    developerRole: false,
+    notes: [],
+  },
+  {
+    slug: "deepseek",
+    name: "DeepSeek",
+    pkg: "@pipedog/deepseek",
+    cls: "DeepSeekLLMService",
+    settings: "DeepSeekLLMSettings",
+    about: "DeepSeek's chat models, with control over their thinking mode.",
+    baseUrl: "https://api.deepseek.com/v1",
+    model: "deepseek-flash",
+    models: [],
+    env: "DEEPSEEK_API_KEY",
+    account:
+      "A DeepSeek account and an API key from the [DeepSeek platform](https://platform.deepseek.com/).",
+    links: [
+      {
+        title: "DeepSeek docs",
+        href: "https://api-docs.deepseek.com/api/create-chat-completion",
+        text: "The chat completion API reference.",
+      },
+    ],
+    developerRole: false,
+    settingsRows: [
+      '| `thinking` | `DeepSeekThinkingConfig \\| null` | `{ type: "disabled" }` | Thinking mode, sent as `thinking` in the request body. `null` leaves it to DeepSeek\'s default. A plain `{ type }` object is converted. |',
+    ],
+    adapter: {
+      cls: "DeepSeekLLMAdapter",
+      module: "deepseek_adapter",
+      about:
+        "adds an empty `reasoning_content` to assistant messages that have none, which DeepSeek requires in thinking mode once a tool call is involved",
+    },
+    usage: [
+      {
+        region: "thinking",
+        intro:
+          "Thinking is off by default, because DeepSeek's V4 models otherwise reason before every answer, which delays the first spoken token. Turn it on with `DeepSeekLLMService.ThinkingConfig`:",
+      },
+    ],
+    notes: [
+      "`seed`, `max_completion_tokens` and `service_tier` are not sent: DeepSeek doesn't support them.",
+      "DeepSeek can't enforce a response schema (`supportsResponseSchema` is `false`), so `runInference` ignores `responseSchema`, with a warning.",
+    ],
+  },
+  {
+    slug: "fireworks",
+    name: "Fireworks AI",
+    pkg: "@pipedog/fireworks",
+    cls: "FireworksLLMService",
+    settings: "FireworksLLMSettings",
+    about: "Fireworks AI serves open and proprietary models through an OpenAI-compatible API.",
+    baseUrl: "https://api.fireworks.ai/inference/v1",
+    model: "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
+    models: [],
+    env: "FIREWORKS_API_KEY",
+    account: "A Fireworks AI account and an API key from [Fireworks](https://fireworks.ai/).",
+    links: [
+      {
+        title: "Fireworks docs",
+        href: "https://docs.fireworks.ai/api-reference/post-chatcompletions",
+        text: "The chat completions API reference.",
+      },
+    ],
+    developerRole: true,
+    notes: [
+      "Model names use the `accounts/fireworks/models/` prefix.",
+      "`seed`, `max_completion_tokens`, `stream_options` and `service_tier` are not sent. Without `stream_options`, token usage is reported only when Fireworks includes it anyway.",
+    ],
+  },
+  {
+    slug: "nebius",
+    name: "Nebius",
+    pkg: "@pipedog/nebius",
+    cls: "NebiusLLMService",
+    settings: "NebiusLLMSettings",
+    about: "Nebius Token Factory serves open models through an OpenAI-compatible API.",
+    baseUrl: "https://api.tokenfactory.nebius.com/v1/",
+    model: "Qwen/Qwen3-30B-A3B-Instruct-2507",
+    models: [],
+    env: "NEBIUS_API_KEY",
+    account:
+      "A Nebius account and an API key from [Nebius Token Factory](https://tokenfactory.nebius.com/).",
+    links: [
+      {
+        title: "Nebius Token Factory",
+        href: "https://tokenfactory.nebius.com/",
+        text: "Models and API keys.",
+      },
+    ],
+    developerRole: false,
+    notes: [],
+  },
+  {
+    slug: "novita",
+    name: "Novita AI",
+    pkg: "@pipedog/novita",
+    cls: "NovitaLLMService",
+    settings: "NovitaLLMSettings",
+    about: "Novita AI serves open models through an OpenAI-compatible API.",
+    baseUrl: "https://api.novita.ai/openai",
+    model: "moonshotai/kimi-k2.5",
+    models: ["openai/gpt-oss-120b"],
+    env: "NOVITA_API_KEY",
+    account: "A Novita AI account and an API key from [Novita AI](https://novita.ai).",
+    links: [
+      { title: "Novita AI docs", href: "https://novita.ai/docs", text: "Models and the API." },
+    ],
+    developerRole: true,
+    notes: [],
+  },
+  {
+    slug: "ollama",
+    name: "Ollama",
+    pkg: "@pipedog/ollama",
+    cls: "OLLamaLLMService",
+    settings: "OllamaLLMSettings",
+    about: "Ollama runs open models on your own machine, behind an OpenAI-compatible API.",
+    baseUrl: "http://localhost:11434/v1",
+    model: "llama2",
+    models: ["mistral"],
+    env: null,
+    account:
+      '[Ollama](https://ollama.com/download) running locally, with a model pulled (`ollama pull llama2`). No API key is needed; `apiKey` defaults to `"ollama"`, which a local Ollama ignores.',
+    links: [
+      {
+        title: "Ollama library",
+        href: "https://ollama.com/library",
+        text: "The models you can pull.",
+      },
+    ],
+    developerRole: false,
+    usage: [
+      {
+        region: "proxy",
+        intro: "An Ollama server on another host, behind a proxy that checks a key:",
+      },
+    ],
+    notes: [
+      "`OLLamaLLMService` doesn't require an API key, unlike the other OpenAI-compatible services, and never falls back to `OPENAI_API_KEY`.",
+      'Ollama seems to ignore "developer" messages, so they are sent as "user" messages.',
+    ],
+  },
+  {
+    slug: "openrouter",
+    name: "OpenRouter",
+    pkg: "@pipedog/openrouter",
+    cls: "OpenRouterLLMService",
+    settings: "OpenRouterLLMSettings",
+    about:
+      "OpenRouter puts one OpenAI-compatible API in front of many model providers, and routes each request to one of them.",
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: "openai/gpt-4.1",
+    models: ["anthropic/claude-sonnet-4"],
+    env: "OPENROUTER_API_KEY",
+    account:
+      "An OpenRouter account, with credits, and an API key from [OpenRouter](https://openrouter.ai/).",
+    links: [
+      {
+        title: "OpenRouter docs",
+        href: "https://openrouter.ai/docs/api-reference/chat-completion",
+        text: "The chat completion API reference.",
+      },
+      {
+        title: "Provider routing",
+        href: "https://openrouter.ai/docs/guides/routing/provider-selection",
+        text: "The provider preferences and their semantics.",
+      },
+    ],
+    developerRole: false,
+    settingsRows: [
+      "| `provider` | `OpenRouterProviderPreferences \\| null` | `null` | Which upstream providers may serve the request, sent as `provider` in the request body. A plain object is converted. |",
+    ],
+    usage: [
+      {
+        region: "provider",
+        intro:
+          "Constrain which providers serve the request with `OpenRouterLLMService.ProviderPreferences`. Its options are camelCase (`allowFallbacks`, `preferredMaxLatency`, ...); options it doesn't know are sent as given:",
+      },
+    ],
+    notes: [
+      "For Gemini models, every system message after the first is sent as a user message.",
+      "A `provider` in `extra.extra_body` wins over the `provider` setting.",
+    ],
+  },
+  {
+    slug: "perplexity",
+    name: "Perplexity",
+    pkg: "@pipedog/perplexity",
+    cls: "PerplexityLLMService",
+    settings: "PerplexityLLMSettings",
+    about: "Perplexity's Sonar models answer with web search built in.",
+    baseUrl: "https://api.perplexity.ai",
+    model: "sonar",
+    models: ["sonar-pro"],
+    env: "PERPLEXITY_API_KEY",
+    account: "A Perplexity account and an API key from [Perplexity](https://www.perplexity.ai/).",
+    links: [
+      {
+        title: "Perplexity docs",
+        href: "https://docs.perplexity.ai/api-reference/chat-completions-post",
+        text: "The chat completions API reference.",
+      },
+    ],
+    developerRole: false,
+    adapter: {
+      cls: "PerplexityLLMAdapter",
+      module: "perplexity_adapter",
+      about:
+        "rewrites the history to Perplexity's rules: only initial system messages, strict user/assistant alternation (merging neighbors with the same role), and no trailing assistant message",
+    },
+    notes: [
+      "Only `model`, `messages` and the sampling settings that are set (`temperature`, `topP`, `maxTokens`, the penalties) are sent: Perplexity doesn't take tools, so function calling isn't available.",
+    ],
+  },
+  {
+    slug: "qwen",
+    name: "Qwen",
+    pkg: "@pipedog/qwen",
+    cls: "QwenLLMService",
+    settings: "QwenLLMSettings",
+    about: "Alibaba Cloud's Qwen models, through DashScope's OpenAI-compatible mode.",
+    baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    model: "qwen-plus",
+    models: ["qwen-max", "qwen-turbo"],
+    env: "QWEN_API_KEY",
+    account:
+      "An Alibaba Cloud account and a DashScope API key from [Alibaba Cloud Model Studio](https://www.alibabacloud.com/).",
+    links: [
+      {
+        title: "Qwen docs",
+        href: "https://www.alibabacloud.com/help/en/model-studio/use-qwen-by-calling-api",
+        text: "Calling Qwen through the API.",
+      },
+    ],
+    developerRole: false,
+    notes: [
+      "The default `baseUrl` is DashScope's international endpoint. Pass your region's endpoint as `baseUrl` if your key belongs to another one.",
+    ],
+  },
+  {
+    slug: "sambanova",
+    name: "SambaNova",
+    pkg: "@pipedog/sambanova",
+    cls: "SambaNovaLLMService",
+    settings: "SambaNovaLLMSettings",
+    about: "SambaNova Cloud serves open models with fast inference on its own hardware.",
+    baseUrl: "https://api.sambanova.ai/v1",
+    model: "Meta-Llama-3.3-70B-Instruct",
+    models: [],
+    env: "SAMBANOVA_API_KEY",
+    account:
+      "A SambaNova Cloud account and an API key from [SambaNova](https://docs.sambanova.ai/).",
+    links: [
+      { title: "SambaNova docs", href: "https://docs.sambanova.ai/", text: "Models and the API." },
+    ],
+    developerRole: false,
+    notes: [
+      "`service_tier` is not sent: SambaNova doesn't support it.",
+      "SambaNova's tool calls may come without an index. The service skips tool calls whose arguments are empty, and runs function calls only when the last one has arguments.",
+    ],
+  },
+];
+
+/** Ported pages (hand-written, except the OpenAI-compatible LLMs above), in sidebar order. */
 export const ported: Record<Section, PortedPage[]> = {
   llm: [
     { slug: "openai", name: "OpenAI", pkg: "@pipedog/openai", classes: ["OpenAILLMService"] },
@@ -107,6 +497,12 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/langchain",
       classes: ["LangchainProcessor"],
     },
+    ...compatibleLlm.map((page) => ({
+      slug: page.slug,
+      name: page.name,
+      pkg: page.pkg,
+      classes: [page.cls],
+    })),
   ],
   stt: [
     {
@@ -316,14 +712,6 @@ export const upcoming: UpcomingPage[] = [
   },
   {
     section: "llm",
-    slug: "ollama",
-    name: "Ollama",
-    about: "Open models running locally with Ollama.",
-    classes: ["OLLamaLLMService"],
-    modules: ["services/ollama/llm.py"],
-  },
-  {
-    section: "llm",
     slug: "mistral",
     name: "Mistral",
     about: "Mistral AI's chat models.",
@@ -345,38 +733,6 @@ export const upcoming: UpcomingPage[] = [
     about: "Models served by NVIDIA NIM.",
     classes: ["NvidiaLLMService"],
     modules: ["services/nvidia/llm.py"],
-  },
-  {
-    section: "llm",
-    slug: "deepseek",
-    name: "DeepSeek",
-    about: "DeepSeek's chat and reasoning models.",
-    classes: ["DeepSeekLLMService"],
-    modules: ["services/deepseek/llm.py"],
-  },
-  {
-    section: "llm",
-    slug: "openrouter",
-    name: "OpenRouter",
-    about: "One API in front of many model providers.",
-    classes: ["OpenRouterLLMService"],
-    modules: ["services/openrouter/llm.py"],
-  },
-  {
-    section: "llm",
-    slug: "cerebras",
-    name: "Cerebras",
-    about: "Fast inference of open models on Cerebras hardware.",
-    classes: ["CerebrasLLMService"],
-    modules: ["services/cerebras/llm.py"],
-  },
-  {
-    section: "llm",
-    slug: "fireworks",
-    name: "Fireworks AI",
-    about: "Open models served by Fireworks AI.",
-    classes: ["FireworksLLMService"],
-    modules: ["services/fireworks/llm.py"],
   },
   {
     section: "llm",
@@ -745,10 +1101,8 @@ export interface LongTailProvider {
 /** Every other upstream service, listed on one page. */
 export const longTail: LongTailProvider[] = [
   { name: "Async", folder: "asyncai", kinds: ["TTS"], classes: ["AsyncAITTSService"] },
-  { name: "Baseten", folder: "baseten", kinds: ["LLM"], classes: ["BasetenLLMService"] },
   { name: "Bland", folder: "bland", kinds: ["TTS"], classes: ["BlandTTSService"] },
   { name: "Camb.ai", folder: "camb", kinds: ["TTS"], classes: ["CambTTSService"] },
-  { name: "Crusoe", folder: "crusoe", kinds: ["LLM"], classes: ["CrusoeLLMService"] },
   {
     name: "fal",
     folder: "fal",
@@ -770,26 +1124,21 @@ export const longTail: LongTailProvider[] = [
   { name: "MiniMax", folder: "minimax", kinds: ["TTS"], classes: ["MiniMaxHttpTTSService"] },
   { name: "Moondream", folder: "moondream", kinds: ["Vision"], classes: ["MoondreamService"] },
   { name: "Moonshine", folder: "moonshine", kinds: ["STT"], classes: ["MoonshineSTTService"] },
-  { name: "Nebius", folder: "nebius", kinds: ["LLM"], classes: ["NebiusLLMService"] },
   { name: "Neuphonic", folder: "neuphonic", kinds: ["TTS"], classes: ["NeuphonicTTSService"] },
-  { name: "Novita", folder: "novita", kinds: ["LLM"], classes: ["NovitaLLMService"] },
   {
     name: "OpenClaw",
     folder: "openclaw",
     kinds: ["Agents"],
     classes: ["OpenClawGatewayService"],
   },
-  { name: "Perplexity", folder: "perplexity", kinds: ["LLM"], classes: ["PerplexityLLMService"] },
   { name: "Piper", folder: "piper", kinds: ["TTS"], classes: ["PiperTTSService"] },
   { name: "Pocket TTS", folder: "pocket_tts", kinds: ["TTS"], classes: ["PocketTTSService"] },
-  { name: "Qwen", folder: "qwen", kinds: ["LLM"], classes: ["QwenLLMService"] },
   {
     name: "Resemble AI",
     folder: "resembleai",
     kinds: ["TTS"],
     classes: ["ResembleAITTSService"],
   },
-  { name: "SambaNova", folder: "sambanova", kinds: ["LLM"], classes: ["SambaNovaLLMService"] },
   {
     name: "Smallest AI",
     folder: "smallest",
