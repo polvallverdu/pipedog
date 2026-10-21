@@ -1,0 +1,73 @@
+{
+  "name": "@pipedog/evals",
+  "version": "0.6.1",
+  "description": "Pipecat's evals (pipecat.evals) for pipedog: test a bot end to end with scripted or LLM-simulated users, TTS for the user's audio, matchers and an LLM judge, results, suites, and the pipedog-eval CLI.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "evals",
+    "testing",
+    "llm-judge"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/evals"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/evals#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "pipedog-eval": "./dist/__main__.js"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/serializer-rtvi-client": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*"
+  },
+  "peerDependencies": {
+    "@pipedog/audio-silero": "workspace:*",
+    "@pipedog/ollama": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@pipedog/audio-silero": {
+      "optional": true
+    },
+    "@pipedog/ollama": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/evals",
+      "src/pipecat/cli/commands/eval.py"
+    ]
+  }
+}

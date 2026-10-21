@@ -33,6 +33,9 @@
     },
     {
       "path": "../transport-websocket"
+    },
+    {
+      "path": "../evals"
     }
   ]
 }

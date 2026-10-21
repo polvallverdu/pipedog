@@ -2382,9 +2382,9 @@
         "typer"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported to @pipedog/evals as packages/evals/src/cli.ts (bin pipedog-eval: run, judge, suite), not to @pipedog/cli. typer -> node:util parseArgs (typer's exit codes). DIVERGENCE: rich's Live dashboard is a plain-ANSI redraw-in-place table on a TTY and streamed lines otherwise; python-dotenv is a small .env loader (search upward, never overrides). Deprecated --stop-bot and --trigger-disconnect not ported."
     },
     {
       "module": "pipecat.cli.commands.init",
@@ -2736,9 +2736,9 @@
         "test_evals_harness_shim.py",
         "test_evals_session.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "index.ts re-exports the main API (pipedog addition; upstream __init__ is empty). The suite is left out (Node-only)."
     },
     {
       "module": "pipecat.evals.__main__",
@@ -2754,9 +2754,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "The pipedog-eval bin (package.json bin), guarded so importing it has no side effects."
     },
     {
       "module": "pipecat.evals._session_subprocess",
@@ -2777,9 +2777,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Runs one scenario in its own process: spawned with process.execPath on this module (.ts in the repo, .js when published); main() runs only when it is the entry point. Result written with pyJsonDumps(result.toDict())."
     },
     {
       "module": "pipecat.evals.audio",
@@ -2798,9 +2798,9 @@
       "tests": [
         "test_evals_session.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "loadUserAudio(path, {decoder}) -> [pcm, sampleRate]. DIVERGENCE: soundfile is replaced by a pure-TS WAV reader (PCM 8/16/24/32, float 32/64, extensible); other formats need a decoder (setUserAudioDecoder or the decoder option)."
     },
     {
       "module": "pipecat.evals.base_driver",
@@ -2819,9 +2819,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Abstract BaseEvalDriver<R>({client, stream, judge, trace, progress}); result() takes one options object."
     },
     {
       "module": "pipecat.evals.client",
@@ -2865,9 +2865,9 @@
         "test_evals_session.py",
         "test_evals_simulation.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalClient(botUrl, {stream, trace, params, sessionParams, userTts, botStt, persona}) on core Pipeline/PipelineWorker/WorkerRunner and EvalClientTransport; Silero loaded lazily from @pipedog/audio-silero. Dropped deprecated BOT_READY_TIMEOUT_S alias and the trigger_disconnect session check. DIVERGENCE: waitForBot probes TCP with lazy node:net (not on Workers); a refused connection is a ConnectionClosed or an Error with a code (no InvalidHandshake/OSError); sendImage uses a small extension-to-MIME table."
     },
     {
       "module": "pipecat.evals.client_transport",
@@ -2890,9 +2890,9 @@
       "tests": [
         "test_evals_client_transport.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalClientTransport(uri, params, {flags, recorder}). The recorder writes WAV with core pcmToWav via lazy node:fs/promises; _RecorderTrack takes an injectable clock."
     },
     {
       "module": "pipecat.evals.conversation",
@@ -2908,9 +2908,9 @@
       "tests": [
         "test_evals_conversation.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Full port. Messages are plain objects with unchanged keys; strip() uses Python's isspace set."
     },
     {
       "module": "pipecat.evals.conversation_observer",
@@ -2932,9 +2932,9 @@
       "tests": [
         "test_evals_conversation_observer.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Full port; event \"on_conversation_ended\" unchanged."
     },
     {
       "module": "pipecat.evals.events",
@@ -2955,9 +2955,9 @@
         "test_evals_session.py",
         "test_evals_simulation.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalEventStream({botAudio, trace}); event dicts keep snake_case keys. Upstream has no test for it."
     },
     {
       "module": "pipecat.evals.fastapi_transport",
@@ -2983,9 +2983,9 @@
         "test_evals_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalFastAPIWebsocketTransport(websocket, params, flags, {inputName, outputName}) on pipedog's bring-your-own-socket FastAPIWebsocketTransport."
     },
     {
       "module": "pipecat.evals.harness",
@@ -3009,9 +3009,9 @@
       "tests": [
         "test_evals_harness_shim.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "skipped: deprecated alias module (moved to session and script_session since 1.9.0)."
     },
     {
       "module": "pipecat.evals.judge",
@@ -3042,9 +3042,9 @@
         "test_evals_simulation.py",
         "test_evals_simulation_judge.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalJudge(classifier, {explainer, explainBelow, allowContinue, maxTokens}); fromConfig() is async (DIVERGENCE). Dropped deprecated: LLM service as classifier, service= keyword, evaluate_run(transcript=)."
     },
     {
       "module": "pipecat.evals.matcher",
@@ -3067,9 +3067,9 @@
       "tests": [
         "test_evals_session.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "ExpectationMatcher({stream, judge, trace}); judge calls tagged with contextualize({eval_pipeline: \"judge\"}). Full port."
     },
     {
       "module": "pipecat.evals.persona",
@@ -3092,9 +3092,9 @@
         "test_evals_session.py",
         "test_evals_simulation.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Full port. new EvalPersona(description, goal, llm) stays positional (required args)."
     },
     {
       "module": "pipecat.evals.results",
@@ -3116,9 +3116,9 @@
         "test_evals_simulation_judge.py",
         "test_evals_suite.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Dropped deprecated EvalTurnResult, EvalResult, EvalTurnProgress. Dataclasses are classes with options constructors; toDict() writes dataclasses.asdict's snake_case keys, static fromDict() mirrors suite.py's _result_from_dict. pyFormatFixed() reproduces Python's :.Nf (half-to-even)."
     },
     {
       "module": "pipecat.evals.scenario",
@@ -3145,9 +3145,9 @@
         "test_evals_simulation.py",
         "test_evals_suite.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Dropped deprecated load_scenario_file, the EvalScenario/EvalTurn re-exports and the flat file shape (DIVERGENCE: a flat file fails with \"'scenarios:' must be a non-empty list\"). EvalScenarioFile.load, isScenarioFile and _loadMapping are async (lazy node:fs); file[name] -> file.get(name), len -> length. YAML through core utils/yaml SafeLoader with !include."
     },
     {
       "module": "pipecat.evals.scenario_config",
@@ -3164,9 +3164,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Dropped deprecated trigger_disconnect key (ignored when present). describeConfig(scenario, {color}). _DEFAULT_LLM_MODELS has no openai entry (service: openai is deprecated)."
     },
     {
       "module": "pipecat.evals.script",
@@ -3191,9 +3191,9 @@
         "test_evals_scenario.py",
         "test_evals_simulation.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Dropped deprecated EvalTurn, EvalScenario, EvalScriptScenario.load, trigger_disconnect. Options constructors with camelCase fields. _parseScript is async (resolves audio:/image: paths like Path.resolve via lazy node:fs). DIVERGENCE: JS has no int/float distinction, so integral floats (pause_ms: 2000.0) are accepted."
     },
     {
       "module": "pipecat.evals.script_driver",
@@ -3218,9 +3218,9 @@
         "test_evals_harness_shim.py",
         "test_evals_session.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalScriptDriver({scenario, defaultTimeoutMs, ...}). Full port."
     },
     {
       "module": "pipecat.evals.script_session",
@@ -3253,9 +3253,9 @@
       "tests": [
         "test_evals_session.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalScriptSession(scenario, botUrl, {params, judge, userTts, botStt}) and async fromScenario. Dropped deprecated on_progress callback, knob keywords, trigger_disconnect passthrough."
     },
     {
       "module": "pipecat.evals.serializer",
@@ -3287,9 +3287,9 @@
         "test_evals_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Dropped deprecated RTVIEvalSerializer. EvalConnectionFlags has modelDump()/modelValidate() (pydantic lax bools); evalConnectMessage() writes compact JSON. EvalSerializer takes an imageDecoder option. DIVERGENCE: Pillow is replaced by a built-in PNG decoder (DecompressionStream); JPEG and other formats need an injected imageDecoder."
     },
     {
       "module": "pipecat.evals.services",
@@ -3321,9 +3321,9 @@
       "tests": [
         "test_evals_services.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Builders are async (DIVERGENCE: factory resolved with dynamic import(); \"module.export\" where module is a package, file: URL or path, or a function from code). Ollama imported lazily. DIVERGENCE: Kokoro, Moonshine and local Whisper are not ported; their builders throw naming the service (the default audio services therefore need a factory). Dropped deprecated service: cartesia / service: openai and DEFAULT_OPENAI_MODEL. Shared helpers in src/_pyutil.ts (sync SHA-256, Python repr/float formatting)."
     },
     {
       "module": "pipecat.evals.session",
@@ -3357,9 +3357,9 @@
         "test_evals_harness_shim.py",
         "test_evals_session.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalSessionParams (options constructor) and abstract EvalSession<R> extends BaseObject with \"on_progress\". fromScenario(scenario, botUrl, {params, personaLlm, judge, userTts, botStt}) is async (service builders are) with one union signature. Dropped deprecated: stop_bot/trigger_disconnect params, _params_with_deprecated_knobs and the knob keywords, the on_progress callback argument. DIVERGENCE: Node socket errors (Error with code) count as OSError, named after the Python class (ECONNREFUSED -> ConnectionRefusedError); the trace prints the JS stack after \"Traceback (most recent call last):\"."
     },
     {
       "module": "pipecat.evals.simulation",
@@ -3381,9 +3381,9 @@
         "test_evals_simulation.py",
         "test_evals_simulation_judge.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Dropped deprecated EvalSimulationScenario.load and trigger_disconnect. describeSimulation(sim, {color}). DIVERGENCE: integral floats accepted where ints are required."
     },
     {
       "module": "pipecat.evals.simulation_driver",
@@ -3413,9 +3413,9 @@
       "tests": [
         "test_evals_simulation.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalSimulationDriver({simulation, persona, ...}). Dropped deprecated transcript()."
     },
     {
       "module": "pipecat.evals.simulation_judge",
@@ -3435,9 +3435,9 @@
       "tests": [
         "test_evals_simulation_judge.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalSimulationJudge(simulation, {judge, explainBelow, trace}); _buildJudge async (EvalJudge.fromConfig is)."
     },
     {
       "module": "pipecat.evals.simulation_session",
@@ -3470,9 +3470,9 @@
       "tests": [
         "test_evals_session.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "EvalSimulationSession(scenario, botUrl, {params, personaLlm, judge, userTts, botStt}) and async fromScenario. Dropped deprecated trigger_disconnect passthrough."
     },
     {
       "module": "pipecat.evals.suite",
@@ -3499,9 +3499,9 @@
       "tests": [
         "test_evals_suite.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Dropped deprecated: bare-string runner_body, EvalSuite.run(on_update=, use_cache=, default_timeout_ms=) with _params_with_deprecated_knobs, stop_bot/trigger_disconnect. EvalRun/EvalManifest are classes with options constructors; EvalManifest.load, run.load and suite.run are async. Node/Bun only (node:child_process, node:fs). DIVERGENCE: capturePipelineLogs(logsDir, prefix, {name, enabled}, fn) takes a callback; loguru's contextualize/extra -> contextualize()/logContext() on AsyncLocalStorage (_log_context.ts) plus a logger sink; bots spawn with process.execPath (\"{python}\" -> bun/node) and @pipedog/runner flags; asyncio.Condition built from Futures; small shlex.split/str.format replacements."
     },
     {
       "module": "pipecat.evals.transport",
@@ -3526,9 +3526,9 @@
         "test_evals_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Only EvalTransportParams. Dropped deprecated: the EvalTransport server and what only it used (query-param constants and helpers, server-based EvalInputTransport/EvalOutputTransport)."
     },
     {
       "module": "pipecat.evals.tts",
@@ -3550,9 +3550,9 @@
       "tests": [
         "test_evals_services.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "CachingTTSService(inner, {cacheKey, cacheDir, useCache}). Disk cache via lazy node:fs/promises and core pcmToWav/readWav. DIVERGENCE: DEFAULT_CACHE_DIR from $HOME/%USERPROFILE% via getEnv; StartFrame has no fields in pipedog, so the inner service gets the sample rate and metrics-off through its FrameProcessorSetup."
     },
     {
       "module": "pipecat.extensions",
@@ -6347,7 +6347,7 @@
       ],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "createTransport, _getTransportParams, _createTelephonyTransport (serializers lazily imported), smallwebrtcSdpMunging, parseTelephonyWebsocket. DIVERGENCE: a hang-up before the provider's start message is TelephonyCallEndedError (extends TelephonyHandshakeError/ValueError) with runnerArgs.handshake set, for 0 or 1 messages (upstream: ValueError, or 'Missing transport params for unknown'). Not ported: eval-connect detection (pipecat.evals), _maybe_apply_daily_dialin and the Daily/Vonage/MOQ transports (TransportNotPortedError); LiveKit builds LiveKitTransport from @pipedog/transport-livekit (optional peer, imported by name), deprecated get_transport_client_id and maybe_capture_participant_*."
+      "notes": "createTransport, _getTransportParams, _createTelephonyTransport (serializers lazily imported), smallwebrtcSdpMunging, parseTelephonyWebsocket. eval-connect detection is ported (type \"eval\"): createTransport builds EvalFastAPIWebsocketTransport, importing the optional peer @pipedog/evals lazily; the deprecated EvalRunnerArguments/EvalTransport branch is not ported. DIVERGENCE: a hang-up before the provider's start message is TelephonyCallEndedError (extends TelephonyHandshakeError/ValueError) with runnerArgs.handshake set, for 0 or 1 messages (upstream: ValueError, or 'Missing transport params for unknown'). Not ported: _maybe_apply_daily_dialin and the Daily/Vonage/MOQ transports (TransportNotPortedError); LiveKit builds LiveKitTransport from @pipedog/transport-livekit (optional peer, imported by name), deprecated get_transport_client_id and maybe_capture_participant_*."
     },
     {
       "module": "pipecat.runner.vonage",
@@ -17736,8 +17736,8 @@
         "pipecat.transports.websocket.client"
       ],
       "needsModules": 123,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "10 pass"
     },
     {
       "file": "tests/test_evals_conversation.py",
@@ -17748,8 +17748,8 @@
         "pipecat.evals.conversation"
       ],
       "needsModules": 1,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass"
     },
     {
       "file": "tests/test_evals_conversation_observer.py",
@@ -17773,8 +17773,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 131,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass"
     },
     {
       "file": "tests/test_evals_harness_shim.py",
@@ -17791,8 +17791,8 @@
         "pipecat.evals.session"
       ],
       "needsModules": 189,
-      "status": "todo",
-      "notes": ""
+      "status": "skipped",
+      "notes": "skipped: tests only the deprecated harness alias module"
     },
     {
       "file": "tests/test_evals_judge.py",
@@ -17806,8 +17806,8 @@
         "pipecat.utils.deprecation"
       ],
       "needsModules": 145,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "45 pass, 3 skip (deprecated)"
     },
     {
       "file": "tests/test_evals_judge_jev.py",
@@ -17820,8 +17820,8 @@
         "pipecat.evals.judge"
       ],
       "needsModules": 147,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "13 pass"
     },
     {
       "file": "tests/test_evals_scenario.py",
@@ -17833,8 +17833,8 @@
         "pipecat.evals.script"
       ],
       "needsModules": 149,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "78 pass, 5 skip (deprecated)"
     },
     {
       "file": "tests/test_evals_serializer.py",
@@ -17849,8 +17849,8 @@
         "pipecat.serializers.rtvi_client"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "31 pass"
     },
     {
       "file": "tests/test_evals_services.py",
@@ -17870,8 +17870,8 @@
         "pipecat.utils.types"
       ],
       "needsModules": 145,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "24 pass, 4 skip (deprecated cartesia/openai by name)"
     },
     {
       "file": "tests/test_evals_session.py",
@@ -17900,8 +17900,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 189,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "173 pass, 6 skip (5 deprecated-only; 1 DIVERGENCE: the global WebSocket can't see a refused upgrade's HTTP status)"
     },
     {
       "file": "tests/test_evals_simulation.py",
@@ -17924,8 +17924,8 @@
         "pipecat.services.llm_service"
       ],
       "needsModules": 187,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "43 pass, 1 skip (service: openai is deprecated)"
     },
     {
       "file": "tests/test_evals_simulation_judge.py",
@@ -17939,8 +17939,8 @@
         "pipecat.evals.simulation_judge"
       ],
       "needsModules": 152,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "3 pass"
     },
     {
       "file": "tests/test_evals_suite.py",
@@ -17953,8 +17953,8 @@
         "pipecat.evals.suite"
       ],
       "needsModules": 188,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "42 pass, 5 skip (deprecated)"
     },
     {
       "file": "tests/test_evals_transport.py",
@@ -17968,8 +17968,8 @@
         "pipecat.frames.frames"
       ],
       "needsModules": 121,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "3 pass, 10 skip (deprecated EvalTransport server / URL flags)"
     },
     {
       "file": "tests/test_exotel_serializer.py",
@@ -20190,7 +20190,7 @@
       ],
       "needsModules": 138,
       "status": "tested",
-      "notes": "22 pass, 2 skip (deprecated), 6 todo (pipecat.evals, Daily dial-in); lives in packages/runner/test/test_runner_utils.test.ts. Includes pipedog createTransport tests (Telnyx handshake, hang-ups, unported transports)."
+      "notes": "26 pass, 2 skip (deprecated), 2 todo (Daily dial-in); lives in packages/runner/test/test_runner_utils.test.ts. Includes pipedog createTransport tests (Telnyx handshake, hang-ups, unported transports) and the eval-connect tests."
     },
     {
       "file": "tests/test_sagemaker_bidi_client.py",

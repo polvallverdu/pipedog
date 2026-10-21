@@ -201,6 +201,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/serializer-vonage`](packages/serializer-vonage) | `VonageFrameSerializer` for the Vonage Audio Connector. |
 | [`@pipedog/serializer-genesys`](packages/serializer-genesys) | `GenesysAudioHookSerializer` for Genesys Cloud AudioHook. |
 | [`@pipedog/runner`](packages/runner) | Pipecat's development runner: `createTransport()` from the runner arguments, and `main()`, a dev server with the prebuilt browser client, SmallWebRTC signalling, LiveKit session tokens, and telephony webhooks and WebSockets for Twilio, Telnyx, Plivo and Exotel. Also a fetch handler (`createRunnerApp()`) to mount in your own server. |
+| [`@pipedog/evals`](packages/evals) | Pipecat's evals: test a bot end to end with scripted or LLM-simulated users, matchers and an LLM judge, from YAML scenarios, with the `pipedog-eval` CLI and multi-bot suites. |
 | [`@pipedog/audio-silero`](packages/audio-silero) | Silero VAD (`SileroVADAnalyzer`), with the upstream model included. |
 | [`@pipedog/audio-smart-turn`](packages/audio-smart-turn) | Local Smart Turn v3 end-of-turn detection, with the upstream model included. |
 | [`@pipedog/onnx`](packages/onnx) | Small ONNX inference backend: `onnxruntime-node` when installed, else `onnxruntime-web`, with a Workers variant. |
@@ -232,6 +233,8 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 - [Voice bot over SmallWebRTC](https://polvallverdu.github.io/pipedog/docs/voice-bot/)
 - [Development runner](https://polvallverdu.github.io/pipedog/docs/runner/): `main()`, the
   prebuilt client and phone calls, as in Pipecat's runner
+- [Evals](https://polvallverdu.github.io/pipedog/docs/evals/): test a bot end to end with scripted
+  or simulated users and an LLM judge (`pipedog-eval`)
 - [Telephony](https://polvallverdu.github.io/pipedog/docs/telephony/): Twilio, Telnyx, Plivo,
   Exotel, Vonage and Genesys
 - [Examples](https://polvallverdu.github.io/pipedog/docs/examples/): every runnable example and its run command
@@ -257,7 +260,7 @@ files.
   Together, Mistral, xAI, DeepSeek, OpenRouter, Ollama and more), HeyGen avatars, the WebSocket,
   SmallWebRTC and LiveKit transports, six telephony serializers and the development runner.
 - **Not ported yet:** the Daily and other room transports, Pipecat Flows, the noise
-  filters (Krisp, RNNoise, Koala, AIC), evals, the CLI, the MCP client service, and 34 other
+  filters (Krisp, RNNoise, Koala, AIC), the CLI, the MCP client service, and 34 other
   providers (AssemblyAI, Gladia, Speechmatics, Rime, NVIDIA and a long tail). See the
   [roadmap](https://polvallverdu.github.io/pipedog/docs/roadmap/).
 - **Testing: mocks and recordings, not live providers yet.** Every provider is tested against mock

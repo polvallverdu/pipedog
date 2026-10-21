@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../asyncio"
+    },
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../serializer-rtvi-client"
+    },
+    {
+      "path": "../transport-websocket"
+    },
+    {
+      "path": "../audio-silero"
+    },
+    {
+      "path": "../ollama"
+    }
+  ]
+}

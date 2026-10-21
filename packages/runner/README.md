@@ -82,7 +82,6 @@ unmodified in `prebuilt/` (release 1.3.0, BSD-2-Clause, Copyright (c) 2025–202
   (`-t vonage`) and WhatsApp aren't ported: selecting them fails with a clear message. Their
   argument classes exist for type parity. The MOQ flags and the deprecated `--folder` and
   `-t eval` aren't ported.
-- An eval harness's `eval-connect` first message is not detected (`pipecat.evals` is not ported).
 - A hang-up mid-handshake is `TelephonyCallEndedError` (a `TelephonyHandshakeError`, upstream's
   `ValueError`) whether zero or one message arrived; upstream fails with "Missing transport params
   for 'unknown'" after one. The runner logs it at info level.

@@ -1,0 +1,153 @@
+---
+title: Evals
+description: Test a bot end to end with scripted or LLM-simulated users, judged by an LLM, from YAML scenarios and the pipedog-eval CLI.
+---
+
+`@pipedog/evals` is the port of Pipecat's `pipecat.evals`. It tests a running bot end to end.
+The harness connects to the bot as an RTVI client and plays the user's side of a conversation,
+in text or in synthesized speech. It listens to what the bot says and checks it against the
+scenario, with exact checks and an LLM judge.
+
+A **scenario** is one check, written in YAML. There are two kinds:
+
+- A **scripted** scenario writes out the user's turns and what the bot should do after each one.
+  You can check text, events, function calls and timing, and send criteria to the judge.
+- A **simulated** scenario gives an LLM a persona and a goal, and lets it talk to the bot. A judge
+  then reads the whole conversation and decides whether the bot did its job.
+
+<Cards>
+  <Card title="Upstream" href="https://github.com/pipecat-ai/pipecat/tree/main/evals">
+    Pipecat's eval suites and their scenarios, which use the same YAML format.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/evals/src">
+    `packages/evals/src`: `session.ts`, `scenario.ts`, `script.ts`, `judge.ts`, `suite.ts`, `cli.ts`.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add -d @pipedog/evals
+```
+
+The harness runs on Bun and Node. The `pipedog-eval` command runs scenarios, judges saved
+conversations and runs suites:
+
+```bash
+bunx pipedog-eval --help    # or: npx pipedog-eval --help
+```
+
+## Make the bot reachable
+
+The harness connects to the [development runner](/docs/runner)'s `/ws` route. Its first message,
+`eval-connect`, tells `createTransport()` to build the eval transport, so the bot needs nothing
+more than an `eval` entry in its transport parameters:
+
+<include cwd meta='title="bot.ts"'>snippets/evals.ts#bot</include>
+
+Start it as usual, e.g. `bun bot.ts`, and it listens on `ws://localhost:7860/ws`.
+
+## Write a scenario
+
+```yaml
+# scenarios/capital.yaml
+name: capital
+judge:
+  eval:
+    factory: ./my_evals.ts.llm   # the judge's LLM, built by your code (below)
+    model: gpt-4.1-mini
+scenarios:
+  - name: capital_question
+    turns:
+      # Wait for the bot's greeting before speaking.
+      - expect:
+          - event: response
+            eval: "the bot opens the conversation (a greeting, an offer to help)"
+      - user: "What is the capital of Germany?"
+        expect:
+          - event: response
+            text_contains: Berlin
+            within_ms: 10000
+            eval: "the response says the capital of Germany is Berlin"
+```
+
+Each turn sends `user:` (or nothing, to wait for the bot) and checks the bot's events in order.
+`response` is the bot's reply: the LLM's text in text modality, the default, or a transcription of
+its speech in audio modality. Other events include `user_transcription`, `bot_started_speaking`,
+`function_call` (with `calls:`), `llm_marker` and `image`. `text_contains` and `text_excludes`
+check the text exactly, `within_ms` sets a latency budget, and `eval:` asks the judge. The module
+docs of `script.ts` and `simulation.ts` describe every key, as upstream's do.
+
+A simulation swaps `turns:` for a persona:
+
+```yaml
+scenarios:
+  - name: capital_curious
+    persona: |
+      A curious, polite traveler who asks one thing at a time.
+    goal: "Find out what the capital of Germany is, then say goodbye."
+    success: "the bot told the caller that the capital of Germany is Berlin"
+    simulator:
+      factory: ./my_evals.ts.llm   # must support function calling (the persona hangs up with a tool)
+    metrics:
+      - name: politeness
+        criterion: "the bot stayed courteous throughout"
+        min_score: 1
+    max_turns: 10
+```
+
+## Services: the judge, the user's voice and the transcriber
+
+The harness builds its own services from the scenario. A `factory:` names a module and one of
+its exports, joined by a dot. The module is a path relative to the working directory, a package
+or a `file:` URL. The export is a function that takes the config block and returns the service:
+
+<include cwd meta='title="my_evals.ts"'>snippets/evals.ts#factories</include>
+
+- `judge.eval` (and a simulation's `simulator`): an OpenAI-compatible LLM, or any
+  `BaseClassifier`. Without a factory it is Ollama (`service: ollama`) running `gemma4:12b`
+  locally. Set `explainer: false` to turn off the explainer that gives reasons for a `no`.
+- `user.speech`: the voice the user's turns are spoken in, when `user.modality: audio`. Synthesized
+  turns are cached on disk.
+- `judge.transcription`: the transcriber for the bot's speech, when `judge.modality: audio`.
+
+<Callout type="warn">
+  Upstream's keyless local defaults for audio, Kokoro for the user's voice and Moonshine or local
+  Whisper for the transcriber, aren't ported yet. Audio scenarios need a `factory:` for both.
+  WAV files work as `audio:` recordings; other formats need a decoder.
+</Callout>
+
+## Run it
+
+```bash
+bunx pipedog-eval run scenarios/capital.yaml --bot-url ws://localhost:7860/ws
+bunx pipedog-eval run scenarios/ -v          # every scenario in a folder, verbose
+```
+
+The command prints each scenario's configuration, then live status and timings. Each scenario's
+`<scenario>.eval.log` goes in `--logs-dir`. The exit code is 1 if any scenario failed.
+
+`pipedog-eval suite manifest.yaml` runs a manifest of bots and their scenarios: it spawns each bot
+on its own port (with the current runtime, `{python} {bot} --port {port}` by default), runs the
+scenarios concurrently, and can repeat them to measure flakiness. `pipedog-eval judge` judges
+saved conversations against a simulation's criteria.
+
+## From code
+
+The same run, without the CLI:
+
+<include cwd meta='title="run.ts"'>snippets/evals.ts#session</include>
+
+`EvalSession.fromScenario()` also takes `judge`, `userTts`, `botStt` and `personaLlm`, which
+override what the scenario configures. That's how a test can pass in fakes.
+
+## Differences from upstream
+
+- `python -m pipecat.evals` and `pipecat eval` are the `pipedog-eval` bin. A plain-ANSI table
+  replaces rich's live dashboard. `.env` is loaded by a small built-in loader.
+- A `factory:` is `<module>.<export>`, imported with `import()`, rather than a dotted Python path.
+  The service builders and `EvalScenarioFile.load()` are async.
+- Each suite run is a child process running `_session_subprocess` with the current runtime.
+- The deprecated pieces are left out: the `EvalTransport` server, `pipecat.evals.harness`, flat
+  scenario files, `trigger_disconnect`, `stop_bot`, and `service: openai` / `service: cartesia`
+  (use a factory).
