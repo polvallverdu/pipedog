@@ -16,7 +16,8 @@
       "!packages/mcp/snapshot",
       "!**/.wrangler",
       "!apps/docs/next-env.d.ts",
-      "!packages/runner/prebuilt"
+      "!packages/runner/prebuilt",
+      "!packages/flows/src/flow_config.schema.json"
     ]
   },
   "formatter": {

@@ -342,6 +342,19 @@
         "@pipedog/openai": "workspace:*",
       },
     },
+    "packages/flows": {
+      "name": "@pipedog/flows",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@pipedog/anthropic": "workspace:*",
+        "@pipedog/google": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
     "packages/google": {
       "name": "@pipedog/google",
       "version": "0.6.1",
@@ -1185,6 +1198,8 @@
     "@pipedog/example-workers-durable-voice-agent": ["@pipedog/example-workers-durable-voice-agent@workspace:examples/workers-durable-voice-agent"],
 
     "@pipedog/fireworks": ["@pipedog/fireworks@workspace:packages/fireworks"],
+
+    "@pipedog/flows": ["@pipedog/flows@workspace:packages/flows"],
 
     "@pipedog/google": ["@pipedog/google@workspace:packages/google"],
 
