@@ -14,13 +14,17 @@
  * - Upstream uses the `mistralai` SDK's `RealtimeConnection`
  *   (`client.audio.realtime.connect(...)`). Here the same WebSocket protocol
  *   is spoken directly, through core's `websocketConnect`, so it runs on
- *   every runtime: the socket is opened at
- *   `{baseUrl}/v1/audio/transcriptions/realtime?model=...` with a Bearer
- *   token; `session.update` sets the audio format; audio goes out as
- *   base64 `input_audio.append` events, `input_audio.flush` flushes and
- *   `input_audio.end` ends the stream. Incoming events: `session.created`,
+ *   every runtime. The protocol follows the SDK (mistralai 3.3.0,
+ *   `mistralai/extra/realtime/transcription.py` and `connection.py`; the JS
+ *   SDK's `extra/realtime` is the same): the socket is opened at
+ *   `{baseUrl}/v1/audio/transcriptions/realtime?model=...` with
+ *   `Authorization: Bearer <key>`; the client waits for `session.created`,
+ *   then sends `session.update` with `session.audio_format` (and
+ *   `session.target_streaming_delay_ms` when set); audio goes out as base64
+ *   `input_audio.append` events and `input_audio.flush` flushes. Incoming
+ *   events: `session.created`, `session.updated`,
  *   `transcription.text.delta`, `transcription.language`,
- *   `transcription.done` and `error`.
+ *   `transcription.segment`, `transcription.done` and `error`.
  * - `baseUrl` is the SDK's `server_url` (default `https://api.mistral.ai`).
  */
 
@@ -53,6 +57,13 @@ import { assertGiven } from "@pipedog/core/utils/types";
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/** The message of an `error` event (`{error: {message, code}}`; the message may be an object). */
+function errorText(event: Record<string, any>): string {
+  const message = event.error?.message;
+  if (message === undefined || message === null) return "Unknown error";
+  return typeof message === "string" ? message : pyJsonDumps(message);
 }
 
 export interface MistralSTTSettingsOptions extends STTSettingsOptions {}
@@ -116,6 +127,8 @@ export class MistralSTTService extends STTService {
   protected _targetStreamingDelayMs: number | null;
   protected _connection: WebsocketClientConnection | null = null;
   protected _receiveTask: Task<unknown> | null = null;
+  /** Events received during the handshake, up to `session.created`. */
+  protected _initialEvents: Record<string, any>[] = [];
   protected _accumulatedText = "";
   protected _detectedLanguage: Language | null = null;
 
@@ -255,9 +268,6 @@ export class MistralSTTService extends STTService {
   protected _realtimeUrl(model: string): string {
     const base = this._baseUrl.replace(/^http(s?):/i, "ws$1:");
     const params = new URLSearchParams({ model });
-    if (this._targetStreamingDelayMs !== null) {
-      params.set("target_streaming_delay_ms", String(this._targetStreamingDelayMs));
-    }
     return `${base}/v1/audio/transcriptions/realtime?${params}`;
   }
 
@@ -272,13 +282,33 @@ export class MistralSTTService extends STTService {
       }
       const headers: Record<string, string> = {};
       if (this._apiKey) headers.Authorization = `Bearer ${this._apiKey}`;
-      this._connection = await websocketConnect(this._realtimeUrl(model), {
+      const connection = await websocketConnect(this._realtimeUrl(model), {
         additionalHeaders: headers,
       });
-      await this._send({
-        type: "session.update",
-        session: { audio_format: { encoding: "pcm_s16le", sample_rate: this.sampleRate } },
-      });
+      // Like the SDK's `connect()`: wait for `session.created`, keeping the
+      // events received until then for the receive task, then send the
+      // session settings.
+      const initialEvents: Record<string, any>[] = [];
+      while (true) {
+        const message = await connection.recv();
+        if (typeof message !== "string") continue;
+        const event = pyJsonLoads(message) as Record<string, any>;
+        initialEvents.push(event);
+        if (event.type === "error") {
+          await connection.close();
+          throw new Error(`Realtime transcription error during handshake: ${errorText(event)}`);
+        }
+        if (event.type === "session.created") break;
+      }
+      this._connection = connection;
+      this._initialEvents = initialEvents;
+      const session: Record<string, unknown> = {
+        audio_format: { encoding: "pcm_s16le", sample_rate: this.sampleRate },
+      };
+      if (this._targetStreamingDelayMs !== null) {
+        session.target_streaming_delay_ms = this._targetStreamingDelayMs;
+      }
+      await this._send({ type: "session.update", session });
 
       this._receiveTask = this.createTask(() => this._receiveEvents(), "mistral_stt_receive");
     } catch (e) {
@@ -304,7 +334,6 @@ export class MistralSTTService extends STTService {
     if (connection && !this._isClosed(connection)) {
       try {
         logger.debug(`${this}: Disconnecting from Mistral STT`);
-        await connection.send(pyJsonDumps({ type: "input_audio.end" }));
         await connection.close();
       } catch (e) {
         rethrowIfCancelled(e);
@@ -325,52 +354,14 @@ export class MistralSTTService extends STTService {
       return;
     }
     try {
+      const initialEvents = this._initialEvents;
+      this._initialEvents = [];
+      for (const event of initialEvents) {
+        await this._handleEvent(event);
+      }
       for await (const message of connection) {
         if (typeof message !== "string") continue;
-        const event = pyJsonLoads(message) as Record<string, any>;
-        const type = event.type;
-        if (type === "session.created") {
-          logger.debug(`${this}: Session created: ${pyJsonDumps(event.session ?? null)}`);
-          await this._callEventHandler("on_connected");
-        } else if (type === "transcription.text.delta") {
-          this._accumulatedText += event.text ?? "";
-          await this.pushFrame(
-            new InterimTranscriptionFrame({
-              text: this._accumulatedText,
-              userId: this._userId,
-              timestamp: timeNowIso8601(),
-            }),
-          );
-        } else if (type === "transcription.done") {
-          if (event.text) {
-            // Report usage before the transcription frame so tracing can
-            // attach it to the STT span the frame closes.
-            await this.emitSttUsageMetrics();
-            await this.pushFrame(
-              new TranscriptionFrame({
-                text: event.text,
-                userId: this._userId,
-                timestamp: timeNowIso8601(),
-                language: this._detectedLanguage,
-              }),
-            );
-            await this._handleTranscription(event.text, true, this._detectedLanguage);
-          }
-          this._accumulatedText = "";
-        } else if (type === "transcription.language") {
-          // The API could send a code Language doesn't list yet; Language is a
-          // string type, so downstream handles either.
-          this._detectedLanguage = (event.audio_language ?? null) as Language | null;
-        } else if (type === "error") {
-          const err = event.error;
-          const msg = (err && typeof err === "object" ? err.message : err) ?? "Unknown error";
-          await this.pushError(`Mistral STT error: ${msg}`);
-          await this._callEventHandler("on_connection_error", msg);
-        } else if (type === "session.updated") {
-          // Acknowledges the audio format.
-        } else {
-          logger.warning(`${this}: Unknown realtime event: ${message}`);
-        }
+        await this._handleEvent(pyJsonLoads(message) as Record<string, any>);
       }
     } catch (e) {
       rethrowIfCancelled(e);
@@ -378,6 +369,52 @@ export class MistralSTTService extends STTService {
       await this._callEventHandler("on_connection_error", errorMessage(e));
     } finally {
       this._connection = null;
+    }
+  }
+
+  /** Handle one realtime event. */
+  protected async _handleEvent(event: Record<string, any>): Promise<void> {
+    const type = event.type;
+    if (type === "session.created") {
+      logger.debug(`${this}: Session created: ${pyJsonDumps(event.session ?? null)}`);
+      await this._callEventHandler("on_connected");
+    } else if (type === "transcription.text.delta") {
+      this._accumulatedText += event.text ?? "";
+      await this.pushFrame(
+        new InterimTranscriptionFrame({
+          text: this._accumulatedText,
+          userId: this._userId,
+          timestamp: timeNowIso8601(),
+        }),
+      );
+    } else if (type === "transcription.done") {
+      if (event.text) {
+        // Report usage before the transcription frame so tracing can
+        // attach it to the STT span the frame closes.
+        await this.emitSttUsageMetrics();
+        await this.pushFrame(
+          new TranscriptionFrame({
+            text: event.text,
+            userId: this._userId,
+            timestamp: timeNowIso8601(),
+            language: this._detectedLanguage,
+          }),
+        );
+        await this._handleTranscription(event.text, true, this._detectedLanguage);
+      }
+      this._accumulatedText = "";
+    } else if (type === "transcription.language") {
+      // The API could send a code Language doesn't list yet; Language is a
+      // string type, so downstream handles either.
+      this._detectedLanguage = (event.audio_language ?? null) as Language | null;
+    } else if (type === "error") {
+      const msg = errorText(event);
+      await this.pushError(`Mistral STT error: ${msg}`);
+      await this._callEventHandler("on_connection_error", msg);
+    } else if (type === "session.updated" || type === "transcription.segment") {
+      // Known SDK events that upstream doesn't act on.
+    } else {
+      logger.warning(`${this}: Unknown realtime event: ${pyJsonDumps(event)}`);
     }
   }
 

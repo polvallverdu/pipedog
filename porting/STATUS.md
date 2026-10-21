@@ -383,8 +383,8 @@ Packages without an upstream counterpart: `@pipedog/tracing`, `@pipedog/sentence
 - `pipecat.services.minimax`: Empty __init__.
 - `pipecat.services.mistral`: Empty __init__.
 - `pipecat.services.mistral.llm`: packages/mistral/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`).
-- `pipecat.services.mistral.stt`: packages/mistral/src/stt.ts: Voxtral realtime WebSocket spoken directly via core websocketConnect instead of the mistralai SDK RealtimeConnection; baseUrl = SDK server_url; DIVERGENCE: _disconnect keeps the connection before cancelling the receive task so the socket is closed and on_disconnected fires. UNVERIFIED: the realtime wire format is from memory of Mistral's API, checked only against a local fake.
-- `pipecat.services.mistral.tts`: packages/mistral/src/tts.ts: raw fetch + SSE parsing of POST /v1/audio/speech (stream=true) instead of the mistralai SDK; new baseUrl option. UNVERIFIED: the SSE event shape is from memory of Mistral's API, checked only against a local fake.
+- `pipecat.services.mistral.stt`: packages/mistral/src/stt.ts: Voxtral realtime WebSocket spoken directly via core websocketConnect instead of the mistralai SDK RealtimeConnection; baseUrl = SDK server_url. Protocol verified against mistralai 3.3.0 / @mistralai/mistralai 3.1.0 extra/realtime and docs.mistral.ai transcribe-in-realtime: waits for session.created, then session.update with audio_format and target_streaming_delay_ms. DIVERGENCE: _disconnect keeps the connection before cancelling the receive task so the socket is closed and on_disconnected fires.
+- `pipecat.services.mistral.tts`: packages/mistral/src/tts.ts: raw fetch + SSE parsing of POST /v1/audio/speech (stream=true) instead of the mistralai SDK; new baseUrl option. Request and events verified against @mistralai/mistralai 3.1.0 (audioSpeechComplete, speechrequest, speechstream*) and docs.mistral.ai stream-speech; the float32 layout of 'pcm' comes from upstream (not stated in Mistral's docs).
 - `pipecat.services.moondream`: Empty __init__.
 - `pipecat.services.moonshine`: Empty __init__.
 - `pipecat.services.nebius`: Empty __init__.

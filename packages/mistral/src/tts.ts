@@ -17,7 +17,11 @@
  *   request goes straight to `POST {baseUrl}/audio/speech` with `fetch`, and
  *   the Server-Sent Events are parsed here: `speech.audio.delta` events carry
  *   base64 float32 PCM in `audio_data`, and `speech.audio.done` carries the
- *   usage.
+ *   usage. The request and events follow the SDK (`@mistralai/mistralai`
+ *   3.1.0 `funcs/audioSpeechComplete.js`, `models/components/speechrequest.js`
+ *   and `speechstream*.js`): `Accept: text/event-stream`, a JSON body with
+ *   `input`, `model`, `voice_id`, `response_format` and `stream`, and a Bearer
+ *   key.
  * - `baseUrl` is new (the SDK's `server_url`); it defaults to Mistral's API.
  */
 
