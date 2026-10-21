@@ -13,18 +13,15 @@ server: two local models, one, or none.
 | VAD only | Silero VAD | silence | ONNX runtime, one model |
 | Provider | the STT service | the STT service | nothing |
 
+Each mode is a choice of [turn strategies](/docs/concepts/turn-strategies) on the user aggregator.
+This page covers the three common setups; the strategies page covers every strategy and option.
+
 ## Local models
 
 Silero VAD hears speech; Smart Turn listens to the end of each utterance and decides whether the user
 is done or only paused. This is Pipecat's default, and pipedog's:
 
-```ts
-import { SileroVADAnalyzer } from "@pipedog/audio-silero";
-
-const aggregators = new LLMContextAggregatorPair(context, {
-  userParams: new LLMUserAggregatorParams({ vadAnalyzer: new SileroVADAnalyzer() }),
-});
-```
+<include cwd>snippets/turn_strategies.ts#local-models</include>
 
 The default turn strategies use Smart Turn from `@pipedog/audio-smart-turn`, so install it next to
 `@pipedog/audio-silero`. Without it, turns end on silence (the VAD-only mode), and pipedog logs a
@@ -38,15 +35,7 @@ and both models, and each further call about 1.3 MB.
 
 Leave out `@pipedog/audio-smart-turn`, or end turns on silence explicitly:
 
-```ts
-import { SpeechTimeoutUserTurnStopStrategy } from "@pipedog/core/turns/user_stop/speech_timeout_user_turn_stop_strategy";
-import { UserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
-
-new LLMUserAggregatorParams({
-  vadAnalyzer: new SileroVADAnalyzer(),
-  userTurnStrategies: new UserTurnStrategies({ stop: [new SpeechTimeoutUserTurnStopStrategy()] }),
-});
-```
+<include cwd>snippets/turn_strategies.ts#vad-only</include>
 
 This answers sooner after a pause than Smart Turn does, so it interrupts users who pause to think more
 often.
@@ -56,15 +45,7 @@ often.
 Some speech-to-text services detect turns themselves. Use one of them and pass no VAD analyzer: the
 user aggregator follows the service's turn signals, and nothing runs locally.
 
-```ts
-import { OpenAIRealtimeSTTService } from "@pipedog/openai/stt";
-
-const stt = new OpenAIRealtimeSTTService({
-  apiKey: process.env.OPENAI_API_KEY!,
-  turnDetection: { type: "server_vad" },
-});
-const aggregators = new LLMContextAggregatorPair(context);
-```
+<include cwd>snippets/turn_strategies.ts#provider</include>
 
 This is the mode for constrained hosts. The
 [Durable Objects example](/docs/deployment/cloudflare-workers) uses it: its Worker is 818 KB gzipped, against 13.7 MB with
@@ -76,5 +57,24 @@ Speech-to-text services with their own turn detection:
 - `DeepgramFluxSTTService` (`@pipedog/deepgram/flux/stt`): Deepgram's turn-taking model.
 - `CartesiaTurnsSTTService` (`@pipedog/cartesia/turns/stt`).
 
-Each of these recommends its own turn strategies to the user aggregator, so passing no VAD analyzer is
-all it takes.
+Each of these recommends its own turn strategies to the user aggregator
+([`ExternalUserTurnStrategies`](/docs/concepts/turn-strategies#externaluserturnstrategies)), so
+passing no VAD analyzer is all it takes. To keep the bot talking when the provider hears the user,
+pass `shouldInterrupt: false` to the service rather than configuring the strategies yourself.
+
+## Going further
+
+<Cards>
+  <Card title="Turn strategies" href="/docs/concepts/turn-strategies">
+    Every start and stop strategy, the presets, and how to write your own.
+  </Card>
+  <Card title="User muting" href="/docs/concepts/user-muting">
+    Ignore the user during the greeting, during tool calls, or whenever the bot speaks.
+  </Card>
+  <Card title="Turn events & idle users" href="/docs/concepts/turn-events">
+    React to turns, prompt a silent user, and measure turns and response latency.
+  </Card>
+  <Card title="Interruptions" href="/docs/concepts/interruptions-and-cancellation">
+    What happens when the user talks over the bot, and how to control it.
+  </Card>
+</Cards>

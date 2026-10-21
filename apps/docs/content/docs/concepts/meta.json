@@ -5,6 +5,9 @@
     "frame-processors",
     "pipelines-and-workers",
     "turn-detection",
+    "turn-strategies",
+    "user-muting",
+    "turn-events",
     "interruptions-and-cancellation",
     "metrics-and-tracing"
   ]

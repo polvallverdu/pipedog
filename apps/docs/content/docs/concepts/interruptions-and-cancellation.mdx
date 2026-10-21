@@ -55,11 +55,45 @@ A processor sees the interruption in `processFrame()` (after `super.processFrame
 cancelled the work in progress), and can override `protected async _startInterruption()` (calling `super._startInterruption()`
 first) for cleanup that must happen at that moment.
 
-<Callout title="Turn strategies and muting">
-  Turn strategies are covered in [Turn detection](/docs/concepts/turn-detection). User muting and
-  the other turn options are ported (`@pipedog/core/turns/user_mute`, `user_start`, `user_stop`)
-  with upstream's names, but don't have a page here yet; Pipecat's documentation for them applies.
-</Callout>
+### Turns with no transcript
+
+If the user interrupts but nothing is transcribed (a cough, say), the bot has stopped and has nothing
+to answer. By default the LLM then runs once, so the bot asks the user to repeat or picks up where it
+left off; `emptyUserTurn` on `LLMUserAggregatorParams` changes that (see
+[Turns with no transcript](/docs/concepts/turn-strategies#turns-with-no-transcript)).
+
+## Controlling interruptions
+
+Interruptions are on by default. What starts one is the [start strategy](/docs/concepts/turn-strategies)
+that opens the user's turn, and [mute strategies](/docs/concepts/user-muting) decide whether the user
+is heard at all:
+
+| Goal | How |
+| --- | --- |
+| Stop the bot as soon as the user speaks | the default (`VADUserTurnStartStrategy`) |
+| Never interrupt, but answer after the bot finishes | `enableInterruptions: false` on the start strategies |
+| Ignore short acknowledgements like "okay" | `MinWordsUserTurnStartStrategy` |
+| Tell interruptions from backchannels with a model | `KrispVivaIPUserTurnStartStrategy` (bring your own Krisp SDK) |
+| Discard what the user says while the bot talks | `AlwaysUserMuteStrategy` |
+| Protect only the greeting, or tool calls | `MuteUntilFirstBotCompleteUserMuteStrategy`, `FirstSpeechUserMuteStrategy`, `FunctionCallUserMuteStrategy` |
+| Keep a provider's turn detection from interrupting | `shouldInterrupt: false` on the STT service |
+
+To turn interruptions off, set `enableInterruptions: false` on every start strategy, since any of
+them can start a turn:
+
+<include cwd>snippets/turn_strategies.ts#no-interruptions</include>
+
+**Disabling interruptions is not muting.** With interruptions off the user's turn still starts and
+is transcribed: the bot finishes speaking and then answers. A muted user's audio and transcripts are
+dropped at the user aggregator, so nothing they say over the bot reaches the context or gets an
+answer. The user aggregator also drops `InterruptionFrame`s while the user is muted, so an
+interruption you queue on the worker doesn't get past it then; one broadcast by a processor after
+the aggregator still does.
+
+With an STT service that detects turns itself, set `shouldInterrupt: false` on the service rather
+than on the strategies: the service hands the setting to the strategies it recommends. Speech-to-speech
+services detect interruptions on their side, and pipedog follows their speaking events and still
+flushes the local audio, so the bot goes quiet at once.
 
 ## Why JavaScript needs help
 
