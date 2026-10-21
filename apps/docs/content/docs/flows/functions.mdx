@@ -1,0 +1,38 @@
+---
+title: Functions
+description: Tools the LLM calls at a node, written as direct functions or explicit schemas, and how they choose the next node.
+---
+
+A function is a tool the LLM can call at a node. Its handler does work and returns
+`[result, nextNode]`:
+
+- `result` is delivered to the LLM as the tool result (any JSON value, or `null`).
+- `nextNode` is the `NodeConfig` to move to, `null` to stay on the node and let the LLM respond,
+  or `NO_RESPONSE` to stay and **not** respond (the next reply is triggered by the user).
+
+## Schemas
+
+The explicit form is a `FlowsFunctionSchema`, whose handler receives the arguments object and the
+flow manager. The [node example](/docs/flows/nodes) uses it.
+
+## Direct functions
+
+A **direct function** is a plain async function whose first parameter is `flowManager`; the other
+parameters are the tool's arguments, matched by name. JavaScript has no docstrings or type hints at
+runtime, so attach the description and the parameter schemas as properties:
+
+<include cwd>snippets/flows.ts#direct</include>
+
+`flowsToolOptions` sets per-tool `cancelOnInterruption` (default `false` in Flows) and `timeoutSecs`.
+
+## Global functions
+
+Tools available at every node go in `globalFunctions` on the `FlowManager`. They are registered once
+and offered alongside each node's own functions.
+
+## Errors
+
+If a handler throws, the LLM receives an error result and the conversation stays on the current
+node. A tool built from a [flow config](/docs/flows/flow-configs) must return
+`[result, TRANSITION_IN_YAML]` (the config chooses the destination); returning a node or a node name
+there is an error reported to the LLM.

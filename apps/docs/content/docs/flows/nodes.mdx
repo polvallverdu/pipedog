@@ -1,0 +1,37 @@
+---
+title: Nodes
+description: A node is one step of a flow, with a role, task messages, functions and actions.
+---
+
+A node is a `NodeConfig`:
+
+| Field | Meaning |
+| --- | --- |
+| `taskMessages` | Required. What the LLM should do at this node, as messages (usually `role: "developer"`). |
+| `name` | Optional. Shown in logs and used as `flowManager.currentNode`; generated if omitted. |
+| `roleMessage` | The bot's role or personality. Sent as the LLM's system instruction and kept across nodes until a node sets another. |
+| `functions` | Tools the LLM may call at this node, in addition to the manager's global functions. |
+| `preActions` / `postActions` | [Actions](/docs/flows/actions) before and after the LLM's response. |
+| `contextStrategy` | How [the conversation history](/docs/flows/context-strategies) changes on entering the node. |
+| `respondImmediately` | Whether the LLM answers as soon as the node is entered. Defaults to `true`; set `false` to wait for the user. |
+
+<include cwd>snippets/flows.ts#node</include>
+
+## Role and task messages
+
+Keep the persona in `roleMessage` (set once, usually on the first node) and the step's job in
+`taskMessages`. A node's task messages are what makes the LLM stay on one topic: say what to do,
+what to collect, and when to call the node's functions.
+
+Only the functions of the **current** node (plus global functions) are offered to the LLM. Entering
+a node replaces the tool set.
+
+## Entering a node
+
+`flowManager.initialize(node)` enters the first node. A function enters the next one by returning
+it. You can also enter a node yourself with `flowManager.setNodeFromConfig(node)`, for example from
+an event handler. On entry the manager runs the node's pre-actions, applies the context strategy,
+registers the node's functions, asks the LLM to respond (unless `respondImmediately` is `false`),
+and finally runs the post-actions.
+
+`flowManager.currentNode` is the name of the active node.

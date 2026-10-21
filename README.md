@@ -186,6 +186,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/aws`](packages/aws) | AWS services: Bedrock LLM, Transcribe STT, Polly TTS, Nova Sonic, AgentCore, and the SageMaker streaming client. |
 | [`@pipedog/whisper`](packages/whisper) | Base STT service for Whisper-compatible APIs, shared by the services that speak that protocol. |
 | [`@pipedog/langchain`](packages/langchain) | LangChain integration (`LangchainProcessor`). |
+| [`@pipedog/flows`](packages/flows) | Structured conversations from nodes, functions and actions (Pipecat Flows), as code or YAML/JSON configs. |
 | [`@pipedog/transport-smallwebrtc`](packages/transport-smallwebrtc) | Peer-to-peer WebRTC transport (werift, Opus via WASM) for the Pipecat browser SDK's `SmallWebRTCTransport`. |
 | [`@pipedog/transport-websocket`](packages/transport-websocket) | WebSocket transports: client, server and bring-your-own-socket, with servers for Bun, Node and Deno, and fetch handlers for Workers. |
 | [`@pipedog/serializer-protobuf`](packages/serializer-protobuf) | `ProtobufFrameSerializer`, wire-compatible with Pipecat's `frames.proto`. |

@@ -1,0 +1,52 @@
+---
+title: Flow configs
+description: Describe a flow as YAML or JSON and join it to your handlers with Flow.
+---
+
+A `FlowConfig` describes the graph as data: the nodes, the tools each offers, and where each tool
+leads. Your code only implements what the tools *do*.
+
+<include cwd>snippets/flows.ts#config-yaml</include>
+
+`Flow` joins the config to the handlers it names. It checks every reference at construction (each
+tool exists and is a valid direct function, each action handler is callable) and reports all
+problems together in one `FlowReferenceError`. It then hands the manager ready-made nodes:
+`flow.initialNode`, `flow.node(name)` and `flow.globalFunctions`.
+
+A tool in a config returns `[result, TRANSITION_IN_YAML]`; the config's `transition_to` picks the
+next node. `transition_to` can also branch on a field of the result:
+
+```yaml
+functions:
+  - name: select_pizza_order
+    transition_to:
+      field: status
+      cases:
+        ok: confirm
+        unavailable: choose_pizza
+      default: confirm
+```
+
+A `transition_only` function needs no handler at all: give it a `description` and a `transition_to`,
+and it just moves the conversation.
+
+## Loading
+
+`FlowConfig.fromYaml(text)`, `fromJson(text)` and `modelValidate(object)` take text or parsed data.
+`fromFile` reads through a function you provide, which keeps the package runtime-agnostic:
+
+<include cwd>snippets/flows.ts#config-file</include>
+
+`!include` in YAML uses the same `readFile`, resolved against a `baseDir`. It can read any file the
+process can read, so use it only for configs you ship; load untrusted text with `fromJson`, or with
+`fromYaml` and no `baseDir`.
+
+Invalid configs throw `ValidationError` with every problem found, not only the first.
+`FlowConfig.modelJsonSchema()` returns the JSON Schema of the file format, for editor validation.
+
+## Placeholders
+
+Prompt text may contain `{{ key }}` placeholders: a node's `role_message`, the `content` of its
+`task_messages`, and the `text` of `tts_say` actions. The manager fills them from
+`flowManager.state` every time it enters the node. `{{ order.size }}` reads into a stored object, and
+`\{{ key }}` shows a literal `{{ key }}`. A key missing from state throws `FlowError` on entry.

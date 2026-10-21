@@ -1,0 +1,29 @@
+---
+title: Actions
+description: Run speech, hang-ups and your own code before or after the LLM responds at a node.
+---
+
+Actions are steps a node runs around the LLM's turn. List them in `preActions` (before the LLM
+responds) or `postActions` (after the bot has finished speaking). Each is an `ActionConfig` with a
+`type`.
+
+| Type | Does | Fields |
+| --- | --- | --- |
+| `tts_say` | Speaks a fixed line. | `text`, optional `appendTextToContext` |
+| `end_conversation` | Ends the pipeline, optionally after a last line. | optional `text` |
+| `function` | Runs your handler inline in the pipeline. | `handler` |
+| anything else | A custom action you register. | `handler` and any extra fields |
+
+<include cwd>snippets/flows.ts#actions</include>
+
+A handler is `(action, flowManager) => void | Promise<void>` and receives the whole action object,
+so extra fields such as `channel` above reach it.
+
+## Registering custom actions
+
+A custom action needs a handler. Put it on the action, or register it once on the manager:
+
+<include cwd>snippets/flows.ts#register-action</include>
+
+Post-actions wait until the bot has finished speaking, so with a TTS service in the pipeline they run
+after the response is heard. `end_conversation` stops the remaining actions.

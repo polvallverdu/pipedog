@@ -1,0 +1,12 @@
+{
+  "title": "Flows",
+  "pages": [
+    "index",
+    "nodes",
+    "functions",
+    "actions",
+    "context-strategies",
+    "flow-configs",
+    "dynamic-flows"
+  ]
+}

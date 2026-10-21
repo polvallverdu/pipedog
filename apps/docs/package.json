@@ -27,6 +27,7 @@
     "@pipedog/deepseek": "workspace:*",
     "@pipedog/elevenlabs": "workspace:*",
     "@pipedog/fireworks": "workspace:*",
+    "@pipedog/flows": "workspace:*",
     "@pipedog/google": "workspace:*",
     "@pipedog/groq": "workspace:*",
     "@pipedog/inworld": "workspace:*",

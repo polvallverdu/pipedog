@@ -1,0 +1,23 @@
+---
+title: Context strategies
+description: Choose whether a node keeps, resets or summarizes the conversation history on entry.
+---
+
+When the conversation enters a node, its **context strategy** decides what the LLM remembers.
+
+| Strategy | Effect |
+| --- | --- |
+| `ContextStrategy.APPEND` | Keep the history and add the node's messages. The default. |
+| `ContextStrategy.RESET` | Drop the history; the LLM sees only the new node's messages (and the role message). |
+| `ContextStrategy.RESET_WITH_SUMMARY` | Reset, but include an LLM-written summary of the earlier conversation. Needs a `summaryPrompt`. Deprecated upstream: it still works and logs a warning once. |
+
+Set one on a node, or give the `FlowManager` a default for nodes that do not:
+
+<include cwd>snippets/flows.ts#strategy</include>
+
+Reset when an earlier phase no longer matters (and would only cost tokens or confuse the model), such as
+moving from small talk to a payment step. Keep the history when the later steps need what the user
+said. In a [flow config](/docs/flows/flow-configs), write `context_strategy: reset` on the node.
+
+State in `flowManager.state` is never reset by a context strategy, so values the conversation
+learned stay available to handlers and placeholders.

@@ -1,0 +1,21 @@
+---
+title: Dynamic flows
+description: Build each node at runtime from what the conversation has learned.
+---
+
+In a dynamic flow, nodes are functions that return a `NodeConfig`, and a tool's handler returns the
+node to go to next. Because the next node is built when the tool is called, it can depend on
+arguments, state or anything else you can compute.
+
+This flow books a slot in three steps. The hour node is built for the day the caller picked, and
+the last node confirms the slot and ends the call:
+
+<include cwd>snippets/flows.ts#dynamic</include>
+
+Each handler returns `[result, nextNode]`. The result goes back to the LLM as the tool result;
+the manager then enters the next node, which swaps in its task messages and tools and asks the LLM to
+respond. A handler can return `null` as the node to stay put, or `NO_RESPONSE` to stay quiet.
+
+Start it with `flowManager.initialize(createDayNode())`, or enter it later with
+`setNodeFromConfig`. Use [flow configs](/docs/flows/flow-configs) instead when the graph is fixed
+and you want it reviewable as data.
