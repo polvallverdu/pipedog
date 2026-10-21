@@ -11,7 +11,7 @@ processing for ultra-low latency conversations; pipedog brings the same architec
 
 <Callout type="warn" title="Unofficial, 0.x">
   pipedog is a community port. It is not affiliated with or endorsed by Daily or the Pipecat
-  project. The core runtime and the main providers are ported; Daily, Pipecat Flows and
+  project. The core runtime, the main providers, Pipecat Flows and evals are ported; Daily and
   a long tail of providers are not yet. Everything is tested against mocks and recorded protocol
   vectors, not yet against the live providers. See the [roadmap](/docs/roadmap).
 </Callout>
@@ -92,10 +92,11 @@ automatically unless you pass `enableRtvi: false`.
 The core runtime (frames, processors, pipelines, workers, bus, observers, RTVI, base services and
 transports) is ported in full, with its upstream test suite. So are the main providers: OpenAI,
 Anthropic, Google, Azure, AWS (including Nova Sonic), Deepgram, Cartesia, ElevenLabs, Inworld,
-Ultravox, xAI and 16 OpenAI-compatible providers, with the WebSocket and SmallWebRTC transports,
-six telephony serializers (Twilio, Telnyx, Plivo, Exotel, Vonage, Genesys) and the
-[development runner](/docs/runner). In all, 502 of upstream's 667 modules (75%) and 244 of its
-340 test files are ported, across 49 packages.
+Ultravox, xAI and 16 OpenAI-compatible providers, with the WebSocket, SmallWebRTC, LiveKit, WhatsApp
+and local audio transports, HeyGen avatars, six telephony serializers (Twilio, Telnyx, Plivo,
+Exotel, Vonage, Genesys) and the [development runner](/docs/runner). Pipecat Flows, evals, the
+RNNoise filter, the soundfile mixer and HTTP Smart Turn are ported too. In all, 559 of upstream's
+667 modules (84%) and 272 of its 340 test files are ported, across 58 packages.
 
 Provider services are tested against mock servers and recorded protocol vectors, and the examples
 run end to end against mock APIs. Testing against the real providers is the next phase, so treat
