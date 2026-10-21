@@ -1,0 +1,54 @@
+---
+title: Hono
+description: Mount the pipedog WebRTC offer and WebSocket endpoints in a Hono app on Bun.
+---
+
+Hono routes the offer, and upgrades `/ws` with its own WebSocket helper and pipedog's Hono adapter,
+`honoWebsocket`. This snippet runs on Bun.
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn hono
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+
+## Files
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`voice.ts` re-exports it:
+
+<include cwd meta='title="voice.ts"'>../../examples/framework-snippets/hono/voice.ts</include>
+
+<include cwd meta='title="app.ts"'>../../examples/framework-snippets/hono/app.ts</include>
+
+## Run it
+
+```bash
+OPENAI_API_KEY=sk-... bun app.ts
+```
+
+Bun serves the default export on port 3000, or on `$PORT`. The offer is at `POST /api/offer` and the
+WebSocket at `/ws`.
+
+## Other runtimes
+
+- **Node.** Serve the app with `@hono/node-server`, with the same routes. `hono/bun`'s
+  `upgradeWebSocket` is Bun only, so use Hono's Node WebSocket helper for `/ws`, or mount `socket` on
+  a separate server.
+- **Cloudflare Workers.** `socket` is a fetch handler that Workers can upgrade, so mount it directly,
+  without the Bun helper: `app.get("/ws", (c) => socket(c.req.raw))`. Leave the offer, and the
+  WebRTC transport, out of a Workers build: Workers have no UDP. A session that should outlive one
+  request belongs in a Durable Object; see [Cloudflare Workers](/docs/frameworks/cloudflare-workers).
+
+## Deploy
+
+Run it as a long-lived Bun process. The offer's media runs over UDP, so a serverless host can't carry
+it.
+
+## Authentication
+
+Neither route has auth. Wrap `offer` and the socket route with a session check before they run, as
+in [Authentication](/docs/frameworks#authentication). Hono middleware on both routes works too.

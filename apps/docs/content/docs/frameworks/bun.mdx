@@ -1,0 +1,47 @@
+---
+title: Bun
+description: Serve the pipedog WebRTC offer and WebSocket endpoints with Bun.serve.
+---
+
+`Bun.serve` routes the offer, and upgrades `/ws` on the server. It then hands each socket to the
+agent through a `WebsocketConnection`, which the server feeds with the socket's messages and close.
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+
+## Files
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`voice.ts` re-exports it:
+
+<include cwd meta='title="voice.ts"'>../../examples/framework-snippets/bun/voice.ts</include>
+
+<include cwd meta='title="server.ts"'>../../examples/framework-snippets/bun/server.ts</include>
+
+Bun upgrades a socket on its own server, not from a fetch handler, so this snippet uses
+`runSocketAgent` with the `websocket` handlers instead of `socket`.
+
+## Run it
+
+```bash
+OPENAI_API_KEY=sk-... bun server.ts
+```
+
+Bun serves the default export on port 3000, or on `$PORT`. The offer is at `POST /api/offer` and the
+WebSocket at `/ws`.
+
+## Deploy
+
+Run it as a long-lived Bun process on a host that allows UDP traffic, for the offer's media. To serve
+the same config on Vercel Functions, see [Vercel](/docs/frameworks/vercel).
+
+## Authentication
+
+Neither route has auth. Check the session in `fetch` before `offer` runs and before
+`server.upgrade`, as in [Authentication](/docs/frameworks#authentication).

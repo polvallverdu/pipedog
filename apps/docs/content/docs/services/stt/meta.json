@@ -1,0 +1,25 @@
+{
+  "title": "Speech-to-text",
+  "pages": [
+    "index",
+    "deepgram",
+    "openai",
+    "google",
+    "cartesia",
+    "elevenlabs",
+    "whisper",
+    "---Coming soon---",
+    "assemblyai",
+    "aws",
+    "azure",
+    "gladia",
+    "groq",
+    "mistral",
+    "nvidia",
+    "sarvam",
+    "soniox",
+    "speechmatics",
+    "together",
+    "xai"
+  ]
+}

@@ -1,0 +1,56 @@
+---
+title: Vercel
+description: Serve the pipedog endpoints from a Bun server on Vercel Functions.
+---
+
+Vercel runs a `server.ts` with the Bun runtime, so the [Bun](/docs/frameworks/bun) snippet's shape
+works, with a `routes` map for static responses.
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+
+## Files
+
+Set the runtime in `vercel.json`:
+
+```json title="vercel.json"
+{ "bunVersion": "1.x" }
+```
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`voice.ts` re-exports it:
+
+<include cwd meta='title="voice.ts"'>../../examples/framework-snippets/vercel/voice.ts</include>
+
+<include cwd meta='title="server.ts"'>../../examples/framework-snippets/vercel/server.ts</include>
+
+## Run it
+
+Locally, Bun serves the default export:
+
+```bash
+OPENAI_API_KEY=sk-... bun server.ts
+```
+
+Then deploy with `vercel deploy`, and set `OPENAI_API_KEY` in the project's environment variables.
+
+## Caveats
+
+- **WebRTC media.** The offer route is mounted, but its media runs over UDP, which a function isn't
+  expected to carry. It's untested here. Use the WebSocket for audio on Vercel.
+- **One instance per socket.** Each WebSocket is pinned to one function instance for its lifetime,
+  and messages don't cross instances. Keep shared state in a database.
+- **Duration.** A function's duration limit also ends a long session.
+- **Daemons.** Vercel Daemons are always-on workers with no inbound HTTP or TCP traffic, so they
+  can't serve these endpoints. They suit background workers that pull their own work.
+
+## Authentication
+
+Neither route has auth. Check the session in `fetch` before `offer` runs and before
+`server.upgrade`, as in [Authentication](/docs/frameworks#authentication).

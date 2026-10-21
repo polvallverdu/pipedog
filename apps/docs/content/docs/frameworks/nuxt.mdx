@@ -1,0 +1,53 @@
+---
+title: Nuxt
+description: Mount the pipedog WebRTC offer endpoint in a Nuxt (Nitro) server route.
+---
+
+A Nitro server route handles `POST /api/offer`. The `.post.ts` suffix limits it to POST.
+`toWebRequest` turns the h3 event into a web `Request` for `offer`.
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+
+## Files
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`~/server/utils/voice` re-exports it:
+
+<include cwd meta='title="server/utils/voice.ts"'>../../examples/framework-snippets/nuxt/server/utils/voice.ts</include>
+
+<include cwd meta='title="server/api/offer.post.ts"'>../../examples/framework-snippets/nuxt/server/api/offer.post.ts</include>
+
+Nuxt auto-imports `defineEventHandler` and `toWebRequest`, so the handler doesn't import them. The
+snippet ships `server/auto-imports.d.ts` so it typechecks without a Nuxt project. A Nuxt app
+generates those declarations itself.
+
+## Run it
+
+```bash
+OPENAI_API_KEY=sk-... bunx nuxt dev
+```
+
+The browser then POSTs its SDP offer to `/api/offer`.
+
+## Deploy
+
+Use a Nitro preset that runs a Node, Bun or Deno server, such as `node-server` (the default),
+`bun` or `deno-server`. The serverless presets don't carry the UDP media.
+
+## WebSocket
+
+This snippet mounts only the offer. Nitro has its own WebSocket handlers, which this snippet doesn't
+use. To serve WebSocket sessions, run a [Bun](/docs/frameworks/bun) or [Deno](/docs/frameworks/deno)
+server next to the Nuxt app.
+
+## Authentication
+
+The route has no auth. Wrap `offer` with a session check before it runs, as in
+[Authentication](/docs/frameworks#authentication). A Nitro server middleware works too.

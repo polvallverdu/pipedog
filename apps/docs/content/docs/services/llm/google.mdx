@@ -1,0 +1,152 @@
+---
+title: Google Gemini
+description: Streaming Gemini chat completions with GoogleLLMService, with thinking, safety settings and Google Search grounding.
+---
+
+## Overview
+
+`GoogleLLMService` runs Gemini models through the Gemini API (Google AI Studio keys). It
+converts an `LLMContext` to Gemini's `Content`/`Part` format, streams the reply and handles
+function calls.
+
+- **`GoogleLLMService`**: streaming Gemini inference with tools, thinking (`GoogleThinkingConfig`),
+  safety settings, image output and search grounding.
+- **`LLMSearchResponseFrame`** (`frames.ts`): pushed when a reply carries grounding metadata, for
+  example from the Google Search tool.
+- **`GoogleRTVIProcessor` / `GoogleRTVIObserver`** (`rtvi.ts`): an RTVI processor whose observer
+  also forwards `LLMSearchResponseFrame`s to the client.
+
+For Vertex AI, see [Google Vertex AI](/docs/services/llm/google-vertex). For speech-to-speech,
+see [Gemini Live](/docs/services/s2s/gemini-live).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/llm/google">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/google/src">
+    `packages/google/src/llm.ts`, `frames.ts` and `rtvi.ts`.
+  </Card>
+  <Card title="Gemini API docs" href="https://ai.google.dev/gemini-api/docs">
+    Models, thinking, safety settings and grounding.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/google
+```
+
+```ts
+import { GoogleLLMService, GoogleThinkingConfig } from "@pipedog/google/llm";
+import { LLMSearchResponseFrame } from "@pipedog/google/frames";
+import { GoogleRTVIProcessor } from "@pipedog/google/rtvi";
+```
+
+## Prerequisites
+
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
+- Pass the key as `apiKey`. The examples read it from `GOOGLE_API_KEY`.
+
+## GoogleLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/llm.ts" name="GoogleLLMServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new GoogleLLMService.Settings({...})`. Any
+setting you leave out keeps the default below. Extra Gemini `GenerateContentConfig` fields can go
+in `extra`, with the Python SDK's snake_case keys (they are converted to camelCase when the
+request is sent).
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gemini-3.6-flash"` | Gemini model. |
+| `systemInstruction` | `string \| null` | `null` | System prompt. |
+| `maxTokens` | `number \| null` | `4096` | Sent as `maxOutputTokens`. |
+| `temperature` | `number \| null` | `null` | Sampling temperature. |
+| `topK` | `number \| null` | `null` | Top-k sampling. |
+| `topP` | `number \| null` | `null` | Nucleus sampling. |
+| `seed` | `number \| null` | `null` | Random seed. Gemini treats it as best effort. |
+| `frequencyPenalty` | `number \| null` | `null` | Not sent by this service. |
+| `presencePenalty` | `number \| null` | `null` | Not sent by this service. |
+| `thinking` | `GoogleThinkingConfig \| null` | `null` | Thinking configuration. See below. |
+| `safetySettings` | `SafetySetting[] \| null` | `null` | Content safety filters. Categories you leave out keep the Gemini API defaults. |
+| `useProviderThinkingDefault` | `boolean` | `false` | Send no thinking default; run at Google's default. |
+
+`GoogleThinkingConfig` takes `thinkingLevel` (Gemini 3 and later: `"minimal"`, `"low"`,
+`"medium"`, `"high"`), `thinkingBudget` (Gemini 2.5: a token count, `0` off, `-1` dynamic) and
+`includeThoughts`. Set a level or a budget, not both.
+
+When `thinking` is `null`, the service sends the lowest thinking setting Google documents for
+the model, for the fastest replies, and logs what it sent. For example `gemini-2.5-flash` gets
+`thinking_budget: 0`, `gemini-2.5-pro` gets `128`, `gemini-3.6-flash` gets
+`thinking_level: "minimal"` and `gemini-3.7-flash` gets `"low"`. Models not in that table
+(including aliases such as `gemini-flash-latest`) run at Google's default.
+
+### Usage
+
+<include cwd meta='title="llm.ts"'>snippets/services/llm-google.ts#usage</include>
+
+Thinking, for Gemini 3 and Gemini 2.5 models:
+
+<include cwd>snippets/services/llm-google.ts#thinking</include>
+
+Google Search grounding, with the RTVI processor that forwards search results to the client:
+
+<include cwd>snippets/services/llm-google.ts#search</include>
+
+Change settings mid-call with an `LLMUpdateSettingsFrame`:
+
+<include cwd>snippets/services/llm-google.ts#update</include>
+
+### Event handlers
+
+Inherited from `LLMService`.
+
+| Event | Description |
+|---|---|
+| `on_completion_timeout` | The stream stalled past `streamIdleTimeoutSecs` (or the retry window). |
+| `on_function_calls_started` | Function calls were received and are about to run. |
+| `on_function_calls_cancelled` | In-progress function calls were cancelled. |
+
+### Notes
+
+- Emits `LLMFullResponseStartFrame`, `LLMTextFrame`s and `LLMFullResponseEndFrame`. Thoughts
+  (with `includeThoughts`) arrive whole, each as an `LLMThoughtStartFrame`,
+  `LLMThoughtTextFrame` and `LLMThoughtEndFrame`.
+- When a reply has grounding metadata, the service pushes an `LLMSearchResponseFrame` with the
+  reply text (`searchResult`), the search entry point's `renderedContent`, and `origins`
+  (site URI, title and the supported text segments with confidence scores).
+  `GoogleRTVIObserver` sends it to the client as a `bot-llm-search-response` message.
+- Gemini thought signatures are saved into the context (through an `LLMMessagesAppendFrame`),
+  so they go back to the model on the next turn.
+- Inline image output becomes an `AssistantImageRawFrame`, but only with an `imageDecoder`.
+  The default decoder throws, so without one an image reply surfaces as a pushed error.
+- `streamIdleTimeoutSecs` (default 20) bounds the gap between chunks, including the wait for
+  the first one. With `retryOnTimeout`, a first chunk that doesn't arrive within
+  `retryTimeoutSecs` (default 5) re-issues the request once.
+- Newer models reject a request that ends with a model turn. For any model whose name doesn't
+  start with `gemini-2.`, `gemini-3-`, `gemini-3.1-` or `gemini-pro-latest`, the service adds a
+  trailing user message when needed.
+- A reply that stops for a reason other than `STOP` (safety, recitation, token limit, ...)
+  logs a warning with the finish reason. The text that did arrive is still pushed.
+- Setting `thinkingBudget` on a Gemini 3, Gemini 4 or Gemma 4 model logs a warning: use
+  `thinkingLevel` there.
+- `runInference()` accepts a `responseSchema` (JSON schema) on Gemini 2.5 and later.
+- An `INVALID_ARGUMENT` rejection removes a pending invalid file message from the context and is
+  reported as an application error.
+- Token usage includes tool-use prompt tokens in the prompt count and thinking tokens in the
+  completion count.
+
+## Runtime notes
+
+The client is `GoogleGenAI` from `@google/genai`, which uses `fetch`, so the service runs on
+Bun, Node, Deno and Cloudflare Workers. Subclasses can override `createClient()`. Image
+decoding (upstream uses Pillow) is not ported: pass an `imageDecoder` built on `sharp`,
+`@jsquash/*` or similar to handle image output.
+
+The deprecated upstream `InputParams` class and the `model`, `params` and `systemInstruction`
+constructor options are not ported; use `settings`.

@@ -7,7 +7,8 @@
     "paths": {
       "$lib/*": ["./sveltekit/src/lib/*"],
       "@/lib/*": ["./nextjs/lib/*"],
-      "~/server/*": ["./nuxt/server/*"]
+      "~/server/*": ["./nuxt/server/*"],
+      "~/lib/*": ["./tanstack-start/src/lib/*"]
     }
   },
   "include": [
@@ -16,6 +17,7 @@
     "hono",
     "bun",
     "nextjs",
+    "tanstack-start",
     "express",
     "elysia",
     "nuxt",

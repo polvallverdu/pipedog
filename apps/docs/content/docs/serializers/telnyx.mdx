@@ -1,0 +1,104 @@
+---
+title: Telnyx
+description: Phone calls over Telnyx media streaming with TelnyxFrameSerializer, used with FastAPIWebsocketTransport.
+---
+
+## Overview
+
+**`TelnyxFrameSerializer`** speaks Telnyx's WebSocket media streaming protocol. Paired with
+[`FastAPIWebsocketTransport`](/docs/transports/websocket), it lets a bot answer phone calls:
+
+- Caller audio (PCMU or PCMA at 8 kHz) becomes `InputAudioRawFrame`s at the pipeline's input rate.
+- Bot audio is resampled to 8 kHz, encoded and sent as `media` events.
+- Touch-tone digits become `InputDTMFFrame`s.
+- An `EndFrame` or `CancelFrame` hangs up the call through Telnyx's REST API (`autoHangUp`).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/serializers/telnyx">
+    Pipecat's documentation for the same serializer.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/serializer-telnyx/src">
+    `packages/serializer-telnyx/src/telnyx.ts`.
+  </Card>
+  <Card title="Telnyx docs" href="https://developers.telnyx.com/docs/voice/programmable-voice/voice-api-fundamentals">
+    Voice API and media streaming.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/serializer-telnyx @pipedog/transport-websocket
+```
+
+```ts
+import { TelnyxFrameSerializer } from "@pipedog/serializer-telnyx/telnyx";
+```
+
+## Prerequisites
+
+- A Telnyx account, a phone number with voice, and media streaming pointed at your WebSocket
+  endpoint.
+- A Telnyx API key for auto hang-up. The examples read it from `TELNYX_API_KEY`.
+- The stream ID and call control ID, which Telnyx sends in its `start` message when the stream
+  opens.
+
+## TelnyxFrameSerializer
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/serializer-telnyx/src/telnyx.ts" name="TelnyxFrameSerializerOptions" />
+
+### InputParams
+
+`params` is a `TelnyxFrameSerializer.InputParams` (`TelnyxFrameSerializerInputParams`):
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `telnyxSampleRate` | `number` | `8000` | Sample rate Telnyx uses, in Hz. |
+| `sampleRate` | `number \| null` | `null` | Override for the pipeline input rate. `null` uses the pipeline's. |
+| `inboundEncoding` | `string` | `"PCMU"` | Encoding of audio sent to Telnyx. Overwritten by the constructor's `inboundEncoding`. |
+| `outboundEncoding` | `string` | `"PCMU"` | Encoding of audio received from Telnyx. Overwritten by the constructor's `outboundEncoding`. |
+| `autoHangUp` | `boolean` | `true` | Hang up the call on `EndFrame` or `CancelFrame`. |
+| `resamplerClearAfterSecs` | `number \| null` | `0.2` | Seconds of silence after which the stream resamplers clear their history. `null` never clears. |
+| `ignoreRtviMessages` | `boolean` | `true` | Drop RTVI messages instead of sending them to Telnyx. |
+
+### Usage
+
+Read Telnyx's first two messages to get the call details, then build the serializer and the
+transport:
+
+<include cwd meta='title="telnyx.ts"'>snippets/services/serializer-telnyx.ts#usage</include>
+
+Without auto hang-up, the call control ID and API key are not needed:
+
+<include cwd>snippets/services/serializer-telnyx.ts#no-hangup</include>
+
+### Notes
+
+- With `autoHangUp` on (the default), the constructor throws if `callControlId` or `apiKey` is
+  missing. The hang-up is a `POST` to
+  `https://api.telnyx.com/v2/calls/{callControlId}/actions/hangup`, attempted once. A 422 with
+  error code 90018 (call already ended) is logged at debug level; other failures are logged as
+  errors and don't throw.
+- Only `PCMU` and `PCMA` are supported. Another encoding throws when the first audio is sent or
+  received.
+- An `InterruptionFrame` sends a `clear` event, so Telnyx drops the audio it has buffered.
+- `OutputTransportMessageFrame`s are sent as JSON, except RTVI messages while
+  `ignoreRtviMessages` is on.
+- Set `addWavHeader: false` on the transport params: Telnyx takes raw encoded audio.
+- A DTMF event whose digit is not a keypad key is ignored.
+
+## Runtime notes
+
+The serializer uses the global `fetch` for the hang-up and runs on Bun, Node, Deno and Cloudflare
+Workers. On Workers, accept the Telnyx WebSocket with `websocketFetchHandler`; see
+[WebSocket](/docs/transports/websocket).
+
+Resampling between 8 kHz and the pipeline rate goes through core's resampler engine
+(`@pipedog/resampler-wasm` by default, a pure TypeScript fallback if it can't load) in place of
+libsoxr, so the samples differ slightly from upstream's.
+
+Upstream's runner detects Telnyx and parses its handshake for you (`parse_telephony_websocket`).
+That runner is not ported, so read the `start` message yourself, as in the example. Other
+telephony serializers not ported yet: Twilio, Plivo, Vonage, Exotel and Genesys.

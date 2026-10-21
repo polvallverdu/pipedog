@@ -1,0 +1,79 @@
+---
+title: OpenAI
+description: Image generation with OpenAIImageGenService, using OpenAI's GPT Image models.
+---
+
+## Overview
+
+- **`OpenAIImageGenService`**: turns each `TextFrame` it receives into a prompt for OpenAI's
+  Images API (`images.generate`) and pushes the result as a `URLImageRawFrame` of RGB pixels.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/image-generation/openai">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/openai/src">
+    `packages/openai/src/image.ts`.
+  </Card>
+  <Card title="OpenAI docs" href="https://platform.openai.com/docs/guides/image-generation">
+    Image models, sizes and quality.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/openai
+```
+
+```ts
+import { OpenAIImageGenService } from "@pipedog/openai/image";
+```
+
+## Prerequisites
+
+- An OpenAI account and an API key from the [OpenAI dashboard](https://platform.openai.com/api-keys).
+- Pass the key as `apiKey` (required). The examples read it from `OPENAI_API_KEY`.
+
+## OpenAIImageGenService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/openai/src/image.ts" name="OpenAIImageGenServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new OpenAIImageGenService.Settings({...})`
+(`OpenAIImageGenSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gpt-image-2.5-flare"` | Image model. |
+| `imageSize` | `OpenAIImageSize \| string \| null` | `null` | `"auto"`, `"1024x1024"`, `"1536x1024"`, `"1024x1536"`, ... `null` leaves it to OpenAI. |
+| `quality` | `OpenAIImageQuality \| string \| null` | `null` | `"auto"`, `"low"`, `"medium"`, `"high"`, ... Lower is faster. `null` lets OpenAI pick. |
+
+### Usage
+
+<include cwd meta='title="image.ts"'>snippets/services/image-openai.ts#usage</include>
+
+### Notes
+
+- Each `TextFrame` is pushed on downstream, then used as the prompt. One image is generated per
+  prompt (`n: 1`).
+- The GPT Image models return the image inline (base64). When the response carries a URL
+  instead, the image is downloaded with `fetch` (the global one, or the `fetch` option) and the
+  URL is set on the frame.
+- The image is decoded to RGB (alpha dropped) with `decodePngToRgb`, a pure JS PNG decoder. Pass
+  `decodeImage` to decode other formats.
+- A response with no image data produces an `ErrorFrame`.
+- As upstream, the constructor passes only `settings` to the base service, so the inherited
+  frame processor options (such as `name`) have no effect.
+
+## Runtime notes
+
+- The client is the `openai` JS SDK over `fetch`, and decoding is pure JS (`fast-png`), so it
+  works on Bun, Node, Deno and Cloudflare Workers.
+- The `fetch` option replaces upstream's required `aiohttp_session`. `decodeImage` is a pipedog
+  addition; upstream decodes with Pillow.
+- The deprecated `imageSize` and `model` constructor options are not ported. Use `settings`.
+- Not ported yet: `AzureImageGenServiceREST` (Azure OpenAI image generation).

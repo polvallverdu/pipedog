@@ -1,0 +1,92 @@
+---
+title: Google
+description: Text-to-image generation with GoogleImageGenService and Gemini image models.
+---
+
+## Overview
+
+`GoogleImageGenService` generates images from text prompts with Gemini image models through
+the Gemini API. Gemini returns each image inline in the response, and the service decodes it
+to RGB pixels for the output transport.
+
+- **`GoogleImageGenService`**: one `generateContent` request per image, with aspect ratio and
+  size settings.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/image-generation/google">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/google/src">
+    `packages/google/src/image.ts` and `image_decoder.ts`.
+  </Card>
+  <Card title="Gemini image generation docs" href="https://ai.google.dev/gemini-api/docs/image-generation">
+    Image models, aspect ratios and sizes.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/google
+```
+
+```ts
+import { GoogleImageGenService } from "@pipedog/google/image";
+import type { ImageDecoder } from "@pipedog/google/image_decoder";
+```
+
+## Prerequisites
+
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
+- Pass the key as `apiKey`. The examples read it from `GOOGLE_API_KEY`.
+- An image decoder (see below).
+
+## GoogleImageGenService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/image.ts" name="GoogleImageGenServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new GoogleImageGenService.Settings({...})`.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gemini-3.1-flash-image"` | Gemini image model. |
+| `numberOfImages` | `number` | `1` | Images per prompt. |
+| `aspectRatio` | `string \| null` | `"1:1"` | Aspect ratio, e.g. `"16:9"`. `null` leaves the model default. |
+| `imageSize` | `"1K" \| "2K" \| "4K" \| null` | `null` | Resolution. `null` leaves the model default. Supported sizes vary by model. |
+
+### Usage
+
+<include cwd meta='title="image.ts"'>snippets/services/image-google.ts#usage</include>
+
+### Image decoder
+
+Upstream decodes the returned PNG, JPEG or WebP with Pillow. pipedog has no edge-compatible
+decoder yet, so the service takes an `imageDecoder`: a function from the encoded bytes and MIME
+type to `{ image, size, mode }` (raw pixels, `[width, height]` and a Pillow-style mode such as
+`"RGB"`). Build one on `sharp`, `@jsquash/*` or similar.
+
+<Callout type="warn">
+The default decoder throws "not ported yet". Without an `imageDecoder`, every generated image
+yields an `ErrorFrame`.
+</Callout>
+
+### Notes
+
+- The service generates an image for each `TextFrame` it receives and emits a
+  `URLImageRawFrame` per image, with `url: null` since Gemini returns the image inline.
+- With `numberOfImages` above 1, the images are generated one after another, one request each.
+- A response with no image, or a failed request, yields an `ErrorFrame`.
+- Supports TTFB metrics.
+- Pass `client` to use your own GenAI client (anything with `models.generateContent`).
+
+## Runtime notes
+
+The client is `GoogleGenAI` from `@google/genai`, which uses `fetch`, so the service runs on
+Bun, Node, Deno and Cloudflare Workers, as long as your `imageDecoder` does too.
+
+The deprecated upstream `InputParams` class, the `params` option and the `negativePrompt`
+setting are not ported.

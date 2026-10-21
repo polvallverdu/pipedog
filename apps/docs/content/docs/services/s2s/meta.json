@@ -1,0 +1,16 @@
+{
+  "title": "Speech-to-speech",
+  "pages": [
+    "index",
+    "openai",
+    "openai-live",
+    "gemini-live",
+    "gemini-live-vertex",
+    "---Coming soon---",
+    "aws",
+    "azure-voice-live",
+    "inworld",
+    "ultravox",
+    "grok"
+  ]
+}

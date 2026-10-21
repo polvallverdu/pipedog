@@ -1,0 +1,51 @@
+---
+title: SvelteKit
+description: Mount the pipedog WebRTC offer endpoint in a SvelteKit +server.ts route.
+---
+
+A `+server.ts` route handles `POST /api/offer`. SvelteKit hands the route a web `Request`, so the
+route passes it to `offer` unchanged.
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn @sveltejs/kit
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+
+## Files
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`$lib/voice` re-exports it:
+
+<include cwd meta='title="src/lib/voice.ts"'>../../examples/framework-snippets/sveltekit/src/lib/voice.ts</include>
+
+<include cwd meta='title="src/routes/api/offer/+server.ts"'>../../examples/framework-snippets/sveltekit/src/routes/api/offer/+server.ts</include>
+
+In your app, put `shared/voice.ts` and `shared/agent.ts` in `src/lib/` and drop the re-export.
+
+## Run it
+
+```bash
+OPENAI_API_KEY=sk-... bunx vite dev
+```
+
+The browser then POSTs its SDP offer to `/api/offer`.
+
+## Deploy
+
+Use an adapter that runs a Node, Bun or Deno server, such as `@sveltejs/adapter-node`
+(`bun add -d @sveltejs/adapter-node`, then set it in `svelte.config.js`). The serverless adapters (Vercel, Netlify, Cloudflare) don't carry the UDP media.
+
+## WebSocket
+
+This snippet mounts only the offer. To serve `socket` too, run it on a server that upgrades
+WebSockets, such as [Bun](/docs/frameworks/bun) or [Deno](/docs/frameworks/deno), next to the
+SvelteKit app.
+
+## Authentication
+
+The route has no auth. Wrap `offer` with a session check before it runs, as in
+[Authentication](/docs/frameworks#authentication).

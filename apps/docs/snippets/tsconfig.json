@@ -8,5 +8,5 @@
     "sourceMap": false,
     "types": ["bun"]
   },
-  "include": ["*.ts", "../../../packages/asyncio/src/async-hooks.d.ts"]
+  "include": ["*.ts", "**/*.ts", "../../../packages/asyncio/src/async-hooks.d.ts"]
 }

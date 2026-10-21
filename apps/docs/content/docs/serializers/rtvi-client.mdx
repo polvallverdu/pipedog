@@ -1,0 +1,97 @@
+---
+title: RTVI client
+description: RTVIClientSerializer lets a pipedog pipeline act as an RTVI client, turning a bot's RTVI server messages into frames.
+---
+
+## Overview
+
+Bots usually speak RTVI as the server: `RTVIObserver` turns their pipeline frames into RTVI
+server messages for a browser client. **`RTVIClientSerializer`** is the inverse. It lets a
+pipedog pipeline sit on the client side of that connection:
+
+- Incoming RTVI server messages from the bot (`bot-llm-text`, `user-transcription`,
+  `bot-started-speaking` and so on) become pipeline frames.
+- Outgoing audio becomes RTVI `raw-audio` messages, and RTVI client messages you build are sent
+  as they are.
+
+It is the default serializer of [`RTVIClientTransport`](/docs/transports/websocket#rtviclienttransport),
+which pairs it with a WebSocket client and the `client-ready` / `bot-ready` handshake. The two are
+the base for driving a bot from a scripted user, as eval harnesses do.
+
+<Cards>
+  <Card title="Upstream source" href="https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/serializers/rtvi_client.py">
+    `pipecat/serializers/rtvi_client.py`. Upstream has no docs page for this class.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/serializer-rtvi-client/src">
+    `packages/serializer-rtvi-client/src/rtvi_client.ts`.
+  </Card>
+  <Card title="RTVI" href="https://docs.pipecat.ai/client/rtvi-standard">
+    The RTVI message standard.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/serializer-rtvi-client
+```
+
+```ts
+import { RTVIClientSerializer } from "@pipedog/serializer-rtvi-client/rtvi_client";
+```
+
+`@pipedog/transport-websocket` already depends on it.
+
+## Prerequisites
+
+A bot that runs an RTVI server transport and is reachable over a WebSocket.
+
+## RTVIClientSerializer
+
+### Configuration
+
+`new RTVIClientSerializer(options?)`:
+
+<auto-type-table cwd path="../../packages/serializer-rtvi-client/src/rtvi_client.ts" name="RTVIClientSerializerOptions" />
+
+There are no serializer params: the constructor always sets `ignoreRtviMessages` to `false`,
+since RTVI messages are what it sends.
+
+### Usage
+
+<include cwd meta='title="client.ts"'>snippets/services/serializer-rtvi-client.ts#usage</include>
+
+Send an RTVI client message by pushing a transport message frame toward the output:
+
+<include cwd>snippets/services/serializer-rtvi-client.ts#send</include>
+
+### Notes
+
+Incoming messages map to frames as follows. Anything else, `bot-ready` and metrics included,
+returns `null`.
+
+| RTVI message | Frame |
+|---|---|
+| `bot-llm-started` | `LLMFullResponseStartFrame` |
+| `bot-llm-text` | `LLMTextFrame` |
+| `bot-llm-marker` | `LLMMarkerResponseFrame` |
+| `bot-llm-stopped` | `LLMFullResponseEndFrame` |
+| `bot-tts-text` | `TTSTextFrame` (text type `SENTENCE`; the wire does not carry it) |
+| `bot-started-speaking` | `BotStartedSpeakingFrame` |
+| `bot-stopped-speaking` | `BotStoppedSpeakingFrame` |
+| `bot-interrupted` | `InterruptionFrame` |
+| `llm-function-call-in-progress` | `FunctionCallInProgressFrame` |
+| `llm-function-call-stopped` | `FunctionCallCancelFrame` if `cancelled`, else `FunctionCallResultFrame` |
+| `user-transcription` | `TranscriptionFrame` if `final` (the default), else `InterimTranscriptionFrame` |
+
+- Outgoing: an `OutputAudioRawFrame` becomes a `raw-audio` message with base64 PCM, its sample
+  rate and channel count, and a counter as `id`. An `OutputTransportMessageFrame` (or urgent) is
+  sent only if its message has `label: "rtvi-ai"`. Every other frame returns `null`.
+- A message that is not JSON, or not labelled `rtvi-ai`, is dropped. Bytes are decoded as strict
+  UTF-8.
+- Bot audio and metrics messages are not mapped yet, upstream as here.
+
+## Runtime notes
+
+Pure TypeScript with no dependencies beyond `@pipedog/core`. Runs on Bun, Node, Deno and
+Cloudflare Workers.

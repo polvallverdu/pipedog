@@ -1,0 +1,35 @@
+---
+title: Vercel
+description: Run WebSocket voice sessions on Vercel Functions with the Bun runtime, and what Vercel can't host.
+---
+
+Vercel Functions can run a `server.ts` with the Bun runtime. With it, a function accepts WebSocket
+upgrades and runs one voice session per socket. The code is the
+[Vercel framework page](/docs/frameworks/vercel), tested in
+[`examples/framework-snippets/vercel`](https://github.com/polvallverdu/pipedog/tree/main/examples/framework-snippets/vercel).
+
+Set the runtime in `vercel.json`:
+
+```json title="vercel.json"
+{ "bunVersion": "1.x" }
+```
+
+## What works
+
+- **WebSocket sessions.** The `/ws` endpoint upgrades in `fetch` and runs the agent on the socket,
+  with protobuf audio frames.
+- **WebRTC signalling.** The `/api/offer` route answers the SDP offer, but the media can't follow:
+  see below.
+
+## Limits
+
+- **No WebRTC media.** SmallWebRTC needs UDP, which Vercel Functions don't carry. Use the
+  WebSocket transport, or run SmallWebRTC on a [server](/docs/deployment/servers).
+- **One instance per socket.** Each WebSocket is pinned to one function instance for its lifetime,
+  and messages don't cross instances. Keep shared state in a database.
+- **Duration.** A function's maximum duration also ends a long session. Check your plan's limit
+  against your longest calls.
+- **Vercel Daemons** are always-on workers with no inbound HTTP or TCP traffic, so they can't serve
+  these endpoints. They suit background workers that pull their own work.
+- **Next.js on Vercel.** A Next.js route handler can answer the offer, but it can't upgrade a
+  WebSocket. See [Next.js](/docs/frameworks/nextjs).

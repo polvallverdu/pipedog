@@ -1,0 +1,202 @@
+---
+title: SmallWebRTC
+description: Peer-to-peer WebRTC with SmallWebRTCTransport, SmallWebRTCConnection, SmallWebRTCRequestHandler and the smallWebRTCOfferHandler signalling endpoint.
+---
+
+## Overview
+
+SmallWebRTC connects one browser (or any WebRTC peer) straight to the bot, with no media server in
+between. Audio goes over RTP as Opus, and RTVI and app messages go over a data channel. It works
+with the Pipecat browser SDK's `SmallWebRTCTransport`.
+
+- **`SmallWebRTCTransport`**: the pipeline transport for one peer connection: audio in and out,
+  optional camera and screen share, and app messages.
+- **`SmallWebRTCConnection`**: the peer connection itself (upstream on aiortc, here on
+  [werift](https://github.com/shinyoshiaki/werift-webrtc)), with ICE servers, tracks, the data
+  channel and renegotiation.
+- **`SmallWebRTCRequestHandler`**: answers SDP offers, creates or reuses connections and applies
+  ICE candidates. Framework-agnostic.
+- **`smallWebRTCOfferHandler`**: the signalling endpoint (`POST` and `PATCH /api/offer`) as a
+  fetch handler, `(Request) => Promise<Response>`.
+- **`nodeRequestListener`**: adapts a fetch handler to Node's `http.createServer()`.
+
+<Callout type="info">
+  The [voice bot guide](/docs/voice-bot) builds a complete SmallWebRTC voice agent, with a browser
+  client.
+</Callout>
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/transport/small-webrtc">
+    Pipecat's documentation for the same transport.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/transport-smallwebrtc/src">
+    `transport.ts`, `connection.ts`, `request_handler.ts` and `http.ts`.
+  </Card>
+  <Card title="Voice bot" href="/docs/voice-bot">
+    A runnable example in `examples/smallwebrtc-voice-bot`.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/transport-smallwebrtc
+```
+
+```ts
+import { SmallWebRTCTransport } from "@pipedog/transport-smallwebrtc/transport";
+import { IceServer, SmallWebRTCConnection } from "@pipedog/transport-smallwebrtc/connection";
+import { SmallWebRTCRequestHandler } from "@pipedog/transport-smallwebrtc/request_handler";
+import { nodeRequestListener, smallWebRTCOfferHandler } from "@pipedog/transport-smallwebrtc/http";
+```
+
+The package depends on `werift` (a pure TypeScript WebRTC stack: ICE, DTLS, SRTP, SCTP, RTP) and
+`libopus-wasm` (libopus compiled to WebAssembly). Neither needs native code.
+
+## Prerequisites
+
+- A long-lived server process that can send and receive UDP. Serverless functions and Cloudflare
+  Workers can't run the media.
+- A client: the Pipecat browser SDK with `@pipecat-ai/small-webrtc-transport`, pointed at your
+  offer endpoint.
+- For peers behind restrictive NATs, a TURN server (see [ICE servers](#ice-servers)).
+
+## SmallWebRTCTransport
+
+### Configuration
+
+`new SmallWebRTCTransport(connection, params, options?)`. `connection` is the
+`SmallWebRTCConnection` from the request handler. `params` is a plain `TransportParams`
+(`audioInEnabled`, `audioOutEnabled`, `videoInEnabled`, `videoOutEnabled` and so on). `options`:
+
+<auto-type-table cwd path="../../packages/transport-smallwebrtc/src/transport.ts" name="SmallWebRTCTransportOptions" />
+
+### Usage
+
+Serve the offer endpoint and start a bot for each new connection:
+
+<include cwd meta='title="server.ts"'>snippets/services/transport-smallwebrtc.ts#usage</include>
+
+On Node, wrap the same handler with `nodeRequestListener`:
+
+<include cwd>snippets/services/transport-smallwebrtc.ts#node</include>
+
+App messages from the peer arrive on the data channel:
+
+<include cwd>snippets/services/transport-smallwebrtc.ts#messages</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_client_connected` | The peer connection is up. Receives the `SmallWebRTCConnection`. |
+| `on_client_disconnected` | The peer connection closed. Receives the `SmallWebRTCConnection`. |
+| `on_app_message` | A data channel message arrived. Receives the message and the sender. |
+
+### Notes
+
+- After `on_client_connected` runs, the input pushes a `ClientConnectedFrame`. App messages are
+  also pushed into the pipeline as `InputTransportMessageFrame`s.
+- Video sources listed in `params.videoInSources` are captured before `on_client_connected`
+  runs, so a handler that captures a source itself wins. `captureParticipantVideo()` captures the
+  camera (`"camera"`) or the screen share (`"screenVideo"`), at 30 frames per second by default.
+- `getClientId(client)` returns the peer connection's `pcId`.
+- When the peer replaces the connection (`restart_pc`), the old track completes its pending
+  writes instead of leaving them waiting. Upstream leaves them pending, so the output transport's
+  write timeout fails the pipeline.
+
+## SmallWebRTCConnection
+
+You rarely build one yourself: `SmallWebRTCRequestHandler` creates one per offer, with the
+options from its `connectionOptions` and `iceServers`.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/transport-smallwebrtc/src/connection.ts" name="SmallWebRTCConnectionOptions" />
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `app-message` | A data channel message arrived. Messages that arrive before the client is connected are queued and delivered on connect. |
+| `track-started` | A remote track started. |
+| `track-ended` | A remote track ended. |
+| `track-status` | The peer turned a source on or off. |
+| `new`, `connecting`, `connected`, `disconnected`, `closed`, `failed` | Peer connection state changes. |
+
+### Notes
+
+- If the connection stays in the connecting state longer than `connectionTimeoutSecs` (default
+  60), it is closed.
+- `sendAppMessage(message)` sends a JSON message on the data channel.
+- Audio is decoded straight to the pipeline's input rate and channel count when Opus supports it
+  (8, 12, 16, 24 or 48 kHz). aiortc always decodes to 48 kHz stereo.
+- Opus decoding uses packet loss concealment and in-band FEC. Pass `opusCodec`, or call
+  `setOpusCodec()`, to replace libopus-wasm (with a native binding, for example).
+- There is no built-in video codec. Without `videoDecoderFactory`, incoming video is negotiated
+  but produces no frames; without `videoEncoderFactory`, outgoing video frames are dropped. A
+  warning is logged once in each case. VP8 and H.264 depayloading and packetization are built in.
+- The SCTP data chunk payload is 1100 bytes, so data channel packets fit a 1280-byte MTU. Change
+  it with the `PIPECAT_SCTP_MAX_CHUNK_SIZE` environment variable.
+
+## SmallWebRTCRequestHandler
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/transport-smallwebrtc/src/request_handler.ts" name="SmallWebRTCRequestHandlerOptions" />
+
+### ICE servers
+
+Without ICE servers, only host candidates are gathered, which works on a LAN or localhost. Add a
+STUN server to cross NATs, and a TURN server for networks that block direct UDP:
+
+<include cwd meta='title="ice.ts"'>snippets/services/transport-smallwebrtc.ts#ice</include>
+
+`updateIceServers()` changes the list for connections created afterwards.
+
+### Notes
+
+- `ConnectionMode.MULTIPLE` (the default) accepts several peers. `ConnectionMode.SINGLE` keeps
+  one: an offer with a different `pc_id`, or with none while a connection exists, gets HTTP 400.
+- An offer with the `pc_id` of an existing connection renegotiates it instead of creating a new
+  one.
+- `esp32Mode` removes the SHA-384 and SHA-512 fingerprints ESP32 peers don't support and, with
+  `host`, keeps only the ICE candidates that match it.
+
+## smallWebRTCOfferHandler
+
+`smallWebRTCOfferHandler(handler, onConnection)` serves one URL, such as `/api/offer`, with the same
+contract as Pipecat's development runner:
+
+| Method | Body | Response |
+|---|---|---|
+| `POST` | `{sdp, type, pc_id?, restart_pc?, request_data?}` | `{sdp, type, pc_id}` |
+| `PATCH` | `{pc_id, candidates: [{candidate, sdp_mid, sdp_mline_index}]}` | `{"status": "success"}` |
+
+`onConnection(connection, request)` runs for each new connection, with the parsed
+`SmallWebRTCRequest` (its `requestData` carries the client's custom data). Start the bot in the
+background and return: the answer is sent once it returns.
+
+Errors follow FastAPI: an `HTTPException` becomes its status with `{"detail": ...}`, a malformed
+body a 400, another method a 405 and anything else a 500.
+
+It is a standard fetch handler, so it mounts in `Bun.serve`, `Deno.serve`, Hono and most
+frameworks; see [Frameworks](/docs/frameworks). On Node, `nodeRequestListener(fetchHandler)` turns
+it into a listener for `http.createServer()`.
+
+## Runtime notes
+
+| Bun | Node | Deno | Cloudflare Workers |
+|---|---|---|---|
+| yes | yes | yes | no |
+
+WebRTC media runs over UDP. Bun, Node and Deno can open UDP sockets; Cloudflare Workers can't, so
+the package does not run there. Use the [WebSocket transport](/docs/transports/websocket) on
+Workers. See [Runtimes](/docs/guides/runtimes).
+
+The signalling endpoint is plain HTTP, but the connection it creates lives in the same process,
+so the offer endpoint and the media must run on the same long-lived server.
+
+Upstream encodes and decodes with PyAV (FFmpeg). Here Opus comes from libopus-wasm and video
+codecs are pluggable, as described above. werift's API wears an aiortc-shaped adapter (`rtc.ts`),
+so the ported code keeps upstream's structure.

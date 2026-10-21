@@ -72,7 +72,7 @@ VAD analyzer. So the Worker loads no local models and no ONNX runtime. That matt
 
 Cloudflare limits a Worker to 10 MB compressed on paid plans and 3 MB on the free plan, so the local
 models don't fit. They also load about 100 MB of runtime and models, close to a Durable Object's
-128 MB memory limit. See [Turn detection](/docs/turn-detection) for the modes.
+128 MB memory limit. See [Turn detection](/docs/concepts/turn-detection) for the modes.
 
 ## Reconnection
 
@@ -118,8 +118,8 @@ export const POST = (request: Request) => offer(request);
 export const POST = ({ request }) => offer(request);
 ```
 
-The Workers example runs in tests against workerd, through `wrangler dev`. The other snippets show the
-same handler mounted in each framework; they are not tested here.
+The Workers example runs in tests against workerd, through `wrangler dev`. The same handlers mounted
+in each framework are tested in `examples/framework-snippets`: see [Frameworks](/docs/frameworks).
 
 ## Run it
 

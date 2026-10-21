@@ -1,0 +1,17 @@
+{
+  "title": "Frameworks",
+  "pages": [
+    "index",
+    "sveltekit",
+    "hono",
+    "bun",
+    "nextjs",
+    "tanstack-start",
+    "cloudflare-workers",
+    "express",
+    "elysia",
+    "nuxt",
+    "deno",
+    "vercel"
+  ]
+}

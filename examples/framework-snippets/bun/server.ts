@@ -34,9 +34,5 @@ const config = {
   },
 };
 
+// `bun server.ts` serves the default export, on port 3000 or $PORT.
 export default config;
-
-// `bun server.ts` starts it on port 3000.
-if (import.meta.main) {
-  Bun.serve({ port: 3000, ...config });
-}

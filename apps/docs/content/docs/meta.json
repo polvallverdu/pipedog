@@ -1,21 +1,29 @@
 {
   "title": "pipedog",
   "pages": [
+    "---Get started---",
     "index",
     "installation",
     "quickstart",
     "voice-bot",
-    "turn-detection",
-    "workers",
-    "frameworks",
-    "---Concepts---",
+    "---Core concepts---",
     "...concepts",
+    "---Frameworks---",
+    "...frameworks",
+    "---Services---",
+    "...services",
+    "---Transports---",
+    "...transports",
+    "---Serializers---",
+    "...serializers",
+    "---Deployment---",
+    "...deployment",
     "---Guides---",
-    "runtimes",
-    "coming-from-pipecat",
-    "---Contributing---",
-    "...contributing",
+    "...guides",
     "---API reference---",
-    "...api"
+    "...api",
+    "---Project---",
+    "roadmap",
+    "...contributing"
   ]
 }

@@ -1,0 +1,50 @@
+---
+title: Next.js
+description: Mount the pipedog WebRTC offer endpoint in a Next.js route handler on the Node.js runtime.
+---
+
+An App Router route handler handles `POST /api/offer` on the Node.js runtime. It passes the web
+`Request` to `offer` unchanged.
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+
+## Files
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`@/lib/voice` re-exports it:
+
+<include cwd meta='title="lib/voice.ts"'>../../examples/framework-snippets/nextjs/lib/voice.ts</include>
+
+<include cwd meta='title="app/api/offer/route.ts"'>../../examples/framework-snippets/nextjs/app/api/offer/route.ts</include>
+
+## Run it
+
+```bash
+OPENAI_API_KEY=sk-... bunx next dev
+```
+
+The browser then POSTs its SDP offer to `/api/offer`.
+
+## Deploy
+
+The route sets `runtime = "nodejs"`, not the edge, because the offer's media runs over UDP and the
+server has to stay up for the call. Run it with `next start` on a long-lived server. Vercel's
+serverless functions don't carry the UDP media.
+
+## WebSocket
+
+A Next.js route handler can't upgrade a WebSocket. Mount `socket` on a server that can upgrade: a
+[Bun](/docs/frameworks/bun), Node or [Deno](/docs/frameworks/deno) server next to the Next.js app, or
+[Cloudflare Workers](/docs/frameworks/cloudflare-workers).
+
+## Authentication
+
+The route has no auth. Wrap `offer` with a session check before it runs, as in
+[Authentication](/docs/frameworks#authentication).

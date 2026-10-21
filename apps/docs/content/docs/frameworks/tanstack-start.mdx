@@ -1,0 +1,68 @@
+---
+title: TanStack Start
+description: Mount the pipedog WebRTC offer endpoint in a TanStack Start server route.
+---
+
+A server route handles `POST /api/offer`. It is a file route with `server.handlers` and no
+component. TanStack Start passes each handler the web `Request`, and the handler passes it to `offer`
+unchanged.
+
+The snippet is checked against `@tanstack/react-start` 1.168.60 and `@tanstack/react-router`
+1.170.41.
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/transport-smallwebrtc @pipedog/transport-websocket @pipedog/serializer-protobuf @pipedog/openai @pipedog/audio-silero @pipedog/audio-smart-turn @tanstack/react-router
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+`@tanstack/react-router` is already in a TanStack Start project.
+
+## Files
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`~/lib/voice` re-exports it. The snippet's tsconfig maps `~/lib/*` to `src/lib/*`. Use a relative
+import if your project has no such alias.
+
+<include cwd meta='title="src/lib/voice.ts"'>../../examples/framework-snippets/tanstack-start/src/lib/voice.ts</include>
+
+<include cwd meta='title="src/routes/api/offer.ts"'>../../examples/framework-snippets/tanstack-start/src/routes/api/offer.ts</include>
+
+The snippet also ships `src/routeTree.gen.d.ts`. In a real project the router plugin generates
+`src/routeTree.gen.ts`, which registers the route's path for `createFileRoute` and loads the types
+of the `server` option. The snippet has no generator, so the declaration stands in for it. Don't copy
+it into your app.
+
+## Run it
+
+```bash
+OPENAI_API_KEY=sk-... bunx vite dev
+```
+
+The router plugin picks up `src/routes/api/offer.ts` and serves it at `/api/offer`.
+
+## Deploy
+
+Build for a long-lived Node or Bun server, not a serverless or edge target: the offer's media runs
+over UDP, and the server has to stay up for the call.
+
+## WebSocket
+
+A TanStack Start server route returns a `Response` and has no API to upgrade a WebSocket. Mount
+`socket` on a server that can upgrade: a [Bun](/docs/frameworks/bun), Node or
+[Deno](/docs/frameworks/deno) server next to the app, or
+[Cloudflare Workers](/docs/frameworks/cloudflare-workers).
+
+## Authentication
+
+The route has no auth. Wrap `offer` with a session check before it runs, as in
+[Authentication](/docs/frameworks#authentication). A request middleware on the route
+(`server.middleware`) works too.
+
+## What is tested
+
+The test imports the route module and calls `Route.options.server.handlers.POST` with a request that
+has no SDP offer, and checks that pipedog's own 400 comes back. It doesn't build a TanStack Start app
+or run its dev server.

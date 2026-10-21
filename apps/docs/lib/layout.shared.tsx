@@ -9,7 +9,8 @@ export function baseOptions(): BaseLayoutProps {
     githubUrl: repoUrl,
     links: [
       { text: "Docs", url: "/docs", active: "nested-url" },
-      { text: "Porting status", url: "/docs/contributing/status" },
+      { text: "Services", url: "/docs/services" },
+      { text: "Roadmap", url: "/docs/roadmap" },
     ],
   };
 }

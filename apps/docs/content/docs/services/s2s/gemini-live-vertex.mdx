@@ -1,0 +1,109 @@
+---
+title: Gemini Live on Vertex AI
+description: Real-time speech-to-speech with GeminiLiveVertexLLMService, the Gemini Live API through Vertex AI with service account or ADC authentication.
+---
+
+## Overview
+
+`GeminiLiveVertexLLMService` runs Gemini Live through Vertex AI. It extends
+[`GeminiLiveLLMService`](/docs/services/s2s/gemini-live), so audio, transcripts, VAD, tools,
+thinking and compression work the same way. Authentication, the endpoint and a few features
+differ.
+
+- **`GeminiLiveVertexLLMService`**: Gemini Live on Vertex AI, with a Google Cloud project, a
+  region and service account credentials or Application Default Credentials (ADC).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/s2s/gemini-live-vertex">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/google/src/gemini_live/vertex">
+    `packages/google/src/gemini_live/vertex/llm.ts`.
+  </Card>
+  <Card title="Vertex AI Live API docs" href="https://cloud.google.com/vertex-ai/generative-ai/docs/live-api">
+    The Live API on Vertex AI.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/google
+```
+
+```ts
+import { GeminiLiveVertexLLMService } from "@pipedog/google/gemini_live/vertex/llm";
+```
+
+## Prerequisites
+
+- A Google Cloud project with the Vertex AI API enabled.
+- A service account with access to Vertex AI, as a key file or a JSON string, or ADC
+  (`gcloud auth application-default login`, or the attached service account on GCP).
+- The examples read `GOOGLE_CLOUD_PROJECT_ID`, `GOOGLE_CLOUD_LOCATION`, and
+  `GOOGLE_APPLICATION_CREDENTIALS` (a key file path) or `GOOGLE_CREDENTIALS_JSON` (the key
+  itself).
+
+## GeminiLiveVertexLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/gemini_live/vertex/llm.ts" name="GeminiLiveVertexLLMServiceOptions" />
+
+### Settings
+
+`GeminiLiveVertexLLMService.Settings` has the same fields as
+[`GeminiLiveLLMService.Settings`](/docs/services/s2s/gemini-live#settings), with the same
+defaults except `model`, which is `"google/gemini-3.8-live"` (Vertex AI model identifiers carry
+the `google/` publisher prefix).
+
+### Usage
+
+<include cwd meta='title="gemini-live-vertex.ts"'>snippets/services/s2s-gemini-live-vertex.ts#usage</include>
+
+With the service account key as a JSON string:
+
+<include cwd>snippets/services/s2s-gemini-live-vertex.ts#credentials</include>
+
+### Authentication
+
+The service picks credentials in this order:
+
+1. `credentials`: a service account key as a JSON string. It is parsed in the constructor.
+2. `credentialsPath`: the path to a key file, read by the client.
+3. Neither: Application Default Credentials.
+
+All three go to `@google/genai` as `googleAuthOptions` with the `cloud-platform` scope, and
+google-auth-library inside the SDK loads the key file, finds ADC and refreshes the access token
+as it expires.
+
+<Callout type="info">
+Upstream loads the credentials and refreshes a token in the constructor, so missing ADC fails
+there with "No valid credentials provided.". Here those steps are asynchronous and happen on
+first connect, so missing credentials surface as a connection error.
+</Callout>
+
+### Methods
+
+`setAudioInputPaused()`, `setVideoInputPaused()`, `setModelModalities()` and `setLanguage()`
+work as on [Gemini Live](/docs/services/s2s/gemini-live#methods).
+
+### Notes
+
+- Passing `apiKey` throws: Vertex AI takes `credentials`, `credentialsPath` or ADC.
+- `projectId` and `location` (a region such as `"us-east4"`) are required.
+- The Gemini File API isn't available: `fileApi` throws `NotImplementedError`. Use Google Cloud
+  Storage for files.
+- Vertex's Live endpoint doesn't support `NON_BLOCKING` tool calls. Functions registered with
+  `cancelOnInterruption: false` run synchronously (the conversation pauses while they run), and
+  the first time one is used the service logs an error and pushes an error frame.
+- `historyConfig` is not sent on Vertex AI.
+
+## Runtime notes
+
+Authentication goes through google-auth-library, which only the Node build of `@google/genai`
+supports. This service runs on Bun, Node and Deno, not on Cloudflare Workers. On Workers, use
+[`GeminiLiveLLMService`](/docs/services/s2s/gemini-live) with a Gemini API key.
+
+The deprecated upstream `model`, `voiceId` and `params` constructor options are not ported;
+use `settings`.

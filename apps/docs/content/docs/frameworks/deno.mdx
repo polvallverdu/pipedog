@@ -1,0 +1,43 @@
+---
+title: Deno
+description: Serve the pipedog WebRTC offer and WebSocket endpoints with Deno.serve.
+---
+
+`Deno.serve` routes both endpoints. `socket` is a fetch handler, and Deno upgrades a WebSocket from
+fetch, so the upgrade uses `Deno.upgradeWebSocket` under the hood.
+
+## Install
+
+```bash
+deno add npm:@pipedog/core npm:@pipedog/asyncio npm:@pipedog/transport-smallwebrtc npm:@pipedog/transport-websocket npm:@pipedog/serializer-protobuf npm:@pipedog/openai npm:@pipedog/audio-silero npm:@pipedog/audio-smart-turn
+```
+
+`@pipedog/audio-smart-turn` isn't imported anywhere: the default turn strategies load it. The
+packages aren't on npm yet; see [Installation](/docs/installation) for using them from a checkout.
+
+## Files
+
+The endpoints come from the shared module on the [overview](/docs/frameworks#the-two-endpoints).
+`voice.ts` re-exports it:
+
+<include cwd meta='title="voice.ts"'>../../examples/framework-snippets/deno/voice.ts</include>
+
+<include cwd meta='title="main.ts"'>../../examples/framework-snippets/deno/main.ts</include>
+
+## Run it
+
+```bash
+OPENAI_API_KEY=sk-... deno run -A main.ts
+```
+
+It listens on port 3000, or on `$PORT`. The offer is at `POST /api/offer` and the WebSocket at `/ws`.
+
+## Deploy
+
+Run it as a long-lived Deno process on a host that allows UDP traffic, for the offer's media. A host
+that runs Deno without UDP can still serve `socket`.
+
+## Authentication
+
+Neither route has auth. Check the session in the `Deno.serve` handler before either endpoint runs,
+as in [Authentication](/docs/frameworks#authentication).

@@ -1,0 +1,133 @@
+---
+title: OpenAI
+description: Streaming chat completions with OpenAILLMService, the base for every OpenAI-compatible API.
+---
+
+## Overview
+
+`OpenAILLMService` streams replies from OpenAI's Chat Completions API, with function calling,
+token usage metrics and out-of-band inference (`runInference`).
+
+- **`OpenAILLMService`**: the OpenAI chat service. It extends `BaseOpenAILLMService`, which
+  builds the client and the request. Point `baseUrl` at any server that speaks the Chat
+  Completions API (Ollama, vLLM, OpenRouter, and so on) to use it with that provider.
+
+For the Responses API, see [OpenAI Responses](/docs/services/llm/openai-responses).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/llm/openai">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/openai/src">
+    `packages/openai/src/llm.ts` and `base_llm.ts`.
+  </Card>
+  <Card title="OpenAI docs" href="https://platform.openai.com/docs/api-reference/chat">
+    The Chat Completions API reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/openai
+```
+
+```ts
+import { OpenAILLMService } from "@pipedog/openai/llm";
+import { OpenAILLMSettings } from "@pipedog/openai/base_llm";
+```
+
+## Prerequisites
+
+- An OpenAI account and an API key from the [OpenAI dashboard](https://platform.openai.com/api-keys).
+- Pass the key as `apiKey`. If you leave it out, the OpenAI SDK reads `OPENAI_API_KEY`. The
+  examples read it from `OPENAI_API_KEY`.
+
+## OpenAILLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/openai/src/llm.ts" name="OpenAILLMServiceOptions" />
+
+The client options (`apiKey`, `baseUrl`, `organization`, `project`, `defaultHeaders`) come from
+`OpenAIClientOptions`:
+
+<auto-type-table cwd path="../../packages/openai/src/base_llm.ts" name="OpenAIClientOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new OpenAILLMService.Settings({...})`
+(`OpenAILLMSettings`). Any setting you leave out keeps the default below. Fields marked
+"not sent" hold the OpenAI SDK's sentinel and are left out of the request, so OpenAI's own
+default applies.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gpt-4.1"` | Chat model. |
+| `systemInstruction` | `string \| null` | `null` | System prompt, added ahead of the context's messages. |
+| `temperature` | `number \| null` | not sent | Sampling temperature. |
+| `topP` | `number \| null` | not sent | Nucleus sampling. |
+| `maxTokens` | `number \| null` | not sent | `max_tokens`. |
+| `maxCompletionTokens` | `number \| null` | not sent | `max_completion_tokens`. |
+| `frequencyPenalty` | `number \| null` | not sent | Frequency penalty. |
+| `presencePenalty` | `number \| null` | not sent | Presence penalty. |
+| `seed` | `number \| null` | not sent | Sampling seed. |
+| `topK` | `number \| null` | `null` | Not part of the OpenAI request. |
+| `filterIncompleteUserTurns` | `boolean` | `false` | Filter incomplete user turns. |
+| `userTurnCompletionConfig` | `UserTurnCompletionConfig \| null` | `null` | Turn completion config used with `filterIncompleteUserTurns`. |
+| `extra` | `Record<string, unknown>` | `{}` | Extra request fields, merged into the request last (they override the fields above). |
+
+### Usage
+
+<include cwd meta='title="llm.ts"'>snippets/services/llm-openai.ts#usage</include>
+
+An OpenAI-compatible server, through `baseUrl`:
+
+<include cwd>snippets/services/llm-openai.ts#compatible</include>
+
+Re-issue a request that produces no output in time:
+
+<include cwd>snippets/services/llm-openai.ts#retry</include>
+
+Change settings mid-call with an `LLMUpdateSettingsFrame`. The next completion uses them:
+
+<include cwd>snippets/services/llm-openai.ts#update</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_completion_timeout` | A completion timed out. |
+| `on_function_calls_started` | The model asked for one or more function calls. |
+| `on_function_calls_cancelled` | Function calls were cancelled. |
+
+These come from the `LLMService` base class.
+
+### Notes
+
+- Runs a completion for each `LLMContextFrame`, between an `LLMFullResponseStartFrame` and an
+  `LLMFullResponseEndFrame`, and streams the reply as `LLMTextFrame`s. Other frames pass
+  through.
+- Requests always stream, with `stream_options: { include_usage: true }`, so token usage metrics
+  are reported.
+- `serviceTier` is sent as `service_tier` when set.
+- `retryOnTimeout` is off by default. With it on, an attempt that produces nothing within
+  `retryTimeoutSecs` (5 seconds by default) is abandoned and re-issued once.
+- Models older than `gpt-4o-mini` and `gpt-4o-2024-08-06` can't enforce a response schema, so
+  `runInference` ignores a `responseSchema` for them, with a warning.
+- OpenAI-compatible subclasses override `createClient()` to build the client their own way, and
+  can set `supportsDeveloperRole = false` to send "developer" messages as "user" messages.
+
+## Runtime notes
+
+- The client is the official `openai` JS SDK, which talks through `fetch`. It works on Bun,
+  Node, Deno and Cloudflare Workers.
+- Upstream builds the client with an httpx connection pool. `fetch` has no such object, so
+  connection reuse is left to the runtime.
+- The JS SDK has no `extra_body` option. Provider-specific `extra_body` fields are merged into
+  the request JSON just before it is sent, as the Python client does.
+- The deprecated `model` and `params` constructor options and `BaseOpenAILLMService.InputParams`
+  are not ported. Use `settings`.
+- Not ported yet: `AzureLLMService` (Azure OpenAI) and the dedicated subclasses for other
+  OpenAI-compatible providers. Until they land, `OpenAILLMService` with `baseUrl` covers most of
+  them.

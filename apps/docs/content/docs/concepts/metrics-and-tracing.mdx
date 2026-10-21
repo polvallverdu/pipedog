@@ -125,7 +125,7 @@ exporter. Read `MetricsFrame`s with an observer if you need them as time series.
 ### Cloudflare Workers
 
 `@pipedog/core` and `@pipedog/tracing` run on Workers (see the
-[compatibility table](/docs/runtimes)). The OTLP exporter posts spans with `fetch`, and spans are
+[compatibility table](/docs/guides/runtimes)). The OTLP exporter posts spans with `fetch`, and spans are
 batched, so flush them before the request ends:
 
 <include cwd>snippets/tracing.ts#workers</include>

@@ -120,6 +120,18 @@ describe("Next.js", () => {
   });
 });
 
+describe("TanStack Start", () => {
+  test("POST is the server route's handler", async () => {
+    const { Route } = await import("../tanstack-start/src/routes/api/offer.ts");
+    const handlers = Route.options.server?.handlers as
+      | Record<string, (ctx: { request: Request }) => Promise<Response>>
+      | undefined;
+    const POST = handlers?.POST;
+    expect(POST).toBeFunction();
+    await expectOwnOfferError(await POST!({ request: offerRequest() }));
+  });
+});
+
 describe("Express", () => {
   test("POST /api/offer", async () => {
     const { default: app } = await import("../express/server.ts");

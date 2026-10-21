@@ -1,0 +1,182 @@
+---
+title: Google
+description: Speech-to-text with GeminiSTTService (Gemini Live transcription models) and GoogleSTTService (Google Cloud Speech-to-Text V2).
+---
+
+## Overview
+
+pipedog ports both of Pipecat's Google speech-to-text services. They use different APIs and
+different credentials:
+
+- **`GeminiSTTService`**: streams audio to a Gemini Live transcription model
+  (`gemini-3.5-transcribe-live` by default) over the Gemini Live API. Authenticates with a
+  Gemini API key. Supports automatic language detection, language hints, adaptation phrases and
+  verbatim or smart transcription.
+- **`GoogleSTTService`**: Google Cloud Speech-to-Text V2 streaming recognition. Authenticates
+  with a Google Cloud service account or Application Default Credentials (ADC). Supports
+  multiple languages, phrase-set adaptation, denoising and automatic stream renewal.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/google">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/google/src">
+    `packages/google/src/gemini_live/stt.ts` and `stt.ts`.
+  </Card>
+  <Card title="Cloud Speech-to-Text docs" href="https://cloud.google.com/speech-to-text/v2/docs">
+    Models, languages and adaptation for Speech-to-Text V2.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/google
+```
+
+`GoogleSTTService` also needs the Cloud Speech Node SDK, an optional peer dependency:
+
+```bash
+bun add @google-cloud/speech
+```
+
+```ts
+import { GeminiSTTService } from "@pipedog/google/gemini_live/stt";
+import { GoogleSTTService } from "@pipedog/google/stt";
+```
+
+## Prerequisites
+
+- **`GeminiSTTService`**: a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey),
+  passed as `apiKey`. The examples read it from `GOOGLE_API_KEY`.
+- **`GoogleSTTService`**: a Google Cloud project with the Speech-to-Text API enabled, and a
+  service account key (as a file or a JSON string) or ADC. The examples read
+  `GOOGLE_APPLICATION_CREDENTIALS` (a key file path) or `GOOGLE_CREDENTIALS_JSON` (the key
+  itself). The project ID comes from the credentials.
+
+## GeminiSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/gemini_live/stt.ts" name="GeminiSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new GeminiSTTService.Settings({...})`.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"gemini-3.5-transcribe-live"` | Gemini Live transcription model. |
+| `language` | `Language \| string \| null` | `null` | A single language hint. |
+| `languages` | `(Language \| string)[]` | `[]` | Language hints. Take precedence over `language`. |
+| `languageAuto` | `boolean \| null` | `null` | Automatic detection. `null` detects unless hints are given; `false` turns it off. |
+| `adaptationPhrases` | `string[] \| null` | `null` | Phrases to bias recognition toward. |
+| `mode` | `"VERBATIM" \| "SMART" \| null` | `null` (model: `"VERBATIM"`) | `"SMART"` removes disfluencies and applies light cleanup. |
+
+### Usage
+
+<include cwd meta='title="gemini-stt.ts"'>snippets/services/stt-google-gemini.ts#usage</include>
+
+With language hints, adaptation phrases and smart transcription:
+
+<include cwd>snippets/services/stt-google-gemini.ts#hints</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | Connected to the Gemini Live API. |
+| `on_disconnected` | Disconnected from the Gemini Live API. |
+| `on_connection_error` | Three connection attempts failed in a row; the service stops retrying. |
+
+### Notes
+
+- Emits `InterimTranscriptionFrame`s as results arrive and a `TranscriptionFrame` for each
+  finished utterance.
+- On a `VADUserStoppedSpeakingFrame`, the service sends an audio-stream-end signal so the model
+  finalizes the utterance at once. Without an upstream VAD, the model finalizes on its own
+  schedule.
+- Language hints and automatic detection are mutually exclusive. If both are set, hints win.
+- Any settings change reconnects the session.
+- Audio is sent at the pipeline's input sample rate. The model works best with 16 kHz mono PCM.
+
+## GoogleSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/google/src/stt.ts" name="GoogleSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new GoogleSTTService.Settings({...})`.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"latest_long"` | Speech V2 model. |
+| `languages` | `Language[]` | `[Language.EN_US]` | Recognition languages. |
+| `language` | `Language \| null` | `null` | Setting it replaces `languages` with that one language. |
+| `useSeparateRecognitionPerChannel` | `boolean` | `false` | Recognize each channel separately. |
+| `enableAutomaticPunctuation` | `boolean` | `true` | Add punctuation. |
+| `enableSpokenPunctuation` | `boolean` | `false` | Transcribe spoken punctuation. |
+| `enableSpokenEmojis` | `boolean` | `false` | Transcribe spoken emojis. |
+| `profanityFilter` | `boolean` | `false` | Filter profanity. |
+| `enableWordTimeOffsets` | `boolean` | `false` | Word timings. |
+| `enableWordConfidence` | `boolean` | `false` | Word confidence scores. |
+| `enableInterimResults` | `boolean` | `true` | Emit interim results. |
+| `enableVoiceActivityEvents` | `boolean` | `false` | Voice activity events. |
+| `adaptation` | `SpeechAdaptation \| null` | `null` | Phrase sets that bias recognition. |
+| `denoiserConfig` | `DenoiserConfig \| null` | `null` | Background-noise removal (Chirp 3 models only), e.g. `{ denoise_audio: true }`. |
+
+`adaptation` and `denoiserConfig` are plain objects. Keys may be snake_case, as Google documents
+them, or camelCase. A `phrase_sets` entry is a phrase set resource name or an inline phrase set.
+Referenced phrase sets must live in the same location as the service.
+
+### Usage
+
+<include cwd meta='title="google-stt.ts"'>snippets/services/stt-google.ts#usage</include>
+
+Speech adaptation:
+
+<include cwd>snippets/services/stt-google.ts#adaptation</include>
+
+Change settings mid-call with an `STTUpdateSettingsFrame`:
+
+<include cwd>snippets/services/stt-google.ts#update</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The service connected. |
+| `on_disconnected` | The service disconnected. |
+
+### Notes
+
+- Emits `InterimTranscriptionFrame`s (with `enableInterimResults`) and `TranscriptionFrame`s.
+- Google limits a streaming call to a few minutes. The service renews the stream every 4
+  minutes (`GoogleSTTService.STREAMING_LIMIT`, in ms) and carries the unfinished audio over.
+- A settings change reconnects the stream.
+- The `telephony` model rejects adaptation; the service logs a warning and transcribes without
+  it.
+- With inline `credentials`, a missing `project_id` throws in the constructor.
+
+## Runtime notes
+
+`GeminiSTTService` uses `GoogleGenAI` from `@google/genai`, which opens the Live API over the
+global `WebSocket` and runs on Bun, Node, Deno and Cloudflare Workers.
+
+Cloud Speech-to-Text V2 streaming is gRPC only, so `GoogleSTTService` loads the Node SDK
+`@google-cloud/speech` lazily on first connect. That needs a Node-compatible runtime, not
+Workers. To use another transport, pass a `client` that implements `GoogleSTTClient`
+(`streamingRecognize()` and, optionally, `getProjectId()`). `clientOptions` (pipedog only) is
+merged into the SDK's `SpeechClient` options.
+
+<Callout type="info">
+Upstream resolves credentials and the project ID in the constructor. Here, with
+`credentialsPath` or ADC, they are resolved on first connect (in `setup()`), so "No valid
+credentials provided." and "Project ID not found in credentials" are raised there. Inline
+`credentials` are still checked in the constructor.
+</Callout>
+
+The deprecated upstream `InputParams` class, the `params` option,
+`GoogleSTTSettings.languageCodes`, `setLanguages()` and `updateOptions()` are not ported.

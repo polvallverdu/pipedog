@@ -11,22 +11,28 @@ processing for ultra-low latency conversations; pipedog brings the same architec
 
 <Callout type="warn" title="Unofficial and early">
   pipedog is a community port. It is not affiliated with or endorsed by Daily or the Pipecat
-  project. The core runtime is ported; most service providers and transports are not yet. See the
-  [porting status](/docs/contributing/status).
+  project. The core runtime and the main voice providers are ported; many other providers and
+  transports are not yet. See the [roadmap](/docs/roadmap).
 </Callout>
 
 <Cards>
   <Card title="Quickstart" href="/docs/quickstart">
     Run a pipeline with a custom frame processor in a few lines.
   </Card>
-  <Card title="Coming from Pipecat (Python)" href="/docs/coming-from-pipecat">
+  <Card title="Coming from Pipecat (Python)" href="/docs/guides/coming-from-pipecat">
     How Pipecat's Python API maps to pipedog.
   </Card>
   <Card title="Core concepts" href="/docs/concepts/frames">
     Frames, frame processors, pipelines, workers and cancellation.
   </Card>
-  <Card title="Runtimes & compatibility" href="/docs/runtimes">
+  <Card title="Runtimes & compatibility" href="/docs/guides/runtimes">
     What runs where: Bun, Node, Deno, Cloudflare Workers.
+  </Card>
+  <Card title="Services" href="/docs/services">
+    LLM, speech-to-text, text-to-speech and realtime providers, one page each.
+  </Card>
+  <Card title="Frameworks" href="/docs/frameworks">
+    Mount a voice agent in SvelteKit, Hono, Bun, Next.js, TanStack Start and more.
   </Card>
 </Cards>
 
@@ -76,9 +82,11 @@ automatically unless you pass `enableRtvi: false`.
 
 ## Status
 
-Milestone 1, the core runtime (frames, processors, pipelines, workers, bus, observers, RTVI, base
-services and transports), is ported. Service providers (STT, LLM, TTS) and most transports are
-next, so a full voice bot is not possible yet. The generated
+The core runtime (frames, processors, pipelines, workers, bus, observers, RTVI, base services and
+transports) is ported, and so are the main voice providers: OpenAI, Google, Anthropic, Deepgram,
+Cartesia and ElevenLabs, with the WebSocket and SmallWebRTC transports. That is enough for a full
+voice bot ([Voice bot](/docs/voice-bot)). [Services](/docs/services) lists every provider, ported or
+coming soon, and the [roadmap](/docs/roadmap) says what's next. The generated
 [porting status](/docs/contributing/status) (`porting/STATUS.md`) lists every package, how much of
 it is ported, and which runtimes it is verified on.
 
