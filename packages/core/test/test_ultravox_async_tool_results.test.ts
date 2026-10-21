@@ -13,20 +13,16 @@
  * before the conversation moved on, as an ordinary tool result. A synchronous
  * call's result goes out as the `client_tool_result` itself.
  *
- * Upstream imports the service with `pytest.importorskip`. Here the service is
- * loaded with a dynamic import so this file still loads while
- * `packages/ultravox/src/llm.ts` (`@pipedog/ultravox`) is unported; the
- * tests are `test.todo` until it lands.
+ * The service lives in `@pipedog/ultravox`; it is imported from its source so
+ * this core test needs no package dependency on it.
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import * as mod from "../../ultravox/src/llm.ts";
 import * as asyncToolMessages from "../src/processors/aggregators/async_tool_messages.ts";
 import { LLMContext } from "../src/processors/aggregators/llm_context.ts";
 
-const TODO = "unported module: pipecat.services.ultravox.llm (packages/ultravox/src/llm.ts)";
-
-// The service module is not ported yet.
-type AnyModule = any;
+// The tests reach into the service's protected members, as upstream does.
 type AnyService = any;
 
 function _format(template: string, toolCallId: string, result: string): string {
@@ -35,19 +31,9 @@ function _format(template: string, toolCallId: string, result: string): string {
 }
 
 describe("TestUltravoxToolResultDelivery", () => {
-  let mod: AnyModule;
   let service: AnyService;
 
-  beforeEach(async () => {
-    const modPath = "../../ultravox/src/llm.ts";
-    try {
-      mod = await import(modPath);
-    } catch {
-      // pytest.importorskip: the tests below are todo until the module exists.
-      mod = undefined;
-      service = undefined;
-      return;
-    }
+  beforeEach(() => {
     service = new mod.UltravoxRealtimeLLMService({
       params: new mod.OneShotInputParams({ apiKey: "test-key", systemPrompt: "test" }),
     });
@@ -59,7 +45,7 @@ describe("TestUltravoxToolResultDelivery", () => {
     return { role: "tool", tool_call_id: toolCallId, content };
   }
 
-  test.todo(`test_sync_result_is_sent_as_client_tool_result (${TODO})`, async () => {
+  test("test_sync_result_is_sent_as_client_tool_result", async () => {
     const context = new LLMContext({
       messages: [_toolResult("call-1", '{"temperature": 72}')] as any,
     });
@@ -76,7 +62,7 @@ describe("TestUltravoxToolResultDelivery", () => {
     expect(service._completedToolCalls.has("call-1")).toBe(true);
   });
 
-  test.todo(`test_async_result_settled_in_place_is_sent_as_user_text (${TODO})`, async () => {
+  test("test_async_result_settled_in_place_is_sent_as_user_text", async () => {
     // The placeholder already answered the invocation on Ultravox's side.
     service._startedPlaceholderSent.add("call-1");
     const context = new LLMContext({
@@ -93,7 +79,7 @@ describe("TestUltravoxToolResultDelivery", () => {
     expect(service._completedToolCalls.has("call-1")).toBe(true);
   });
 
-  test.todo(`test_deferred_async_result_is_sent_as_user_text (${TODO})`, async () => {
+  test("test_deferred_async_result_is_sent_as_user_text", async () => {
     service._startedPlaceholderSent.add("call-1");
     const context = new LLMContext({
       messages: [
@@ -111,7 +97,7 @@ describe("TestUltravoxToolResultDelivery", () => {
     );
   });
 
-  test.todo(`test_result_is_delivered_once_across_context_pushes (${TODO})`, async () => {
+  test("test_result_is_delivered_once_across_context_pushes", async () => {
     service._startedPlaceholderSent.add("call-1");
     const context = new LLMContext({
       messages: [_toolResult("call-1", '{"temperature": 72}')] as any,

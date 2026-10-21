@@ -6,11 +6,11 @@
     "openai-live",
     "gemini-live",
     "gemini-live-vertex",
+    "inworld",
+    "ultravox",
     "---Coming soon---",
     "aws",
     "azure-voice-live",
-    "inworld",
-    "ultravox",
     "grok"
   ]
 }

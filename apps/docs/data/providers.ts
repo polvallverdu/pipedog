@@ -172,6 +172,12 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/elevenlabs",
       classes: ["ElevenLabsTTSService", "ElevenLabsHttpTTSService"],
     },
+    {
+      slug: "inworld",
+      name: "Inworld",
+      pkg: "@pipedog/inworld",
+      classes: ["InworldTTSService", "InworldHttpTTSService"],
+    },
   ],
   s2s: [
     {
@@ -197,6 +203,18 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "Gemini Live on Vertex AI",
       pkg: "@pipedog/google",
       classes: ["GeminiLiveVertexLLMService"],
+    },
+    {
+      slug: "inworld",
+      name: "Inworld Realtime",
+      pkg: "@pipedog/inworld",
+      classes: ["InworldRealtimeLLMService"],
+    },
+    {
+      slug: "ultravox",
+      name: "Ultravox",
+      pkg: "@pipedog/ultravox",
+      classes: ["UltravoxRealtimeLLMService"],
     },
   ],
   image: [
@@ -556,14 +574,6 @@ export const upcoming: UpcomingPage[] = [
   },
   {
     section: "tts",
-    slug: "inworld",
-    name: "Inworld",
-    about: "Inworld's low-latency voices.",
-    classes: ["InworldTTSService", "InworldHttpTTSService"],
-    modules: ["services/inworld/tts.py"],
-  },
-  {
-    section: "tts",
     slug: "hume",
     name: "Hume",
     about: "Hume's expressive speech synthesis (Octave).",
@@ -602,22 +612,6 @@ export const upcoming: UpcomingPage[] = [
     about: "xAI's realtime voice API.",
     classes: ["GrokRealtimeLLMService"],
     modules: ["services/xai/realtime/llm.py"],
-  },
-  {
-    section: "s2s",
-    slug: "ultravox",
-    name: "Ultravox",
-    about: "Ultravox's realtime speech-to-speech model.",
-    classes: ["UltravoxRealtimeLLMService"],
-    modules: ["services/ultravox/llm.py"],
-  },
-  {
-    section: "s2s",
-    slug: "inworld",
-    name: "Inworld Realtime",
-    about: "Inworld's realtime speech-to-speech API.",
-    classes: ["InworldRealtimeLLMService"],
-    modules: ["services/inworld/realtime/llm.py"],
   },
   // Image
   {

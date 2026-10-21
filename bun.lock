@@ -30,6 +30,7 @@
         "@pipedog/deepgram": "workspace:*",
         "@pipedog/elevenlabs": "workspace:*",
         "@pipedog/google": "workspace:*",
+        "@pipedog/inworld": "workspace:*",
         "@pipedog/langchain": "workspace:*",
         "@pipedog/openai": "workspace:*",
         "@pipedog/serializer-protobuf": "workspace:*",
@@ -38,6 +39,7 @@
         "@pipedog/tracing": "workspace:*",
         "@pipedog/transport-smallwebrtc": "workspace:*",
         "@pipedog/transport-websocket": "workspace:*",
+        "@pipedog/ultravox": "workspace:*",
         "@pipedog/whisper": "workspace:*",
         "cn": "0.4.0",
         "fumadocs-core": "16.16.2",
@@ -249,6 +251,14 @@
         "@google-cloud/text-to-speech",
       ],
     },
+    "packages/inworld": {
+      "name": "@pipedog/inworld",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
     "packages/langchain": {
       "name": "@pipedog/langchain",
       "version": "0.5.0",
@@ -395,6 +405,14 @@
       "optionalPeers": [
         "ws",
       ],
+    },
+    "packages/ultravox": {
+      "name": "@pipedog/ultravox",
+      "version": "0.5.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
     },
     "packages/whisper": {
       "name": "@pipedog/whisper",
@@ -829,6 +847,8 @@
 
     "@pipedog/google": ["@pipedog/google@workspace:packages/google"],
 
+    "@pipedog/inworld": ["@pipedog/inworld@workspace:packages/inworld"],
+
     "@pipedog/langchain": ["@pipedog/langchain@workspace:packages/langchain"],
 
     "@pipedog/mcp": ["@pipedog/mcp@workspace:packages/mcp"],
@@ -852,6 +872,8 @@
     "@pipedog/transport-smallwebrtc": ["@pipedog/transport-smallwebrtc@workspace:packages/transport-smallwebrtc"],
 
     "@pipedog/transport-websocket": ["@pipedog/transport-websocket@workspace:packages/transport-websocket"],
+
+    "@pipedog/ultravox": ["@pipedog/ultravox@workspace:packages/ultravox"],
 
     "@pipedog/whisper": ["@pipedog/whisper@workspace:packages/whisper"],
 

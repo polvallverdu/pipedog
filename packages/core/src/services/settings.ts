@@ -331,10 +331,10 @@ export class ServiceSettings {
     ) => T,
     settings: Record<string, unknown>,
   ): T {
-    const cls = ServiceSettings as unknown as typeof ServiceSettings &
-      (new (
-        options?: object,
-      ) => T);
+    // The subclass `fromMapping` is called on (Python's `cls`), not
+    // `ServiceSettings`: its fields and aliases decide where keys go.
+    // biome-ignore lint/complexity/noThisInStatic: polymorphic static, like Python's classmethod.
+    const cls = this as unknown as typeof ServiceSettings & (new (options?: object) => T);
     const fieldNames = new Set(new cls()._fieldNames());
     const kwargs: Record<string, unknown> = {};
     const extra: Record<string, unknown> = {};

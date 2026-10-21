@@ -1,0 +1,55 @@
+{
+  "name": "@pipedog/inworld",
+  "version": "0.5.0",
+  "description": "Inworld services (Realtime speech-to-speech, TTS) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "inworld",
+    "tts",
+    "speech-to-speech",
+    "realtime-api"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/inworld"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/inworld#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/services/inworld",
+      "src/pipecat/adapters/services/inworld_realtime_adapter.py"
+    ]
+  }
+}
