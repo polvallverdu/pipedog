@@ -1,5 +1,16 @@
 # @pipedog/asyncio
 
+## 0.6.0
+
+### Patch Changes
+
+- [#42](https://github.com/polvallverdu/pipedog/pull/42) [`b53032d`](https://github.com/polvallverdu/pipedog/commit/b53032d6a46103d5a1c1fd16b3b61dfd38a7bc2b) Thanks [@polvallverdu](https://github.com/polvallverdu)! - On Cloudflare Workers, loop callbacks run in the I/O context that scheduled them. One isolate
+  serves many requests and Durable Objects, and the shared ready queue could run one session's
+  callbacks during another's turn, so its I/O failed with "Cannot perform I/O on behalf of a
+  different Durable Object" (or "request"), and tasks those callbacks created stayed in the wrong
+  context. Parallel voice sessions on Durable Objects could lose their speech-to-text connection or
+  their WebSocket output this way.
+
 ## 0.5.0
 
 ### Patch Changes

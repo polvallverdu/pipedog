@@ -1,5 +1,13 @@
 # @pipedog/audio-smart-turn
 
+## 0.6.0
+
+### Patch Changes
+
+- Updated dependencies [[`dd4712b`](https://github.com/polvallverdu/pipedog/commit/dd4712bcedc3ac408918651673743fe90520f8db)]:
+  - @pipedog/core@0.6.0
+  - @pipedog/onnx@0.6.0
+
 ## 0.5.0
 
 ### Patch Changes

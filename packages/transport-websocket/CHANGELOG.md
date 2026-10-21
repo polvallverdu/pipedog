@@ -1,5 +1,19 @@
 # @pipedog/transport-websocket
 
+## 0.6.0
+
+### Patch Changes
+
+- [#40](https://github.com/polvallverdu/pipedog/pull/40) [`626112c`](https://github.com/polvallverdu/pipedog/commit/626112cb7f3974ebc85b4604bbbf42ab38554bdd) Thanks [@polvallverdu](https://github.com/polvallverdu)! - `websocketFetchHandler` and `upgradeWebSocket` now upgrade on Bun, with the server Bun passes to
+  `fetch` (`handler(request, server)`, served with the new `bunWebSocket` handlers), and on Node
+  through the new `serveFetch()`, which serves a fetch handler with WebSocket upgrades on Bun, Node
+  (with `ws`) and Deno.
+- Updated dependencies [[`b53032d`](https://github.com/polvallverdu/pipedog/commit/b53032d6a46103d5a1c1fd16b3b61dfd38a7bc2b), [`dd4712b`](https://github.com/polvallverdu/pipedog/commit/dd4712bcedc3ac408918651673743fe90520f8db)]:
+  - @pipedog/asyncio@0.6.0
+  - @pipedog/core@0.6.0
+  - @pipedog/serializer-protobuf@0.6.0
+  - @pipedog/serializer-rtvi-client@0.6.0
+
 ## 0.5.0
 
 ### Patch Changes

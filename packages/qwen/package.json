@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/qwen",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Qwen LLM service (QwenLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",
