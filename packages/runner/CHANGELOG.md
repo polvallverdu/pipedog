@@ -1,5 +1,19 @@
 # @pipedog/runner
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`9f1ce7a`](https://github.com/polvallverdu/pipedog/commit/9f1ce7aea9ae80195d7ff8da0cb591f7910641ac)]:
+  - @pipedog/asyncio@0.6.1
+  - @pipedog/core@0.6.1
+  - @pipedog/serializer-exotel@0.6.1
+  - @pipedog/serializer-plivo@0.6.1
+  - @pipedog/serializer-telnyx@0.6.1
+  - @pipedog/serializer-twilio@0.6.1
+  - @pipedog/transport-smallwebrtc@0.6.1
+  - @pipedog/transport-websocket@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes

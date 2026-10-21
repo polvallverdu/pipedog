@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/grok",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Deprecated alias of @pipedog/xai's Grok LLM service, for pipedog.",
   "keywords": [
     "pipecat",

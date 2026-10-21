@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/crusoe",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Crusoe LLM service (CrusoeLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",
