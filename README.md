@@ -187,6 +187,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/resampler-wasm`](packages/resampler-wasm) | High-quality PCM resampling (rubato sinc, compiled to WebAssembly), one-shot and streaming. |
 | [`@pipedog/sentencex-wasm`](packages/sentencex-wasm) | Wikimedia sentencex sentence segmentation, compiled to WebAssembly. |
 | [`@pipedog/tracing`](packages/tracing) | OpenTelemetry setup (`setupTracing()`) with OTLP/HTTP and console exporters. |
+| [`@pipedog/mcp`](packages/mcp) | A local MCP server with these docs and the API of every package, for coding agents: `claude mcp add pipedog -- npx -y @pipedog/mcp`. |
 
 Where Python installs `pipecat-ai[deepgram,openai]`, you add `@pipedog/core`, `@pipedog/deepgram`
 and `@pipedog/openai`. Modules are imported by their upstream path:
@@ -213,6 +214,8 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 - [Frameworks](https://polvallverdu.github.io/pipedog/docs/frameworks/): Express, Hono, Next.js and more
 - [Coming from Pipecat (Python)](https://polvallverdu.github.io/pipedog/docs/coming-from-pipecat/)
 - [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/)
+- [Docs for AI tools](https://polvallverdu.github.io/pipedog/docs/guides/llms/): llms.txt, Markdown pages
+  and the [`@pipedog/mcp`](packages/mcp) server for coding agents
 
 ## Status
 

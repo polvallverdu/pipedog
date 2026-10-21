@@ -7,6 +7,8 @@ coverage/
 .env
 .next/
 apps/docs/out/
+# The docs snapshot @pipedog/mcp ships, written at release time (bun run mcp:snapshot).
+packages/mcp/snapshot/
 .wrangler/
 .source/
 next-env.d.ts

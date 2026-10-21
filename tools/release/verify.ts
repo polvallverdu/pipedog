@@ -4,12 +4,15 @@
 // Rehearse a release without touching the repo: build, stage each publishable
 // package in its npm form, `npm pack` it, install all tarballs into a fresh
 // project, and import every export from plain Node (no TypeScript, no Bun).
+// @pipedog/mcp gets its docs snapshot as in `bun run release` (a docs build for
+// the production URL), and its server is run from the tarball and queried.
 //
 //   bun tools/release/verify.ts
 
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  checkPackageFiles,
   checkPublishManifest,
   type Manifest,
   preparePackageDir,
@@ -42,6 +45,12 @@ await sh(
   ROOT,
 );
 
+// The docs snapshot @pipedog/mcp bundles, made as `bun run release` makes it, but
+// written here instead of into the package.
+const MCP_SNAPSHOT = join(OUT, "mcp-snapshot", "docs.json");
+console.log("docs snapshot for @pipedog/mcp (docs build)...");
+await sh(["bun", "packages/mcp/scripts/snapshot.ts", "--build", "--out", MCP_SNAPSHOT], ROOT);
+
 const pkgs = publishablePackages();
 const versions = new Map([...pkgs].map(([n, p]) => [n, p.manifest.version as string]));
 const tarballs: string[] = [];
@@ -59,7 +68,15 @@ for (const [name, p] of pkgs) {
     const from = join(p.dir, entry);
     if (existsSync(from)) cpSync(from, join(stage, entry), { recursive: true });
   }
+  if (name === "@pipedog/mcp") {
+    mkdirSync(join(stage, "snapshot"), { recursive: true });
+    cpSync(MCP_SNAPSHOT, join(stage, "snapshot", "docs.json"));
+  }
   preparePackageDir(stage, p.manifest, versions);
+  for (const issue of checkPackageFiles(stage, m)) {
+    problems++;
+    console.error(`❌ ${name}: ${issue}`);
+  }
   const tgz = (
     await sh(["npm", "pack", "--silent", "--pack-destination", join(OUT, "tarballs")], stage)
   )
@@ -114,8 +131,27 @@ writeFileSync(
   join(app, "smoke.mjs"),
   `import { runTest } from "@pipedog/core/tests/utils";\nimport { TextFrame } from "@pipedog/core/frames/frames";\nimport { FrameProcessor } from "@pipedog/core/processors/frame_processor";\nimport { createTask, sleep, CancelledError } from "@pipedog/asyncio";\nimport { segment } from "@pipedog/sentencex-wasm";\nimport { initResampler } from "@pipedog/resampler-wasm";\nclass Pass extends FrameProcessor { async processFrame(f, d) { await super.processFrame(f, d); await this.pushFrame(f, d); } }\nconst [down] = await runTest(new Pass(), { framesToSend: [new TextFrame({ text: "hi" })], expectedDownFrames: [TextFrame] });\nif (down[0].text !== "hi") throw new Error("pipeline");\nconst t = createTask(() => sleep(10)); t.cancel(); try { await t; throw new Error("no cancel"); } catch (e) { if (!(e instanceof CancelledError)) throw e; }\nif (segment("en", "Dr. Smith arrived. He sat.").length !== 2) throw new Error("sentencex");\nconst r = await initResampler(); if (!r) throw new Error("resampler");\nconsole.log("smoke ok: pipeline, cancellation, sentencex, resampler");\n`,
 );
+// The docs MCP server, run by its bin from the installed tarball, over stdio.
+writeFileSync(
+  join(app, "mcp.mjs"),
+  `import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+const client = new Client({ name: "release-verify", version: "0" });
+await client.connect(new StdioClientTransport({ command: "node", args: ["node_modules/.bin/pipedog-mcp"] }));
+const text = async (name, args) => (await client.callTool({ name, arguments: args })).content[0].text;
+const search = await text("search_docs", { query: "deepgram", limit: 1 });
+if (!search.includes("slug: services/stt/deepgram")) throw new Error("search_docs: " + search);
+const page = await text("read_page", { slug: "services/stt/deepgram" });
+if (!page.startsWith("# Deepgram")) throw new Error("read_page: " + page.slice(0, 200));
+const api = await text("get_api", { symbol: "DeepgramSTTService" });
+if (!api.includes("DeepgramSTTServiceOptions")) throw new Error("get_api: " + api.slice(0, 200));
+const pages = await text("list_pages", {});
+await client.close();
+console.log("mcp ok: " + pages.split("\\n")[0]);
+`,
+);
 let ok = true;
-for (const script of ["check.mjs", "smoke.mjs"]) {
+for (const script of ["check.mjs", "smoke.mjs", "mcp.mjs"]) {
   try {
     console.log((await sh(["node", script], app)).trim());
   } catch (e) {

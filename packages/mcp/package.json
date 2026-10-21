@@ -1,0 +1,62 @@
+{
+  "name": "@pipedog/mcp",
+  "version": "0.4.0",
+  "description": "A local stdio MCP server with the pipedog docs, for coding agents: list, search and read the pages, and look up the API of every @pipedog/* package. The docs ship with each release and work offline.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "mcp",
+    "model-context-protocol",
+    "docs",
+    "llms-txt",
+    "coding-agent"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/mcp#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "pipedog-mcp": "./dist/bin.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "src",
+    "snapshot"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node"
+    ],
+    "compat": {
+      "unsupportedRuntimes": [
+        "deno",
+        "workerd"
+      ]
+    }
+  }
+}
