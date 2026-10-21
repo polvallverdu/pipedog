@@ -35,6 +35,7 @@
         "@pipedog/deepgram": "workspace:*",
         "@pipedog/deepseek": "workspace:*",
         "@pipedog/elevenlabs": "workspace:*",
+        "@pipedog/evals": "workspace:*",
         "@pipedog/fireworks": "workspace:*",
         "@pipedog/flows": "workspace:*",
         "@pipedog/google": "workspace:*",
@@ -337,6 +338,30 @@
         "@pipedog/core": "workspace:*",
       },
     },
+    "packages/evals": {
+      "name": "@pipedog/evals",
+      "version": "0.6.1",
+      "bin": {
+        "pipedog-eval": "./dist/__main__.js",
+      },
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/serializer-rtvi-client": "workspace:*",
+        "@pipedog/transport-websocket": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "24.19.1",
+      },
+      "peerDependencies": {
+        "@pipedog/audio-silero": "workspace:*",
+        "@pipedog/ollama": "workspace:*",
+      },
+      "optionalPeers": [
+        "@pipedog/audio-silero",
+        "@pipedog/ollama",
+      ],
+    },
     "packages/fireworks": {
       "name": "@pipedog/fireworks",
       "version": "0.6.1",
@@ -571,10 +596,12 @@
         "ws": "8.22.0",
       },
       "peerDependencies": {
+        "@pipedog/evals": "workspace:*",
         "@pipedog/transport-livekit": "workspace:*",
         "ws": "^8.0.0",
       },
       "optionalPeers": [
+        "@pipedog/evals",
         "@pipedog/transport-livekit",
         "ws",
       ],
@@ -1270,6 +1297,8 @@
     "@pipedog/docs": ["@pipedog/docs@workspace:apps/docs"],
 
     "@pipedog/elevenlabs": ["@pipedog/elevenlabs@workspace:packages/elevenlabs"],
+
+    "@pipedog/evals": ["@pipedog/evals@workspace:packages/evals"],
 
     "@pipedog/example-framework-snippets": ["@pipedog/example-framework-snippets@workspace:examples/framework-snippets"],
 

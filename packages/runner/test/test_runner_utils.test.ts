@@ -7,9 +7,8 @@
 /**
  * Upstream's runner utils tests: `CallData`, `parse_telephony_websocket` and
  * `create_transport`, plus pipedog's tests of `createTransport` (hang-ups,
- * unported transports) and the SDP munging. The eval and Daily dial-in tests
- * need modules that are not ported (`pipecat.evals`, the Daily transport) and
- * are `todo`.
+ * unported transports) and the SDP munging. The Daily dial-in tests need the
+ * Daily transport, which is not ported, and are `todo`.
  *
  * Upstream mocks the socket with `MagicMock().iter_text.return_value =
  * MockAsyncIterator([...])`; here the socket is a stand-in with Starlette's
@@ -18,6 +17,9 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
+import { EvalFastAPIWebsocketTransport } from "@pipedog/evals/fastapi_transport";
+import { EvalConnectionFlags, EvalSerializer, evalConnectMessage } from "@pipedog/evals/serializer";
+import { EvalTransportParams } from "@pipedog/evals/transport";
 import { TelnyxFrameSerializer } from "@pipedog/serializer-telnyx/telnyx";
 import { TwilioFrameSerializer } from "@pipedog/serializer-twilio/twilio";
 import { LiveKitParams, LiveKitTransport } from "@pipedog/transport-livekit/transport";
@@ -273,8 +275,27 @@ describe("TestParseTelephonyIdempotent", () => {
 });
 
 describe("TestParseEvalConnect", () => {
-  test.todo("test_eval_connect_detected_from_first_message (needs pipecat.evals.serializer)");
-  test.todo("test_eval_connect_leaves_the_next_message_unread (needs pipecat.evals.serializer)");
+  test("test_eval_connect_detected_from_first_message", async () => {
+    const flags = new EvalConnectionFlags({ skipTts: true, captureBotAudio: true });
+    const ws = new MockWebsocket([evalConnectMessage(flags)]);
+
+    const [transportType, callData] = await parseTelephonyWebsocket(ws);
+
+    expect(transportType).toEqual("eval");
+    expect(EvalConnectionFlags.modelValidate(callData.body)).toEqual(flags);
+  });
+
+  test("test_eval_connect_leaves_the_next_message_unread", async () => {
+    // The harness's client-ready follows eval-connect and must reach the bot.
+    const messages = new MockWebsocket([
+      evalConnectMessage(new EvalConnectionFlags()),
+      JSON.stringify({ type: "client-ready" }),
+    ]);
+
+    await parseTelephonyWebsocket(messages);
+
+    expect(messages.index).toEqual(1);
+  });
 });
 
 // The serializers hang up through the providers' REST APIs and refuse to start
@@ -440,10 +461,37 @@ describe("pipedog: createTransport", () => {
 });
 
 describe("TestCreateTransportEval", () => {
-  test.todo(
-    "test_eval_connect_builds_the_eval_transport_with_its_flags (needs pipecat.evals.transport)",
-  );
-  test.todo("test_eval_connect_without_eval_params_raises (needs pipecat.evals.transport)");
+  test("test_eval_connect_builds_the_eval_transport_with_its_flags", async () => {
+    const flags = new EvalConnectionFlags({ skipTts: true, captureBotAudio: true });
+    // Upstream's MagicMock socket: the eval-connect message as raw text.
+    const ws = connectionWith([]);
+    ws.feedMessage(evalConnectMessage(flags));
+    const args = new WebSocketRunnerArguments({ websocket: ws });
+
+    const transport = await createTransport(args, {
+      eval: () => new EvalTransportParams({ allowedOrigins: [] }),
+    });
+
+    expect(transport).toBeInstanceOf(EvalFastAPIWebsocketTransport);
+    expect(args.transportType).toEqual("eval");
+    const serializer = (transport as any)._params.serializer;
+    expect(serializer).toBeInstanceOf(EvalSerializer);
+    expect(serializer._captureAudio).toBe(true);
+  });
+
+  test("test_eval_connect_without_eval_params_raises", async () => {
+    const ws = connectionWith([]);
+    ws.feedMessage(evalConnectMessage(new EvalConnectionFlags()));
+    const args = new WebSocketRunnerArguments({ websocket: ws });
+
+    const error = await createTransport(args, {
+      twilio: () => new FastAPIWebsocketParams({ allowedOrigins: [] }),
+    }).catch((e) => e);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toEqual("ValueError");
+    expect(String(error.message)).toContain("'eval'");
+  });
 });
 
 describe("TestMaybeApplyDailyDialin", () => {

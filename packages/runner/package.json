@@ -53,10 +53,14 @@
     "livekit-server-sdk": "2.19.1"
   },
   "peerDependencies": {
+    "@pipedog/evals": "workspace:*",
     "@pipedog/transport-livekit": "workspace:*",
     "ws": "^8.0.0"
   },
   "peerDependenciesMeta": {
+    "@pipedog/evals": {
+      "optional": true
+    },
     "@pipedog/transport-livekit": {
       "optional": true
     },

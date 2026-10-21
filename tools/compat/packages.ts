@@ -161,6 +161,10 @@ export function optionalPeersToHide(pkg: PackageInfo, all: PackageInfo[]): strin
   const uses = ((own.pipecat as { compat?: { usesOptionalPeers?: string[] } } | undefined)?.compat
     ?.usesOptionalPeers ?? []) as string[];
   const required = new Set<string>([
+    // A package is never hidden from its own smoke test, even when another
+    // package declares it as an optional peer (e.g. @pipedog/evals on
+    // @pipedog/audio-silero).
+    own.name as string,
     ...Object.keys(own.dependencies ?? {}),
     ...Object.keys(own.peerDependencies ?? {}).filter((n) => !ownMeta[n]?.optional),
     ...uses,

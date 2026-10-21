@@ -8,13 +8,13 @@
  * Transport utility functions.
  *
  * `parseTelephonyWebsocket` detects the telephony provider (Twilio, Telnyx,
- * Plivo, Exotel) from its first WebSocket messages; `telephonyHandshake` (a
+ * Plivo, Exotel), or an eval harness's `eval-connect`, from its first
+ * WebSocket messages; `telephonyHandshake` (a
  * pipedog addition) reports the same parse as a typed outcome, including a
  * call that hung up before its handshake completed. `createTransport` builds
  * the transport the runner arguments ask for, and `smallwebrtcSdpMunging`
- * adapts SDP for ESP32 peers. Not ported: the eval-connect detection (needs
- * `pipecat.evals`), the Daily dial-in helper and the Daily, LiveKit, Vonage
- * and MOQ transports (not ported), and the deprecated
+ * adapts SDP for ESP32 peers. Not ported: the Daily dial-in helper and the
+ * Daily, LiveKit, Vonage and MOQ transports (not ported), and the deprecated
  * `get_transport_client_id` and `maybe_capture_participant_*`.
  *
  * Nothing here depends on a runtime or a web framework: the socket is
@@ -55,7 +55,7 @@ import {
 } from "./types.ts";
 
 /** A telephony provider `parseTelephonyWebsocket` can detect, or `"unknown"`. */
-export type TelephonyTransportType = "twilio" | "telnyx" | "plivo" | "exotel" | "unknown";
+export type TelephonyTransportType = "twilio" | "telnyx" | "plivo" | "exotel" | "eval" | "unknown";
 
 /** A message from `receive()`, shaped like Starlette's (ASGI) WebSocket messages. */
 export interface TelephonyWebsocketMessage {
@@ -153,6 +153,18 @@ export function _detectTransportTypeFromMessage(messageData: JsonDict): Telephon
   return "unknown";
 }
 
+/** The eval flags of an `eval-connect` message, or `null` for any other message. */
+async function _parseEvalConnect(
+  message: unknown,
+): Promise<import("@pipedog/evals/serializer").EvalConnectionFlags | null> {
+  // A cheap check first, so non-eval connections don't import the evals package.
+  if (!isRecord(message) || message.type !== "client-message") {
+    return null;
+  }
+  const { parseEvalConnect } = await import("@pipedog/evals/serializer");
+  return parseEvalConnect(message);
+}
+
 /** Raised when the socket closes before the first message. */
 export class TelephonyHandshakeError extends Error {
   override name = "ValueError";
@@ -207,6 +219,11 @@ const closedAfterOneMessage = new WeakSet<object>();
  * - Plivo: `stream_id`, `call_id`.
  * - Exotel (`ExotelCallData`): `stream_id`, `call_id`, `account_sid`, `from`,
  *   `to`, `custom_parameters`.
+ * - Eval (the harness's `eval-connect` message, sent first): `body` (the
+ *   connection's eval flags).
+ *
+ * An eval is recognized from the first message alone; no second message is
+ * read, so the harness's next message reaches the eval transport.
  *
  * The parsed result is cached per socket, so this is idempotent: the
  * underlying message stream is single-use, but calling this function again
@@ -246,8 +263,16 @@ export async function parseTelephonyWebsocket(
   logger.trace(`First message: ${firstMessageRaw}`);
   firstMessage = parseMessage(firstMessageRaw);
 
-  // DIVERGENCE: upstream first checks for an eval harness's `eval-connect`
-  // message here (pipecat.evals). Evals are not ported, so it is not detected.
+  const evalFlags = await _parseEvalConnect(firstMessage);
+  if (evalFlags !== null) {
+    logger.debug("Detected transport: eval (from first message)");
+    const result: [TelephonyTransportType, CallData] = [
+      "eval",
+      new CallData({ body: evalFlags.modelDump() }),
+    ];
+    parsedTelephony.set(websocket, result);
+    return result;
+  }
 
   // Second message - optional, some providers may only send one
   const secondMessageRaw = await nextText(websocket);
@@ -446,7 +471,7 @@ export class TelephonyCallEndedError extends TelephonyHandshakeError {
 
 /**
  * Raised when the runner arguments select a transport pipedog has not ported
- * (Daily, Vonage Video Connector, MOQ, evals). Plays the part of the
+ * (Daily, Vonage Video Connector, MOQ). Plays the part of the
  * `ImportError` upstream raises when the transport's extra isn't installed.
  */
 export class TransportNotPortedError extends Error {
@@ -469,7 +494,7 @@ export type TransportParamsFactory = () => any;
 
 /**
  * Transport params factories by transport name: `"webrtc"`, `"websocket"`,
- * `"twilio"`, `"telnyx"`, `"plivo"`, `"exotel"` (and, for API parity,
+ * `"twilio"`, `"telnyx"`, `"plivo"`, `"exotel"`, `"eval"` (and, for API parity,
  * `"daily"`, `"livekit"`, `"vonage"`, `"moq"`).
  */
 export type TransportParamsMap = Record<string, TransportParamsFactory>;
@@ -494,6 +519,35 @@ export function _getTransportParams(
   }
   const params = transportParams[transportKey]!();
   logger.debug(`Using transport params for ${transportKey}`);
+  return params;
+}
+
+/**
+ * Get the eval transport's parameters, with its serializer defaulted.
+ *
+ * Defaulting the serializer to `EvalSerializer` means a bot only has to opt
+ * into audio input.
+ *
+ * @throws TransportParamsError (upstream's `ValueError`) If the `"eval"` entry
+ *   is missing or doesn't build an `EvalTransportParams`.
+ */
+export async function _getEvalTransportParams(
+  transportParams: TransportParamsMap,
+): Promise<import("@pipedog/evals/transport").EvalTransportParams> {
+  const { EvalSerializer } = await import("@pipedog/evals/serializer");
+  const { EvalTransportParams } = await import("@pipedog/evals/transport");
+
+  const params = _getTransportParams("eval", transportParams);
+  if (!(params instanceof EvalTransportParams)) {
+    throw new TransportParamsError(
+      "Eval transport params must be an EvalTransportParams instance. " +
+        "Set transportParams.eval to a function returning " +
+        "new EvalTransportParams({ audioInEnabled: true }).",
+    );
+  }
+  if (params.serializer === null) {
+    params.serializer = new EvalSerializer();
+  }
   return params;
 }
 
@@ -646,8 +700,16 @@ export async function createTransport(
     runnerArgs.transportType = transportType;
     runnerArgs.callData = callData;
 
-    // DIVERGENCE: upstream detects an eval harness's `eval-connect` message here
-    // and builds the eval transport. pipecat.evals is not ported.
+    if (transportType === "eval") {
+      const { EvalFastAPIWebsocketTransport } = await import("@pipedog/evals/fastapi_transport");
+      const { EvalConnectionFlags } = await import("@pipedog/evals/serializer");
+
+      return new EvalFastAPIWebsocketTransport(
+        runnerArgs.websocket,
+        await _getEvalTransportParams(transportParams),
+        EvalConnectionFlags.modelValidate(callData.body),
+      );
+    }
 
     const params = _getTransportParams(transportType, transportParams);
 
