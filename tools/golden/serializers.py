@@ -3,11 +3,15 @@
 #
 # Golden vectors for the serializer packages, produced by upstream pipecat.
 #
-# Runs upstream's ProtobufFrameSerializer, TelnyxFrameSerializer and
-# RTVIClientSerializer on fixed inputs and writes what they produce to each
+# Runs upstream's ProtobufFrameSerializer, TelnyxFrameSerializer,
+# RTVIClientSerializer and the telephony serializers in telephony.py (Twilio,
+# Plivo, Exotel, Vonage, Genesys) on fixed inputs and writes what they produce to each
 # package's test/fixtures/golden.json, which pipedog's golden tests replay.
 #
-#   <python with upstream pipecat + soxr + aiohttp installed> -I tools/golden/serializers.py
+#   <python with upstream pipecat + soxr + aiohttp installed> -I tools/golden/serializers.py [names]
+#
+# Names select what to regenerate (protobuf, telnyx, rtvi_client, twilio, plivo,
+# exotel, vonage, genesys); none regenerates everything.
 #
 # (e.g. a venv with `pip install -e .upstream/pipecat aiohttp soxr`), then
 # `bun test packages/serializer-*`. Needs `bunx` on PATH to format the output.
@@ -597,9 +601,23 @@ async def rtvi_client():
 
 
 async def main():
-    await protobuf()
-    await telnyx()
-    await rtvi_client()
+    import telephony
+
+    jobs = {
+        "protobuf": protobuf,
+        "telnyx": telnyx,
+        "rtvi_client": rtvi_client,
+        "twilio": lambda: telephony.twilio(write, sine_pcm, MESSAGES),
+        "plivo": lambda: telephony.plivo(write, sine_pcm, MESSAGES),
+        "exotel": lambda: telephony.exotel(write, sine_pcm, MESSAGES),
+        "vonage": lambda: telephony.vonage(write, sine_pcm, MESSAGES),
+        "genesys": lambda: telephony.genesys(write, sine_pcm, MESSAGES),
+    }
+    selected = sys.argv[1:] or list(jobs)
+    for name in selected:
+        await jobs[name]()
 
 
+# `-I` leaves the script's directory off sys.path; telephony.py sits next to it.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 asyncio.run(main())

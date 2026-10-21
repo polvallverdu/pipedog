@@ -1,0 +1,85 @@
+---
+title: Twilio quickstart
+description: Run a phone bot on Twilio Media Streams from examples/twilio-phone-bot, and test it without a phone.
+---
+
+This guide runs [`examples/twilio-phone-bot`](https://github.com/polvallverdu/pipedog/tree/main/examples/twilio-phone-bot):
+call a Twilio number and talk to an assistant built on OpenAI transcription, chat and speech.
+Press `#` to end the call; the bot finishes its sentence and hangs up.
+
+## What you need
+
+- [Bun](https://bun.sh) to install the repository, and [Deno](https://deno.com) to run the server.
+- An OpenAI API key.
+- A Twilio account and a phone number with voice.
+- A public HTTPS URL for your machine, e.g. from `ngrok http 8765`.
+
+## Run it
+
+```bash
+git clone https://github.com/polvallverdu/pipedog.git
+cd pipedog
+bun install
+cd examples/twilio-phone-bot
+OPENAI_API_KEY=sk-... \
+TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... \
+PUBLIC_URL=https://your-tunnel.ngrok.app \
+bun run start
+```
+
+Then, in the Twilio console, open your phone number and set **A call comes in** to
+**Webhook**, `https://your-tunnel.ngrok.app/twiml`, **HTTP POST**. Call the number.
+
+## How it works
+
+The app is one fetch handler with two routes (`src/app.ts`):
+
+- **`POST /twiml`** is Twilio's voice webhook. It checks the `X-Twilio-Signature` with your auth
+  token and answers with TwiML that connects the call to the media stream, passing the caller's
+  and the dialed numbers as stream parameters:
+
+  ```xml
+  <Response>
+    <Connect>
+      <Stream url="wss://your-tunnel.ngrok.app/ws">
+        <Parameter name="from_number" value="+15551234567" />
+        <Parameter name="to_number" value="+15559876543" />
+      </Stream>
+    </Connect>
+  </Response>
+  ```
+
+- **`GET /ws`** is the Media Streams WebSocket, upgraded by `websocketFetchHandler`. Each
+  connection is one call (`src/bot.ts`):
+  1. `telephonyHandshake` reads Twilio's `connected` and `start` messages: the stream SID, the
+     call SID and the numbers. A caller who hangs up first ends the session here.
+  2. `TwilioFrameSerializer` is built from them, with the account SID and auth token so it can hang
+     up the call.
+  3. `FastAPIWebsocketTransport` carries the call; the pipeline is OpenAI realtime transcription
+     (with turn detection on OpenAI's side), `OpenAILLMService` and `OpenAITTSService`. The
+     pipeline runs at 16 kHz in and 24 kHz out; the serializer converts to and from Twilio's 8 kHz
+     μ-law.
+  4. A small processor ends the pipeline when the caller presses `#`; on the `EndFrame`, the
+     serializer `POST`s `Status=completed` to Twilio's REST API.
+
+`src/deno.ts` serves it with `Deno.serve`. On Cloudflare Workers, serve `createPhoneApp(...)` from
+a Durable Object per call, as in `examples/workers-durable-voice-agent`.
+
+## Test it without a phone
+
+```bash
+bun test examples/twilio-phone-bot
+```
+
+The tests need no API key and no Twilio account. A scripted fake Twilio (`test/fake_twilio.ts`)
+sends `connected` and `start`, waits for the greeting, then plays a recorded question as 20 ms
+μ-law `media` events in real time and waits for the answer. The OpenAI APIs are the mock from
+`examples/test-mocks`, and Twilio's REST API is a local stand-in that records the hang-up. The
+same call runs in process (through a stand-in for Workers' `WebSocketPair`) and on Deno over a real
+port.
+
+## Next
+
+- [How phone calls connect](/docs/telephony), and the other providers' serializers.
+- [Twilio serializer reference](/docs/serializers/twilio): every option, regional hosts, and
+  hang-up behavior.

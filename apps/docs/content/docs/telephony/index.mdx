@@ -1,0 +1,77 @@
+---
+title: How phone calls connect
+description: How a phone call reaches a pipedog bot over a WebSocket media stream, and which serializer speaks each provider's protocol.
+---
+
+## The path of a call
+
+A phone bot is a pipeline whose transport is a WebSocket that a phone provider opens to your
+server. The provider handles the phone network; your server handles the conversation.
+
+```text
+caller ─► phone network ─► provider (Twilio, Telnyx, Plivo, Exotel, ...)
+                               │ 1. webhook: "a call came in"  ──►  your server answers with
+                               │                                    "stream it to wss://…/ws"
+                               │ 2. WebSocket to wss://…/ws    ◄─►  transport + serializer
+                               ▼                                    + your pipeline
+```
+
+1. **The call arrives.** The provider calls your webhook (Twilio and Telnyx with TwiML/TeXML,
+   Plivo with XML, Exotel and Genesys through a flow you configure in their console). The answer
+   tells the provider to open a bidirectional media stream to your WebSocket URL, optionally with
+   parameters such as the caller's number.
+2. **The stream opens.** The provider connects to your WebSocket and sends a handshake: a
+   `connected` message, then a `start` message with the **stream ID** and **call ID**.
+3. **The conversation.** Audio flows both ways as JSON messages (base64 μ-law at 8 kHz for most
+   providers) or binary frames (Vonage, Genesys). The provider's **serializer** turns them into
+   `InputAudioRawFrame`s at your pipeline's rate, and your bot's audio back into the provider's
+   format. Touch-tone keys become `InputDTMFFrame`s; an interruption tells the provider to drop
+   buffered audio.
+4. **The end.** When the caller hangs up, the provider closes the socket and the transport fires
+   `on_client_disconnected`. When your bot ends the call (an `EndFrame`), serializers that support
+   it hang up through the provider's REST API, so the caller isn't left on a silent line.
+
+All of this runs over a plain WebSocket, so the same bot runs on Bun, Node, Deno and Cloudflare
+Workers. On Deno and Workers, accept the socket with `websocketFetchHandler` from
+`@pipedog/transport-websocket`; on Bun and Node, use its server adapters. See
+[WebSocket](/docs/transports/websocket).
+
+## Serializers
+
+| Provider | Serializer | Audio | Hangs up on `EndFrame` |
+|---|---|---|---|
+| [Twilio](/docs/serializers/twilio) | `TwilioFrameSerializer` | μ-law 8 kHz, JSON | Yes (REST) |
+| [Telnyx](/docs/serializers/telnyx) | `TelnyxFrameSerializer` | μ-law or A-law 8 kHz, JSON | Yes (REST) |
+| [Plivo](/docs/serializers/plivo) | `PlivoFrameSerializer` | μ-law 8 kHz, JSON | Yes (REST) |
+| [Exotel](/docs/serializers/exotel) | `ExotelFrameSerializer` | PCM 8 kHz, JSON | No |
+| [Vonage](/docs/serializers/vonage) | `VonageFrameSerializer` | PCM 16 kHz, binary | No |
+| [Genesys](/docs/serializers/genesys) | `GenesysAudioHookSerializer` | μ-law 8 kHz, binary | Sends `disconnect` |
+
+Set `addWavHeader: false` on `FastAPIWebsocketParams` for all of them.
+
+## Reading the handshake
+
+`@pipedog/runner` reads the handshake for you. `parseTelephonyWebsocket(websocket)` is upstream's
+`parse_telephony_websocket`: it reads the first two messages, detects Twilio, Telnyx, Plivo or
+Exotel, and returns `[transportType, callData]`. `callData.callId` is the provider's call
+identifier (Twilio's `callSid`, Telnyx's `call_control_id`, Plivo's `callId`, Exotel's
+`call_sid`), and `callData.fromNumber` and `callData.toNumber` are filled where the provider sends
+them (on Twilio, from the `from_number` and `to_number` stream parameters).
+
+`telephonyHandshake(websocket)` returns the same parse as a typed outcome, so a caller who hangs up
+while the call is still connecting is an ordinary result rather than an exception:
+
+<include cwd meta='title="telephony.ts"'>snippets/telephony.ts#handshake</include>
+
+```bash
+bun add @pipedog/runner
+```
+
+`@pipedog/runner` is a partial port: only these telephony helpers are ported so far.
+
+## Next
+
+- [Twilio quickstart](/docs/telephony/twilio-quickstart): a working phone bot from
+  `examples/twilio-phone-bot`.
+- Testing without a phone: the example's tests drive the bot with a scripted fake Twilio that
+  speaks the Media Streams protocol, against mock OpenAI APIs.

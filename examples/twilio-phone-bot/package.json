@@ -1,0 +1,23 @@
+{
+  "name": "@pipedog/example-twilio-phone-bot",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A phone bot on Twilio Media Streams: the TwiML webhook and the media WebSocket as fetch handlers, OpenAI speech-to-text, chat and text-to-speech.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "scripts": {
+    "start": "deno run --allow-net --allow-env --allow-read src/deno.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/openai": "workspace:*",
+    "@pipedog/runner": "workspace:*",
+    "@pipedog/serializer-twilio": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*"
+  },
+  "devDependencies": {
+    "@pipedog/example-test-mocks": "workspace:*"
+  }
+}

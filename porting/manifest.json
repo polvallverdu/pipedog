@@ -6176,9 +6176,9 @@
       "tests": [
         "test_runner_run.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "in_progress",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "PARTIAL: index.ts re-exports the telephony helpers (types.ts, utils.ts) only. The development runner (run.py) is not ported."
     },
     {
       "module": "pipecat.runner.daily",
@@ -6306,9 +6306,9 @@
         "test_moq_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "in_progress",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "PARTIAL: only CallData, TelnyxCallData and ExotelCallData. Dict-style access is getItem/get/has; modelValidate mimics pydantic (aliases, populate_by_name, extra=allow, type checks). Not ported: DialinSettings, DailyDialinRequest, RunnerArguments and its subclasses."
     },
     {
       "module": "pipecat.runner.utils",
@@ -6345,9 +6345,9 @@
         "test_moq_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "in_progress",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "PARTIAL: only the telephony parse: _detectTransportTypeFromMessage and parseTelephonyWebsocket (socket = anything with Starlette's receive(); cache in a WeakMap). Added telephonyHandshake (pipedog-only typed outcome: started / closed / unrecognized). DIVERGENCE: eval-connect detection skipped (pipecat.evals not ported). Not ported: create_transport, _create_telephony_transport, SDP munging, Daily/LiveKit/Vonage helpers."
     },
     {
       "module": "pipecat.runner.vonage",
@@ -6430,9 +6430,9 @@
       "tests": [
         "test_exotel_serializer.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported in full. Golden vectors from upstream: byte-identical at 8 kHz, events with log lines."
     },
     {
       "module": "pipecat.serializers.genesys",
@@ -6455,9 +6455,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported in full. The position (upstream timedelta) is kept as integer microseconds, formatted like f'{x:.3f}' (half-even on exact ties) and parsed like float()+timedelta. Session id uses crypto.randomUUID(). Upstream tests/genesys/test_genesys_serializer.py is not in the manifest (the tools can't add test entries); it is ported to packages/serializer-genesys/test/test_genesys_serializer.test.ts (27 pass), plus golden AudioHook sessions recorded from upstream."
     },
     {
       "module": "pipecat.serializers.plivo",
@@ -6480,9 +6480,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported in full. Hang-up uses fetch in place of aiohttp. Golden vectors from upstream: byte-identical at 8 kHz, events and log lines, hang-up request and logs. No upstream test file; covered by test/golden.test.ts."
     },
     {
       "module": "pipecat.serializers.protobuf",
@@ -6586,9 +6586,9 @@
         "test_twilio_serializer.py",
         "test_twilio_serializer_base_url.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported in full. Constructor takes an options object. Hang-up uses fetch (cancelled with the pipeline) in place of aiohttp; it reads the 404 body once and parses it, and keeps aiohttp's JSON content-type check. Basic credentials are UTF-8 encoded (aiohttp: Latin-1). Golden vectors from upstream (tools/golden/telephony.py): wire output byte-identical at 8 kHz, hang-up request and log lines identical; resampled audio compared by SNR (resampler-wasm vs libsoxr)."
     },
     {
       "module": "pipecat.serializers.vonage",
@@ -6610,9 +6610,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported in full. Golden vectors from upstream: binary audio byte-identical at 16 kHz, events with upstream's log lines (Python repr of dicts reproduced). No upstream test file; covered by test/golden.test.ts."
     },
     {
       "module": "pipecat.services",
@@ -17981,8 +17981,8 @@
         "pipecat.serializers.exotel"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass"
     },
     {
       "file": "tests/test_fastapi_websocket.py",
@@ -20189,8 +20189,8 @@
         "pipecat.transports.daily.transport"
       ],
       "needsModules": 138,
-      "status": "todo",
-      "notes": ""
+      "status": "in_progress",
+      "notes": "PARTIAL: the telephony tests (TestCallData, TestParseTelephonyWebSocket, TestParseTelephonyIdempotent: 12 pass) are ported to packages/runner/test/test_runner_utils.test.ts, not the manifest's packages/evals path; the eval, create_transport, Daily and deprecated tests are test.todo (10)."
     },
     {
       "file": "tests/test_sagemaker_bidi_client.py",
@@ -21147,8 +21147,8 @@
         "pipecat.serializers.twilio"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "3 pass"
     },
     {
       "file": "tests/test_twilio_serializer_base_url.py",
@@ -21159,8 +21159,8 @@
         "pipecat.serializers.twilio"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass"
     },
     {
       "file": "tests/test_ui_commands.py",

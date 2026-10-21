@@ -99,6 +99,7 @@ Resampling between 8 kHz and the pipeline rate goes through core's resampler eng
 (`@pipedog/resampler-wasm` by default, a pure TypeScript fallback if it can't load) in place of
 libsoxr, so the samples differ slightly from upstream's.
 
-Upstream's runner detects Telnyx and parses its handshake for you (`parse_telephony_websocket`).
-That runner is not ported, so read the `start` message yourself, as in the example. Other
-telephony serializers not ported yet: Twilio, Plivo, Vonage, Exotel and Genesys.
+`parseTelephonyWebsocket` from `@pipedog/runner` detects Telnyx and parses its handshake for you
+(`callData.streamId`, `callData.callId` for the call control ID, and `outboundEncoding`); see
+[How phone calls connect](/docs/telephony#reading-the-handshake). The example above reads the
+`start` message by hand instead.
