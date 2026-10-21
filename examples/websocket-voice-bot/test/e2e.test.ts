@@ -85,19 +85,25 @@ beforeAll(async () => {
 });
 
 /**
- * The recorded question followed by 1.5 s of silence, written to the cache. The
- * original ends about 0.1 s after the last word, too short for the turn to end, and
- * the fake microphone loops the file.
+ * The recorded question between 2.5 s and 1.5 s of silence, written to the cache.
+ *
+ * The fake microphone starts playing the file as soon as the page connects, while
+ * the bot is still getting ready to greet. The original starts talking 0.05 s in, so
+ * the scripted user cut the greeting short: about 0.3 s after the bot started
+ * speaking under load, before the second sentence, which the bot then never said
+ * (nor showed). The silence before lets the user wait for the greeting (1 s of
+ * speech) to end. The original ends about 0.1 s after the last word, too short for
+ * the turn to end, and the fake microphone loops the file.
  */
 function paddedQuestionWav(): string {
   const source = readFileSync(QUESTION_WAV);
   const at = source.indexOf("data");
   const size = source.readUInt32LE(at + 4);
   const speech = source.subarray(at + 8, at + 8 + size);
-  const silence = new Uint8Array(24000 * 2 * 1.5);
-  const pcm = new Uint8Array(speech.length + silence.length);
-  pcm.set(speech);
-  pcm.set(silence, speech.length);
+  const before = new Uint8Array(24000 * 2 * 2.5);
+  const after = new Uint8Array(24000 * 2 * 1.5);
+  const pcm = new Uint8Array(before.length + speech.length + after.length);
+  pcm.set(speech, before.length);
 
   const header = new DataView(new ArrayBuffer(44));
   const text = (offset: number, s: string) =>
