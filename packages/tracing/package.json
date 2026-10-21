@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/tracing",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "OpenTelemetry tracing setup for pipedog: setupTracing() with OTLP/HTTP and console exporters, on Bun, Node, Deno and Cloudflare Workers.",
   "license": "BSD-2-Clause",
   "repository": {
