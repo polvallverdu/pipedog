@@ -218,9 +218,9 @@
         "test_get_llm_invocation_params.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Port is at packages/anthropic/src/anthropic_adapter.ts. Nothing upstream is deprecated, so nothing was dropped. tsc shows no errors in this file and biome is clean. No @anthropic-ai/sdk types are imported: MessageParam, TextBlockParam, ToolUnionParam and CacheControlEphemeralParam are declared structurally, as open_ai_adapter.ts does. ANTHROPIC_NOT_GIVEN is undefined and anthropicIsGiven is a type guard. getLlmInvocationParams(context, options) takes enablePromptCaching (required), systemInstruction, ensureLastMessageIsUser and systemPromptCacheTtl in one options object. The nested dataclass ConvertedMessages is exported at top level and also exposed as the static AnthropicLLMAdapter.ConvertedMessages. Python copy.deepcopy becomes structuredClone and json.loads becomes pyJsonLoads. Python's `tools or []` is handled with an isGiven-aware helper, because the TS NOT_GIVEN is a truthy object. Conversion errors are wrapped in LLMContextConversionError after rethrowIfCancelled. I created packages/anthropic (package.json, tsconfig.json). Another agent has since added the @anthropic-ai/sdk dependency to package.json, and I left it in place. pipecat.runtimes is [] until compat is run."
     },
     {
       "module": "pipecat.adapters.services.aws_nova_sonic_adapter",
@@ -350,9 +350,9 @@
         "test_get_llm_invocation_params.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported in full to /Users/pol/vscode/pipedog/packages/google/src/gemini_adapter.ts. Nothing upstream is deprecated, so nothing was dropped. Differences from upstream: (1) Messages are @google/genai Content/Part plain objects, so part fields use camelCase (inlineData, functionCall, thoughtSignature). The getMessagesForLogging copy has camelCase keys too, not the Python SDK's snake_case to_json_dict(). (2) The JS SDK carries bytes as base64 strings, so inline data and thought signatures are base64-encoded. prefersRawFileBytes stays true, so the resolver still caches raw bytes. The placeholder signature is the base64 of 'skip_thought_signature_validator'. A bookmark signature given as a Uint8Array is base64-encoded before it is applied. (3) Inline-data bookmark matching compares decoded byte lengths and accepts either base64 text or a Uint8Array. (4) Part.from_uri without a MIME type uses a local extension table in place of Python's mimetypes.guess_type, and throws 'Failed to determine mime type for file: ...' like upstream when the type is unknown. (5) The nested dataclasses (ConvertedMessages, MessageConversionResult, MessageConversionParams) are classes at module level and are also static members of GeminiLLMAdapter. (6) The (note, tool) warned-pairs set is keyed by a JSON string. tsc and biome pass for this file. | UNRESOLVED: gemini_adapter.ts _thoughtSignatureBookmarkMatchesPart logs the unknown bookmark with JSON.stringify where upstream uses a Python dict repr. Only the format of a warning log line differs, and core has no pyRepr helper, so I left it. | UNRESOLVED: gemini_adapter.ts _addPlaceholderThoughtSignatures and _applyThoughtSignaturesToMessages: upstream filters with isinstance(message, Content). The JS SDK's Content is a plain object with no class, so the port cannot tell a raw dict from Content and treats any object as Content. This cannot be fixed without a class to check against."
     },
     {
       "module": "pipecat.adapters.services.gemini_live_adapter",
@@ -372,9 +372,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported in full to /Users/pol/vscode/pipedog/packages/google/src/gemini_live_adapter.ts. getLlmInvocationParams takes { systemInstruction, serviceTools } and uses _realtimeSessionTools(...) ?? NOT_GIVEN. _convertToolCallsToText is a protected static. One small difference: in the '[Function X returned ...]' text, non-string tool content is stringified by JS template rules, not Python's repr. tsc and biome pass for this file. | UNRESOLVED: gemini_adapter.ts _thoughtSignatureBookmarkMatchesPart logs the unknown bookmark with JSON.stringify where upstream uses a Python dict repr. Only the format of a warning log line differs, and core has no pyRepr helper, so I left it. | UNRESOLVED: gemini_adapter.ts _addPlaceholderThoughtSignatures and _applyThoughtSignaturesToMessages: upstream filters with isinstance(message, Content). The JS SDK's Content is a plain object with no class, so the port cannot tell a raw dict from Content and treats any object as Content. This cannot be fixed without a class to check against."
     },
     {
       "module": "pipecat.adapters.services.grok_realtime_adapter",
@@ -507,9 +507,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/openai/src/open_ai_live_adapter.ts. Imports ./live/events.ts (InputItem, InputTextContent, OutputTextContent, MAX_INPUT_ITEMS; pydantic models assumed as classes with camelCase options constructors), which another agent has not written yet: that is the only remaining tsc error. Python's `from_standard_tools(...) or []` is mapped explicitly, because NOT_GIVEN is truthy in JS. A local pyRepr formats role=... in the debug log the way Python does. | UNRESOLVED: packages/openai/src/open_ai_realtime_adapter.ts: upstream builds the packed history text with json.dumps(indent=2, ensure_ascii=False), but the port uses JSON.stringify because core's pyJsonDumps has no indent option. Output differs only for numbers that Python and JS write differently. Adding indent to core/utils/py_json.ts is outside this task's files. | UNRESOLVED: Log and error messages that format a dict with Python's {msg} (open_ai_realtime_adapter's logger.error and its ValueError) use JSON.stringify in the port, so they show JSON rather than Python dict repr. Core has no shared Python repr helper. | UNRESOLVED: Typecheck reports two missing modules, ./live/events.ts and ./realtime/events.ts. These are expected: other agents are porting them concurrently. No other type or lint errors in the three files."
     },
     {
       "module": "pipecat.adapters.services.open_ai_realtime_adapter",
@@ -536,9 +536,9 @@
         "test_function_calling_adapters.py",
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/openai/src/open_ai_realtime_adapter.ts. Imports ./realtime/events.ts (ConversationItem, ItemContent with camelCase options such as callId), not written yet: that is the only remaining tsc error. The nested ConvertedMessages dataclass is now an exported class and also a static member of the adapter. DIVERGENCE: json.dumps(messages, indent=2, ensure_ascii=False) uses JSON.stringify(…, null, 2) because pyJsonDumps has no indent option. Output is the same except integral floats (1.0 becomes 1). ValueError is thrown as a plain Error. | UNRESOLVED: packages/openai/src/open_ai_realtime_adapter.ts: upstream builds the packed history text with json.dumps(indent=2, ensure_ascii=False), but the port uses JSON.stringify because core's pyJsonDumps has no indent option. Output differs only for numbers that Python and JS write differently. Adding indent to core/utils/py_json.ts is outside this task's files. | UNRESOLVED: Log and error messages that format a dict with Python's {msg} (open_ai_realtime_adapter's logger.error and its ValueError) use JSON.stringify in the port, so they show JSON rather than Python dict repr. Core has no shared Python repr helper. | UNRESOLVED: Typecheck reports two missing modules, ./live/events.ts and ./realtime/events.ts. These are expected: other agents are porting them concurrently. No other type or lint errors in the three files."
     },
     {
       "module": "pipecat.adapters.services.open_ai_responses_adapter",
@@ -564,9 +564,9 @@
         "test_get_llm_invocation_params.py",
         "test_openai_responses_logging.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/openai/src/open_ai_responses_adapter.ts. No dependency on the openai SDK: ResponseInputItemParam, ToolParam and FunctionToolParam are declared structurally, and NOT_GIVEN is undefined via core's openaiFromLlmContextTools, as in core open_ai_adapter.ts. DIVERGENCE: for tool messages whose content is not a string, Python's str(content) (a Python repr) is replaced by pyJsonDumps for objects. The except ValueError around inlinedFileContent is a broad catch with rethrowIfCancelled that wraps the error in LLMContextConversionError. Type-checks cleanly. Also created packages/openai/package.json (deps @pipedog/core and @pipedog/asyncio workspace:*, pipecat block with empty runtimes) and tsconfig.json modelled on google. Symlinked packages/openai/node_modules/@pipedog/{core,asyncio} so tsc resolves the imports; run bun install to make the links properly. | UNRESOLVED: packages/openai/src/open_ai_realtime_adapter.ts: upstream builds the packed history text with json.dumps(indent=2, ensure_ascii=False), but the port uses JSON.stringify because core's pyJsonDumps has no indent option. Output differs only for numbers that Python and JS write differently. Adding indent to core/utils/py_json.ts is outside this task's files. | UNRESOLVED: Log and error messages that format a dict with Python's {msg} (open_ai_realtime_adapter's logger.error and its ValueError) use JSON.stringify in the port, so they show JSON rather than Python dict repr. Core has no shared Python repr helper. | UNRESOLVED: Typecheck reports two missing modules, ./live/events.ts and ./realtime/events.ts. These are expected: other agents are porting them concurrently. No other type or lint errors in the three files."
     },
     {
       "module": "pipecat.adapters.services.perplexity_adapter",
@@ -6720,9 +6720,9 @@
         "test_run_inference.py",
         "test_ttfat_metrics.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Port is in packages/anthropic/src/llm.ts. It uses @anthropic-ai/sdk, which I added to packages/anthropic/package.json as ^0.131.0 (released 2026-09-30) and installed with bun install, so bun.lock changed. Dropped as deprecated: AnthropicLLMService.InputParams and the model/params constructor arguments. Changes from upstream: (1) The JS SDK has no NOT_GIVEN, so temperature, topK, topP and thinking store null to mean 'not sent'. An explicit null sampling value is therefore omitted from the request, where upstream would send JSON null. Before sending, any request field that anthropicIsGiven rejects is dropped. (2) The JS SDK has no extra_body option, so params keep upstream's extra_body entry and it is merged into the request JSON when the request is sent. (3) The JS SDK has no RequestTooLargeError, so a 413 is matched by status. APIStatusError is matched as Anthropic.APIError with a status set. (4) With retryOnTimeout, the first attempt runs under waitFor with its own AbortController, and that request is aborted before the retry. Every SDK await goes through abortable() with currentSignal(). (5) tracedLlm is installed on _processContext in a static block. (6) AnthropicThinkingConfig gets modelDump({excludeUnset}) and fromDict in place of pydantic. (7) The _THINKING_DEFAULTS table and the _modelName and _applySamplingSettings helpers are exported for tests. One tsc error remains, at llm.ts:365 (TS2344): AnthropicLLMAdapter does not satisfy the constraint BaseLLMAdapter<Record<string, unknown>>. The cause is outside this file: core's LLMService<TAdapter extends BaseLLMAdapter> defaults to Record<string, unknown>, and the adapter's AnthropicLLMInvocationParams is an interface with no index signature. Fix it in core (constrain to BaseLLMAdapter<object>, as LLMAdapterClass already does) or make the adapter's params a type alias. Possible core bug: ServiceSettings.fromMapping builds a plain ServiceSettings instead of `this`. If so, the override that turns a thinking dict into AnthropicThinkingConfig would find thinking in extra and never run. Biome warns once about `this` in the static fromMapping; this is deliberate so subclasses work. | UNRESOLVED: I compared packages/anthropic/src/llm.ts against llm.py line by line and found no real divergence to fix. Defaults use ?? (or || only where Python's `or` is meant), the broad catch puts CancelledError first and calls rethrowIfCancelled before the generic branch, every await is kept, durations are in seconds, the token estimate uses \\p{L}\\p{N}_ and Math.trunc to match Python's \\w and int(), usage fields use != null checks, the deprecated InputParams and model/params arguments are dropped, and the header and naming follow the conventions. | UNRESOLVED: Documented divergence I left as is: the sampling settings (temperature, topK, topP) and thinking default to null to stand in for Anthropic's NOT_GIVEN, so an explicitly set null is left out of the request where upstream would send JSON null. A cleaner fix would need the settings validation to accept ANTHROPIC_NOT_GIVEN (undefined) as a given value. | UNRESOLVED: Type error outside this file: tsc reports src/llm.ts(365,53) TS2344, 'AnthropicLLMAdapter' does not satisfy the constraint 'BaseLLMAdapter<Record<string, unknown>>'. It comes from the typing of AnthropicLLMInvocationParams in packages/anthropic/src/anthropic_adapter.ts (probably an interface with no index signature), not from llm.ts."
     },
     {
       "module": "pipecat.services.assemblyai",
@@ -8650,9 +8650,9 @@
       "tests": [
         "test_gemini_live_interaction_status.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Upstream __init__.py is empty; index.ts is the header plus `export {}`. | UNRESOLVED: packages/google/src/gemini_live/index.ts and packages/google/src/vertex/index.ts were checked: both upstream __init__.py files are empty or hold only the license header, so empty modules are correct. | UNRESOLVED: packages/google/src/image.ts and packages/google/src/rtvi.ts were checked line by line and no real divergence was found. Deprecated InputParams, params and negative_prompt are correctly left out, and the broad catches call rethrowIfCancelled. | UNRESOLVED: In llm.ts, grounding confidence uses `confidenceScores ?? []` where upstream passes None (pydantic would reject None there). This is a deliberate safe deviation and was left as is. | UNRESOLVED: Outside the reviewed files: core ServiceSettings.fromMapping (packages/core/src/services/settings.ts) builds a plain ServiceSettings instead of `this`. The Google override works around it; the core bug itself was not changed here. | UNRESOLVED: Outside the reviewed files: packages/google/src/gemini_live/llm.ts line 1637 has a type error (SessionResumptionConfig handle is string | null where the SDK expects string | undefined). It belongs to another module and was not touched."
     },
     {
       "module": "pipecat.services.google.gemini_live.file_api",
@@ -8670,9 +8670,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "aiohttp is replaced by the global fetch (injectable `fetch` option), cancelled through currentSignal()/abortable. aiofiles is replaced by an injected `fs` ({readFile}); without one, node:fs/promises is imported lazily on first upload, so uploadFile needs `fs` on Workers. mimetypes.guess_type is replaced by an exported guessMimeType() over a common-extension table (unknown extensions fall back to application/octet-stream). The constructor keeps positional (apiKey, baseUrl) and adds a trailing options object. | UNRESOLVED: packages/google/src/gemini_live/index.ts and packages/google/src/vertex/index.ts were checked: both upstream __init__.py files are empty or hold only the license header, so empty modules are correct. | UNRESOLVED: packages/google/src/image.ts and packages/google/src/rtvi.ts were checked line by line and no real divergence was found. Deprecated InputParams, params and negative_prompt are correctly left out, and the broad catches call rethrowIfCancelled. | UNRESOLVED: In llm.ts, grounding confidence uses `confidenceScores ?? []` where upstream passes None (pydantic would reject None there). This is a deliberate safe deviation and was left as is. | UNRESOLVED: Outside the reviewed files: core ServiceSettings.fromMapping (packages/core/src/services/settings.ts) builds a plain ServiceSettings instead of `this`. The Google override works around it; the core bug itself was not changed here. | UNRESOLVED: Outside the reviewed files: packages/google/src/gemini_live/llm.ts line 1637 has a type error (SessionResumptionConfig handle is string | null where the SDK expects string | undefined). It belongs to another module and was not touched."
     },
     {
       "module": "pipecat.services.google.gemini_live.llm",
@@ -8721,9 +8721,9 @@
         "test_realtime_intermediate_results.py",
         "test_ttfat_metrics.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Full port in packages/google/src/gemini_live/llm.ts on @google/genai Live (callback session feeding an asyncio Queue, the same pattern as gemini_live/stt.ts). Deprecated items left out: the InputParams class and the model/voiceId/params constructor args. Tracing is installed in a static block (tracedGeminiLive on _toolResult, _handleSessionReady, _handleMsgToolCall, _handleMsgTurnComplete; installTracedStt on _handleUserTranscription). Divergences: (1) historyConfig is set on the config, but @google/genai 2.27 does not send it in the setup message. (2) The interaction_status SDK-version warning never fires, because the JS SDK passes Gemini API messages through unchanged; it is kept behind the static _SDK_SUPPORTS_INTERACTION_STATUS = true flag. (3) Video goes through core encodeImage, so an already-encoded image (format is a MIME type) is sent as is, where upstream's Pillow call would fail. (4) A plain string that happens to be a Language value (e.g. \"es\") is converted to the Gemini locale, where upstream would send it as given. Null generation-config fields are dropped before sending (pydantic does the same). Typecheck is clean. core/test/test_realtime_service_tool_sync Gemini tests: 6 pass. | UNRESOLVED: packages/google/src/gemini_live/llm.ts: a few debug logs (_connect 'Setting tools', _toolResult 'tool_result_message', _createSingleResponse 'Creating response') print the objects with pyJsonDumps, so they show as JSON. Upstream f-strings print Python repr ({'k': 'v'}). The core has no Python-repr helper, and these are debug-only log lines that no test compares, so I left them as they are."
     },
     {
       "module": "pipecat.services.google.gemini_live.stt",
@@ -8770,9 +8770,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "The upstream __init__.py holds only the license header, so index.ts is `export {}`. | UNRESOLVED: packages/google/src/gemini_live/llm.ts: a few debug logs (_connect 'Setting tools', _toolResult 'tool_result_message', _createSingleResponse 'Creating response') print the objects with pyJsonDumps, so they show as JSON. Upstream f-strings print Python repr ({'k': 'v'}). The core has no Python-repr helper, and these are debug-only log lines that no test compares, so I left them as they are."
     },
     {
       "module": "pipecat.services.google.gemini_live.vertex.llm",
@@ -8792,9 +8792,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "GeminiLiveVertexLLMService builds a GoogleGenAI({vertexai, project, location, googleAuthOptions}) client. Deprecated model/voiceId/params args are left out. Auth uses the google-auth-library path that only the SDK's Node build has, so this class runs on Bun, Node and Deno but not workerd. DIVERGENCE: upstream raises 'No valid credentials provided.' in the constructor when ADC is missing and refreshes the token there. In JS, loading the key file, finding ADC and refreshing the token are async, so they happen on first connect; inline credentials are still parsed in the constructor. The parent constructor calls createClient() before the Vertex fields exist, so the override skips that call and the constructor calls it again at the end. | UNRESOLVED: packages/google/src/gemini_live/llm.ts: a few debug logs (_connect 'Setting tools', _toolResult 'tool_result_message', _createSingleResponse 'Creating response') print the objects with pyJsonDumps, so they show as JSON. Upstream f-strings print Python repr ({'k': 'v'}). The core has no Python-repr helper, and these are debug-only log lines that no test compares, so I left them as they are."
     },
     {
       "module": "pipecat.services.google.image",
@@ -8823,9 +8823,9 @@
         "test_google_image.py",
         "test_google_image_gen.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "PARTIAL | Pillow decoding has no edge-compatible JS equivalent. Decoding goes through an injectable `imageDecoder` (new file packages/google/src/image_decoder.ts). The default notPortedImageDecoder throws \"not ported yet\", so without a decoder each generated image yields an ErrorFrame. Deprecated InputParams, the `params` option and the `negativePrompt` setting are dropped. A `client` option was added so the GenAI client can be injected. GRPC_ENABLE_FORK_SUPPORT is not ported. | UNRESOLVED: packages/google/src/gemini_live/index.ts and packages/google/src/vertex/index.ts were checked: both upstream __init__.py files are empty or hold only the license header, so empty modules are correct. | UNRESOLVED: packages/google/src/image.ts and packages/google/src/rtvi.ts were checked line by line and no real divergence was found. Deprecated InputParams, params and negative_prompt are correctly left out, and the broad catches call rethrowIfCancelled. | UNRESOLVED: In llm.ts, grounding confidence uses `confidenceScores ?? []` where upstream passes None (pydantic would reject None there). This is a deliberate safe deviation and was left as is. | UNRESOLVED: Outside the reviewed files: core ServiceSettings.fromMapping (packages/core/src/services/settings.ts) builds a plain ServiceSettings instead of `this`. The Google override works around it; the core bug itself was not changed here. | UNRESOLVED: Outside the reviewed files: packages/google/src/gemini_live/llm.ts line 1637 has a type error (SessionResumptionConfig handle is string | null where the SDK expects string | undefined). It belongs to another module and was not touched."
     },
     {
       "module": "pipecat.services.google.llm",
@@ -8871,9 +8871,9 @@
         "test_run_inference.py",
         "test_ttfat_metrics.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "PARTIAL | Partial only because inline image parts use the same imageDecoder stub as image.ts (without a decoder an image response becomes a pushed error); everything else is ported. Dropped as deprecated: InputParams and the model/params/systemInstruction constructor options. Generation params are built with the Python SDK's snake_case keys (so extra and the thinking-default log lines carry over) and converted to the JS SDK's camelCase GenerateContentConfig in _toGenerateContentConfig. The streaming request is made lazily on the first pull, matching Python. An abandoned stream is released by aborting its request, because a pending next() would block return(). DeadlineExceeded has no JS counterpart, so only TimeoutError is treated as a timeout. ClientError.status==INVALID_ARGUMENT is read from the 4xx ApiError body. Thought signatures stay as the SDK's base64 strings. GeminiLLMAdapter is imported from ./gemini_adapter.ts (the manifest places it in @pipedog/google). Typed as LLMService<GeminiLLMAdapter & BaseLLMAdapter> because GeminiLLMInvocationParams is an interface, which does not satisfy the Record<string, unknown> bound. GoogleLLMSettings.fromMapping maps fields itself, because core's ServiceSettings.fromMapping ignores `this` and always builds a plain ServiceSettings (a core bug that affects every subclass). _processContext is wrapped with tracedLlm in a static block. tsc and biome are clean for all files in this unit. | UNRESOLVED: packages/google/src/gemini_live/index.ts and packages/google/src/vertex/index.ts were checked: both upstream __init__.py files are empty or hold only the license header, so empty modules are correct. | UNRESOLVED: packages/google/src/image.ts and packages/google/src/rtvi.ts were checked line by line and no real divergence was found. Deprecated InputParams, params and negative_prompt are correctly left out, and the broad catches call rethrowIfCancelled. | UNRESOLVED: In llm.ts, grounding confidence uses `confidenceScores ?? []` where upstream passes None (pydantic would reject None there). This is a deliberate safe deviation and was left as is. | UNRESOLVED: Outside the reviewed files: core ServiceSettings.fromMapping (packages/core/src/services/settings.ts) builds a plain ServiceSettings instead of `this`. The Google override works around it; the core bug itself was not changed here. | UNRESOLVED: Outside the reviewed files: packages/google/src/gemini_live/llm.ts line 1637 has a type error (SessionResumptionConfig handle is string | null where the SDK expects string | undefined). It belongs to another module and was not touched."
     },
     {
       "module": "pipecat.services.google.rtvi",
@@ -8893,9 +8893,9 @@
         "pydantic"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "RTVISearchResponseMessageData and RTVIBotLLMSearchResponseMessage are small classes whose modelDump() writes the snake_case wire keys (search_result, rendered_content, origins[].site_uri/site_title/results), because core's rtvi/models.ts does not export its BaseModel field helpers. GoogleRTVIProcessor.createRtviObserver(options) ignores its options, as upstream does. | UNRESOLVED: packages/google/src/gemini_live/index.ts and packages/google/src/vertex/index.ts were checked: both upstream __init__.py files are empty or hold only the license header, so empty modules are correct. | UNRESOLVED: packages/google/src/image.ts and packages/google/src/rtvi.ts were checked line by line and no real divergence was found. Deprecated InputParams, params and negative_prompt are correctly left out, and the broad catches call rethrowIfCancelled. | UNRESOLVED: In llm.ts, grounding confidence uses `confidenceScores ?? []` where upstream passes None (pydantic would reject None there). This is a deliberate safe deviation and was left as is. | UNRESOLVED: Outside the reviewed files: core ServiceSettings.fromMapping (packages/core/src/services/settings.ts) builds a plain ServiceSettings instead of `this`. The Google override works around it; the core bug itself was not changed here. | UNRESOLVED: Outside the reviewed files: packages/google/src/gemini_live/llm.ts line 1637 has a type error (SessionResumptionConfig handle is string | null where the SDK expects string | undefined). It belongs to another module and was not touched."
     },
     {
       "module": "pipecat.services.google.stt",
@@ -8995,9 +8995,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Upstream __init__.py holds only the license header; index.ts is the header plus `export {}`. | UNRESOLVED: packages/google/src/gemini_live/index.ts and packages/google/src/vertex/index.ts were checked: both upstream __init__.py files are empty or hold only the license header, so empty modules are correct. | UNRESOLVED: packages/google/src/image.ts and packages/google/src/rtvi.ts were checked line by line and no real divergence was found. Deprecated InputParams, params and negative_prompt are correctly left out, and the broad catches call rethrowIfCancelled. | UNRESOLVED: In llm.ts, grounding confidence uses `confidenceScores ?? []` where upstream passes None (pydantic would reject None there). This is a deliberate safe deviation and was left as is. | UNRESOLVED: Outside the reviewed files: core ServiceSettings.fromMapping (packages/core/src/services/settings.ts) builds a plain ServiceSettings instead of `this`. The Google override works around it; the core bug itself was not changed here. | UNRESOLVED: Outside the reviewed files: packages/google/src/gemini_live/llm.ts line 1637 has a type error (SessionResumptionConfig handle is string | null where the SDK expects string | undefined). It belongs to another module and was not touched."
     },
     {
       "module": "pipecat.services.google.vertex.llm",
@@ -9019,9 +9019,9 @@
       "tests": [
         "test_google_thinking_defaults.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "GoogleVertexLLMService extends GoogleLLMService from ../llm.ts with adapterClass GeminiVertexLLMAdapter. Deprecated model/params/systemInstruction args are left out. Upstream sets GRPC_ENABLE_FORK_SUPPORT, which has nothing to do here (the SDK uses fetch), so it is dropped. Runtime limit, credentials divergence and createClient ordering are the same as the gemini_live Vertex service: Node build of @google/genai only, ADC and key file resolved on the first request, client created at the end of the constructor. | UNRESOLVED: packages/google/src/gemini_live/llm.ts: a few debug logs (_connect 'Setting tools', _toolResult 'tool_result_message', _createSingleResponse 'Creating response') print the objects with pyJsonDumps, so they show as JSON. Upstream f-strings print Python repr ({'k': 'v'}). The core has no Python-repr helper, and these are debug-only log lines that no test compares, so I left them as they are."
     },
     {
       "module": "pipecat.services.gradium",
@@ -10556,9 +10556,9 @@
         "test_openai_realtime_user_audio.py",
         "test_settings.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openai.base_llm",
@@ -10593,9 +10593,9 @@
         "test_openai_compatible_api_key.py",
         "test_openai_compatible_extra_body.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Uses the official `openai` JS SDK (fetch based; added `openai@^6.49.0` to packages/openai/package.json). Not ported because deprecated: InputParams and the model/params constructor options. The SDK's NOT_GIVEN is `undefined`. The store-mode sampling fields get it through the exported setOpenAINotGiven(), because TS can't widen inherited LLMSettings field types. DIVERGENCE: there is no httpx client or connection limits, so the SDK's own fetch is used. The JS SDK has no extra_body option, so extra_body is merged into the request JSON in _requestBody(). APIStatusError becomes APIError.status and APITimeoutError becomes APIConnectionTimeoutError. Stream chunks are awaited via abortable(), and the stream is aborted in finally. @traced_llm is applied by wrapping the prototype after the class. supportsDeveloperRole and _requiresApiKey are statics. LLMService is parameterized with OpenAILLMAdapter & BaseLLMAdapter because of the generic constraint. | UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openai.image",
@@ -10621,9 +10621,9 @@
       "tests": [
         "test_openai_image_gen.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Not ported because deprecated: the imageSize and model constructor options. DIVERGENCE: the required aiohttp_session is replaced by an optional `fetch` option. Pillow decode plus convert(\"RGB\") is replaced by decodePngToRgb, built on `fast-png` (pure JS; added `fast-png@^8.0.0`). It handles 8/16-bit, gray, alpha and palette PNGs. A pipedog-only `decodeImage` option lets callers supply a decoder for other formats. | UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openai.live",
@@ -10639,9 +10639,9 @@
       "tests": [
         "test_openai_live_service.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "The upstream __init__ is empty, so this is `export {}`. | UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openai.live.events",
@@ -10659,9 +10659,9 @@
       "tests": [
         "test_openai_live_service.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "The pydantic models are ported onto a small local LiveModel base, modelled on the rtvi/models.ts machinery. It has camelCase fields, constructors that take an options object and validate it, modelValidate() for snake_case wire data and modelDump()/toPayload() for snake_case output (exclude_none). extra=\"allow\" models keep unknown keys in modelExtra. LiveModelValidationError stands in for pydantic's ValidationError, and parse_server_event becomes parseServerEvent, which throws Error where upstream raises ValueError. event_id defaults to crypto.randomUUID(). | UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openai.live.llm",
@@ -10698,9 +10698,9 @@
       "tests": [
         "test_openai_live_service.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/openai/src/live/llm.ts. Ports OpenAILiveLLMSettings, ResponsesDelegation, ClientDelegation, _TurnGrouper, _LiveDelegation, _PendingResponse and OpenAILiveLLMService, along with the chunking and token-estimate helpers. The helpers work on code points, as Python does. The WebSocket is opened with core's websocketConnect and an Authorization header. A webSocketFactory option was added that upstream does not have, for runtimes whose WebSocket can't send headers, such as Workers. DIVERGENCE: upstream skips only ValueError from parse_server_event; this port skips any non-cancellation error from parseServerEvent, which is the only error that function raises. OpenAIResponsesReasoningConfig is sent as its non-null effort, summary and mode fields, which matches model_dump(exclude_none=True). The tools snapshot uses pyJsonDumps on a key-sorted copy, because pyJsonDumps has no sort_keys. The LLMService generic is OpenAILiveLLMAdapter & BaseLLMAdapter, the same pattern google uses. No deprecated APIs upstream. The only remaining tsc error is the missing ../responses/llm.ts, which another agent has not written yet. It imports OpenAIResponsesLLMSettings, which needs model, systemInstruction, maxCompletionTokens, reasoning and extra, and OpenAIResponsesReasoningConfig, which needs effort, summary and mode."
     },
     {
       "module": "pipecat.services.openai.llm",
@@ -10733,9 +10733,9 @@
         "test_sarvam_llm.py",
         "test_ui_worker.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Not ported because deprecated: the model and params constructor options, including the service_tier fallback from params. serviceTier comes only from its own option. | UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openai.realtime",
@@ -10755,9 +10755,9 @@
         "test_openai_realtime_user_audio.py",
         "test_settings.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "The upstream __init__ is empty (0 lines), so this is `export {}`. | UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openai.realtime.events",
@@ -10785,9 +10785,9 @@
         "test_openai_realtime_user_audio.py",
         "test_settings.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/openai/src/realtime/events.ts. The pydantic models become classes on a small local BaseModel. Fields are camelCase and each constructor takes an options object. modelValidate() reads snake_case wire keys, and modelDump({excludeNone}) / toJSON() write them, so the wire format is unchanged. modelCopy({update}) covers model_copy. SessionProperties.modelFields covers model_fields, mapping camelCase names to wire keys. TokenDetails keeps extra keys, available through modelExtra. Unions are resolved by type: the audio format, and turn detection as bool or config. The SessionProperties tools validator runs in the constructor through LLMContext._normalizeAndValidateTools. The SessionUpdateEvent override that turns turn_detection false into null is kept. Validation is reduced to required fields and the type literal of server events, which raise ValidationError. Value types are not checked. parseServerEvent also accepts UTF-8 bytes. A smoke test at runtime confirmed parse, dump, extra fields and the error message match upstream. No deprecated APIs upstream. No tsc errors."
     },
     {
       "module": "pipecat.services.openai.realtime.llm",
@@ -10834,9 +10834,9 @@
         "test_realtime_tool_sync.py",
         "test_settings.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/openai/src/realtime/llm.ts. Not ported because deprecated: the `model` and `sessionProperties` constructor options (use `settings`) and the `_warn_init_param_moved_to_settings` calls that went with them. Divergences: the websocket is core `websocketConnect()`; video frames are encoded with core `encodeImage()` instead of PIL, and the data URI uses the MIME type that returns; the tracing decorators (tracedOpenaiRealtime x3, tracedStt via installTracedStt) are applied in a static block; `get_args(ImageDetail)` is a local constant list; `fromMapping` reads `SessionProperties.modelFields` and accepts both snake_case and camelCase keys; `_handleEvtError` logs the event with JSON.stringify where Python uses the pydantic repr. The service type parameter is `OpenAIRealtimeLLMAdapter & BaseLLMAdapter`, because the adapter's invocation-params interface does not satisfy LLMService's `Record<string, unknown>` constraint. Audio resampling uses core `createStreamResampler()`, which is the soxr stub, so input audio that is not already 24 kHz throws until core has a resampler. CORE BUG FOUND, not fixed because it is outside this unit: `LLMService._resolveAdapterClass` in packages/core/src/services/llm_service.ts reads `LLMService.adapterClass` where it should read `this.adapterClass`. Every subclass's `static adapterClass` is therefore ignored, and in a smoke run both this service and the Responses services got OpenAILLMAdapter. Typecheck is clean for this file. | UNRESOLVED: packages/openai/src/realtime/llm.ts _handleEvtError formats the event with JSON.stringify, not pydantic's str(evt) repr. This is only an error message, so it was left as is | UNRESOLVED: packages/openai/src/realtime/llm.ts _sendUserVideo uses core encodeImage, which passes 'image/*' formats through. Upstream would fail in Image.frombytes on those. This is lenient behavior recorded in the porting notes, so it was left as is | UNRESOLVED: packages/openai/src/responses/llm.ts _hashInputItems is async (crypto.subtle) where upstream is sync, and it uses JSON.stringify with sorted keys, not Python's json.dumps separators. The hash is only compared with itself, so behavior holds, but there is an extra await point | UNRESOLVED: packages/openai/src/responses/llm.ts _reportEventUsage coalesces null token fields to 0 with ??. Upstream's dict.get(k, 0) would pass None to LLMTokenUsage, so the port is more lenient. Left as is | UNRESOLVED: Not in scope: core WebsocketLLMService._wsSend (packages/core/src/services/llm_service.ts) uses JSON.stringify for a wire payload; the Responses WS service sends through it | UNRESOLVED: No ported tests exist for these two modules (packages/openai has no test dir), so the fixes were checked only by typecheck (no errors in either file)"
     },
     {
       "module": "pipecat.services.openai.responses",
@@ -10850,9 +10850,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "The upstream __init__ is empty, so this is `export {}`. | UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openai.responses.llm",
@@ -10889,9 +10889,9 @@
         "test_openai_responses_websocket.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/openai/src/responses/llm.ts. Upstream `_BaseOpenAIResponsesLLMService` is used as a base of both LLMService (HTTP) and WebsocketLLMService (WS). It is ported as a defineMixin, `BaseOpenAIResponsesLLMServiceMixin`, with `_BaseOpenAIResponsesLLMService` as its plain-class form over LLMService. `OpenAIResponsesLLMService extends Mixin(WebsocketLLMService)`, and addVirtualBase makes `instanceof _BaseOpenAIResponsesLLMService` true for both services. The mixin's members are public (listed in the BaseOpenAIResponsesLLMServiceMembers and BaseOpenAIResponsesLLMServiceStatics interfaces). The HTTP client is the `openai` JS SDK, using the dependency another agent already added. Streamed events are plain objects, so upstream's isinstance checks became `event.type` checks. Each `next()` is wrapped in abortable(), and in `finally` the iterator is closed and the controller aborted, as base_llm does. APITimeoutError becomes APIConnectionTimeoutError, TIMEOUT_EXCEPTIONS becomes isTimeoutException(). The DefaultAsyncHttpxClient connection limits are dropped. OPENAI_NOT_GIVEN (undefined) is written straight into temperature, topP and maxCompletionTokens after the defaults are built, the same way base_llm does it. `_hashInputItems` uses WebCrypto SHA-256 over sort-keys JSON, which makes it, `_applyPreviousResponseOptimization` and `_storePreviousResponseState` async. The API key falls back to core getEnv('OPENAI_API_KEY'). tracedLlm is applied to both `_processContext` methods in static blocks. The adapter type is `OpenAIResponsesLLMAdapter & BaseLLMAdapter` (same constraint issue as realtime). Private names are exported for test ports: _RetryableError and its subclasses, _isOSeries, _THINKING_DEFAULTS, _modelName, _modelSupportsReasoning. Runtime is affected by the core `_resolveAdapterClass` bug described in the realtime entry: the adapter resolves to OpenAILLMAdapter until core is fixed. Typecheck is clean, and a temporary smoke test (deleted afterwards) passed for params building, the previous_response_id optimization and instanceof. | UNRESOLVED: packages/openai/src/realtime/llm.ts _handleEvtError formats the event with JSON.stringify, not pydantic's str(evt) repr. This is only an error message, so it was left as is | UNRESOLVED: packages/openai/src/realtime/llm.ts _sendUserVideo uses core encodeImage, which passes 'image/*' formats through. Upstream would fail in Image.frombytes on those. This is lenient behavior recorded in the porting notes, so it was left as is | UNRESOLVED: packages/openai/src/responses/llm.ts _hashInputItems is async (crypto.subtle) where upstream is sync, and it uses JSON.stringify with sorted keys, not Python's json.dumps separators. The hash is only compared with itself, so behavior holds, but there is an extra await point | UNRESOLVED: packages/openai/src/responses/llm.ts _reportEventUsage coalesces null token fields to 0 with ??. Upstream's dict.get(k, 0) would pass None to LLMTokenUsage, so the port is more lenient. Left as is | UNRESOLVED: Not in scope: core WebsocketLLMService._wsSend (packages/core/src/services/llm_service.ts) uses JSON.stringify for a wire payload; the Responses WS service sends through it | UNRESOLVED: No ported tests exist for these two modules (packages/openai has no test dir), so the fixes were checked only by typecheck (no errors in either file)"
     },
     {
       "module": "pipecat.services.openai.stt",
@@ -10926,9 +10926,9 @@
         "test_openai_http_client.py",
         "test_openai_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Depends on @pipedog/whisper/base_stt (BaseWhisperSTTService, BaseWhisperSTTSettings(+Options), BaseWhisperSTTServiceOptions, Transcription; also uses _client, _includeProbMetrics, _transcribe). That module is not written yet, and all the remaining tsc errors in stt.ts come from it. @pipedog/whisper is NOT yet in packages/openai/package.json dependencies because the workspace package doesn't exist and `bun install` would fail; add it once it does. Not ported because deprecated: model/language/prompt/temperature (OpenAISTTService) and model/language/prompt/noise_reduction (OpenAIRealtimeSTTService) constructor options. Realtime STT uses _websocketConnect with an Authorization header, which works on Bun, Node and Deno; Workers would need a webSocketFactory. File upload uses openai.toFile. | UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openai.tts",
@@ -10958,9 +10958,9 @@
         "test_openai_http_client.py",
         "test_tts_processing_metrics.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Not ported because deprecated: InputParams and the voice/model/instructions/speed/params constructor options. Uses the openai SDK's audio.speech.create, which returns a Response. Its body is re-chunked to chunkSize to match iter_bytes(chunk_size). DIVERGENCE: httpClient is a `fetch` function (passed as the SDK's fetch option) rather than an httpx client. @traced_tts is applied via installTracedTts. | UNRESOLVED: Not a bug, just unverified: stt.ts cannot be typechecked yet because `@pipedog/whisper/base_stt` is not ported. I checked it against the Python by hand. The other reviewed files show no type errors. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
     },
     {
       "module": "pipecat.services.openclaw",
@@ -12375,9 +12375,9 @@
       "tests": [
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported to packages/whisper/src/base_stt.ts with the names packages/openai/src/stt.ts already imports (BaseWhisperSTTService, BaseWhisperSTTServiceOptions, BaseWhisperSTTSettings, BaseWhisperSTTSettingsOptions, Transcription, languageToWhisperLanguage). Dropped as deprecated: the constructor args model, language, prompt and temperature, and their _warn_init_param_moved_to_settings calls. Settings still come through the settings option. _requires_api_key is a protected static, so a subclass can override it before the base constructor runs, and the ValueError becomes an Error with the same text. AsyncOpenAI becomes the openai JS SDK (apiKey, baseURL, fetch). httpClient is typed typeof fetch, as in packages/openai/src/tts.ts; upstream's httpx client and its Timeout and connection-limit behavior do not carry over. Transcription comes from openai/resources/audio/transcriptions. response.text.strip() becomes trim(), which differs from Python only for the ASCII separators U+001C to U+001F. NotImplementedError becomes Error. @traced_stt becomes installTracedStt in a static block. Also created packages/whisper/package.json (depends on @pipedog/asyncio, @pipedog/core, openai ^6.49.0) and packages/whisper/tsconfig.json, and ran bun install, which updated bun.lock for the new workspace. tsc on packages/whisper exits 0, biome check and check-headers pass. porting/manifest.json was not edited. | UNRESOLVED: packages/whisper/src/base_stt.ts _transcribe: upstream raise NotImplementedError has an empty str(), so run_stt yields ErrorFrame \"Unknown error occurred: \" there, while the port yields \"Unknown error occurred: NotImplementedError: _transcribe must be implemented by subclasses\". Cosmetic and only reachable by subclasses that forget to override; left as is because no core NotImplementedError class exists to mirror. Change it if exact wire-text parity is wanted. | UNRESOLVED: Deliberate, documented divergence (not fixed): upstream http_client (AsyncHTTPClient) is ported as a fetch option, so httpx Timeout and connection limits do not carry over."
     },
     {
       "module": "pipecat.services.whisper.stt",
@@ -16632,8 +16632,8 @@
         "pipecat.services.anthropic.llm"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_anthropic_sampling_settings.py",
@@ -16645,8 +16645,8 @@
         "pipecat.services.anthropic.llm"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "4 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_anthropic_stop_reason.py",
@@ -16659,8 +16659,8 @@
         "pipecat.services.anthropic.llm"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "15 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_anthropic_thinking_defaults.py",
@@ -16672,8 +16672,8 @@
         "pipecat.services.anthropic.llm"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "26 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_app_resources.py",
@@ -18293,8 +18293,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 137,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "38 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_gemini_live_language.py",
@@ -18306,8 +18306,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 122,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_gemini_live_tracing.py",
@@ -18332,8 +18332,8 @@
         "pipecat.services.google.gemini_live.llm"
       ],
       "needsModules": 122,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_gemini_stt.py",
@@ -18422,8 +18422,8 @@
         "pipecat.services.google.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "13 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_google_http_tts.py",
@@ -18446,8 +18446,8 @@
         "pipecat.services.google.image"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_google_image_gen.py",
@@ -18459,8 +18459,8 @@
         "pipecat.services.google.image"
       ],
       "needsModules": 116,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "4 pass, 0 fail, 1 skip, 2 todo"
     },
     {
       "file": "tests/test_google_safety_settings.py",
@@ -18472,8 +18472,8 @@
         "pipecat.utils.types"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_google_stream_timeout.py",
@@ -18487,8 +18487,8 @@
         "pipecat.services.google.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "17 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_google_stt.py",
@@ -18515,8 +18515,8 @@
         "pipecat.services.google.vertex.llm"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "31 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_google_token_usage.py",
@@ -18528,8 +18528,8 @@
         "pipecat.services.google.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_google_utils.py",
@@ -18775,8 +18775,8 @@
         "pipecat.services.openai.llm"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "23 pass, 0 fail, 1 skip, 0 todo"
     },
     {
       "file": "tests/test_llm_context.py",
@@ -18948,8 +18948,8 @@
         "pipecat.services.google.llm"
       ],
       "needsModules": 122,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_llm_with_backend.py",
@@ -19346,8 +19346,8 @@
         "pipecat.services.openai.image"
       ],
       "needsModules": 115,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_live_service.py",
@@ -19371,8 +19371,8 @@
         "pipecat.workers.llm.backend_llm_worker"
       ],
       "needsModules": 143,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "48 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_llm_timeout.py",
@@ -19388,8 +19388,8 @@
         "pipecat.utils.http"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "18 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_realtime_audio_frames.py",
@@ -19404,8 +19404,8 @@
         "pipecat.services.openai.realtime.llm"
       ],
       "needsModules": 121,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_realtime_reasoning.py",
@@ -19420,8 +19420,8 @@
         "pipecat.services.openai.realtime.llm"
       ],
       "needsModules": 121,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "10 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_realtime_usage_metrics.py",
@@ -19436,8 +19436,8 @@
         "pipecat.utils.tracing.service_decorators"
       ],
       "needsModules": 121,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_realtime_user_audio.py",
@@ -19453,8 +19453,8 @@
         "pipecat.services.openai.realtime.llm"
       ],
       "needsModules": 121,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "10 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_responses_http.py",
@@ -19468,8 +19468,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "25 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_responses_logging.py",
@@ -19481,8 +19481,8 @@
         "pipecat.processors.aggregators.llm_context"
       ],
       "needsModules": 114,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_responses_websocket.py",
@@ -19496,8 +19496,8 @@
         "pipecat.services.openai.responses.llm"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "72 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_stt.py",
@@ -19778,7 +19778,7 @@
       ],
       "needsModules": 113,
       "status": "ported",
-      "notes": "0 pass, 0 fail, 0 skip, 48 todo"
+      "notes": "15 pass, 0 fail, 0 skip, 33 todo"
     },
     {
       "file": "tests/test_realtime_tool_result_encoding.py",
@@ -19807,8 +19807,8 @@
         "pipecat.services.openai.realtime.llm"
       ],
       "needsModules": 121,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_redaction.py",
@@ -20360,7 +20360,7 @@
       ],
       "needsModules": 113,
       "status": "ported",
-      "notes": "15 pass, 0 fail, 2 skip, 0 todo"
+      "notes": "34 pass, 0 fail, 10 skip, 0 todo"
     },
     {
       "file": "tests/test_service_language.py",
@@ -20927,8 +20927,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 126,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "14 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_ttfb_metrics.py",
@@ -21232,8 +21232,8 @@
         "pipecat.workers.ui.ui_tools"
       ],
       "needsModules": 143,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "76 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_ultravox_async_tool_results.py",

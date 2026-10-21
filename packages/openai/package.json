@@ -1,0 +1,49 @@
+{
+  "name": "@pipedog/openai",
+  "version": "0.2.0",
+  "description": "OpenAI services (LLM, Responses, Realtime, Live, STT, TTS, image) for pipedog.",
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/openai"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/openai#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/whisper": "workspace:*",
+    "fast-png": "^8.0.0",
+    "openai": "^6.49.0"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/services/openai",
+      "src/pipecat/adapters/services/open_ai_live_adapter.py",
+      "src/pipecat/adapters/services/open_ai_realtime_adapter.py",
+      "src/pipecat/adapters/services/open_ai_responses_adapter.py"
+    ]
+  }
+}
