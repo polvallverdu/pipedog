@@ -5,10 +5,13 @@
     "websocket",
     "smallwebrtc",
     "---Coming soon---",
-    "daily",
     "livekit",
     "local-audio",
-    "vonage",
-    "whatsapp"
+    "whatsapp",
+    "---Blocked or deferred---",
+    "daily",
+    "lemonslice",
+    "moq",
+    "vonage"
   ]
 }

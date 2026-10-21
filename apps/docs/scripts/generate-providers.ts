@@ -115,16 +115,43 @@ function issueLinks(page: UpcomingPage): { open: string; search: string } {
   };
 }
 
+const statusLabel = (page: UpcomingPage) =>
+  page.status === "blocked" ? "Blocked" : page.status === "deferred" ? "Deferred" : "Coming soon";
+
+function callout(page: UpcomingPage, search: string): string {
+  if (!page.status) {
+    return `<Callout type="warn" title="Coming soon">
+  ${page.name} isn't ported to pipedog yet. It is available in Pipecat (Python), and its pipedog
+  port will keep the same class names and options. [Ask for it, or upvote the request](${search}).
+</Callout>`;
+  }
+  if (!page.reason || !page.unblock) {
+    throw new Error(`${page.section}/${page.slug} is ${page.status} but has no reason or unblock`);
+  }
+  const lead =
+    page.status === "blocked"
+      ? `${page.name} is blocked: there is no viable JS path for it today.`
+      : `${page.name} is deferred: it is possible, but it isn't ready to port.`;
+  const sources = (page.sources ?? []).map((s) => `[${s.title}](${s.href})`).join(", ");
+  return `<Callout type="warn" title="${statusLabel(page)}">
+  ${lead}
+
+  **Why.** ${page.reason}
+
+  **What would unblock it.** ${page.unblock}${sources ? `\n\n  Sources: ${sources}.` : ""}
+</Callout>`;
+}
+
 function upcomingPage(page: UpcomingPage): string {
   const { open, search } = issueLinks(page);
   const pkg = plannedPackage(page);
-  return `${frontmatter(page.name, `${page.about} Not ported to pipedog yet.`)}
+  const description = page.status
+    ? `${page.about} ${statusLabel(page)} in pipedog: not ported yet.`
+    : `${page.about} Not ported to pipedog yet.`;
+  return `${frontmatter(page.name, description)}
 ${GENERATED}
 
-<Callout type="warn" title="Coming soon">
-  ${page.name} isn't ported to pipedog yet. It is available in Pipecat (Python), and its pipedog
-  port will keep the same class names and options. [Ask for it, or upvote the request](${search}).
-</Callout>
+${callout(page, search)}
 
 ## What it is
 
@@ -283,7 +310,7 @@ function portedRows(section: Section): string[] {
 function upcomingRows(section: Section): string[] {
   return byName(upcoming.filter((page) => page.section === section)).map(
     (page) =>
-      `| [${page.name}](${pageUrl(section, page.slug)}) | ${code(page.classes)} | | Coming soon |`,
+      `| [${page.name}](${pageUrl(section, page.slug)}) | ${code(page.classes)} | | ${statusLabel(page)} |`,
   );
 }
 
@@ -297,13 +324,16 @@ function table(section: Section): string {
 }
 
 function sectionMeta(section: Section, withIndex: boolean): string {
-  const soon = byName(upcoming.filter((page) => page.section === section)).map((page) => page.slug);
+  const pages = byName(upcoming.filter((page) => page.section === section));
+  const soon = pages.filter((page) => !page.status).map((page) => page.slug);
+  const held = pages.filter((page) => page.status).map((page) => page.slug);
   return json({
     title: sections[section].title,
     pages: [
       ...(withIndex ? ["index"] : []),
       ...ported[section].map((page) => page.slug),
       ...(soon.length ? ["---Coming soon---", ...soon] : []),
+      ...(held.length ? ["---Blocked or deferred---", ...held] : []),
     ],
   });
 }
