@@ -20,6 +20,8 @@ npm i @pipedog/transport-websocket @pipedog/serializer-protobuf ws   # Node: `ws
 |---|:-:|:-:|:-:|:-:|
 | `SingleClientWebsocketServerTransport` (`/server`) | ✅ `Bun.serve` | ✅ with `ws` | ✅ `Deno.serve` | ❌ can't listen on a port |
 | `websocketServe()` (`/serve`) | ✅ | ✅ with `ws` | ✅ | ❌ throws, pointing to `WebSocketPair` |
+| `websocketFetchHandler()`, `upgradeWebSocket()` (`/fetch`) | ✅ pass the server, serve with `bunWebSocket` | ✅ with `serveFetch()` and `ws` | ✅ | ✅ `WebSocketPair` |
+| `serveFetch()` (`/serve`): a fetch handler with WebSocket upgrades | ✅ | ✅ with `ws` | ✅ | ❌ can't listen on a port |
 | `FastAPIWebsocketTransport` (`/fastapi`), bring your own socket | ✅ | ✅ | ✅ | ✅ `WebSocketPair`, in a Worker or a Durable Object |
 | `honoWebsocket()` (`/hono`) | ✅ `hono/bun` | ✅ `@hono/node-ws` | ✅ `hono/deno` | ✅ `hono/cloudflare-workers` |
 | `WebsocketClientTransport` (`/client`) | ✅ | ✅ | ✅ | ✅ |
@@ -128,6 +130,23 @@ import { websocketServe } from "@pipedog/transport-websocket/serve";
 const server = await websocketServe({ handler: runBot, host: "0.0.0.0", port: 8765 });
 // ... later: closes open connections (1001) and waits for their handlers.
 await server.close();
+```
+
+### A fetch handler on any server (`serveFetch`)
+
+`websocketFetchHandler()` upgrades from fetch on Deno and Workers by itself. On Bun it upgrades
+with the server Bun passes to `fetch` (serve with the `bunWebSocket` handlers), and on Node with
+`serveFetch()`, which accepts the socket with `ws`. `serveFetch()` wires this up on all three:
+
+```ts
+import { websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
+import { serveFetch } from "@pipedog/transport-websocket/serve";
+
+const media = websocketFetchHandler(runBot);
+await serveFetch((request, server) => media(request, server), { host: "0.0.0.0", port: 8765 });
+
+// Or on Bun directly:
+// Bun.serve({ fetch: (request, server) => media(request, server), websocket: bunWebSocket });
 ```
 
 ### Bun.serve

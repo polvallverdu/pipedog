@@ -1,6 +1,35 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist", "types": [] },
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": []
+  },
   "include": ["src"],
-  "references": [{ "path": "../asyncio" }, { "path": "../core" }]
+  "references": [
+    {
+      "path": "../asyncio"
+    },
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../serializer-exotel"
+    },
+    {
+      "path": "../serializer-plivo"
+    },
+    {
+      "path": "../serializer-telnyx"
+    },
+    {
+      "path": "../serializer-twilio"
+    },
+    {
+      "path": "../transport-smallwebrtc"
+    },
+    {
+      "path": "../transport-websocket"
+    }
+  ]
 }

@@ -9,12 +9,13 @@
 //   GET  /ws     The Media Streams WebSocket, upgraded by `websocketFetchHandler`.
 //                Each connection is one call, answered by `runPhoneBot`.
 //
-// Serve it with anything that upgrades WebSockets from fetch: `Deno.serve`
+// Serve it with `serveFetch` on Bun or Node (src/server.ts), `Deno.serve`
 // (src/deno.ts), a Cloudflare Worker or Durable Object, or a framework route.
+// On Bun the second argument is the server, which upgrades the WebSocket.
 
 import { rethrowIfCancelled } from "@pipedog/asyncio";
 import { base64ToBytes, bytesToBase64 } from "@pipedog/core/utils/base64";
-import { websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
+import { type UpgradingServer, websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
 import { type PhoneBotOptions, runPhoneBot } from "./bot.ts";
 
 export interface PhoneAppOptions extends PhoneBotOptions {
@@ -103,7 +104,9 @@ function sameSignature(a: string, b: string): boolean {
 }
 
 /** Build the phone bot's fetch handler. */
-export function createPhoneApp(options: PhoneAppOptions): (request: Request) => Promise<Response> {
+export function createPhoneApp(
+  options: PhoneAppOptions,
+): (request: Request, server?: UpgradingServer | null) => Promise<Response> {
   const media = websocketFetchHandler((connection) => runPhoneBot(connection, options));
   const validate = options.validateWebhook ?? Boolean(options.twilioAuthToken);
 
@@ -136,10 +139,10 @@ export function createPhoneApp(options: PhoneAppOptions): (request: Request) => 
     return new Response(body, { headers: { "content-type": "text/xml; charset=utf-8" } });
   }
 
-  return async (request: Request): Promise<Response> => {
+  return async (request: Request, server?: UpgradingServer | null): Promise<Response> => {
     const { pathname } = new URL(request.url);
     if (pathname === "/twiml") return twiml(request);
-    if (pathname === "/ws") return media(request);
+    if (pathname === "/ws") return media(request, server);
     return new Response("not found", { status: 404 });
   };
 }

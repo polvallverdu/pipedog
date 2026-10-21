@@ -7,10 +7,11 @@
 /**
  * Pipecat runner package for local and cloud bot execution.
  *
- * PARTIAL PORT: only the telephony helpers are ported so far
- * (`parseTelephonyWebsocket` and the `CallData` types). The development
- * runner itself (`run.py`) and the Daily, LiveKit, MOQ and Vonage helpers are
- * not.
+ * The root re-exports the runner arguments (`./types`) and `createTransport`
+ * with the telephony helpers (`./utils`). The development server is
+ * `@pipedog/runner/run` (`main`, `createRunnerApp`) and `@pipedog/runner/serve`,
+ * as upstream's is `pipecat.runner.run`. The Daily, LiveKit, MOQ and Vonage
+ * helper modules are not ported (their transports aren't).
  */
 
 export * from "./types.ts";

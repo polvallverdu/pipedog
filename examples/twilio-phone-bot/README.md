@@ -16,12 +16,13 @@ caller ◄─► Twilio ◄─► GET /ws (μ-law 8 kHz, JSON events)
 
 Both routes are one fetch handler, `(Request) => Promise<Response>` (`src/app.ts`). The WebSocket
 route is `websocketFetchHandler` from `@pipedog/transport-websocket`, so it runs wherever a
-request can be upgraded from fetch: Deno (`src/deno.ts`), Cloudflare Workers and Durable Objects,
+request can be upgraded: Bun or Node with `serveFetch` (`src/server.ts`), Deno (`src/deno.ts`),
+Cloudflare Workers and Durable Objects,
 or a framework route. Turn detection runs on OpenAI's side, so there are no local models to load.
 
 ## Run it
 
-You need [Deno](https://deno.com) and [Bun](https://bun.sh) (for the install), an OpenAI API key,
+You need [Bun](https://bun.sh) (or run `bun run start:deno` with [Deno](https://deno.com)), an OpenAI API key,
 a Twilio account with a phone number, and a public HTTPS URL for your machine (e.g. `ngrok http
 8765`).
 
