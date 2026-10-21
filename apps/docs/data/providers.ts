@@ -932,6 +932,17 @@ export interface UpcomingPage {
   modules: string[];
   /** The upstream docs page, when it isn't <upstreamFolder>/<slug>. */
   upstreamUrl?: string;
+  /**
+   * Why the port can't happen yet. Without it the page is "coming soon". "blocked" means there is
+   * no viable JS path today, "deferred" means it is possible but needs vendor SDKs or keys.
+   */
+  status?: "blocked" | "deferred";
+  /** Why it is blocked or deferred. Required with `status`. */
+  reason?: string;
+  /** What would unblock it. Required with `status`. */
+  unblock?: string;
+  /** Where the reason comes from. */
+  sources?: { title: string; href: string }[];
 }
 
 /** Popular upstream providers that aren't ported yet: one short page each. */
@@ -1069,6 +1080,17 @@ export const upcoming: UpcomingPage[] = [
     about: "Tavus' realtime video avatars.",
     classes: ["TavusVideoService", "TavusTransport"],
     modules: ["services/tavus/video.py", "transports/tavus/transport.py"],
+    status: "blocked",
+    reason:
+      "Tavus avatars join a Daily room, so they need the Daily transport, which has no server-side JS path (see Daily).",
+    unblock:
+      "Unblocked when Daily gets a server-side JS transport. The REST client for Tavus is portable on its own.",
+    sources: [
+      {
+        title: "Pipecat's Tavus transport",
+        href: "https://docs.pipecat.ai/api-reference/server/services/transport/tavus",
+      },
+    ],
   },
   {
     section: "video",
@@ -1094,6 +1116,14 @@ export const upcoming: UpcomingPage[] = [
     about: "WebRTC rooms on Daily, with telephony (PSTN and SIP) and recording.",
     classes: ["DailyTransport"],
     modules: ["transports/daily/transport.py"],
+    status: "blocked",
+    reason:
+      "Upstream uses the native daily-python SDK. Daily publishes no headless or server-side JS SDK, and @daily-co/daily-js is browser-only. Tavus and LemonSlice run on Daily rooms, so they are blocked too.",
+    unblock:
+      "Unblocked if Daily ships a Node or server SDK, or if someone builds a headless media path. The REST helpers for rooms and tokens are portable now, and a pull request for them would be accepted.",
+    sources: [
+      { title: "daily-js quickstart", href: "https://docs.daily.co/docs/daily-js/quickstart" },
+    ],
   },
   {
     section: "transports",
@@ -1110,6 +1140,50 @@ export const upcoming: UpcomingPage[] = [
     about: "Vonage Video API sessions, through the Video Connector.",
     classes: ["VonageVideoConnectorTransport"],
     modules: ["transports/vonage/video_connector.py"],
+    status: "blocked",
+    reason:
+      "Upstream uses a native, Python-only SDK. Vonage lists Node.js as coming soon. The Vonage voice (Audio Connector) serializer is a different thing and is already ported.",
+    unblock: "Unblocked when Vonage ships its Node SDK.",
+    sources: [
+      {
+        title: "Vonage Video AI connectors",
+        href: "https://developer.vonage.com/en/video/ai-connectors/overview",
+      },
+    ],
+  },
+  {
+    section: "transports",
+    slug: "lemonslice",
+    name: "LemonSlice",
+    about: "LemonSlice's realtime video avatars, delivered through Daily rooms.",
+    classes: ["LemonSliceTransport", "LemonSliceApi"],
+    modules: ["transports/lemonslice/transport.py", "transports/lemonslice/api.py"],
+    upstreamUrl: "https://docs.pipecat.ai/server/services/transport/lemonslice",
+    status: "blocked",
+    reason:
+      "LemonSliceTransport is built on the Daily transport (its params extend DailyParams), which has no server-side JS path (see Daily).",
+    unblock:
+      "Unblocked when Daily gets a server-side JS transport. The REST client (LemonSliceApi) is portable on its own.",
+    sources: [
+      {
+        title: "Pipecat's LemonSlice transport",
+        href: "https://docs.pipecat.ai/server/services/transport/lemonslice",
+      },
+    ],
+  },
+  {
+    section: "transports",
+    slug: "moq",
+    name: "MoQ",
+    about: "Media over QUIC (MoQ) relays.",
+    classes: ["MOQTransport", "MOQParams"],
+    modules: ["transports/moq/transport.py"],
+    upstreamUrl: "https://docs.pipecat.ai/api-reference/server/services/transport/moq",
+    status: "deferred",
+    reason:
+      "The protocol is still changing. The JS library, @moq/net, falls back to WebSocket on servers and only has experimental WebTransport.",
+    unblock: "Deferred until the spec and server-side JS support settle.",
+    sources: [{ title: "MoQ JS library", href: "https://doc.moq.dev/js/" }],
   },
   {
     section: "transports",

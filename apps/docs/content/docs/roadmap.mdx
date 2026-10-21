@@ -92,6 +92,31 @@ upstream modules:
 
 There are no dates. Ports happen in the order people need them.
 
+## Blocked or deferred
+
+Some upstream pieces can't be ported today, or aren't worth porting yet. Each has a reason, and
+a condition that would change that. "Blocked" means there is no viable JS path today. "Deferred"
+means it is possible, but needs vendor SDKs or keys, or waits on a moving spec. Last assessed on
+2026-10-21.
+
+| Item | Status | Why | What would unblock it | Source |
+|---|---|---|---|---|
+| [Daily](/docs/transports/daily) transport, plus [Tavus](/docs/services/video/tavus) and [LemonSlice](/docs/transports/lemonslice), which run on Daily rooms | Blocked | Upstream uses the native `daily-python` SDK. Daily publishes no headless or server-side JS SDK, and `@daily-co/daily-js` is browser-only. | Daily ships a Node or server SDK, or someone builds a headless media path. The REST helpers for rooms and tokens are portable now, and a pull request would be accepted. | [daily-js quickstart](https://docs.daily.co/docs/daily-js/quickstart), [LemonSlice](https://docs.pipecat.ai/server/services/transport/lemonslice), [Tavus](https://docs.pipecat.ai/api-reference/server/services/transport/tavus) |
+| [Vonage Video Connector](/docs/transports/vonage) | Blocked | Upstream uses a native, Python-only SDK. Vonage lists "Node.js coming soon". The Vonage voice (Audio Connector) [serializer](/docs/serializers/vonage) is already ported. | Vonage ships its Node SDK. | [Vonage AI connectors](https://developer.vonage.com/en/video/ai-connectors/overview) |
+| [MoQ](/docs/transports/moq) transport | Deferred | The protocol is still changing. The JS library, `@moq/net`, falls back to WebSocket on servers and only has experimental WebTransport. | The spec and server-side JS support settle. | [MoQ JS docs](https://doc.moq.dev/js/) |
+| Krisp VIVA (filter, VAD, turn) | Deferred | The proprietary SDK isn't on public npm, and it needs a Krisp license and models. The hook `setKrispAudioSdk()` (in `@pipedog/core`) is ported, so you can plug in your own copy of the SDK. | A bring-your-own-SDK package is planned. | Krisp's SDK terms |
+| ai-coustics (AIC) filter and Quail VAD | Deferred | `@ai-coustics/aic-sdk` is native (darwin and linux), and the other build is WASM, aimed at browsers. Both need a license key. | Planned as an optional package. | `@ai-coustics/aic-sdk` on npm |
+| Koala (Picovoice) noise suppression | Deferred | There is no Node build, only `@picovoice/koala-web` (WASM, for browsers), and it needs an AccessKey. | It will be ported if users ask: [open a request](https://github.com/polvallverdu/pipedog/issues/new?template=feature_request.yml). | `@picovoice/koala-web` on npm |
+| Tk local transport, Smart Turn v2 and Smart Turn CoreML | Skipped | Skipped on purpose. Tk is a desktop GUI, and both Smart Turn variants are superseded by v3, which is ported. | Nothing planned. Open a request if you have a use for one. | |
+
+These are not blocked, and are in progress: LiveKit and HeyGen (Node first, not on Workers),
+WhatsApp calling, local audio, RNNoise, the WAV mixer and HTTP Smart Turn.
+
+Contributions are welcome on any of these, especially the portable parts (the REST helpers for
+Daily, Tavus and LemonSlice) and the bring-your-own-SDK packages. Open a request with the
+[port request template](https://github.com/polvallverdu/pipedog/issues/new?template=feature_request.yml)
+first, so the work isn't duplicated.
+
 ## Ask for a port
 
 1. Look for the provider on its coming-soon page, which links to a search of the issues.
