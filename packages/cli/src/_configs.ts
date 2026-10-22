@@ -394,6 +394,7 @@ ${AWS_CREDENTIALS}
   settings: new KokoroTTSService.Settings({
     voice: process.env.KOKORO_VOICE_ID ?? "af_heart",
   }),
+})`,
   minimax_tts: `new MiniMaxHttpTTSService({
   apiKey: process.env.MINIMAX_API_KEY ?? "",
   groupId: process.env.MINIMAX_GROUP_ID ?? "",
