@@ -670,6 +670,31 @@ export class RTVIObserver extends BaseObserver {
    * @param data Frame push event data containing source, frame, direction,
    *   and timestamp.
    */
+  /**
+   * The pushes `onPushFrame` would return from at once, told apart from the
+   * push alone (see `BaseObserver.acceptsPush`), so the worker doesn't wake
+   * this observer for every hop of every frame. A subclass that overrides
+   * `onPushFrame` is sent every push, as before.
+   */
+  override acceptsPush(data: FramePushed): boolean {
+    if (this.onPushFrame !== RTVIObserver.prototype.onPushFrame) return true;
+    const frame = data.frame;
+    if (frame.broadcastSiblingId !== null && data.direction !== FrameDirection.DOWNSTREAM) {
+      return false;
+    }
+    if (
+      frame instanceof AudioRawFrame &&
+      !(this._params.userAudioLevelEnabled || this._params.botAudioLevelEnabled)
+    ) {
+      return false;
+    }
+    return (
+      data.firstPush ||
+      frame instanceof AggregatedTextFrame ||
+      frame instanceof AggregatedTextProgressFrame
+    );
+  }
+
   override async onPushFrame(data: FramePushed): Promise<void> {
     const src = data.source;
     const frame = data.frame;

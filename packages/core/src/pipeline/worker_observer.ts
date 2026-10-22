@@ -223,7 +223,19 @@ export class WorkerObserver extends BaseObserver {
    * @param data The frame processing event data to distribute to observers.
    */
   override async onProcessFrame(data: FrameProcessed): Promise<void> {
-    await this._sendToProxy(data);
+    if (!this._proxies || this._proxies.size === 0) {
+      return;
+    }
+    // DIVERGENCE: an observer that doesn't override onProcessFrame isn't sent
+    // the event. Upstream queues it anyway and wakes the observer's worker to
+    // run the empty base method, once per processor per frame. The observer
+    // sees the same calls either way; the pipeline does far less work (most
+    // observers, including the worker's defaults, only watch pushes).
+    for (const proxy of this._proxies.values()) {
+      if (proxy.observer.onProcessFrame !== BaseObserver.prototype.onProcessFrame) {
+        await proxy.queue.put(data);
+      }
+    }
   }
 
   /**
@@ -245,7 +257,7 @@ export class WorkerObserver extends BaseObserver {
     }
 
     for (const proxy of this._proxies.values()) {
-      if (data.firstPush || proxy.observer.observeEveryPush) {
+      if ((data.firstPush || proxy.observer.observeEveryPush) && proxy.observer.acceptsPush(data)) {
         await proxy.queue.put(data);
       }
     }
