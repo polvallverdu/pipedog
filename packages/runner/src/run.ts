@@ -52,7 +52,11 @@
  * - LiveKit only: `bun bot.ts -t livekit` (needs `@pipedog/transport-livekit`
  *   and `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`)
  *
- * PARTIAL PORT: Daily, MOQ, Vonage (Video Connector), WhatsApp and eval
+ * - WhatsApp: `bun bot.ts --whatsapp` (needs `@pipedog/transport-whatsapp` and
+ *   `WHATSAPP_APP_SECRET`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TOKEN`,
+ *   `WHATSAPP_WEBHOOK_VERIFICATION_TOKEN`; webhook at `/whatsapp`)
+ *
+ * PARTIAL PORT: Daily, MOQ, Vonage (Video Connector) and eval
  * support need transports that are not ported yet. Their CLI choices and
  * `/start` transports are recognized and fail with a clear message.
  */
@@ -99,6 +103,7 @@ export const TRANSPORT_ROUTE_DEPENDENCIES: Record<string, readonly string[]> = {
   telephony: ["@pipedog/transport-websocket"],
   websocket: ["@pipedog/transport-websocket"],
   moq: ["@pipedog/transport-moq"],
+  whatsapp: ["@pipedog/transport-whatsapp", "@pipedog/transport-smallwebrtc"],
 };
 
 /** What to do when a transport's routes are disabled. */
@@ -109,6 +114,7 @@ export const TRANSPORT_INSTALL_HINTS: Record<string, string> = {
   telephony: "install @pipedog/transport-websocket",
   websocket: "install @pipedog/transport-websocket",
   moq: "not ported to pipedog yet",
+  whatsapp: "install @pipedog/transport-whatsapp",
 };
 
 /** Transports the runner recognizes but pipedog has not ported, with their upstream module. */
@@ -116,7 +122,6 @@ export const UNPORTED_TRANSPORTS: Record<string, string> = {
   daily: "pipecat.transports.daily",
   moq: "pipecat.transports.moq",
   vonage: "pipecat.transports.vonage.video_connector",
-  whatsapp: "pipecat.transports.whatsapp",
 };
 
 let RUNNER_DOWNLOADS_FOLDER: string | null = null;
@@ -1147,10 +1152,7 @@ export async function _configureServerApp(
   _setupUnifiedStartRoute(runnerApp, args, activeSessions);
 
   if (args.whatsapp) {
-    // DIVERGENCE: upstream mounts /whatsapp here. The WhatsApp transport is not ported.
-    logger.error(
-      "The WhatsApp transport (pipecat.transports.whatsapp) is not ported to pipedog yet.",
-    );
+    await _setupWhatsappRoutes(runnerApp, args);
   }
 }
 
@@ -1604,6 +1606,167 @@ export function _addLifespanToApp(runnerApp: RunnerApp, lifespan: Lifespan): voi
 }
 
 /**
+ * Seams the WhatsApp routes' tests replace: extra `WhatsAppClient` options
+ * (a fake Meta API `fetch`, a connection factory).
+ */
+export const _whatsappDeps: { clientOptions: () => Record<string, unknown> } = {
+  clientOptions: () => ({}),
+};
+
+/**
+ * Set up WhatsApp-specific routes: `GET /whatsapp` (Meta's webhook
+ * verification) and `POST /whatsapp` (call events). Calls are answered over
+ * SmallWebRTC and the bot runs with a `SmallWebRTCRunnerArguments` whose
+ * `body` is the call's metadata.
+ *
+ * DIVERGENCE: an invalid body is rejected with FastAPI's 422 shape by hand
+ * (`parseWebhookRequest`, not pydantic), and `handleWebhookRequest` throws
+ * plain errors where upstream raises `ValueError` ("No supported event"), so
+ * that one is recognized by its message. The client's `fetch` option replaces
+ * upstream's aiohttp session.
+ */
+export async function _setupWhatsappRoutes(runnerApp: RunnerApp, args: Namespace): Promise<void> {
+  const requiredVars = [
+    "WHATSAPP_APP_SECRET",
+    "WHATSAPP_PHONE_NUMBER_ID",
+    "WHATSAPP_TOKEN",
+    "WHATSAPP_WEBHOOK_VERIFICATION_TOKEN",
+  ];
+  const env = (name: string): string | undefined => process.env[name] || undefined;
+  const missing = requiredVars.filter((v) => !env(v));
+  if (missing.length > 0) {
+    logger.error(
+      `Missing required environment variables for WhatsApp transport:\n    ${missing.join("\n    ")}\n            `,
+    );
+    return;
+  }
+
+  const appSecret = env("WHATSAPP_APP_SECRET")!;
+  const phoneNumberId = env("WHATSAPP_PHONE_NUMBER_ID")!;
+  const token = env("WHATSAPP_TOKEN")!;
+  const verificationToken = env("WHATSAPP_WEBHOOK_VERIFICATION_TOKEN")!;
+
+  let api: typeof import("@pipedog/transport-whatsapp/api");
+  let clientModule: typeof import("@pipedog/transport-whatsapp/client");
+  try {
+    if (!_transportRoutesEnabled("whatsapp")) {
+      throw new Error(`install ${_transportRouteDependencies("whatsapp").join(" and ")}`);
+    }
+    [api, clientModule] = await Promise.all([
+      import("@pipedog/transport-whatsapp/api"),
+      import("@pipedog/transport-whatsapp/client"),
+    ]);
+  } catch (e) {
+    rethrowIfCancelled(e);
+    logger.error(`WhatsApp transport dependencies not installed: ${e}`);
+    return;
+  }
+
+  // Global WhatsApp client instance, created on startup.
+  let whatsappClient: InstanceType<typeof clientModule.WhatsAppClient> | null = null;
+
+  runnerApp.get("/whatsapp", async (request) => {
+    if (whatsappClient === null) {
+      logger.error("WhatsApp client is not initialized");
+      throw new HTTPException(503, "Service unavailable");
+    }
+    const params = Object.fromEntries(new URL(request.url).searchParams);
+    logger.debug(`Webhook verification request received with params: ${Object.keys(params)}`);
+    try {
+      const result = await whatsappClient.handleVerifyWebhookRequest(params, verificationToken);
+      logger.info("Webhook verification successful");
+      return result;
+    } catch (e) {
+      rethrowIfCancelled(e);
+      logger.warning(`Webhook verification failed: ${e}`);
+      throw new HTTPException(403, "Verification failed");
+    }
+  });
+
+  runnerApp.post("/whatsapp", async (request) => {
+    const rawBody = new Uint8Array(await request.arrayBuffer());
+    let body: ReturnType<typeof api.parseWebhookRequest>;
+    try {
+      body = api.parseWebhookRequest(JSON.parse(new TextDecoder().decode(rawBody)));
+    } catch (e) {
+      rethrowIfCancelled(e);
+      const msg = e instanceof api.WebhookValidationError ? e.message : "JSON decode error";
+      throw new HTTPException(422, [{ type: "value_error", loc: ["body"], msg, input: null }]);
+    }
+
+    if (whatsappClient === null) {
+      logger.error("WhatsApp client is not initialized");
+      throw new HTTPException(503, "Service unavailable");
+    }
+
+    // Validate webhook object type
+    if (body.object !== "whatsapp_business_account") {
+      logger.warning(`Invalid webhook object type: ${body.object}`);
+      throw new HTTPException(400, "Invalid object type");
+    }
+
+    logger.debug(`Processing WhatsApp webhook: ${JSON.stringify(body)}`);
+
+    // Handle new WebRTC connections from WhatsApp calls: spawn a bot instance
+    // for the conversation, with the call's metadata as `runnerArgs.body`.
+    const connectionCallback = async (
+      connection: SmallWebRTCRunnerArguments["webrtcConnection"],
+      call: unknown,
+    ): Promise<void> => {
+      const botModule = await runnerApp.getBotModule();
+      const sessionId = crypto.randomUUID();
+      const runnerArgs = new SmallWebRTCRunnerArguments({
+        fileStorage: await runnerApp.getFileStorage(),
+        webrtcConnection: connection,
+        sessionId,
+        body: call,
+      });
+      runnerArgs.cliArgs = args;
+      runnerApp.startBotSession(
+        () => _runBotSession(runnerApp, () => botModule.bot(runnerArgs), sessionId, null),
+        `runner::whatsapp::${sessionId}`,
+      );
+    };
+
+    try {
+      const result = await whatsappClient.handleWebhookRequest(body, {
+        connectionCallback,
+        rawBody,
+        sha256Signature: request.headers.get("x-hub-signature-256"),
+      });
+      logger.debug(`Webhook processed successfully: ${result}`);
+      return { status: "success", message: "Webhook processed successfully" };
+    } catch (e) {
+      rethrowIfCancelled(e);
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.startsWith("No supported event found")) {
+        logger.warning(`Invalid webhook request format: ${message}`);
+        throw new HTTPException(400, `Invalid request: ${message}`);
+      }
+      logger.error(`Internal error processing webhook: ${e}`);
+      throw new HTTPException(500, "Internal server error processing webhook");
+    }
+  });
+
+  // Manage the WhatsApp client's lifecycle and clean up its calls.
+  _addLifespanToApp(runnerApp, async () => {
+    whatsappClient = new clientModule.WhatsAppClient({
+      whatsappToken: token,
+      whatsappSecret: appSecret,
+      phoneNumberId,
+      ...(_whatsappDeps.clientOptions() as object),
+    });
+    logger.info("WhatsApp client initialized successfully");
+    return async () => {
+      // Cleanup all active calls on shutdown
+      logger.info("Cleaning up WhatsApp client resources...");
+      if (whatsappClient) await whatsappClient.terminateAllCalls();
+      logger.info("WhatsApp cleanup completed");
+    };
+  });
+}
+
+/**
  * Set up Daily-specific routes.
  *
  * DIVERGENCE: upstream mounts `/daily` and `/daily-dialin-webhook` when the
@@ -2035,7 +2198,7 @@ export function _addRunnerArguments(parser: ArgumentParser): ArgumentParser {
   });
   parser.addArgument("--whatsapp", {
     action: "store_true",
-    help: "Ensure required WhatsApp environment variables are present (not ported yet)",
+    help: "Ensure required WhatsApp environment variables are present",
   });
   parser.addArgument("--ws-auth", {
     dest: "ws_auth",
@@ -2295,11 +2458,6 @@ export async function main(
       `The ${args.transport} transport (${UNPORTED_TRANSPORTS[args.transport]}) is not ported to ` +
         "pipedog yet. Use -t webrtc, -t websocket or a telephony transport " +
         "(twilio, telnyx, plivo, exotel).",
-    );
-  }
-  if (args.whatsapp) {
-    return fail(
-      "The WhatsApp transport (pipecat.transports.whatsapp) is not ported to pipedog yet.",
     );
   }
 

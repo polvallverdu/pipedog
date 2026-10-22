@@ -35,6 +35,9 @@
       "path": "../transport-websocket"
     },
     {
+      "path": "../transport-whatsapp"
+    },
+    {
       "path": "../evals"
     }
   ]

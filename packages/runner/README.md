@@ -26,6 +26,10 @@ runner keeps its shape. Export `bot(runnerArgs)`, call `main()`, and pick the tr
   `POST /start` mints a bot and a user token and starts the bot with `LiveKitRunnerArguments`;
   `createTransport()` then needs `@pipedog/transport-livekit` (an optional peer) and
   `@livekit/rtc-node`.
+- `--whatsapp`: mounts `GET`/`POST /whatsapp` (Meta's webhook verification and call events) on
+  `@pipedog/transport-whatsapp` (an optional peer). It needs `WHATSAPP_APP_SECRET`,
+  `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TOKEN` and `WHATSAPP_WEBHOOK_VERIFICATION_TOKEN`. Each call
+  starts the bot with `SmallWebRTCRunnerArguments`, and `runnerArgs.body` is the call.
 - `parseTelephonyWebsocket()`, `telephonyHandshake()` and the `CallData` types.
 
 ```sh
@@ -79,7 +83,7 @@ unmodified in `prebuilt/` (release 1.3.0, BSD-2-Clause, Copyright (c) 2025–202
 ## Differences from upstream
 
 - Daily (`-t daily`, `--direct`, the dial-in webhook), MOQ, the Vonage Video Connector
-  (`-t vonage`) and WhatsApp aren't ported: selecting them fails with a clear message. Their
+  (`-t vonage`) aren't ported: selecting them fails with a clear message. Their
   argument classes exist for type parity. The MOQ flags and the deprecated `--folder` and
   `-t eval` aren't ported.
 - A hang-up mid-handshake is `TelephonyCallEndedError` (a `TelephonyHandshakeError`, upstream's
