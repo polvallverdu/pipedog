@@ -16,3 +16,6 @@ next-env.d.ts
 
 # The runner vendors the prebuilt client; it must ship (see tools/runner/sync-prebuilt.ts).
 !packages/runner/prebuilt/dist/
+
+# Python bytecode (tools/bench/perf/pipecat_bench.py)
+__pycache__/
