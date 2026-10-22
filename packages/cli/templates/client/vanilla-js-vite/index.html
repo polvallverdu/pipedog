@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Voice bot</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-brand">
+        <h1 id="title" class="header-title">Voice bot</h1>
+      </div>
+      <div class="header-controls">
+        <select id="transport-select" class="control" aria-label="Transport">
+        </select>
+        <button id="mic-btn" type="button" class="control mic-btn" disabled>
+          <span id="mic-status">Mic off</span>
+        </button>
+        <button id="connect-btn" type="button" class="control connect-btn">Connect</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="panel conversation-panel">
+        <h2 class="panel-title">Conversation</h2>
+        <div id="conversation-log" class="panel-content"></div>
+      </section>
+
+      <section class="panel events-panel">
+        <h2 class="panel-title">Events</h2>
+        <div id="events-log" class="panel-content"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/src/app.js"></script>
+</body>
+
+</html>

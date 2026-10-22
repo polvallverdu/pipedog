@@ -17,6 +17,7 @@
       "!**/.wrangler",
       "!apps/docs/next-env.d.ts",
       "!packages/runner/prebuilt",
+      "!packages/cli/templates",
       "!packages/flows/src/flow_config.schema.json"
     ]
   },
@@ -48,6 +49,16 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["packages/cli/src/templates/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noTemplateCurlyInString": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["packages/core/src/**", "packages/asyncio/src/**"],
       "linter": {

@@ -25,8 +25,8 @@ unresolvable during the run, so a package that silently depends on one fails.
 
 Every package is verified on all four runtimes except `@pipedog/transport-smallwebrtc` (no UDP
 on Workers), `@pipedog/transport-livekit`, `@pipedog/heygen` and `@pipedog/transport-heygen`
-(LiveKit's media SDK is a native addon, which Workers can't load) and `@pipedog/mcp` (a stdio tool
-for Bun and Node). The harness checks that each
+(LiveKit's media SDK is a native addon, which Workers can't load), `@pipedog/mcp` (a stdio tool
+for Bun and Node) and `@pipedog/cli` (a command line tool: Bun, Node and Deno). The harness checks that each
 package loads and runs its smoke test; inside a verified package, a few entry points still need a
 server runtime:
 

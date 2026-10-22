@@ -59,6 +59,12 @@ pin it to your pipedog version: `npx -y @pipedog/mcp@<version>`. With `--live` (
 bundled ones if the site doesn't answer within 10 seconds (`--timeout <ms>`). It needs Node.js 20
 or later.
 
+### From `pipedog init`
+
+[`pipedog init`](/docs/cli) writes the entries below into a new project's `.mcp.json`,
+`.cursor/mcp.json` and `.vscode/mcp.json`, next to an `AGENTS.md` that tells the agent to use
+them. `--no-mcp` skips it.
+
 ### Claude Code
 
 ```bash

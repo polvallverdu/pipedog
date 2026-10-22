@@ -1,0 +1,75 @@
+{
+  "name": "@pipedog/cli",
+  "version": "0.6.1",
+  "description": "The pipedog command line, the port of Pipecat's CLI: `pipedog init` scaffolds a TypeScript voice bot (runner, services, client, agent guides, docs MCP), and `pipedog eval` runs @pipedog/evals.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "cli",
+    "scaffold",
+    "create",
+    "mcp"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "pipedog": "./dist/__main__.js"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src",
+    "agent_templates",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@clack/prompts": "1.8.1"
+  },
+  "peerDependencies": {
+    "@pipedog/evals": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@pipedog/evals": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno"
+    ],
+    "upstream": [
+      "src/pipecat/cli"
+    ],
+    "compat": {
+      "unsupportedRuntimes": [
+        "workerd"
+      ]
+    }
+  }
+}

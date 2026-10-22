@@ -37,6 +37,10 @@ conversations and runs suites:
 bunx pipedog-eval --help    # or: npx pipedog-eval --help
 ```
 
+The same commands are `pipedog eval` in [`@pipedog/cli`](/docs/cli), which loads this package when
+you run it. A project made with `pipedog init --eval` has the `eval` transport, a starter scenario
+and both packages.
+
 ## Make the bot reachable
 
 The harness connects to the [development runner](/docs/runner)'s `/ws` route. Its first message,
