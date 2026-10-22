@@ -196,6 +196,22 @@ export class BaseObserver extends BaseObject {
   async onPushFrame(_data: FramePushed): Promise<void> {}
 
   /**
+   * Whether `onPushFrame` should be called for this push at all.
+   *
+   * Not in upstream. The pipeline worker calls it synchronously, as the frame
+   * is pushed, and skips the push when it returns false, instead of waking
+   * the observer to ignore it. Every push of every frame goes through here,
+   * so an observer that only cares about some frames can return false early
+   * from conditions on `data` alone (not on state that changes while frames
+   * are in flight). Defaults to true.
+   *
+   * @param data The event data containing details about the frame transfer.
+   */
+  acceptsPush(_data: FramePushed): boolean {
+    return true;
+  }
+
+  /**
    * Handle the event when a processor has been set up.
    *
    * A processor connects and does its other slow start-up work here, so

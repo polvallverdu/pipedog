@@ -24,7 +24,7 @@ and wire protocols, with camelCase members. So Pipecat's client SDKs (`@pipecat-
   one toolchain, no separate Python service to deploy and operate.
 - **Runs where your app runs.** Bun, Node, Deno and Cloudflare Workers, bundled to a single file.
   Deploy a voice agent to serverless or the edge, close to your users.
-- **Less overhead.** 2.5–3.4× the frame throughput of Pipecat on CPython, 5–7× lower per-frame
+- **Less overhead.** About 5× the frame throughput of Pipecat on CPython, 10–14× lower per-frame
   latency, and cold starts around 45 ms instead of 400 ms ([Performance](#performance)).
 - **The JavaScript ecosystem.** npm packages, your existing deploy pipeline, and the language most
   web teams already write.
@@ -201,11 +201,11 @@ The same pipeline, 10 pass-through processors in a `PipelineWorker`, in pipedog 
 
 | | Throughput | Latency per frame | Cold start |
 | --- | ---: | ---: | ---: |
-| Pipecat · CPython 3.13 | 9,372 frames/s | 571 µs | 401 ms |
-| pipedog · Bun 1.4 | 23,281 frames/s (2.5×) | 99 µs (5.8×) | 45 ms |
-| pipedog · Node 24 | 28,831 frames/s (3.1×) | 83 µs (6.9×) | 67 ms |
-| pipedog · Deno 2.9 | 32,160 frames/s (3.4×) | 116 µs (4.9×) | 49 ms |
-| pipedog · Cloudflare workerd | 24,615 frames/s (2.6×) | 370 µs (1.5×) | 43 ms |
+| Pipecat · CPython 3.13 | 9,294 frames/s | 572 µs | 396 ms |
+| pipedog · Bun 1.4 | 44,394 frames/s (4.8×) | 52 µs (11.0×) | 44 ms |
+| pipedog · Node 24 | 52,350 frames/s (5.6×) | 41 µs (13.8×) | 66 ms |
+| pipedog · Deno 2.9 | 53,288 frames/s (5.7×) | 59 µs (9.7×) | 47 ms |
+| pipedog · Cloudflare workerd | 45,198 frames/s (4.9×) | 180 µs (3.2×) | 42 ms |
 
 Measured on an Apple M4 Pro with `bun run bench:perf`. With a real service (Gemini LLM and TTS),
 both frameworks add little over calling the SDK directly; the network dominates. Peak memory, the

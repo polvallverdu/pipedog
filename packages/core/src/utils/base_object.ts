@@ -158,6 +158,15 @@ export abstract class BaseObject {
   }
 
   /** Call all registered handlers for the specified event. */
+  /**
+   * Whether any handler is registered for `eventName`. Not in upstream: code
+   * that fires an event for every frame checks it first, so an event nobody
+   * listens to costs no await.
+   */
+  protected _hasEventHandlers(eventName: string): boolean {
+    return (this._eventHandlers.get(eventName)?.handlers.length ?? 0) > 0;
+  }
+
   protected async _callEventHandler(eventName: string, ...args: any[]): Promise<void> {
     const eventHandler = this._eventHandlers.get(eventName);
     if (!eventHandler) return;

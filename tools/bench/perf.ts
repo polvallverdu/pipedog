@@ -379,6 +379,8 @@ async function main() {
   if (values.write) {
     const out = join(ROOT, "tools", "bench", "perf", "results.json");
     await Bun.write(out, `${JSON.stringify(report, null, 2)}\n`);
+    // In the layout the repo's formatter checks.
+    await Bun.$`bunx biome format --write ${out}`.cwd(ROOT).quiet();
     console.log(`wrote ${out}`);
     const page = join(ROOT, "apps", "docs", "content", "docs", "performance.mdx");
     const text = await Bun.file(page).text();

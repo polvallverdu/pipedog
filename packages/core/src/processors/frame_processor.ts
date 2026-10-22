@@ -824,11 +824,16 @@ export class FrameProcessor extends BaseObject {
     frame: Frame,
     direction: FrameDirection = FrameDirection.DOWNSTREAM,
   ): Promise<void> {
-    await this._callEventHandler("on_before_push_frame", frame);
+    // These fire for every push of every frame: skip the await when nobody listens.
+    if (this._hasEventHandlers("on_before_push_frame")) {
+      await this._callEventHandler("on_before_push_frame", frame);
+    }
 
     await this.#internalPushFrame(frame, direction);
 
-    await this._callEventHandler("on_after_push_frame", frame);
+    if (this._hasEventHandlers("on_after_push_frame")) {
+      await this._callEventHandler("on_after_push_frame", frame);
+    }
   }
 
   /** Broadcast an InterruptionFrame both upstream and downstream. */
@@ -934,7 +939,10 @@ export class FrameProcessor extends BaseObject {
     try {
       const timestamp = this._setup ? this.getClock().getTime() : 0;
       if (direction === FrameDirection.DOWNSTREAM && this._next) {
-        logger.trace(`Pushing ${frame} downstream from ${this} to ${this._next}`);
+        // Every push of every frame: build the message only when it is logged.
+        if (logger.isEnabledFor("TRACE")) {
+          logger.trace(`Pushing ${frame} downstream from ${this} to ${this._next}`);
+        }
         if (observer) {
           const data = new FramePushed({
             source: this,
@@ -947,7 +955,10 @@ export class FrameProcessor extends BaseObject {
         }
         await this._next.queueFrame(frame, direction);
       } else if (direction === FrameDirection.UPSTREAM && this._prev) {
-        logger.trace(`Pushing ${frame} upstream from ${this} to ${this._prev}`);
+        // Every push of every frame: build the message only when it is logged.
+        if (logger.isEnabledFor("TRACE")) {
+          logger.trace(`Pushing ${frame} upstream from ${this} to ${this._prev}`);
+        }
         if (observer) {
           const data = new FramePushed({
             source: this,
@@ -1049,7 +1060,9 @@ export class FrameProcessor extends BaseObject {
     callback: FrameCallback | null,
   ): Promise<void> {
     try {
-      await this._callEventHandler("on_before_process_frame", frame);
+      if (this._hasEventHandlers("on_before_process_frame")) {
+        await this._callEventHandler("on_before_process_frame", frame);
+      }
 
       // Process the frame.
       await this.processFrame(frame, direction);
@@ -1058,7 +1071,9 @@ export class FrameProcessor extends BaseObject {
         await callback(this, frame, direction);
       }
 
-      await this._callEventHandler("on_after_process_frame", frame);
+      if (this._hasEventHandlers("on_after_process_frame")) {
+        await this._callEventHandler("on_after_process_frame", frame);
+      }
     } catch (e) {
       rethrowIfCancelled(e);
       // The frame callback runs inside this block, so the cause of an

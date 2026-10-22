@@ -26,11 +26,11 @@ so a slow minute on the network or on the machine falls on all of them.
 
 | | Throughput (frames/s) | Latency per frame (median) | p90 | Peak memory |
 |---|---:|---:|---:|---:|
-| Pipecat · CPython 3.13.13 | 9,372 (1.0×) | 571 µs (1.0×) | 575 µs | 143 MB |
-| pipedog · Bun 1.4.2 | 23,281 (2.5×) | 99 µs (5.8×) | 110 µs | 246 MB |
-| pipedog · Node 24.14.0 | 28,831 (3.1×) | 83 µs (6.9×) | 91 µs | 337 MB |
-| pipedog · Deno 2.9.5 | 32,160 (3.4×) | 116 µs (4.9×) | 144 µs | 296 MB |
-| pipedog · workerd 1.20261005.1 | 24,615 (2.6×) | 370 µs (1.5×) | 541 µs | – |
+| Pipecat · CPython 3.13.13 | 9,294 (1.0×) | 572 µs (1.0×) | 578 µs | 144 MB |
+| pipedog · Bun 1.4.2 | 44,394 (4.8×) | 52 µs (11.0×) | 60 µs | 184 MB |
+| pipedog · Node 24.14.0 | 52,350 (5.6×) | 41 µs (13.8×) | 58 µs | 278 MB |
+| pipedog · Deno 2.9.5 | 53,288 (5.7×) | 59 µs (9.7×) | 74 µs | 221 MB |
+| pipedog · workerd 1.20261005.1 | 45,198 (4.9×) | 180 µs (3.2×) | 239 µs | – |
 
 ### Cold start
 
@@ -40,11 +40,11 @@ empty program, so the difference is what loading the framework and running the p
 
 | | Cold start | Runtime alone | Framework | Peak memory | Bundle |
 |---|---:|---:|---:|---:|---:|
-| Pipecat · CPython | 401 ms | 13 ms | 388 ms | 114 MB | – |
-| pipedog · Bun | 45 ms | 7 ms | 39 ms | 52 MB | 3.5 MB |
-| pipedog · Node | 67 ms | 21 ms | 46 ms | 87 MB | 3.8 MB |
-| pipedog · Deno | 49 ms | 21 ms | 28 ms | 90 MB | 3.1 MB |
-| pipedog · workerd | 43 ms | 11 ms | 32 ms | – | 1.7 MB |
+| Pipecat · CPython | 396 ms | 13 ms | 383 ms | 114 MB | – |
+| pipedog · Bun | 44 ms | 6 ms | 38 ms | 51 MB | 3.5 MB |
+| pipedog · Node | 66 ms | 21 ms | 45 ms | 87 MB | 3.8 MB |
+| pipedog · Deno | 47 ms | 20 ms | 27 ms | 90 MB | 3.1 MB |
+| pipedog · workerd | 42 ms | 11 ms | 31 ms | – | 1.7 MB |
 
 ### Gemini LLM: time to first token
 
@@ -52,11 +52,11 @@ empty program, so the difference is what loading the framework and running the p
 
 | | Through the pipeline (median) | SDK alone (median) | Difference, paired (median) | Middle half of differences | Requests |
 |---|---:|---:|---:|---:|---:|
-| Pipecat · CPython | 731 ms | 602 ms | 122 ms | -39 to 221 ms | 30 |
-| pipedog · Bun | 669 ms | 668 ms | -22 ms | -162 to 180 ms | 36 |
-| pipedog · Node | 648 ms | 677 ms | -50 ms | -151 to 63 ms | 36 |
-| pipedog · Deno | 726 ms | 704 ms | -4 ms | -124 to 174 ms | 36 |
-| pipedog · workerd | 710 ms | 593 ms | 89 ms | -49 to 254 ms | 30 |
+| Pipecat · CPython | 529 ms | 491 ms | -6 ms | -41 to 104 ms | 36 |
+| pipedog · Bun | 497 ms | 452 ms | 15 ms | -24 to 116 ms | 36 |
+| pipedog · Node | 516 ms | 500 ms | -21 ms | -173 to 166 ms | 36 |
+| pipedog · Deno | 527 ms | 513 ms | 40 ms | -30 to 93 ms | 36 |
+| pipedog · workerd | 496 ms | 467 ms | 51 ms | -68 to 129 ms | 36 |
 
 ### Gemini TTS: time to first audio
 
@@ -64,11 +64,11 @@ empty program, so the difference is what loading the framework and running the p
 
 | | Through the pipeline (median) | SDK alone (median) | Difference, paired (median) | Middle half of differences | Requests |
 |---|---:|---:|---:|---:|---:|
-| Pipecat · CPython | 815 ms | 697 ms | 144 ms | -21 to 219 ms | 24 |
-| pipedog · Bun | 846 ms | 636 ms | 139 ms | 12 to 358 ms | 24 |
-| pipedog · Node | 758 ms | 723 ms | 6 ms | -37 to 198 ms | 24 |
-| pipedog · Deno | 871 ms | 665 ms | 148 ms | 22 to 322 ms | 24 |
-| pipedog · workerd | 833 ms | 633 ms | 121 ms | 57 to 213 ms | 24 |
+| Pipecat · CPython | 758 ms | 664 ms | 127 ms | 15 to 204 ms | 24 |
+| pipedog · Bun | 741 ms | 626 ms | 127 ms | 43 to 192 ms | 24 |
+| pipedog · Node | 753 ms | 727 ms | 30 ms | -42 to 117 ms | 24 |
+| pipedog · Deno | 786 ms | 803 ms | 84 ms | -126 to 253 ms | 24 |
+| pipedog · workerd | 876 ms | 642 ms | 170 ms | 92 to 294 ms | 24 |
 
 Measured 2026-10-22 on Apple M4 Pro (12 cores, 24 GB), darwin 25.6.0: pipedog 0.8.0, Pipecat 5558d26dca (pinned upstream) on CPython 3.13.13, Bun 1.4.2, Node 24.14.0, Deno 2.9.5, workerd 1.20261005.1. 6 rounds, runtimes taking turns.
 
