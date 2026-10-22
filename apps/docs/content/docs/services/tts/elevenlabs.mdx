@@ -1,24 +1,26 @@
 ---
 title: ElevenLabs
-description: Text-to-speech with ElevenLabsTTSService (multi-context WebSocket) and ElevenLabsHttpTTSService (HTTP streaming), both with word timestamps.
+description: Text-to-speech with ElevenLabsTTSService (multi-context WebSocket), ElevenLabsHttpTTSService (HTTP streaming) and ElevenLabsDialogueTTSService (Text to Dialogue), all with word timestamps.
 ---
 
 ## Overview
 
 ElevenLabs turns text into speech with its Flash, Turbo, Multilingual and v3 models. pipedog
-ports both of Pipecat's ElevenLabs text-to-speech services:
+ports all three of Pipecat's ElevenLabs text-to-speech services:
 
 - **`ElevenLabsTTSService`**: streams over ElevenLabs' multi-context WebSocket API
   (`multi-stream-input`), with word-level timestamps and per-turn audio contexts.
 - **`ElevenLabsHttpTTSService`**: posts each request to the `stream/with-timestamps` HTTP
   endpoint and streams the audio and alignment back.
+- **`ElevenLabsDialogueTTSService`**: streams over ElevenLabs' multi-context Text to Dialogue
+  WebSocket, which serves the Eleven v3 and v4 dialogue models.
 
 <Cards>
   <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/elevenlabs">
     Pipecat's documentation for the same services.
   </Card>
   <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/elevenlabs/src">
-    `packages/elevenlabs/src/tts.ts` and `tts_base.ts`.
+    `packages/elevenlabs/src/tts.ts`, `dialogue/tts.ts` and `tts_base.ts`.
   </Card>
   <Card title="ElevenLabs docs" href="https://elevenlabs.io/docs/api-reference/text-to-speech">
     Voices, models and voice settings.
@@ -32,6 +34,7 @@ bun add @pipedog/elevenlabs
 ```
 
 ```ts
+import { ElevenLabsDialogueTTSService } from "@pipedog/elevenlabs/dialogue/tts";
 import { ElevenLabsHttpTTSService, ElevenLabsTTSService } from "@pipedog/elevenlabs/tts";
 ```
 
@@ -142,16 +145,56 @@ Inherited from `TTSService`:
 - IPA pronunciations (`pronunciationTransformIpa()`) work with `eleven_flash_v2` and
   `eleven_turbo_v2` only.
 
+## ElevenLabsDialogueTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/elevenlabs/src/dialogue/tts.ts" name="ElevenLabsDialogueTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new ElevenLabsDialogueTTSService.Settings({...})`.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"eleven_v4_turbo"` | An `eleven_v3` or `eleven_v4` model. Any other model logs a warning. |
+| `voice` | `string \| null` | `null` | Voice id. Registered per context, so a change only opens a new context. |
+| `language` | `Language \| null` | `null` | Synthesis language, sent as `language_code` where the model supports it. |
+| `stability` | `number \| null` | `null` | Voice stability, 0.0 to 1.0. The only voice setting Text to Dialogue reads. |
+
+A `model` or `language` change reconnects the WebSocket. A `voice` or `stability` change closes the
+current audio context, and the next one registers the new values.
+
+### Usage
+
+<include cwd meta='title="dialogue.ts"'>snippets/services/tts-elevenlabs.ts#dialogue</include>
+
+### Notes
+
+- Text is always aggregated by sentence, and a trailing space is added to each input, because the
+  server joins inputs verbatim. A `textAggregationMode` other than `SENTENCE` is ignored with a
+  warning.
+- Eleven v3 and v4 perform inline audio tags such as `[laughs]`. They come back as spoken
+  characters in the alignment, so they reach the LLM context unless a text filter removes them.
+- A keepalive context is registered when the socket opens, because the server drops a connection
+  that is idle for 20 seconds and rejects a keepalive that names no registered context. Set a
+  `voice` so it can be registered.
+- `pronunciationTransformIpa()` renders pronunciations as IPA between slashes, which Eleven v3
+  reads.
+- `seed` makes generation reproducible.
+
 ## Runtime notes
 
 - `ElevenLabsTTSService` uses the global `WebSocket` and sends the key as an `xi-api-key` header
   on the handshake. That works on Bun, Node and Deno, and on Cloudflare Workers, where the socket
   is opened through `fetch`. Upstream sets a 16 MB message size limit; the standard `WebSocket`
   has none.
+- `ElevenLabsDialogueTTSService` uses the same WebSocket and `xi-api-key` header as
+  `ElevenLabsTTSService`, so it runs wherever that does.
 - `ElevenLabsHttpTTSService` uses `fetch`. Upstream's required `aiohttp_session` is replaced by
   an optional `fetch` option (the global `fetch` by default).
 - Not ported: the deprecated `PronunciationDictionaryLocator`, the `InputParams` classes and the
   `voiceId`, `model`, `params`, `pronunciationDictionaryLocators` and `aggregateSentences`
   constructor options. Use `settings` and `textAggregationMode`.
-- `ElevenLabsDialogueTTSService` (upstream `services/elevenlabs/dialogue`, Text to Dialogue) is
-  not ported yet.
+
+<RuntimeMatrix pkg="@pipedog/elevenlabs" />

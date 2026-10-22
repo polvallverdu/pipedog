@@ -762,7 +762,7 @@ export const ported: Record<Section, PortedPage[]> = {
       slug: "elevenlabs",
       name: "ElevenLabs",
       pkg: "@pipedog/elevenlabs",
-      classes: ["ElevenLabsTTSService", "ElevenLabsHttpTTSService"],
+      classes: ["ElevenLabsTTSService", "ElevenLabsHttpTTSService", "ElevenLabsDialogueTTSService"],
     },
     { slug: "groq", name: "Groq", pkg: "@pipedog/groq", classes: ["GroqTTSService"] },
     { slug: "mistral", name: "Mistral", pkg: "@pipedog/mistral", classes: ["MistralTTSService"] },
@@ -809,6 +809,14 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/pocket-tts",
       classes: ["PocketTTSService"],
     },
+    {
+      slug: "rime",
+      name: "Rime",
+      pkg: "@pipedog/rime",
+      classes: ["RimeTTSService", "RimeHttpTTSService", "RimeV1TTSService"],
+    },
+    { slug: "fish", name: "Fish Audio", pkg: "@pipedog/fish", classes: ["FishAudioTTSService"] },
+    { slug: "hume", name: "Hume", pkg: "@pipedog/hume", classes: ["HumeTTSService"] },
   ],
   s2s: [
     {
@@ -1099,22 +1107,6 @@ export const upcoming: UpcomingPage[] = [
   },
   {
     section: "tts",
-    slug: "rime",
-    name: "Rime",
-    about: "Rime's expressive voices for conversational agents.",
-    classes: ["RimeTTSService", "RimeHttpTTSService", "RimeNonJsonTTSService"],
-    modules: ["services/rime/tts.py"],
-  },
-  {
-    section: "tts",
-    slug: "fish",
-    name: "Fish Audio",
-    about: "Fish Audio's voices, including cloned voices.",
-    classes: ["FishAudioTTSService"],
-    modules: ["services/fish/tts.py"],
-  },
-  {
-    section: "tts",
     slug: "soniox",
     name: "Soniox",
     about: "Speech synthesis from Soniox.",
@@ -1128,14 +1120,6 @@ export const upcoming: UpcomingPage[] = [
     about: "Speech synthesis from NVIDIA Riva.",
     classes: ["NvidiaTTSService"],
     modules: ["services/nvidia/tts.py"],
-  },
-  {
-    section: "tts",
-    slug: "hume",
-    name: "Hume",
-    about: "Hume's expressive speech synthesis (Octave).",
-    classes: ["HumeTTSService"],
-    modules: ["services/hume/tts.py"],
   },
   {
     section: "tts",
@@ -1374,11 +1358,6 @@ export const unportedVariants: { name: string; classes: string[]; modules: strin
       "DeepgramFluxSageMakerTTSService",
     ],
     modules: ["services/deepgram/sagemaker/", "services/deepgram/flux/sagemaker/"],
-  },
-  {
-    name: "ElevenLabs Dialogue",
-    classes: ["ElevenLabsDialogueTTSService"],
-    modules: ["services/elevenlabs/dialogue/tts.py"],
   },
   {
     name: "NVIDIA on SageMaker",

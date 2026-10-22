@@ -1,0 +1,53 @@
+{
+  "name": "@pipedog/hume",
+  "version": "0.6.1",
+  "description": "Hume TTS service for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "hume",
+    "tts",
+    "speech"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/hume"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/hume#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/services/hume"
+    ]
+  }
+}

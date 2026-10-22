@@ -1,0 +1,55 @@
+{
+  "name": "@pipedog/rime",
+  "version": "0.6.1",
+  "description": "Rime services (WebSocket, HTTP and WebSocket v1 TTS) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "rime",
+    "tts",
+    "speech"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/rime"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/rime#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@bufbuild/protobuf": "2.16.0",
+    "@rimelabs/api": "0.3.0"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/services/rime"
+    ]
+  }
+}

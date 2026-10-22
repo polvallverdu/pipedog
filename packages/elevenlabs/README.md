@@ -1,12 +1,13 @@
 # @pipedog/elevenlabs
 
 ElevenLabs services for pipedog: speech-to-text (`ElevenLabsSTTService`), realtime streaming STT
-(`ElevenLabsRealtimeSTTService`), and WebSocket and HTTP text-to-speech (`ElevenLabsTTSService`,
-`ElevenLabsHttpTTSService`) with word timestamps. It talks to the API with `fetch` and `WebSocket`;
+(`ElevenLabsRealtimeSTTService`), WebSocket and HTTP text-to-speech (`ElevenLabsTTSService`,
+`ElevenLabsHttpTTSService`) and Text to Dialogue for the Eleven v3 and v4 models
+(`ElevenLabsDialogueTTSService`), with word timestamps. It talks to the API with `fetch` and `WebSocket`;
 no ElevenLabs SDK is needed.
 
 A port of Pipecat's `pipecat.services.elevenlabs`. Subpaths mirror upstream:
-`@pipedog/elevenlabs/stt`, `/tts`.
+`@pipedog/elevenlabs/stt`, `/tts`, `/dialogue/tts`.
 
 ## Install
 
@@ -31,9 +32,6 @@ const tts = new ElevenLabsTTSService({
 ## Runtimes
 
 Bun, Node.js 22+, Deno and Cloudflare Workers.
-
-Upstream's Text-to-Dialogue service (`pipecat.services.elevenlabs.dialogue`) is not ported yet; see
-[porting status](https://polvallverdu.github.io/pipedog/docs/contributing/status/).
 
 ## Links
 
