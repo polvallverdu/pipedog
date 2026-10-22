@@ -18,6 +18,14 @@ and wire protocols, with camelCase members. So Pipecat's client SDKs (`@pipecat-
 
 **Docs:** <https://polvallverdu.github.io/pipedog/>
 
+## Why TypeScript?
+
+<!-- DRAFT: replace these placeholders with the reasons before merging. -->
+
+- _TODO: reason._
+- _TODO: reason._
+- _TODO: reason._
+
 ## Quickstart
 
 A voice assistant you talk to in the browser, with OpenAI speech-to-text, chat and text-to-speech
@@ -180,6 +188,24 @@ packages don't run on Workers: `@pipedog/aws`'s `SageMakerBidiClient` (HTTP/2), 
 Cloud Speech and Text-to-Speech services, and the servers that listen on a port (the runner's
 `main()` and `serve()`, `serveFetch`). Each package's README has its own runtime table.
 Details: [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/).
+
+## Performance
+
+The same pipeline, 10 pass-through processors in a `PipelineWorker`, in pipedog and in Pipecat
+(the upstream commit pipedog is ported from), on one machine. In brackets: compared with Pipecat.
+
+| | Throughput | Latency per frame | Cold start |
+| --- | ---: | ---: | ---: |
+| Pipecat · CPython 3.13 | 9,372 frames/s | 571 µs | 401 ms |
+| pipedog · Bun 1.4 | 23,281 frames/s (2.5×) | 99 µs (5.8×) | 45 ms |
+| pipedog · Node 24 | 28,831 frames/s (3.1×) | 83 µs (6.9×) | 67 ms |
+| pipedog · Deno 2.9 | 32,160 frames/s (3.4×) | 116 µs (4.9×) | 49 ms |
+| pipedog · Cloudflare workerd | 24,615 frames/s (2.6×) | 370 µs (1.5×) | 43 ms |
+
+Measured on an Apple M4 Pro with `bun run bench:perf`. With a real service (Gemini LLM and TTS),
+both frameworks add little over calling the SDK directly; the network dominates. Peak memory, the
+Gemini numbers and how each is measured:
+[Performance](https://polvallverdu.github.io/pipedog/docs/performance/).
 
 ## Packages
 
