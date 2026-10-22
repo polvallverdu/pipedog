@@ -41,10 +41,25 @@ export {
   SimpleSpanProcessor,
   type SpanExporter,
 } from "@opentelemetry/sdk-trace-base";
+export {
+  DEFAULT_TRACER_NAME,
+  getTracerName,
+  setTracerName,
+} from "@pipedog/core/utils/tracing/setup";
 
 export interface SetupTracingOptions {
-  /** The name of the service for traces. Defaults to `"pipecat"`, as upstream. */
+  /**
+   * The name of the service for traces (`service.name`). Defaults to `"pipedog"`; upstream's
+   * default is `"pipecat"`. Set your own in production.
+   */
   serviceName?: string;
+  /**
+   * What the library's tracers are called (the instrumentation scope of its spans): `"pipedog"`
+   * and `"pipedog.turn"` by default. Pass `"pipecat"` for upstream's names (`pipecat`,
+   * `pipecat.turn`), if dashboards, alerts or queries filter on them. Span names and attribute
+   * keys are upstream's either way.
+   */
+  tracerName?: string;
   /**
    * A pre-configured OpenTelemetry span exporter instance, e.g.
    * `new OTLPTraceExporter({ url })`. If null, only console export is

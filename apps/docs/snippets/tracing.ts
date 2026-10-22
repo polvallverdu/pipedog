@@ -13,7 +13,12 @@ import {
   registerOpenTelemetry,
 } from "@pipedog/core/utils/tracing/setup";
 import { WorkerRunner } from "@pipedog/core/workers/runner";
-import { forceFlushTracing, OTLPTraceExporter, setupTracing } from "@pipedog/tracing";
+import {
+  forceFlushTracing,
+  OTLPTraceExporter,
+  setTracerName,
+  setupTracing,
+} from "@pipedog/tracing";
 
 const pipeline = new Pipeline([]);
 
@@ -35,6 +40,20 @@ const worker = new PipelineWorker(pipeline, {
 });
 // #endregion setup
 void worker;
+
+// #region names
+// Tracers are called "pipedog" and "pipedog.turn" by default. For dashboards, alerts or queries
+// that filter on Pipecat's names ("pipecat" and "pipecat.turn"), switch them back at startup,
+// before any pipeline is created:
+setTracerName("pipecat");
+
+// or in setupTracing, which does the same:
+setupTracing({
+  serviceName: "my-voice-bot",
+  tracerName: "pipecat",
+  exporter: new OTLPTraceExporter({ url: "http://localhost:4318/v1/traces" }),
+});
+// #endregion names
 
 // #region vendors
 // Langfuse (OTLP endpoint, Basic auth with your public/secret key pair)

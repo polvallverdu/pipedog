@@ -31,6 +31,19 @@ setupTracing({
 `forceFlushTracing()` and `shutdownTracing()` flush and stop the exporter, for example before a
 short-lived process exits.
 
+### Names
+
+Span names and attribute keys are Pipecat's. The library's tracers are called `pipedog` and
+`pipedog.turn` (Pipecat: `pipecat` and `pipecat.turn`), and the default `service.name` is
+`"pipedog"`, so set your own `serviceName`. If a dashboard or query filters on Pipecat's tracer
+names, bring them back at startup, before creating a pipeline:
+
+```ts
+import { setTracerName } from "@pipedog/tracing";
+
+setTracerName("pipecat"); // or setupTracing({ tracerName: "pipecat", ... })
+```
+
 ## Runtimes
 
 Bun, Node.js 22+, Deno and Cloudflare Workers. On Workers, flush before the request ends; the docs

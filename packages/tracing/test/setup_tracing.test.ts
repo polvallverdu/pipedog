@@ -22,10 +22,13 @@ import {
 } from "@pipedog/core/utils/tracing/setup";
 import { WorkerRunner } from "@pipedog/core/workers/runner";
 import {
+  DEFAULT_TRACER_NAME,
   forceFlushTracing,
+  getTracerName,
   InMemorySpanExporter,
   OTLPTraceExporter,
   SimpleSpanProcessor,
+  setTracerName,
   setupTracing,
   shutdownTracing,
 } from "../src/index.ts";
@@ -60,11 +63,12 @@ describe("setupTracing", () => {
     exporter.reset();
   });
 
-  test("a PipelineWorker with enableTracing exports conversation and turn spans", async () => {
+  /** Run one short conversation through a traced pipeline, and flush its spans. */
+  async function runConversation(conversationId: string, attributes: Record<string, string> = {}) {
     const worker = new PipelineWorker(new Pipeline([new IdentityFilter()]), {
       enableTracing: true,
-      conversationId: "conv-e2e",
-      additionalSpanAttributes: { "app.tenant": "acme" },
+      conversationId,
+      additionalSpanAttributes: attributes,
       cancelOnIdleTimeout: false,
     });
     const runner = new WorkerRunner();
@@ -83,6 +87,42 @@ describe("setupTracing", () => {
     });
     await runner.run();
     await forceFlushTracing();
+  }
+
+  test("the tracers are called pipedog by default, and pipecat once asked for", async () => {
+    expect(getTracerName()).toBe(DEFAULT_TRACER_NAME);
+    expect(DEFAULT_TRACER_NAME).toBe("pipedog");
+    exporter.reset();
+    await runConversation("conv-default-names");
+    const names = new Set(exporter.getFinishedSpans().map((s) => s.instrumentationScope.name));
+    expect([...names]).toEqual(["pipedog.turn"]);
+
+    // For dashboards and queries that filter on upstream's names.
+    setTracerName("pipecat");
+    try {
+      exporter.reset();
+      await runConversation("conv-upstream-names");
+      const upstream = new Set(exporter.getFinishedSpans().map((s) => s.instrumentationScope.name));
+      expect([...upstream]).toEqual(["pipecat.turn"]);
+    } finally {
+      setTracerName(DEFAULT_TRACER_NAME);
+    }
+    exporter.reset();
+  });
+
+  test("setupTracing({ tracerName }) sets it, and an empty name is refused", () => {
+    try {
+      setupTracing({ exporter, tracerName: "custom" });
+      expect(getTracerName()).toBe("custom");
+    } finally {
+      setTracerName(DEFAULT_TRACER_NAME);
+    }
+    expect(() => setTracerName("")).toThrow();
+    expect(getTracerName()).toBe(DEFAULT_TRACER_NAME);
+  });
+
+  test("a PipelineWorker with enableTracing exports conversation and turn spans", async () => {
+    await runConversation("conv-e2e", { "app.tenant": "acme" });
 
     const spans = exporter.getFinishedSpans();
     const conversation = spans.find((s) => s.name === "conversation");

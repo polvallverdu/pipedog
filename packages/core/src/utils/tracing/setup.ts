@@ -196,9 +196,47 @@ function getenv(name: string): string | undefined {
   ];
 }
 
+/**
+ * What the library's tracers are called, which shows up as the instrumentation scope
+ * (`otel.scope.name`) of its spans: `<name>` for the service spans and `<name>.turn` for the
+ * conversation and turn spans.
+ *
+ * DIVERGENCE: upstream uses `"pipecat"`. pipedog defaults to `"pipedog"`, so its traces can be told
+ * apart from a Pipecat bot's, and `setTracerName("pipecat")` brings the upstream names back for
+ * dashboards, alerts or queries that filter on them. Span names and attribute keys are not
+ * affected: they're the same as upstream either way.
+ */
+export const DEFAULT_TRACER_NAME = "pipedog";
+
+let tracerName = DEFAULT_TRACER_NAME;
+
+/**
+ * Change the name the library's tracers are created with (see `DEFAULT_TRACER_NAME`).
+ *
+ * Call it before the pipeline is created: the turn tracer is fetched when the observer is built.
+ * `setupTracing({ tracerName })` does this too.
+ */
+export function setTracerName(name: string): void {
+  if (!name) throw new Error("the tracer name can't be empty");
+  tracerName = name;
+}
+
+/** The name the library's tracers are created with. */
+export function getTracerName(): string {
+  return tracerName;
+}
+
 export interface SetupTracingOptions {
-  /** The name of the service for traces. Defaults to `"pipecat"`. */
+  /**
+   * The name of the service for traces (`service.name`). Defaults to `"pipedog"`; upstream's
+   * default is `"pipecat"`. Set your own in production.
+   */
   serviceName?: string;
+  /**
+   * The name of the library's tracers, `"pipedog"` by default. Pass `"pipecat"` to get upstream's
+   * tracer names (`pipecat`, `pipecat.turn`). Same as calling `setTracerName()`.
+   */
+  tracerName?: string;
   /**
    * A pre-configured OpenTelemetry span exporter instance. If null, only
    * console export will be available if enabled.
@@ -222,7 +260,8 @@ export interface SetupTracingOptions {
  * setupTracing({ serviceName: "my-service", exporter });
  */
 export function setupTracing(options: SetupTracingOptions = {}): boolean {
-  const serviceName = options.serviceName ?? "pipecat";
+  const serviceName = options.serviceName ?? "pipedog";
+  if (options.tracerName !== undefined) setTracerName(options.tracerName);
   const exporter = options.exporter ?? null;
   const consoleExport = options.consoleExport ?? false;
 
