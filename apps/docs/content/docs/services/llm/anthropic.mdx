@@ -126,6 +126,8 @@ Inherited from `LLMService`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/anthropic" />
+
 - `@anthropic-ai/sdk` is fetch-based and runs on Bun, Node, Deno and Cloudflare Workers.
 - `client` takes any object with a `beta.messages.create(params, { signal })` method, such as
   `AnthropicBedrock` or `AnthropicVertex` from Anthropic's Bedrock and Vertex SDKs (not

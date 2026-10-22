@@ -89,6 +89,8 @@ Through the dated API:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/azure" />
+
 - The client is the official `openai` JS SDK over `fetch`, so the service works on Bun, Node,
   Deno and Cloudflare Workers.
 - `AzureTokenProvider` is any `() => Promise<string>`. `getBearerTokenProvider()` from

@@ -291,21 +291,23 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 ## Status
 
 pipedog is 0.x: expect breaking changes between minor versions. Against the pinned upstream
-commit, 584 of Pipecat's 667 modules are ported (88%, 80% of the lines) and 280 of its 340 test
+commit, 622 of Pipecat's 667 modules are ported (93%, 90% of the lines) and 305 of its 340 test
 files.
 
 - **Core runtime: complete.** All 361 core modules are ported, and all 150 of core's upstream test
   files are ported 1:1 and passing.
-- **Providers: the main ones.** Across 66 packages: OpenAI, Anthropic, Google, Azure, AWS (with Nova
-  Sonic), Deepgram, Cartesia, ElevenLabs, Inworld, Ultravox, 16 OpenAI-compatible providers (Groq,
+- **Providers: the main ones.** Across 87 packages: OpenAI, Anthropic, Google, Azure, AWS (with Nova
+  Sonic), Deepgram, Cartesia, ElevenLabs, Inworld, Ultravox, about 30 more speech providers
+  (AssemblyAI, Speechmatics, Gladia, Soniox, Rime, Fish, Hume, Sarvam and others), 16 OpenAI-compatible providers (Groq,
   Together, Mistral, xAI, DeepSeek, OpenRouter, Ollama and more), HeyGen avatars, the WebSocket,
   SmallWebRTC, LiveKit, WhatsApp and local audio transports, six telephony serializers, the
   development runner, the `pipedog` CLI, Pipecat Flows, evals, the MCP client, and the RNNoise filter, soundfile
   mixer, HTTP Smart Turn, and keyless local speech models on ONNX Runtime (Whisper, Moonshine,
   FunASR SenseVoice, Kokoro, Piper, Pocket TTS).
 - **Not ported yet:** the Daily and other room transports (Tavus, LemonSlice, MoQ, the Vonage Video
-  Connector), the Krisp, Koala and AIC filters and models, and 28 other providers (AssemblyAI, Gladia,
-  Speechmatics, Rime, NVIDIA and a long tail). See the
+  Connector), the Krisp, Koala and AIC filters and models, the Redis and pgmq buses, the SageMaker
+  variants of Deepgram and NVIDIA, and a few providers (NVIDIA, Simli, Tavus, fal, Mem0, Moondream,
+  Keenable, OpenClaw). See the
   [roadmap](https://polvallverdu.github.io/pipedog/docs/roadmap/).
 - **Testing: mocks and recordings, not live providers yet.** Every provider is tested against mock
   servers and recorded protocol vectors, and the examples run end to end against mock APIs.
@@ -323,7 +325,7 @@ pipedog tracks one pinned Pipecat commit at a time.
 - [`upstream.json`](upstream.json) pins the upstream repository and commit. `bun run upstream`
   checks it out into `.upstream/pipecat`, and `bun run upstream bump` moves the pin.
 - [`porting/manifest.json`](porting/manifest.json) lists every upstream module (667) and test file
-  (340) with its target package (105 in all, 53 of them ported at least in part), TypeScript path,
+  (340) with its target package (105 in all, 81 of them ported at least in part), TypeScript path,
   dependencies and status. [`porting/STATUS.md`](porting/STATUS.md) is generated from it.
 - [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) is the rulebook for how Python maps to TypeScript.
   Deliberate differences from upstream are marked `DIVERGENCE` in the code and listed in the manifest.

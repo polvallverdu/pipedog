@@ -158,6 +158,8 @@ Inherited from `LLMService`.
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/google" />
+
 The client is `GoogleGenAI` from `@google/genai`, which opens the Live API over the global
 `WebSocket`. Server messages arrive through the SDK's callbacks and are fed to the service's
 receive task, so socket errors go through the same reconnect path as upstream.

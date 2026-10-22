@@ -134,6 +134,10 @@ session starts; open it to join as the user.
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/heygen" />
+
+<RuntimeMatrix pkg="@pipedog/transport-heygen" />
+
 - The session APIs use `fetch`; pass `fetch` to replace the global one (upstream takes an aiohttp
   session).
 - The control WebSocket uses the global `WebSocket`. `clientOptions.websocketOptions` takes a

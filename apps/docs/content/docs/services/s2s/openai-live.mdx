@@ -128,6 +128,8 @@ Client delegation, with a pipedog LLM service as the backend:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/openai" />
+
 - The socket is opened with `websocketConnect()` from core, and the key is sent as an
   `Authorization` header. Bun, Node and Deno send it from the global `WebSocket`; on Cloudflare
   Workers core opens the socket through `fetch`. `webSocketFactory` (a pipedog addition) lets

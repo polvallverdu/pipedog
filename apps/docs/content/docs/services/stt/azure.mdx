@@ -82,6 +82,8 @@ Speech model:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/azure" />
+
 `AzureSTTService` opens its WebSocket with core's `websocketConnect` and works on
 Bun, Node, Deno and Cloudflare Workers. The key is sent both as the `Ocp-Apim-Subscription-Key`
 handshake header and as a query parameter, as the Speech SDK does, so it also authenticates where

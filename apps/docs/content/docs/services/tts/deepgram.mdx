@@ -173,6 +173,8 @@ reconnects:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/deepgram" />
+
 `DeepgramTTSService` and `DeepgramFluxTTSService` use the global `WebSocket` and send the key as an
 `Authorization: Token <key>` header on the handshake. That works on Bun, Node, Deno and Cloudflare
 Workers (where the socket is opened through `fetch`). Pass `webSocketFactory` to open the socket

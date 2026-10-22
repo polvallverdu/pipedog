@@ -145,6 +145,8 @@ Same as `OpenAIResponsesLLMService` above.
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/openai" />
+
 - `OpenAIResponsesHttpLLMService` uses the `openai` JS SDK over `fetch`, which works on Bun,
   Node, Deno and Cloudflare Workers.
 - `OpenAIResponsesLLMService` sends the key as an `Authorization` header on the WebSocket

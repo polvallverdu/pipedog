@@ -98,6 +98,8 @@ Without auto hang-up, only the stream SID is needed:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/serializer-twilio" />
+
 The serializer uses the global `fetch` for the hang-up and runs on Bun, Node, Deno and Cloudflare
 Workers. Accept the Twilio WebSocket with `websocketFetchHandler` (Deno, Workers) or any of the
 [WebSocket](/docs/transports/websocket) server adapters.

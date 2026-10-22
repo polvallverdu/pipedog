@@ -83,6 +83,8 @@ This comes from the `TTSService` base class.
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/openai" />
+
 - The client is the `openai` JS SDK over `fetch`. The audio is read from the response body
   stream, so it works on Bun, Node, Deno and Cloudflare Workers.
 - `httpClient` takes a `fetch` function where upstream takes an httpx client.

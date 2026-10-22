@@ -11,8 +11,8 @@ processing for ultra-low latency conversations; pipedog brings the same architec
 
 <Callout type="warn" title="Unofficial, 0.x">
   pipedog is a community port. It is not affiliated with or endorsed by Daily or the Pipecat
-  project. The core runtime, the main providers, Pipecat Flows and evals are ported; Daily and
-  a long tail of providers are not yet. Everything is tested against mocks and recorded protocol
+  project. The core runtime, most providers, Pipecat Flows, evals and the CLI are ported; Daily
+  and a few providers (NVIDIA, Simli, Tavus) are not yet. Everything is tested against mocks and recorded protocol
   vectors, not yet against the live providers. See the [roadmap](/docs/roadmap).
 </Callout>
 
@@ -92,13 +92,14 @@ automatically unless you pass `enableRtvi: false`.
 The core runtime (frames, processors, pipelines, workers, bus, observers, RTVI, base services and
 transports) is ported in full, with its upstream test suite. So are the main providers: OpenAI,
 Anthropic, Google, Azure, AWS (including Nova Sonic), Deepgram, Cartesia, ElevenLabs, Inworld,
-Ultravox, xAI and 16 OpenAI-compatible providers, with the WebSocket, SmallWebRTC, LiveKit, WhatsApp
+Ultravox, xAI, about 30 more speech providers (AssemblyAI, Speechmatics, Gladia, Soniox, Rime, Fish,
+Hume, Sarvam and others) and 16 OpenAI-compatible providers, with the WebSocket, SmallWebRTC, LiveKit, WhatsApp
 and local audio transports, HeyGen avatars, six telephony serializers (Twilio, Telnyx, Plivo,
 Exotel, Vonage, Genesys) and the [development runner](/docs/runner). Pipecat Flows, evals, the
 [`pipedog` CLI](/docs/cli), the RNNoise filter, the soundfile mixer, HTTP Smart Turn, the
 [MCP client](/docs/services/mcp-client) and the keyless local speech models (Whisper, Moonshine,
-FunASR, Kokoro, Piper, Pocket TTS) are ported too. In all, 584 of upstream's 667 modules (88%) and
-280 of its 340 test files are ported, across 66 packages.
+FunASR, Kokoro, Piper, Pocket TTS) are ported too. In all, 622 of upstream's 667 modules (93%) and
+305 of its 340 test files are ported, across 87 packages.
 
 Provider services are tested against mock servers and recorded protocol vectors, and the examples
 run end to end against mock APIs. Testing against the real providers is the next phase, so treat

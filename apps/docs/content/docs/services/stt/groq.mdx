@@ -73,6 +73,8 @@ Change settings mid-call with an `STTUpdateSettingsFrame`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/groq" />
+
 - The client is the `openai` JS SDK (through `@pipedog/whisper`) over `fetch`. It works on Bun, Node, Deno and Cloudflare Workers.
 - The deprecated `model`, `language`, `prompt` and `temperature` constructor options are not ported. Use `settings`.
 - Tested against fakes, not against Groq itself.

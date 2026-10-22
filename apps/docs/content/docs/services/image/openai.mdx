@@ -71,6 +71,8 @@ Runtime-updatable settings, passed as `settings: new OpenAIImageGenService.Setti
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/openai" />
+
 - The client is the `openai` JS SDK over `fetch`, and decoding is pure JS (`fast-png`), so it
   works on Bun, Node, Deno and Cloudflare Workers.
 - The `fetch` option replaces upstream's required `aiohttp_session`. `decodeImage` is a pipedog

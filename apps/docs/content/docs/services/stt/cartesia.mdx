@@ -159,6 +159,8 @@ With eager end of turn:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/cartesia" />
+
 Both services use the global `WebSocket` and send the key as an `X-API-Key` header on the
 handshake. The Bun, Node and Deno `WebSocket` support handshake headers, and on Cloudflare
 Workers the socket is opened through `fetch` with an `Upgrade` header. A standard `WebSocket`

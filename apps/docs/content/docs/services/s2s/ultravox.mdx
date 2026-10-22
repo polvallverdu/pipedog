@@ -100,6 +100,8 @@ Switch the reply medium mid-call:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/ultravox" />
+
 - Calls are created with `fetch` (upstream uses aiohttp) and the socket is opened with
   `websocketConnect()` from core, so the service runs on Bun, Node, Deno and Cloudflare Workers.
 - `maxDuration` is in seconds (upstream takes a `timedelta`); out-of-range values throw a

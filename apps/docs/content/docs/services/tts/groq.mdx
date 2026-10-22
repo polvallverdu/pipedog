@@ -69,6 +69,8 @@ Change settings mid-call with an `TTSUpdateSettingsFrame`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/groq" />
+
 - Requests go through `fetch` (upstream uses the `groq` SDK). It works on Bun, Node, Deno and Cloudflare Workers.
 - The whole response is read and parsed as one WAV. Upstream parses each streamed chunk as a WAV.
 - The deprecated `InputParams` and the `params`, `model_name` and `voice_id` options are not ported. Use `settings`.
