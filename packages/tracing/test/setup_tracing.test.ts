@@ -27,6 +27,7 @@ import {
   OTLPTraceExporter,
   SimpleSpanProcessor,
   setupTracing,
+  shutdownTracing,
 } from "../src/index.ts";
 
 describe("setupTracing", () => {
@@ -141,6 +142,37 @@ describe("OTLPTraceExporter", () => {
       });
     } finally {
       server.stop(true);
+    }
+  });
+});
+
+describe("forceFlushTracing", () => {
+  test("waits for an export the batch timer started before the call", async () => {
+    // Exports take 150 ms to reach the "collector".
+    class SlowExporter extends InMemorySpanExporter {
+      override export(
+        spans: Parameters<InMemorySpanExporter["export"]>[0],
+        callback: Parameters<InMemorySpanExporter["export"]>[1],
+      ) {
+        setTimeout(() => super.export(spans, callback), 150);
+      }
+    }
+    const exporter = new SlowExporter();
+    const previous = process.env.OTEL_BSP_SCHEDULE_DELAY;
+    process.env.OTEL_BSP_SCHEDULE_DELAY = "20";
+    trace.disable();
+    try {
+      expect(setupTracing({ serviceName: "pipedog-slow", exporter })).toBe(true);
+      trace.getTracer("test").startSpan("late").end();
+      // The 20 ms timer starts the export: the span has left the processor's queue.
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      await forceFlushTracing();
+      expect(exporter.getFinishedSpans().map((s) => s.name)).toEqual(["late"]);
+    } finally {
+      if (previous === undefined) delete process.env.OTEL_BSP_SCHEDULE_DELAY;
+      else process.env.OTEL_BSP_SCHEDULE_DELAY = previous;
+      await shutdownTracing();
+      trace.disable();
     }
   });
 });

@@ -74,7 +74,47 @@ export function registerWithCore(): void {
  */
 export function setupTracing(options: SetupTracingOptions = {}): boolean {
   registerWithCore();
-  return coreSetupTracing(options);
+  return coreSetupTracing(
+    options.exporter ? { ...options, exporter: trackExports(options.exporter) } : options,
+  );
+}
+
+/** Exports that have started and not yet called back, across the exporters of `setupTracing()`. */
+const pendingExports = new Set<Promise<void>>();
+
+/**
+ * Wraps `exporter` to keep track of the exports in flight.
+ *
+ * The SDK's `BatchSpanProcessor.forceFlush()` only exports the spans still in its
+ * queue. When its timer has just started an export, the spans are no longer in
+ * the queue, so it returns at once, before they reach the collector.
+ * `forceFlushTracing()` waits for those exports too.
+ */
+function trackExports(exporter: sdk.SpanExporter): sdk.SpanExporter {
+  return {
+    export(spans, resultCallback) {
+      let done!: () => void;
+      const pending = new Promise<void>((resolve) => {
+        done = resolve;
+      });
+      pendingExports.add(pending);
+      const finish = () => {
+        pendingExports.delete(pending);
+        done();
+      };
+      try {
+        exporter.export(spans, (result) => {
+          finish();
+          resultCallback(result);
+        });
+      } catch (e) {
+        finish();
+        throw e;
+      }
+    },
+    shutdown: () => exporter.shutdown(),
+    forceFlush: exporter.forceFlush ? () => exporter.forceFlush!() : undefined,
+  };
 }
 
 interface FlushableProvider {
@@ -94,7 +134,7 @@ function sdkTracerProvider(): FlushableProvider | null {
 }
 
 /**
- * Export every span the batch processors still hold.
+ * Export every span the batch processors still hold, and wait for the exports in flight.
  *
  * Not in upstream (a Python process flushes on exit). On Cloudflare Workers
  * call it before the request ends, e.g. `ctx.waitUntil(forceFlushTracing())`,
@@ -102,6 +142,9 @@ function sdkTracerProvider(): FlushableProvider | null {
  */
 export async function forceFlushTracing(): Promise<void> {
   await sdkTracerProvider()?.forceFlush();
+  // DIVERGENCE: not in upstream. An export the batch timer started before this call
+  // isn't part of `forceFlush()`'s promise (see `trackExports`).
+  while (pendingExports.size > 0) await Promise.all([...pendingExports]);
 }
 
 /** Flush and shut down the global tracer provider (no more spans are exported). */
