@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/aws",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "AWS services (Bedrock LLM, Transcribe STT, Polly TTS, Nova Sonic, AgentCore, SageMaker) for pipedog.",
   "keywords": [
     "pipecat",

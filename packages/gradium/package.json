@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/gradium",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Gradium services (STT, TTS) for pipedog.",
   "keywords": [
     "pipecat",

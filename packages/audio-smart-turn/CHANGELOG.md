@@ -1,5 +1,22 @@
 # @pipedog/audio-smart-turn
 
+## 0.8.0
+
+### Patch Changes
+
+- [#69](https://github.com/polvallverdu/pipedog/pull/69) [`d6e6f45`](https://github.com/polvallverdu/pipedog/commit/d6e6f45c41c7a0aff8f8bdf551f43a8222dc90a8) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Fixes for apps bundled with `bun build` (and `bun build --compile`) and run without `node_modules`:
+  
+  - `@pipedog/transport-smallwebrtc` loads `reflect-metadata` first itself (a new dependency, pinned). werift's X.509 code needs it before `tsyringe`, and a bundle that loads the transport lazily, as `@pipedog/runner` does, could put the import after it, which disabled the runner's WebRTC routes. Hosts don't import or externalize `reflect-metadata`; it does not belong in core.
+  - `@pipedog/runner` counts its own transports (`@pipedog/transport-websocket`, `@pipedog/transport-smallwebrtc`) as available instead of resolving them by name, which fails in a bundle: every telephony and WebSocket route answered 404.
+  - Silero, Smart Turn and RNNoise read their default model or `.wasm` file next to the package's source, which a bundle does not copy. The error now names the `model` option (or `initRnnoise()`) and the `with { type: "file" }` import that fixes it, instead of a bare file-not-found for a path nobody recognizes.
+  - Core's Smart Turn fallback warning says that a bundled app has to pass `createLocalSmartTurnAnalyzerV3()` to the turn strategy, since a bundler can't see core's by-name import.
+  
+  Docs: a Bundling page under Deployment, with the tested `bun build` recipe, a snippet per asset, and what has to stay outside the bundle and why. `examples/bundle-check` bundles and runs a sample bot per configuration in CI.
+- Updated dependencies [[`d6e6f45`](https://github.com/polvallverdu/pipedog/commit/d6e6f45c41c7a0aff8f8bdf551f43a8222dc90a8), [`d6e6f45`](https://github.com/polvallverdu/pipedog/commit/d6e6f45c41c7a0aff8f8bdf551f43a8222dc90a8)]:
+  - @pipedog/core@0.8.0
+  - @pipedog/onnx@0.8.0
+  - @pipedog/asyncio@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes

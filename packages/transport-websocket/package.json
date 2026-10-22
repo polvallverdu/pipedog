@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/transport-websocket",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "WebSocket transports for pipedog: client, single-client server and bring-your-own-socket (FastAPI) transports over a runtime-agnostic socket, with servers for Bun, Node (ws) and Deno.",
   "keywords": [
     "pipecat",

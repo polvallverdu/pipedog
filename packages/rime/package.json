@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/rime",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Rime services (WebSocket, HTTP and WebSocket v1 TTS) for pipedog.",
   "keywords": [
     "pipecat",

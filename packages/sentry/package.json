@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/sentry",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Sentry metrics for pipedog (pipecat.processors.metrics.sentry): SentryMetrics reports TTFB and processing time as Sentry transactions, with any Sentry JS SDK (Node, Bun, Deno, Cloudflare).",
   "keywords": [
     "pipecat",

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/pocket-tts",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Pocket TTS for pipedog: a port of Pipecat's PocketTTSService, running Kyutai's Pocket TTS locally on ONNX Runtime through @pipedog/onnx.",
   "keywords": [
     "pipecat",

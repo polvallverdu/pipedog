@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/serializer-protobuf",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Protobuf frame serializer (ProtobufFrameSerializer) for pipedog, wire-compatible with Pipecat's frames.proto.",
   "keywords": [
     "pipecat",

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/sarvam",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Sarvam AI services (LLM, STT, TTS) for pipedog.",
   "keywords": [
     "pipecat",

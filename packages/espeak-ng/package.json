@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/espeak-ng",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "eSpeak NG phonemization for pipedog's local TTS models (Kokoro, Piper): espeak-ng compiled to WebAssembly, loaded lazily as an optional peer dependency.",
   "keywords": [
     "pipecat",
