@@ -28,6 +28,7 @@ import {
   type OnnxBackend,
   type OnnxModelSource,
   sharedSession,
+  withDefaultModelHint,
 } from "@pipedog/onnx";
 
 /** The upstream model file name. */
@@ -68,10 +69,19 @@ export function onnxSmartTurnSessionFactory(
   return async (modelPath, sessionOptions) => {
     const backend = await (options.backend ?? createOnnxBackend());
     const model = options.model ?? modelPath;
-    const session =
+    const create = () =>
       options.shareSession === false
-        ? await backend.createSession(model, sessionOptions)
-        : await sharedSession(backend, model, sessionOptions);
+        ? backend.createSession(model, sessionOptions)
+        : sharedSession(backend, model, sessionOptions);
+    // The package's own file is not there after bundling: say how to pass it.
+    const session =
+      model instanceof URL && model.href === defaultSmartTurnModelUrl().href
+        ? await withDefaultModelHint(create, {
+            what: "the Smart Turn model",
+            specifier: "@pipedog/audio-smart-turn/smart-turn-v3.2-cpu.onnx",
+            usage: "`createLocalSmartTurnAnalyzerV3({ model })`",
+          })
+        : await create();
     const output = session.outputNames[0] as string;
     return {
       async run(feeds) {

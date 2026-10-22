@@ -40,6 +40,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
     "@pipedog/core": "workspace:*"
   },
   "peerDependencies": {

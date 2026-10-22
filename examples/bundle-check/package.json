@@ -1,0 +1,35 @@
+{
+  "name": "@pipedog/example-bundle-check",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Sample bots that are bundled with `bun build` and run from a directory without node_modules, to check that a single-file deployment works.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/audio-rnnoise-filter": "workspace:*",
+    "@pipedog/audio-silero": "workspace:*",
+    "@pipedog/audio-smart-turn": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/google": "workspace:*",
+    "@pipedog/onnx": "workspace:*",
+    "@pipedog/openai": "workspace:*",
+    "@pipedog/resampler-wasm": "workspace:*",
+    "@pipedog/runner": "workspace:*",
+    "@pipedog/serializer-protobuf": "workspace:*",
+    "@pipedog/serializer-telnyx": "workspace:*",
+    "@pipedog/transport-smallwebrtc": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*"
+  },
+  "devDependencies": {
+    "@google-cloud/speech": "8.1.1",
+    "@google-cloud/text-to-speech": "7.1.1",
+    "@grpc/grpc-js": "1.14.6",
+    "@pipedog/example-test-mocks": "workspace:*",
+    "onnxruntime-node": "1.30.0",
+    "onnxruntime-web": "1.30.0"
+  }
+}

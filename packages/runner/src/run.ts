@@ -614,6 +614,12 @@ export async function _runBotSession(
 // Transport availability.
 // ---------------------------------------------------------------------------
 
+/** Transport packages this package depends on, so they are installed (or bundled) with it. */
+const BUNDLED_DEPENDENCIES: readonly string[] = [
+  "@pipedog/transport-websocket",
+  "@pipedog/transport-smallwebrtc",
+];
+
 /**
  * Check whether a module can be resolved without importing it.
  *
@@ -621,6 +627,11 @@ export async function _runBotSession(
  * @returns `true` if the runtime can resolve the module.
  */
 export function _isModuleAvailable(module: string): boolean {
+  // DIVERGENCE: upstream's `importlib.util.find_spec` only sees installed packages, and its
+  // extras are optional. Here the transports in this package's own `dependencies` are always
+  // there, and a bundle (`bun build`) has no node_modules to resolve them from, so resolving
+  // them by name would disable their routes in every bundled app.
+  if (BUNDLED_DEPENDENCIES.includes(module)) return true;
   const meta = import.meta as { resolve?: (specifier: string) => string };
   if (typeof meta.resolve !== "function") return false;
   try {

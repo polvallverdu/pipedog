@@ -13,7 +13,7 @@ whole call. That shapes where it can run. The transport decides most of it:
 
 | Host | Runtime | SmallWebRTC | WebSocket | Page |
 |---|---|---|---|---|
-| VM, container, bare metal | Bun, Node, Deno | Yes | Yes | [Servers](/docs/deployment/servers) |
+| VM, container, bare metal | Bun, Node, Deno | Yes | Yes | [Servers](/docs/deployment/servers), [Bundling](/docs/deployment/bundling) |
 | Cloudflare Workers + Durable Objects | workerd | No (no UDP) | Yes | [Cloudflare Workers](/docs/deployment/cloudflare-workers) |
 | Vercel Functions | Bun runtime | No (no UDP) | Yes | [Vercel](/docs/deployment/vercel) |
 | Serverless functions without WebSockets | any | No | No | Signalling only |

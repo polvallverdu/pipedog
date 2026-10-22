@@ -1,0 +1,131 @@
+---
+title: Bundling
+description: Ship a pipedog bot as one file with bun build, with the models and WebAssembly files inside, and know what has to stay outside.
+---
+
+`bun build` turns a bot and its dependencies into one file (or one executable, with `--compile`),
+so a server needs no `node_modules`. pipedog bundles, with a few things you have to hand over
+yourself, because a bundler can follow an `import` but not a path built at run time. This page
+lists them, with a recipe for each.
+
+Every recipe here runs in CI: `examples/bundle-check` bundles a sample bot per configuration with
+`bun build` (and `--compile`), and runs it from a directory with no `node_modules`, against mock
+providers. The runs use Bun 1.4.
+
+## The build
+
+```sh
+bun build --target=bun --outdir dist src/bot.ts
+bun dist/bot.js
+```
+
+- **Use `--outdir`, not `--outfile`.** Models and WebAssembly files imported with
+  `with { type: "file" }` are copied next to the bundle; Bun refuses `--outfile` when there are
+  any. Deploy the whole `dist` directory.
+- **`bun build --compile --outfile bot src/bot.ts`** puts the bundle, the runtime and every file
+  import in one executable. Nothing is copied next to it.
+- Minifying works. Add `--keep-names` to keep processor names readable in the logs.
+- **Run it with `bun --no-install`** when you test the bundle in a directory without
+  `node_modules`: without it Bun fetches missing packages from npm while it runs, which hides
+  what the bundle lacks.
+
+## What breaks, and what to do
+
+| What you see | Cause | What to do |
+| --- | --- | --- |
+| `ENOENT ... data/silero_vad.onnx` (now an error that names the `model` option) | Silero and Smart Turn read their model from `data/` next to the package's source. A bundle has no such directory. | [Pass the model](#the-model-and-webassembly-files) as a `with { type: "file" }` import. |
+| `Failed to initialize RNNoise: ENOENT ... rnnoise.wasm` | Same: the module is read next to the source. | Call `initRnnoise()` with the file. |
+| `No ONNX runtime available` | `onnxruntime-node` and `onnxruntime-web` are imported by name at run time, which the bundle doesn't contain. | Install `onnxruntime-node` next to the bundle, or [bundle `onnxruntime-web`](#onnxruntime). |
+| `Smart Turn is unavailable, so user turns end when the VAD hears silence` | Core finds `@pipedog/audio-smart-turn` by name at run time, for the default turn strategies. | Pass `createLocalSmartTurnAnalyzerV3()` to the turn strategy yourself. |
+| `Missing module: @google-cloud/text-to-speech` or `.../speech` | The services import the gRPC SDKs by name. | [Import them and pass them in](#google), or install them next to the bundle. |
+| `/ws` answers 404 from `@pipedog/runner`, or `WebRTC routes disabled` in its log | The runner checked that its transports resolve by name. Fixed: they are now always counted as there. SmallWebRTC's `reflect-metadata` import is also kept in order. | Update `@pipedog/runner` and `@pipedog/transport-smallwebrtc`. |
+
+SmallWebRTC (werift, with Opus compiled to WebAssembly in `libopus-wasm`), the WebSocket
+transports, the OpenAI and Gemini services, the resampler and the telephony serializers bundle
+without any option. `reflect-metadata`, which werift's X.509 code needs, is loaded by
+`@pipedog/transport-smallwebrtc` itself, first: you don't mark it external or import it.
+
+## The model and WebAssembly files
+
+`with { type: "file" }` makes Bun copy the file and give you its path. Turn the path into a URL
+with `new URL(path, import.meta.url)`: it points at the file next to the bundle (or inside the
+executable) wherever the process was started from. `Bun.file(path)` alone is relative to the
+working directory, so it fails when a service manager starts the bot from another one.
+
+**Silero VAD** (`@pipedog/audio-silero/silero_vad.onnx`, 2.3 MB), and **Smart Turn**
+(`@pipedog/audio-smart-turn/smart-turn-v3.2-cpu.onnx`, 8.7 MB):
+
+<include cwd meta='title="bundling_silero.ts"'>snippets/bundling_silero.ts#silero</include>
+
+<include cwd meta='title="bundling_smart_turn.ts"'>snippets/bundling_smart_turn.ts#smart-turn</include>
+
+**RNNoise** (`@pipedog/audio-rnnoise-filter/rnnoise.wasm`, 1.4 MB):
+
+<include cwd meta='title="bundling_rnnoise.ts"'>snippets/bundling_rnnoise.ts#rnnoise</include>
+
+**The resampler** (`@pipedog/resampler-wasm/resampler.wasm`, 39 KB) needs nothing: the package
+embeds a copy of the module in its JavaScript and uses it when the file isn't there. To load the
+file instead:
+
+<include cwd meta='title="bundling_resampler.ts"'>snippets/bundling_resampler.ts#resampler</include>
+
+The model options also take bytes (`new Uint8Array(await Bun.file(url).arrayBuffer())`) or a path.
+The models are not embedded in the JavaScript: they are 2 to 9 MB.
+
+## onnxruntime
+
+Silero and Smart Turn run on `onnxruntime-node` (a native addon) when it is installed, and on
+`onnxruntime-web` (WebAssembly) otherwise. Pick the one that fits how you ship:
+
+- **`onnxruntime-node`** is the fastest, and it can't be bundled: it is a native addon with a
+  binary per platform. Build with `--external onnxruntime-node` and install it next to the bundle
+  (`bun add onnxruntime-node`). It doesn't work with `bun build --compile`: an executable can't
+  load an external package.
+- **`onnxruntime-web`** bundles, and works with `--compile`. Import it yourself and give it its
+  two files (the loader and the module, 14 MB, copied next to the bundle):
+
+<include cwd meta='title="bundling_onnx_web.ts"'>snippets/bundling_onnx_web.ts#onnx-web</include>
+
+Install `onnxruntime-web@1.30.0` (`bun add onnxruntime-web@1.30.0`) as a dependency of your app,
+at the version `@pipedog/onnx` is tested with. Create the backend once and pass it to every
+model, so they share it.
+
+The cost is speed. Measured on Bun 1.4 (Apple M4 Pro, one thread, `bun run bench`):
+
+| Backend | Silero, per 32 ms chunk | Smart Turn inference | Smart Turn per prediction (features and inference) |
+| --- | ---: | ---: | ---: |
+| `onnxruntime-node` | 0.135 ms | 72 ms | 208 ms |
+| `onnxruntime-web` | 0.199 ms | 166 ms | 225 ms |
+
+Silero is 0.6% of a real-time chunk either way. Smart Turn runs once each time the user pauses, and
+the web backend adds about 17 ms to that prediction.
+
+## Google
+
+`@google/genai` (Gemini) is a dependency of `@pipedog/google` and bundles. The Cloud Speech-to-Text
+and Text-to-Speech clients are optional peers that talk gRPC; the services import them by name.
+Import them in your bot and pass the modules, which puts them in the bundle (grpc-js, google-gax
+and their protos add about 4 MB):
+
+<include cwd meta='title="bundling_google.ts"'>snippets/bundling_google.ts#google</include>
+
+`GoogleTTSService` and `GeminiTTSService` take `textToSpeechModule` too.
+
+## What stays outside
+
+| Package | When | Why |
+| --- | --- | --- |
+| `onnxruntime-node` | You use the native ONNX backend. | A native addon: its `.node` binaries are loaded from `node_modules`. Not possible with `--compile`; use `onnxruntime-web`. |
+| `ws` | You serve WebSockets on Node. | An optional peer, imported by name. Bun doesn't need it: `Bun.serve` upgrades the socket. |
+| `@pipedog/transport-livekit`, `@pipedog/transport-whatsapp`, `@pipedog/evals` | You use them through `@pipedog/runner`. | Optional peers that the runner looks up by name. The bundle check doesn't cover them. |
+
+Nothing else the bundle check runs has to stay out: the Google clients, `reflect-metadata`, werift,
+`@peculiar/x509`, `tsyringe`, `libopus-wasm` and the models are all in the bundle, or next to it as
+files.
+
+## The runner
+
+`@pipedog/runner`'s `main()` also serves the prebuilt browser client from a directory next to its
+source, which a bundle doesn't have, and logs `Prebuilt frontend not available`. The telephony and
+WebSocket routes work without it, and the WebRTC routes stay enabled. See
+[The runner](/docs/runner).

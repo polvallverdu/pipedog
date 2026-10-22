@@ -11,6 +11,7 @@
  * to compile WebAssembly from bytes: there the `.wasm` is imported as a module.
  */
 
+import { rethrowIfCancelled } from "@pipedog/asyncio";
 import { engineFromModule, type RnnoiseEngine } from "./engine.ts";
 import { currentEngine, initOnce, setEngine } from "./state.ts";
 
@@ -46,8 +47,24 @@ async function load(source: RnnoiseSource | undefined): Promise<RnnoiseEngine> {
     module = source;
   } else {
     let bytes: BufferSource;
-    if (source === undefined) bytes = await readUrl(defaultWasmUrl());
-    else if (source instanceof URL) bytes = await readUrl(source);
+    if (source === undefined) {
+      try {
+        bytes = await readUrl(defaultWasmUrl());
+      } catch (e) {
+        rethrowIfCancelled(e);
+        // A bundler does not copy the file the package reads next to its own source.
+        throw new Error(
+          `Could not read the RNNoise module that ships with the package (${e instanceof Error ? e.message : String(e)}). ` +
+            "That happens when the app is bundled: the bundle does not include the .wasm file. " +
+            "Load it yourself before creating the filter. With `bun build` (also `--compile`):\n" +
+            '  import wasmPath from "@pipedog/audio-rnnoise-filter/rnnoise.wasm" with { type: "file" };\n' +
+            // Not one literal: the compat harness rewrites `import.meta.url` in sources.
+            `  await initRnnoise(new URL(wasmPath, ${"import.meta"}.url));\n` +
+            "(bytes, a compiled WebAssembly.Module or a Response work too).",
+          { cause: e },
+        );
+      }
+    } else if (source instanceof URL) bytes = await readUrl(source);
     else if (typeof Response !== "undefined" && source instanceof Response)
       bytes = await source.arrayBuffer();
     else bytes = source as BufferSource;
