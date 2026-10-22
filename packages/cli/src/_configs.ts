@@ -206,10 +206,12 @@ ${AWS_CREDENTIALS}
 })`,
   cartesia_stt: keyed("CartesiaSTTService", "CARTESIA_API_KEY"),
   cartesia_turns_stt: keyed("CartesiaTurnsSTTService", "CARTESIA_API_KEY"),
+  assemblyai_stt: keyed("AssemblyAISTTService", "ASSEMBLYAI_API_KEY"),
   deepgram_stt: keyed("DeepgramSTTService", "DEEPGRAM_API_KEY"),
   deepgram_flux_stt: keyed("DeepgramFluxSTTService", "DEEPGRAM_API_KEY"),
   elevenlabs_stt: keyed("ElevenLabsSTTService", "ELEVENLABS_API_KEY"),
   elevenlabs_realtime_stt: keyed("ElevenLabsRealtimeSTTService", "ELEVENLABS_API_KEY"),
+  gladia_stt: keyed("GladiaSTTService", "GLADIA_API_KEY"),
   gemini_stt: keyed("GeminiSTTService", "GOOGLE_API_KEY"),
   google_stt: `new GoogleSTTService({
   credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",
@@ -227,6 +229,8 @@ ${AWS_CREDENTIALS}
   // OpenAI detects the end of each turn, so no turn model has to run here.
   turnDetection: { type: "server_vad" },
 })`,
+  soniox_stt: keyed("SonioxSTTService", "SONIOX_API_KEY"),
+  speechmatics_stt: keyed("SpeechmaticsSTTService", "SPEECHMATICS_API_KEY"),
   together_stt: keyed("TogetherSTTService", "TOGETHER_API_KEY"),
   whisper_stt: `new WhisperSTTService({
   settings: new WhisperSTTService.Settings({
@@ -383,6 +387,8 @@ ${AWS_CREDENTIALS}
     "RIME_API_KEY",
     `    voice: process.env.RIME_VOICE_ID ?? "luna",`,
   ),
+  soniox_tts: keyed("SonioxTTSService", "SONIOX_API_KEY"),
+  speechmatics_tts: keyed("SpeechmaticsTTSService", "SPEECHMATICS_API_KEY"),
   together_tts: keyed(
     "TogetherTTSService",
     "TOGETHER_API_KEY",

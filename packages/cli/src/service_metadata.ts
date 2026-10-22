@@ -164,6 +164,7 @@ export const NOT_OFFERED: Record<string, string> = {
   XAIHttpTTSService: "the HTTP variant of XAITTSService, which is offered",
   InworldHttpTTSService: "the HTTP variant of InworldTTSService, which is offered",
   AzureHttpTTSService: "the HTTP variant of AzureTTSService, which is offered",
+  AssemblyAISyncSTTService: "the sync HTTP variant of AssemblyAISTTService, which is offered",
   HeyGenTransport: "a transport, not a video service (HeyGenVideoService is offered)",
   WhisperSTTServiceMLX:
     "upstream doesn't offer it either; in pipedog it runs the same ONNX engine as WhisperSTTService, which is offered",
@@ -264,12 +265,14 @@ export class ServiceRegistry {
     svc("azure_stt", "Azure Speech", "@pipedog/azure", ["AzureSTTService"]),
     svc("cartesia_stt", "Cartesia", "@pipedog/cartesia", ["CartesiaSTTService"]),
     svc("cartesia_turns_stt", "Cartesia Turns", "@pipedog/cartesia", ["CartesiaTurnsSTTService"]),
+    svc("assemblyai_stt", "AssemblyAI", "@pipedog/assemblyai", ["AssemblyAISTTService"]),
     svc("deepgram_stt", "Deepgram", "@pipedog/deepgram", ["DeepgramSTTService"]),
     svc("deepgram_flux_stt", "Deepgram Flux", "@pipedog/deepgram", ["DeepgramFluxSTTService"]),
     svc("elevenlabs_stt", "ElevenLabs", "@pipedog/elevenlabs", ["ElevenLabsSTTService"]),
     svc("elevenlabs_realtime_stt", "ElevenLabs Realtime", "@pipedog/elevenlabs", [
       "ElevenLabsRealtimeSTTService",
     ]),
+    svc("gladia_stt", "Gladia", "@pipedog/gladia", ["GladiaSTTService"]),
     svc("gemini_stt", "Gemini Transcribe Live", "@pipedog/google", ["GeminiSTTService"]),
     svc("google_stt", "Google Speech-to-Text", "@pipedog/google", ["GoogleSTTService"], {
       note: "Uses Google's gRPC Node SDK: runs on Bun and Node, not on Workers.",
@@ -282,6 +285,8 @@ export class ServiceRegistry {
     }),
     svc("openai_stt", "OpenAI (Whisper)", "@pipedog/openai", ["OpenAISTTService"]),
     svc("openai_realtime_stt", "OpenAI Realtime", "@pipedog/openai", ["OpenAIRealtimeSTTService"]),
+    svc("soniox_stt", "Soniox", "@pipedog/soniox", ["SonioxSTTService"]),
+    svc("speechmatics_stt", "Speechmatics", "@pipedog/speechmatics", ["SpeechmaticsSTTService"]),
     svc("together_stt", "Together AI", "@pipedog/together", ["TogetherSTTService"]),
     svc("whisper_stt", "Whisper (Local)", "@pipedog/whisper", ["WhisperSTTService"], {
       extraDependencies: { "onnxruntime-node": "^1.30.0" },
@@ -347,6 +352,8 @@ export class ServiceRegistry {
       note: "Runs the model locally (downloaded on first use into ~/.cache/pipedog): Bun, Node and Deno, not Workers.",
     }),
     svc("rime_tts", "Rime", "@pipedog/rime", ["RimeTTSService"]),
+    svc("soniox_tts", "Soniox", "@pipedog/soniox", ["SonioxTTSService"]),
+    svc("speechmatics_tts", "Speechmatics", "@pipedog/speechmatics", ["SpeechmaticsTTSService"]),
     svc("together_tts", "Together AI", "@pipedog/together", ["TogetherTTSService"]),
     svc("xai_tts", "xAI", "@pipedog/xai", ["XAITTSService"]),
   ];
