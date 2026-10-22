@@ -41,7 +41,7 @@ const FAIL_MARK = "__COMPAT_FAIL__";
 const RESULT_MARK = "__COMPAT_RESULT__";
 const TIMEOUT_MS = 60_000;
 /** A compatibility date workerd 1.20261005.1 supports. */
-const COMPATIBILITY_DATE = "2026-10-01";
+export const COMPATIBILITY_DATE = "2026-10-01";
 
 /** Scratch directory for bundles; node_modules is gitignored and excluded from biome. */
 export const OUT_ROOT = join(ROOT, "node_modules", ".cache", "pipedog-compat");
@@ -94,7 +94,7 @@ function workerEntry(smoke: string, hidden: string[]): string {
 
 const ERROR_LINE = /(\b[A-Z]\w*Error\b|\berror\b|Uncaught|Cannot|not found|not supported)/i;
 
-function firstErrorLine(text: string): string {
+export function firstErrorLine(text: string): string {
   const lines = text
     .split("\n")
     .map((l) => l.trim())
@@ -148,7 +148,7 @@ function freshDir(dir: string): string {
   return dir;
 }
 
-interface BundleOptions {
+export interface BundleOptions {
   target: "node" | "browser" | "bun";
   conditions?: string[];
   plugins?: BunPlugin[];
@@ -185,7 +185,7 @@ function hideModulesPlugin(hidden: string[]): BunPlugin {
  * installed (unbundled) package has, so files shipped next to the sources
  * (models, wasm) are found where they would be.
  */
-function moduleUrlPlugin(): BunPlugin {
+export function moduleUrlPlugin(): BunPlugin {
   return {
     name: "keep-import-meta-url",
     setup(build) {
@@ -208,7 +208,7 @@ function moduleUrlPlugin(): BunPlugin {
  * never a hidden one: a computed `import(name)` that the bundler cannot see
  * must fail to resolve too.
  */
-function provideOptionalPeers(dir: string, hidden: string[]): void {
+export function provideOptionalPeers(dir: string, hidden: string[]): void {
   const code = readFileSync(join(dir, "bundle.mjs"), "utf8");
   const deps: Record<string, string> = {};
   for (const name of readdirSync(join(ROOT, "packages"))) {
@@ -238,7 +238,11 @@ function provideOptionalPeers(dir: string, hidden: string[]): void {
 }
 
 /** Bundle `entry` to `<dir>/bundle.mjs`. Returns null on success, else the error text. */
-async function bundle(entry: string, dir: string, opts: BundleOptions): Promise<string | null> {
+export async function bundle(
+  entry: string,
+  dir: string,
+  opts: BundleOptions,
+): Promise<string | null> {
   try {
     const out = await Bun.build({
       entrypoints: [entry],
@@ -325,7 +329,7 @@ async function runNode(smoke: string, dir: string, hidden: string[]): Promise<Ru
  * Bare Node builtin specifiers (`"dgram"`, `"crypto"`), which a browser-target
  * build rejects, become external `node:` imports, which Deno provides.
  */
-function nodeBuiltinsPlugin(): BunPlugin {
+export function nodeBuiltinsPlugin(): BunPlugin {
   const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
   const names = builtinModules.filter((m) => !m.startsWith("_") && !m.startsWith("node:"));
   const filter = new RegExp(`^(${names.map(escapeRegExp).join("|")})$`);
@@ -366,7 +370,7 @@ async function runDeno(smoke: string, dir: string, hidden: string[]): Promise<Ru
  * bundle, and `.onnx` imports into Data modules (an ArrayBuffer), the way a
  * Worker can be handed model bytes (wrangler's `Data` rule).
  */
-function wasmModulesPlugin(dir: string, modules: string[]): BunPlugin {
+export function wasmModulesPlugin(dir: string, modules: string[]): BunPlugin {
   return {
     name: "workerd-wasm-modules",
     setup(build) {
@@ -383,7 +387,7 @@ function wasmModulesPlugin(dir: string, modules: string[]): BunPlugin {
   };
 }
 
-function workerdConfig(port: number, wasm: string[]): string {
+export function workerdConfig(port: number, wasm: string[]): string {
   const modules = [
     '(name = "bundle.mjs", esModule = embed "bundle.mjs")',
     ...wasm.map(
@@ -408,7 +412,7 @@ const smokeWorker :Workerd.Worker = (
 `;
 }
 
-function freePort(): number {
+export function freePort(): number {
   const server = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
   const port = server.port;
   server.stop(true);

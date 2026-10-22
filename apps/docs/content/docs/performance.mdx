@@ -1,0 +1,119 @@
+---
+title: Performance
+description: pipedog on Bun, Node, Deno and Cloudflare Workers against Pipecat on CPython, measured on the same machine with the same scenarios.
+---
+
+pipedog and Pipecat run the same pipelines: a frame goes through the same processors, the same
+queues and the same `PipelineWorker`. This page measures what that costs on each runtime, offline
+(the framework alone) and against Gemini (a real service, where the network dominates).
+
+Every scenario is written twice, once against each framework, in the same shape:
+[`tools/bench/perf/pipedog.ts`](https://github.com/polvallverdu/pipedog/blob/main/tools/bench/perf/pipedog.ts)
+and
+[`tools/bench/perf/pipecat_bench.py`](https://github.com/polvallverdu/pipedog/blob/main/tools/bench/perf/pipecat_bench.py).
+Pipecat runs from the upstream commit pipedog is ported from. Both log at `WARNING`. pipedog runs
+from a bundle made with `bun build`, as it is deployed. The runtimes take turns within each round,
+so a slow minute on the network or on the machine falls on all of them.
+
+## Results
+
+{/* perf:start */}
+
+### Frame processing
+
+10 pass-through processors in a `PipelineWorker`. **Throughput**: 20,000 `TextFrame`s queued at once.
+**Latency**: one frame at a time, queued to arrival at the end of the pipeline. In brackets: compared with Pipecat (higher is better).
+
+| | Throughput (frames/s) | Latency per frame (median) | p90 | Peak memory |
+|---|---:|---:|---:|---:|
+| Pipecat · CPython 3.13.13 | 9,372 (1.0×) | 571 µs (1.0×) | 575 µs | 143 MB |
+| pipedog · Bun 1.4.2 | 23,281 (2.5×) | 99 µs (5.8×) | 110 µs | 246 MB |
+| pipedog · Node 24.14.0 | 28,831 (3.1×) | 83 µs (6.9×) | 91 µs | 337 MB |
+| pipedog · Deno 2.9.5 | 32,160 (3.4×) | 116 µs (4.9×) | 144 µs | 296 MB |
+| pipedog · workerd 1.20261005.1 | 24,615 (2.6×) | 370 µs (1.5×) | 541 µs | – |
+
+### Cold start
+
+From starting the process to a pipeline that has started and ended, with the Google services loaded
+(for workerd: from starting `workerd serve` to the response). *Runtime alone* is the same for an
+empty program, so the difference is what loading the framework and running the pipeline cost.
+
+| | Cold start | Runtime alone | Framework | Peak memory | Bundle |
+|---|---:|---:|---:|---:|---:|
+| Pipecat · CPython | 401 ms | 13 ms | 388 ms | 114 MB | – |
+| pipedog · Bun | 45 ms | 7 ms | 39 ms | 52 MB | 3.5 MB |
+| pipedog · Node | 67 ms | 21 ms | 46 ms | 87 MB | 3.8 MB |
+| pipedog · Deno | 49 ms | 21 ms | 28 ms | 90 MB | 3.1 MB |
+| pipedog · workerd | 43 ms | 11 ms | 32 ms | – | 1.7 MB |
+
+### Gemini LLM: time to first token
+
+`GoogleLLMService` with `gemini-3.5-flash-lite` (thinking at its minimum, as the service sends by default), from queueing an `LLMContextFrame` to the first `LLMTextFrame` at the end of the pipeline. *SDK alone* is the same request made with the Google GenAI SDK of the same language, in the same process, alternating with the pipeline.
+
+| | Through the pipeline (median) | SDK alone (median) | Difference, paired (median) | Middle half of differences | Requests |
+|---|---:|---:|---:|---:|---:|
+| Pipecat · CPython | 731 ms | 602 ms | 122 ms | -39 to 221 ms | 30 |
+| pipedog · Bun | 669 ms | 668 ms | -22 ms | -162 to 180 ms | 36 |
+| pipedog · Node | 648 ms | 677 ms | -50 ms | -151 to 63 ms | 36 |
+| pipedog · Deno | 726 ms | 704 ms | -4 ms | -124 to 174 ms | 36 |
+| pipedog · workerd | 710 ms | 593 ms | 89 ms | -49 to 254 ms | 30 |
+
+### Gemini TTS: time to first audio
+
+`GeminiTTSService` with `gemini-3.8-flash-tts`, from queueing a `TTSSpeakFrame` to the first `TTSAudioRawFrame` at the end of the pipeline, and the same request made with the SDK.
+
+| | Through the pipeline (median) | SDK alone (median) | Difference, paired (median) | Middle half of differences | Requests |
+|---|---:|---:|---:|---:|---:|
+| Pipecat · CPython | 815 ms | 697 ms | 144 ms | -21 to 219 ms | 24 |
+| pipedog · Bun | 846 ms | 636 ms | 139 ms | 12 to 358 ms | 24 |
+| pipedog · Node | 758 ms | 723 ms | 6 ms | -37 to 198 ms | 24 |
+| pipedog · Deno | 871 ms | 665 ms | 148 ms | 22 to 322 ms | 24 |
+| pipedog · workerd | 833 ms | 633 ms | 121 ms | 57 to 213 ms | 24 |
+
+Measured 2026-10-22 on Apple M4 Pro (12 cores, 24 GB), darwin 25.6.0: pipedog 0.8.0, Pipecat 5558d26dca (pinned upstream) on CPython 3.13.13, Bun 1.4.2, Node 24.14.0, Deno 2.9.5, workerd 1.20261005.1. 6 rounds, runtimes taking turns.
+
+{/* perf:end */}
+
+## Reading the numbers
+
+**Frame processing** is the framework alone: no I/O, no models. It's what a pipeline spends moving
+frames between processors, so it sets the floor under every response. In a voice bot each audio
+chunk (every 10–20 ms) and each LLM token goes through it.
+
+**Workers** run pipedog's event loop the slowest of the JavaScript runtimes. Its timers and
+`setImmediate` wait about a millisecond, so `@pipedog/asyncio` yields through a body read instead,
+and a frame takes several such yields across 10 processors. That is still well under a
+millisecond per frame.
+
+**Peak memory** in the JavaScript runtimes is mostly garbage the collector hasn't reclaimed yet,
+not memory in use. With 20,000 frames sent through, the live heap after a forced collection grows
+by about 5 MB on Node, and drops back once the pipeline ends. CPython frees objects as soon as the
+last reference goes, so its peak stays closer to what it holds. Under memory pressure V8 collects
+earlier; `--max-old-space-size` caps it.
+
+**Cold start** matters for serverless (a Worker or a function that starts per call) and for
+scaling out. Pipecat's is mostly importing Python modules (here with the Google services). A
+bundle loads in one read.
+
+**Gemini** times are dominated by the network and the model, which vary by hundreds of
+milliseconds from one request to the next. The *SDK alone* column makes the same request with
+Google's SDK, in the same process, right before or after each pipeline request. The paired
+difference is the framework's share, and is mostly within the noise for both frameworks. TTS
+services send audio downstream in chunks of a fixed size (as Pipecat does), so the first audio
+frame waits for the first full chunk, while the SDK column stops the clock at the first byte.
+
+## Running it
+
+```sh
+bun install
+GOOGLE_API_KEY=... bun run bench:perf --write   # without a key, the Gemini scenarios are skipped
+bun run bench:perf --runtime bun,python --scenario hop --rounds 1
+```
+
+The first run creates a Python 3.13 environment with [uv](https://docs.astral.sh/uv/) and installs
+Pipecat from the pinned upstream checkout (`bun run upstream` restores it). `--write` saves the raw
+samples to
+[`tools/bench/perf/results.json`](https://github.com/polvallverdu/pipedog/blob/main/tools/bench/perf/results.json)
+and the tables above. Model inference (Silero VAD, Smart Turn) has its own benchmark,
+`bun run bench`; its results are in the [`@pipedog/onnx`
+README](https://github.com/polvallverdu/pipedog/tree/main/packages/onnx#readme).

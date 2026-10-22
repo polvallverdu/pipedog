@@ -18,6 +18,19 @@ and wire protocols, with camelCase members. So Pipecat's client SDKs (`@pipecat-
 
 **Docs:** <https://polvallverdu.github.io/pipedog/>
 
+## Why TypeScript?
+
+- **One language across the stack.** Bot, backend and web client in TypeScript: shared types,
+  one toolchain, no separate Python service to deploy and operate.
+- **Runs where your app runs.** Bun, Node, Deno and Cloudflare Workers, bundled to a single file.
+  Deploy a voice agent to serverless or the edge, close to your users.
+- **Less overhead.** 2.5–3.4× the frame throughput of Pipecat on CPython, 5–7× lower per-frame
+  latency, and cold starts around 45 ms instead of 400 ms ([Performance](#performance)).
+- **The JavaScript ecosystem.** npm packages, your existing deploy pipeline, and the language most
+  web teams already write.
+- **Still Pipecat.** Same architecture, frames and wire protocols, so Pipecat's client SDKs, docs
+  and patterns carry over.
+
 ## Quickstart
 
 A voice assistant you talk to in the browser, with OpenAI speech-to-text, chat and text-to-speech
@@ -181,6 +194,24 @@ Cloud Speech and Text-to-Speech services, and the servers that listen on a port 
 `main()` and `serve()`, `serveFetch`). Each package's README has its own runtime table.
 Details: [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/).
 
+## Performance
+
+The same pipeline, 10 pass-through processors in a `PipelineWorker`, in pipedog and in Pipecat
+(the upstream commit pipedog is ported from), on one machine. In brackets: compared with Pipecat.
+
+| | Throughput | Latency per frame | Cold start |
+| --- | ---: | ---: | ---: |
+| Pipecat · CPython 3.13 | 9,372 frames/s | 571 µs | 401 ms |
+| pipedog · Bun 1.4 | 23,281 frames/s (2.5×) | 99 µs (5.8×) | 45 ms |
+| pipedog · Node 24 | 28,831 frames/s (3.1×) | 83 µs (6.9×) | 67 ms |
+| pipedog · Deno 2.9 | 32,160 frames/s (3.4×) | 116 µs (4.9×) | 49 ms |
+| pipedog · Cloudflare workerd | 24,615 frames/s (2.6×) | 370 µs (1.5×) | 43 ms |
+
+Measured on an Apple M4 Pro with `bun run bench:perf`. With a real service (Gemini LLM and TTS),
+both frameworks add little over calling the SDK directly; the network dominates. Peak memory, the
+Gemini numbers and how each is measured:
+[Performance](https://polvallverdu.github.io/pipedog/docs/performance/).
+
 ## Packages
 
 All packages are published under the `@pipedog` scope and released together at one version.
@@ -285,6 +316,8 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 - [Frameworks](https://polvallverdu.github.io/pipedog/docs/frameworks/): Express, Hono, Next.js and more
 - [Coming from Pipecat (Python)](https://polvallverdu.github.io/pipedog/docs/coming-from-pipecat/)
 - [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/)
+- [Performance](https://polvallverdu.github.io/pipedog/docs/performance/): pipedog on Bun, Node, Deno
+  and Workers against Pipecat on CPython
 - [Docs for AI tools](https://polvallverdu.github.io/pipedog/docs/guides/llms/): llms.txt, Markdown pages
   and the [`@pipedog/mcp`](packages/mcp) server for coding agents
 
