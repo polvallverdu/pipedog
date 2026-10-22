@@ -216,6 +216,11 @@ ${AWS_CREDENTIALS}
 })`,
   groq_stt: keyed("GroqSTTService", "GROQ_API_KEY"),
   mistral_stt: keyed("MistralSTTService", "MISTRAL_API_KEY"),
+  moonshine_stt: `new MoonshineSTTService({
+  settings: new MoonshineSTTService.Settings({
+    model: process.env.MOONSHINE_MODEL ?? "small-streaming",
+  }),
+})`,
   openai_stt: keyed("OpenAISTTService", "OPENAI_API_KEY"),
   openai_realtime_stt: `new OpenAIRealtimeSTTService({
   apiKey: process.env.OPENAI_API_KEY ?? "",
@@ -223,6 +228,11 @@ ${AWS_CREDENTIALS}
   turnDetection: { type: "server_vad" },
 })`,
   together_stt: keyed("TogetherSTTService", "TOGETHER_API_KEY"),
+  whisper_stt: `new WhisperSTTService({
+  settings: new WhisperSTTService.Settings({
+    model: process.env.WHISPER_MODEL ?? "Systran/faster-distil-whisper-medium.en",
+  }),
+})`,
   xai_stt: keyed("XAISTTService", "XAI_API_KEY"),
 
   // LLM services
@@ -332,6 +342,11 @@ ${AWS_CREDENTIALS}
     "INWORLD_API_KEY",
     `    voice: process.env.INWORLD_VOICE_ID ?? "Ashley",`,
   ),
+  kokoro_tts: `new KokoroTTSService({
+  settings: new KokoroTTSService.Settings({
+    voice: process.env.KOKORO_VOICE_ID ?? "af_heart",
+  }),
+})`,
   mistral_tts: keyed(
     "MistralTTSService",
     "MISTRAL_API_KEY",
@@ -342,6 +357,16 @@ ${AWS_CREDENTIALS}
     "OPENAI_API_KEY",
     `    voice: process.env.OPENAI_VOICE_ID ?? "marin",`,
   ),
+  piper_tts: `new PiperTTSService({
+  settings: new PiperTTSService.Settings({
+    voice: process.env.PIPER_VOICE_ID ?? "en_US-ryan-high",
+  }),
+})`,
+  pockettts_tts: `new PocketTTSService({
+  settings: new PocketTTSService.Settings({
+    voice: process.env.POCKET_TTS_VOICE_ID ?? "alba",
+  }),
+})`,
   together_tts: keyed(
     "TogetherTTSService",
     "TOGETHER_API_KEY",

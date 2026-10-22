@@ -89,9 +89,11 @@ export const IMPORTS: Record<string, readonly string[]> = {
   google_stt: ['import { GoogleSTTService } from "@pipedog/google/stt";'],
   groq_stt: ['import { GroqSTTService } from "@pipedog/groq/stt";'],
   mistral_stt: ['import { MistralSTTService } from "@pipedog/mistral/stt";'],
+  moonshine_stt: ['import { MoonshineSTTService } from "@pipedog/moonshine/stt";'],
   openai_stt: ['import { OpenAISTTService } from "@pipedog/openai/stt";'],
   openai_realtime_stt: ['import { OpenAIRealtimeSTTService } from "@pipedog/openai/stt";'],
   together_stt: ['import { TogetherSTTService } from "@pipedog/together/stt";'],
+  whisper_stt: ['import { WhisperSTTService } from "@pipedog/whisper/stt";'],
   xai_stt: ['import { XAISTTService } from "@pipedog/xai/stt";'],
 
   // LLM services
@@ -117,8 +119,11 @@ export const IMPORTS: Record<string, readonly string[]> = {
   google_tts: ['import { GoogleTTSService } from "@pipedog/google/tts";'],
   groq_tts: ['import { GroqTTSService } from "@pipedog/groq/tts";'],
   inworld_tts: ['import { InworldTTSService } from "@pipedog/inworld/tts";'],
+  kokoro_tts: ['import { KokoroTTSService } from "@pipedog/kokoro/tts";'],
   mistral_tts: ['import { MistralTTSService } from "@pipedog/mistral/tts";'],
   openai_tts: ['import { OpenAITTSService } from "@pipedog/openai/tts";'],
+  piper_tts: ['import { PiperTTSService } from "@pipedog/piper/tts";'],
+  pockettts_tts: ['import { PocketTTSService } from "@pipedog/pocket-tts/tts";'],
   together_tts: ['import { TogetherTTSService } from "@pipedog/together/tts";'],
   xai_tts: ['import { XAITTSService } from "@pipedog/xai/tts";'],
 
