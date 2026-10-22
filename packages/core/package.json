@@ -50,7 +50,11 @@
   },
   "devDependencies": {
     "@opentelemetry/api": "1.9.1",
-    "@opentelemetry/sdk-trace-base": "2.11.0"
+    "@opentelemetry/sdk-trace-base": "2.11.0",
+    "@valibot/to-json-schema": "1.8.0",
+    "arktype": "2.2.8",
+    "valibot": "1.5.0",
+    "zod": "4.6.5"
   },
   "pipecat": {
     "runtimes": [
