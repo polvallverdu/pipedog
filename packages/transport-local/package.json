@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/transport-local",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Local audio transport for pipedog: the machine's microphone and speakers through sox or ffmpeg (no native addon), on Node, Bun and Deno.",
   "keywords": [
     "pipecat",

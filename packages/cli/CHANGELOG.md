@@ -1,5 +1,12 @@
 # @pipedog/cli
 
+## 0.8.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @pipedog/evals@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/openai",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "OpenAI services (LLM, Responses, Realtime, Live, STT, TTS, image) for pipedog.",
   "keywords": [
     "pipecat",

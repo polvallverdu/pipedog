@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/moonshine",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Moonshine speech-to-text for pipedog: a port of Pipecat's MoonshineSTTService, running Moonshine's models locally through @pipedog/onnx.",
   "keywords": [
     "pipecat",

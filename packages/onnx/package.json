@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/onnx",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A tiny ONNX inference backend for pipedog models (Silero VAD, Smart Turn): onnxruntime-node when installed, else onnxruntime-web (WASM), with a Cloudflare Workers variant.",
   "keywords": [
     "pipecat",

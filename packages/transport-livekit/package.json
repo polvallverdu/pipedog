@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/transport-livekit",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "LiveKit transport for pipedog: joins a LiveKit room (self-hosted or LiveKit Cloud) as a participant, with audio, video, data messages and SIP DTMF. Media runs on LiveKit's native Node SDK (@livekit/rtc-node).",
   "keywords": [
     "pipecat",

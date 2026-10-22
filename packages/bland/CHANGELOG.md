@@ -1,5 +1,13 @@
 # @pipedog/bland
 
+## 0.8.0
+
+### Patch Changes
+
+- Updated dependencies [[`d6e6f45`](https://github.com/polvallverdu/pipedog/commit/d6e6f45c41c7a0aff8f8bdf551f43a8222dc90a8)]:
+  - @pipedog/core@0.8.0
+  - @pipedog/asyncio@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes

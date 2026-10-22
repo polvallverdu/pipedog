@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/hume",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Hume TTS service for pipedog.",
   "keywords": [
     "pipecat",

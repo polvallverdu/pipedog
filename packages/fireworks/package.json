@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/fireworks",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Fireworks AI LLM service (FireworksLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

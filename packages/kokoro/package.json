@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/kokoro",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Kokoro text-to-speech for pipedog: a port of Pipecat's KokoroTTSService, running the Kokoro-82M ONNX model locally through @pipedog/onnx with espeak-ng phonemization.",
   "keywords": [
     "pipecat",
