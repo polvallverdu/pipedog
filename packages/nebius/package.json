@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/nebius",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Nebius LLM service (NebiusLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

@@ -1,5 +1,9 @@
 # @pipedog/resampler-wasm
 
+## 0.7.0
+
+No changes in this release.
+
 ## 0.6.1
 
 No changes in this release.

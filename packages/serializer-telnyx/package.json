@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/serializer-telnyx",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Telnyx WebSocket media streams frame serializer (TelnyxFrameSerializer) for pipedog.",
   "keywords": [
     "pipecat",

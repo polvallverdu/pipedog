@@ -1,5 +1,14 @@
 # @pipedog/audio-silero
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies [[`41278ae`](https://github.com/polvallverdu/pipedog/commit/41278ae4842de3534561ca725d18621c3fb27e8a), [`20a84e7`](https://github.com/polvallverdu/pipedog/commit/20a84e741d546e66e0eb7ad9a163c3968a4c042f)]:
+  - @pipedog/onnx@0.7.0
+  - @pipedog/core@0.7.0
+  - @pipedog/asyncio@0.7.0
+
 ## 0.6.1
 
 ### Patch Changes

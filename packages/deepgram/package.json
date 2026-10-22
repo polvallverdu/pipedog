@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/deepgram",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Deepgram services (STT, TTS, Flux STT and TTS) for pipedog.",
   "keywords": [
     "pipecat",

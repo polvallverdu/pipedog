@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/gladia",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Gladia speech-to-text service for pipedog.",
   "keywords": [
     "pipecat",

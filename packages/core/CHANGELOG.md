@@ -1,5 +1,25 @@
 # @pipedog/core
 
+## 0.7.0
+
+### Minor Changes
+
+- [#68](https://github.com/polvallverdu/pipedog/pull/68) [`20a84e7`](https://github.com/polvallverdu/pipedog/commit/20a84e741d546e66e0eb7ad9a163c3968a4c042f) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Traces say pipedog now. The library's tracers are called `pipedog` and `pipedog.turn` (they were
+  `pipecat` and `pipecat.turn`, as upstream), and `setupTracing()` defaults `service.name` to
+  `"pipedog"` (was `"pipecat"`). Span names and attribute keys are unchanged.
+  
+  If a dashboard, alert or query filters on the Pipecat tracer names, bring them back at startup,
+  before creating a pipeline, with `setTracerName("pipecat")` or `setupTracing({ tracerName:
+  "pipecat" })`. `getTracerName()` and `DEFAULT_TRACER_NAME` are exported too. Set your own
+  `serviceName` in production either way.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @pipedog/asyncio@0.7.0
+  - @pipedog/resampler-wasm@0.7.0
+  - @pipedog/sentencex-wasm@0.7.0
+
 ## 0.6.1
 
 ### Patch Changes
