@@ -1,8 +1,9 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 
-/** ElevenLabs services for pipedog. Subpaths mirror `pipecat.services.elevenlabs.*` (`/stt`, `/tts`). */
+/** ElevenLabs services for pipedog. Subpaths mirror `pipecat.services.elevenlabs.*` (`/stt`, `/tts`, `/dialogue/tts`). */
 
+export * from "./dialogue/tts.ts";
 export * from "./stt.ts";
 export * from "./tts.ts";
 export * from "./tts_base.ts";

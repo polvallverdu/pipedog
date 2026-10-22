@@ -8194,9 +8194,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/elevenlabs/src/dialogue/index.ts re-exports dialogue/tts."
     },
     {
       "module": "pipecat.services.elevenlabs.dialogue.tts",
@@ -8223,9 +8223,9 @@
         "test_elevenlabs_dialogue_tts.py",
         "test_tts_pronunciations.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/elevenlabs/src/dialogue/tts.ts. Runs on the global WebSocket through ElevenLabsTTSBase (xi-api-key handshake header). Settings are camelCase; the wire (snake_case alignment, voices/inputs/close_context/flush/keep_alive messages) is upstream's. A smoke test (packages/elevenlabs/compat/smoke.ts) runs the service against a fake WebSocket on bun, node, deno and workerd. Untested against the real Text-to-Dialogue endpoint."
     },
     {
       "module": "pipecat.services.elevenlabs.stt",
@@ -8483,9 +8483,9 @@
       "tests": [
         "test_fish_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/fish/src/tts.ts. ormsgpack is replaced by @msgpack/msgpack 3.1.3 (pure TypeScript). DIVERGENCE: JS cannot tell 1.0 from 1, so whole-number floats (prosody speed 1.0) pack as MessagePack integers. Deprecated InputParams and the reference_id, model_id and params parameters are not ported. Wire format checked against https://docs.fish.audio/api-reference/endpoint/websocket/tts-live. Untested against the real service."
     },
     {
       "module": "pipecat.services.funasr",
@@ -9464,9 +9464,9 @@
         "pydantic"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/hume/src/tts.ts. The Hume Python SDK is replaced by fetch against POST /v0/tts/stream/json (NDJSON), per the hume TypeScript SDK 0.16.1 and the API reference. DIVERGENCE: no httpx client to close (stop/cancel/cleanup overrides dropped); the tracking headers say pipedog; optional fetch option. Deprecated InputParams, update_setting, voice_id and params are not ported. Upstream has no Hume test file; packages/hume/test/test_hume_tts.test.ts is new. Untested against the real service."
     },
     {
       "module": "pipecat.services.image_service",
@@ -11352,9 +11352,9 @@
       "tests": [
         "test_rime_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/rime/src/tts.ts. RimeTTSService (JSON WebSocket) and RimeHttpTTSService (fetch option replaces aiohttp_session). Deprecated RimeNonJsonTTSService, its settings, the InputParams classes and the voice_id/model/params/aggregate_sentences parameters are not ported. Settings fields are camelCase (repetitionPenalty, topP). DIVERGENCE: PAUSE_TAG prints whole numbers without .0. Untested against the real service."
     },
     {
       "module": "pipecat.services.rime.tts_v1",
@@ -11385,9 +11385,9 @@
       "tests": [
         "test_rime_v1_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/rime/src/tts_v1.ts. rime-api is replaced by Rime's own @rimelabs/api 0.3.0 (same schema as rime-api 0.4.0, which is under 14 days old) with @bufbuild/protobuf 2.16.0. The negotiated subprotocol is read from WebSocket.protocol. Untested against the real service."
     },
     {
       "module": "pipecat.services.sambanova",
@@ -17636,8 +17636,8 @@
         "pipecat.services.tts_service"
       ],
       "needsModules": 132,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "30 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_elevenlabs_stt.py",
@@ -18061,8 +18061,8 @@
         "pipecat.utils.types"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_flows_actions.py",
@@ -19887,8 +19887,8 @@
         "pipecat.services.rime.tts"
       ],
       "needsModules": 130,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 1 skip, 0 todo. The skip is the RimeNonJsonTTSService test (deprecated upstream, not ported)."
     },
     {
       "file": "tests/test_rime_v1_tts.py",
@@ -19904,8 +19904,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 131,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "68 pass, 0 fail, 0 skip, 0 todo. Upstream's websockets server is Bun.serve; the parametrized cases are expanded."
     },
     {
       "file": "tests/test_rnnoise_cancellation.py",
@@ -21029,7 +21029,7 @@
       ],
       "needsModules": 138,
       "status": "todo",
-      "notes": "Partial: Inworld cases (TestInworldPronunciation, TestPronunciationTransforms.test_unusable_words_are_spoken_as_written) ported in packages/inworld/test/test_tts_pronunciations.test.ts: 5 pass, 0 fail. Remaining cases (phonemes, Cartesia, ElevenLabs, Deepgram, gating) not ported."
+      "notes": "Partial: Inworld cases (TestInworldPronunciation, TestPronunciationTransforms.test_unusable_words_are_spoken_as_written) ported in packages/inworld/test/test_tts_pronunciations.test.ts: 5 pass, 0 fail. ElevenLabs Dialogue cases (TestElevenLabsPronunciation.test_dialogue_ipa, TestPronunciationTransforms.test_longest_first) ported in packages/elevenlabs/test/test_tts_pronunciations.test.ts: 2 pass, 0 fail. Remaining cases (phonemes, Cartesia, ElevenLabs TTS and HTTP, Deepgram, gating) not ported."
     },
     {
       "file": "tests/test_tts_reconnect.py",

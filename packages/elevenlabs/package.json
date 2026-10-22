@@ -1,7 +1,7 @@
 {
   "name": "@pipedog/elevenlabs",
   "version": "0.6.1",
-  "description": "ElevenLabs services (STT, Realtime STT, WebSocket and HTTP TTS) for pipedog.",
+  "description": "ElevenLabs services (STT, Realtime STT, WebSocket and HTTP TTS, Text-to-Dialogue) for pipedog.",
   "keywords": [
     "pipecat",
     "pipedog",

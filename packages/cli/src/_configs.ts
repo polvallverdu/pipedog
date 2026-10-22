@@ -325,6 +325,16 @@ ${AWS_CREDENTIALS}
     "ELEVENLABS_API_KEY",
     `    voice: process.env.ELEVENLABS_VOICE_ID ?? "",`,
   ),
+  elevenlabs_dialogue_tts: keyed(
+    "ElevenLabsDialogueTTSService",
+    "ELEVENLABS_API_KEY",
+    `    voice: process.env.ELEVENLABS_VOICE_ID ?? "",`,
+  ),
+  fish_tts: keyed(
+    "FishAudioTTSService",
+    "FISH_API_KEY",
+    `    voice: process.env.FISH_VOICE_ID ?? "",`,
+  ),
   gemini_tts: keyed("GeminiTTSService", "GOOGLE_API_KEY"),
   google_tts: `new GoogleTTSService({
   credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",
@@ -337,6 +347,7 @@ ${AWS_CREDENTIALS}
     "GROQ_API_KEY",
     `    voice: process.env.GROQ_VOICE_ID ?? "autumn",`,
   ),
+  hume_tts: keyed("HumeTTSService", "HUME_API_KEY", `    voice: process.env.HUME_VOICE_ID ?? "",`),
   inworld_tts: keyed(
     "InworldTTSService",
     "INWORLD_API_KEY",
@@ -367,6 +378,11 @@ ${AWS_CREDENTIALS}
     voice: process.env.POCKET_TTS_VOICE_ID ?? "alba",
   }),
 })`,
+  rime_tts: keyed(
+    "RimeTTSService",
+    "RIME_API_KEY",
+    `    voice: process.env.RIME_VOICE_ID ?? "luna",`,
+  ),
   together_tts: keyed(
     "TogetherTTSService",
     "TOGETHER_API_KEY",

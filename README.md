@@ -197,7 +197,10 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/google`](packages/google) | Google services: Gemini (LLM, Live), Cloud Speech-to-Text, Cloud Text-to-Speech. |
 | [`@pipedog/deepgram`](packages/deepgram) | Deepgram services: STT, TTS, Flux STT and TTS. |
 | [`@pipedog/cartesia`](packages/cartesia) | Cartesia services: STT, Ink-2 turn-based STT, WebSocket and HTTP TTS. |
-| [`@pipedog/elevenlabs`](packages/elevenlabs) | ElevenLabs services: STT, Realtime STT, WebSocket and HTTP TTS. |
+| [`@pipedog/elevenlabs`](packages/elevenlabs) | ElevenLabs services: STT, Realtime STT, WebSocket and HTTP TTS, Text to Dialogue. |
+| [`@pipedog/rime`](packages/rime) | Rime services: WebSocket, HTTP and WebSocket v1 TTS. |
+| [`@pipedog/fish`](packages/fish) | Fish Audio TTS. |
+| [`@pipedog/hume`](packages/hume) | Hume TTS (Octave). |
 | [`@pipedog/inworld`](packages/inworld) | Inworld services: Realtime speech-to-speech, WebSocket and HTTP TTS. |
 | [`@pipedog/ultravox`](packages/ultravox) | Ultravox realtime speech-to-speech service. |
 | [`@pipedog/aws`](packages/aws) | AWS services: Bedrock LLM, Transcribe STT, Polly TTS, Nova Sonic, AgentCore, and the SageMaker streaming client. |

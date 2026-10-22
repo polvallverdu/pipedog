@@ -158,6 +158,9 @@ export const NOT_OFFERED: Record<string, string> = {
   DeepgramHttpTTSService: "the HTTP variant of DeepgramTTSService, which is offered",
   CartesiaHttpTTSService: "the HTTP variant of CartesiaTTSService, which is offered",
   ElevenLabsHttpTTSService: "the HTTP variant of ElevenLabsTTSService, which is offered",
+  RimeHttpTTSService: "the HTTP variant of RimeTTSService, which is offered",
+  RimeV1TTSService:
+    "needs a model that picks its endpoint and a protocol; RimeTTSService is offered",
   XAIHttpTTSService: "the HTTP variant of XAITTSService, which is offered",
   InworldHttpTTSService: "the HTTP variant of InworldTTSService, which is offered",
   AzureHttpTTSService: "the HTTP variant of AzureTTSService, which is offered",
@@ -312,11 +315,16 @@ export class ServiceRegistry {
     svc("deepgram_tts", "Deepgram", "@pipedog/deepgram", ["DeepgramTTSService"]),
     svc("deepgram_flux_tts", "Deepgram Flux", "@pipedog/deepgram", ["DeepgramFluxTTSService"]),
     svc("elevenlabs_tts", "ElevenLabs", "@pipedog/elevenlabs", ["ElevenLabsTTSService"]),
+    svc("elevenlabs_dialogue_tts", "ElevenLabs Text to Dialogue", "@pipedog/elevenlabs", [
+      "ElevenLabsDialogueTTSService",
+    ]),
+    svc("fish_tts", "Fish Audio", "@pipedog/fish", ["FishAudioTTSService"]),
     svc("gemini_tts", "Gemini TTS", "@pipedog/google", ["GeminiTTSService"]),
     svc("google_tts", "Google TTS", "@pipedog/google", ["GoogleTTSService"], {
       note: "Uses Google's gRPC Node SDK: runs on Bun and Node, not on Workers.",
     }),
     svc("groq_tts", "Groq TTS", "@pipedog/groq", ["GroqTTSService"]),
+    svc("hume_tts", "Hume", "@pipedog/hume", ["HumeTTSService"]),
     svc("inworld_tts", "Inworld", "@pipedog/inworld", ["InworldTTSService"]),
     svc("kokoro_tts", "Kokoro", "@pipedog/kokoro", ["KokoroTTSService"], {
       extraDependencies: {
@@ -338,6 +346,7 @@ export class ServiceRegistry {
       extraDependencies: { "onnxruntime-node": "^1.30.0" },
       note: "Runs the model locally (downloaded on first use into ~/.cache/pipedog): Bun, Node and Deno, not Workers.",
     }),
+    svc("rime_tts", "Rime", "@pipedog/rime", ["RimeTTSService"]),
     svc("together_tts", "Together AI", "@pipedog/together", ["TogetherTTSService"]),
     svc("xai_tts", "xAI", "@pipedog/xai", ["XAITTSService"]),
   ];

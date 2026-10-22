@@ -48,4 +48,19 @@ const httpTts = new ElevenLabsHttpTTSService({
 const update = new TTSUpdateSettingsFrame({
   delta: new ElevenLabsTTSService.Settings({ speed: 1.1 }),
 });
+
 // #endregion update
+
+// #region dialogue
+import { ElevenLabsDialogueTTSService } from "@pipedog/elevenlabs/dialogue/tts";
+
+// Eleven v3 and v4 dialogue models. Needs a voice id.
+const dialogue = new ElevenLabsDialogueTTSService({
+  apiKey: process.env.ELEVENLABS_API_KEY ?? "",
+  settings: new ElevenLabsDialogueTTSService.Settings({
+    voice: "your-voice-id",
+    model: "eleven_v4_turbo",
+    stability: 0.5,
+  }),
+});
+// #endregion dialogue

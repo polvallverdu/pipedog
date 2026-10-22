@@ -7,7 +7,7 @@ description: "Every pipedog service by category: ported, and coming soon from Pi
 
 Services are frame processors that call an AI provider. pipedog ports them from Pipecat with the same
 class names and options (in camelCase), one package per provider: `@pipedog/openai`,
-`@pipedog/deepgram` and so on. 69 service pages are ported so far. The "coming soon"
+`@pipedog/deepgram` and so on. 72 service pages are ported so far. The "coming soon"
 pages link to Pipecat's docs and to a port request.
 
 Each service page follows the same layout as Pipecat's: overview, installation, configuration
@@ -85,7 +85,7 @@ Turn the bot's text into audio frames. [All text-to-speech services](/docs/servi
 | [Google](/docs/services/tts/google) | `GoogleTTSService`, `GoogleHttpTTSService`, `GeminiTTSService` | `@pipedog/google` | Ported |
 | [Deepgram](/docs/services/tts/deepgram) | `DeepgramTTSService`, `DeepgramHttpTTSService`, `DeepgramFluxTTSService` | `@pipedog/deepgram` | Ported |
 | [Cartesia](/docs/services/tts/cartesia) | `CartesiaTTSService`, `CartesiaHttpTTSService` | `@pipedog/cartesia` | Ported |
-| [ElevenLabs](/docs/services/tts/elevenlabs) | `ElevenLabsTTSService`, `ElevenLabsHttpTTSService` | `@pipedog/elevenlabs` | Ported |
+| [ElevenLabs](/docs/services/tts/elevenlabs) | `ElevenLabsTTSService`, `ElevenLabsHttpTTSService`, `ElevenLabsDialogueTTSService` | `@pipedog/elevenlabs` | Ported |
 | [Groq](/docs/services/tts/groq) | `GroqTTSService` | `@pipedog/groq` | Ported |
 | [Mistral](/docs/services/tts/mistral) | `MistralTTSService` | `@pipedog/mistral` | Ported |
 | [Together AI](/docs/services/tts/together) | `TogetherTTSService` | `@pipedog/together` | Ported |
@@ -96,10 +96,10 @@ Turn the bot's text into audio frames. [All text-to-speech services](/docs/servi
 | [Kokoro (local)](/docs/services/tts/kokoro) | `KokoroTTSService` | `@pipedog/kokoro` | Ported |
 | [Piper](/docs/services/tts/piper) | `PiperTTSService`, `PiperHttpTTSService` | `@pipedog/piper` | Ported |
 | [Pocket TTS (local)](/docs/services/tts/pocket-tts) | `PocketTTSService` | `@pipedog/pocket-tts` | Ported |
-| [Fish Audio](/docs/services/tts/fish) | `FishAudioTTSService` | | Coming soon |
-| [Hume](/docs/services/tts/hume) | `HumeTTSService` | | Coming soon |
+| [Rime](/docs/services/tts/rime) | `RimeTTSService`, `RimeHttpTTSService`, `RimeV1TTSService` | `@pipedog/rime` | Ported |
+| [Fish Audio](/docs/services/tts/fish) | `FishAudioTTSService` | `@pipedog/fish` | Ported |
+| [Hume](/docs/services/tts/hume) | `HumeTTSService` | `@pipedog/hume` | Ported |
 | [NVIDIA Riva](/docs/services/tts/nvidia) | `NvidiaTTSService` | | Coming soon |
-| [Rime](/docs/services/tts/rime) | `RimeTTSService`, `RimeHttpTTSService`, `RimeNonJsonTTSService` | | Coming soon |
 | [Sarvam AI](/docs/services/tts/sarvam) | `SarvamTTSService`, `SarvamHttpTTSService` | | Coming soon |
 | [Soniox](/docs/services/tts/soniox) | `SonioxTTSService` | | Coming soon |
 | [Speechmatics](/docs/services/tts/speechmatics) | `SpeechmaticsTTSService` | | Coming soon |
