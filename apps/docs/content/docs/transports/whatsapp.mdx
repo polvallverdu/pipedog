@@ -91,6 +91,21 @@ Bun.serve({ port: 8080, routes: { "/webhook": { GET: webhook, POST: webhook } } 
 The callback gets the `SmallWebRTCConnection` and the connect event, with the caller's number
 (`call.from`) and the call ID (`call.id`). If it throws, the call stays up and the error is logged.
 
+### With the runner
+
+`@pipedog/runner` wires all of this for you, as upstream's runner does. Install
+`@pipedog/transport-whatsapp`, set `WHATSAPP_APP_SECRET`, `WHATSAPP_PHONE_NUMBER_ID`,
+`WHATSAPP_TOKEN` and `WHATSAPP_WEBHOOK_VERIFICATION_TOKEN`, and run:
+
+```bash
+bun bot.ts -t webrtc --whatsapp
+```
+
+It serves `GET /whatsapp` (Meta's verification) and `POST /whatsapp` (call events). Each call starts
+your `bot(runnerArgs)` with `SmallWebRTCRunnerArguments`: build the transport with
+`createTransport()` as for any WebRTC session, and read the caller from `runnerArgs.body`
+(`from`, `id`). See the [runner](/docs/runner#whatsapp).
+
 ### Without the helper
 
 ```ts

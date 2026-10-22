@@ -623,11 +623,13 @@
       "peerDependencies": {
         "@pipedog/evals": "workspace:*",
         "@pipedog/transport-livekit": "workspace:*",
+        "@pipedog/transport-whatsapp": "workspace:*",
         "ws": "^8.0.0",
       },
       "optionalPeers": [
         "@pipedog/evals",
         "@pipedog/transport-livekit",
+        "@pipedog/transport-whatsapp",
         "ws",
       ],
     },

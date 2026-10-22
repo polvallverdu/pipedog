@@ -27,7 +27,8 @@ bun add @pipedog/runner
 It brings the SmallWebRTC and WebSocket transports and the Telnyx, Twilio, Plivo and Exotel
 serializers. On Node, also install `ws` for the WebSocket routes (`npm install ws`); Bun and Deno
 need nothing else. For `-t livekit`, add `@pipedog/transport-livekit` and `@livekit/rtc-node` (see
-[LiveKit](/docs/transports/livekit)).
+[LiveKit](/docs/transports/livekit)). For `--whatsapp`, add `@pipedog/transport-whatsapp` (see
+[WhatsApp](/docs/transports/whatsapp)).
 
 ## A bot
 
@@ -58,6 +59,7 @@ if (import.meta.main) {
 bun bot.ts -t webrtc                         # open http://localhost:7860
 bun bot.ts -t telnyx --proxy mybot.ngrok.io  # point the Telnyx number at https://mybot.ngrok.io/
 bun bot.ts -t livekit                        # POST /start returns a LiveKit room URL and user token
+bun bot.ts --whatsapp                        # WhatsApp calls: webhook at /whatsapp (needs the WHATSAPP_* variables)
 bun bot.ts                                   # every ported transport at once
 ```
 
@@ -76,6 +78,8 @@ bun bot.ts                                   # every ported transport at once
 | `POST`, `PATCH /api/offer` | SmallWebRTC offers and ICE candidates; a known `pc_id` renegotiates (and `restart_pc` restarts) the existing peer connection. |
 | `/sessions/{id}/api/offer` | The same, for a session from `/start` (Pipecat Cloud's proxy shape); its `/start` body becomes `runnerArgs.body`. |
 | `POST /` | With `-t twilio`, `telnyx` or `plivo`: the TwiML or TeXML that connects the call to `wss://<proxy>/ws`. With `-t exotel`: the WebSocket URL to configure. |
+| `GET /whatsapp` | With `--whatsapp`: Meta's webhook verification. Returns the `hub.challenge` number, or 403 for a wrong `hub.verify_token`. |
+| `POST /whatsapp` | With `--whatsapp`: call events. Checks `X-Hub-Signature-256` against the app secret, answers a `connect` event's SDP offer over SmallWebRTC and starts the bot with `SmallWebRTCRunnerArguments` (`runnerArgs.body` is the call: `from`, `id`, `direction`, ...). 400 for another `object` or no supported event, 422 for a malformed body, 500 for failures. |
 | `/ws`, `/ws/{token}` | The telephony media stream. |
 | `/ws-client`, `/ws-client/{token}` | A plain WebSocket session (`transportType: "websocket"`). |
 | `POST /files`, `POST /sessions/{id}/files` | Client uploads, with `-u/--uploads-folder` or a `createFileStorage()` export. |
@@ -199,7 +203,8 @@ serve another build.
 | `-t twilio -x mybot.ngrok.io` | the same flags |
 | `--host`, `--port`, `--esp32`, `--ice-servers`, `--ws-auth`, `--allowed-origins`, `-u`, `-f`, `--runner-body`, `-v` | the same flags |
 | `-t livekit` | the same: `/start` mints tokens from `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` (and `LIVEKIT_ROOM_NAME`) |
-| `-t daily`, `-d`, `-t moq`, `-t vonage`, `--whatsapp` | recognized; fail with "not ported to pipedog yet" |
+| `--whatsapp` | the same: mounts `/whatsapp` (below) |
+| `-t daily`, `-d`, `-t moq`, `-t vonage` | recognized; fail with "not ported to pipedog yet" |
 | `.env` loaded with `load_dotenv(override=True)` | the same |
 
 ## A migrated bot: bot.py to bot.ts
@@ -330,13 +335,34 @@ bun bot.ts -t webrtc                                 # development, in the brows
 bun bot.ts -t telnyx --proxy mybot.ngrok.io          # phone calls through an ngrok tunnel
 ```
 
+## WhatsApp
+
+`--whatsapp` mounts the webhook for WhatsApp Business calls at `/whatsapp`. It is a flag, not a
+`-t` transport: combine it with whatever else you serve. The bot runs over SmallWebRTC, so
+`createTransport()` builds a `SmallWebRTCTransport` from the `SmallWebRTCRunnerArguments` the
+webhook passes in (there is no WhatsApp runner argument type, as upstream). `runnerArgs.body` is the
+call's metadata from Meta (`from`, `id`, `direction`, `timestamp`).
+
+```bash
+bun add @pipedog/transport-whatsapp   # an optional peer of the runner
+
+export WHATSAPP_APP_SECRET=...                 # Meta app secret, to check X-Hub-Signature-256
+export WHATSAPP_PHONE_NUMBER_ID=...            # the business phone number ID
+export WHATSAPP_TOKEN=...                      # Graph API access token
+export WHATSAPP_WEBHOOK_VERIFICATION_TOKEN=... # the verify token you set in the Meta dashboard
+bun bot.ts -t webrtc --whatsapp
+```
+
+Point the webhook of your Meta app (subscribed to `calls`) at `https://<public host>/whatsapp`. If a
+variable is missing, or `@pipedog/transport-whatsapp` is not installed, the runner logs an error and
+mounts no WhatsApp routes. On shutdown it ends the calls that are still open. See
+[WhatsApp](/docs/transports/whatsapp) for the transport.
+
 ## Not ported
 
 - Daily (`-t daily`, `-d/--direct`, `/daily`, the dial-in webhook), MOQ and the Vonage Video
-  Connector (`-t vonage`): their transports are not ported. The WhatsApp transport is ported
-  ([`@pipedog/transport-whatsapp`](/docs/transports/whatsapp)), but the runner's `--whatsapp`
-  route is not wired to it. The argument classes exist for type parity; selecting these fails
-  with a clear message.
+  Connector (`-t vonage`): their transports are not ported. The argument classes exist for type
+  parity; selecting these fails with a clear message.
 - `-t eval`: deprecated upstream, so not ported. The evals themselves are ported, in
   [`@pipedog/evals`](/docs/evals).
 - The MOQ CLI flags and the deprecated `--folder` flag.
