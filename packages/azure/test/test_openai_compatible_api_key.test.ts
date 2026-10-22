@@ -19,7 +19,7 @@
  * - `test_api_key_argument_is_required`: Python raises TypeError for the
  *   missing keyword argument. TypeScript rejects the call at compile time; at
  *   runtime the missing options object raises TypeError too.
- * - The services not ported yet are `test.todo`.
+ * - NvidiaLLMService is not ported yet; its cases are `test.todo`.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -43,6 +43,8 @@ import * as grokPkg from "../../grok/src/index.ts";
 import * as groqPkg from "../../groq/src/index.ts";
 import { GroqLLMService } from "../../groq/src/llm.ts";
 import { GroqSTTService } from "../../groq/src/stt.ts";
+import * as inceptionPkg from "../../inception/src/index.ts";
+import { InceptionLLMService } from "../../inception/src/llm.ts";
 import * as mistralPkg from "../../mistral/src/index.ts";
 import { MistralLLMService } from "../../mistral/src/llm.ts";
 import * as nebiusPkg from "../../nebius/src/index.ts";
@@ -59,6 +61,8 @@ import * as qwenPkg from "../../qwen/src/index.ts";
 import { QwenLLMService } from "../../qwen/src/llm.ts";
 import * as sambanovaPkg from "../../sambanova/src/index.ts";
 import { SambaNovaLLMService } from "../../sambanova/src/llm.ts";
+import * as sarvamPkg from "../../sarvam/src/index.ts";
+import { SarvamLLMService } from "../../sarvam/src/llm.ts";
 import * as togetherPkg from "../../together/src/index.ts";
 import { TogetherLLMService } from "../../together/src/llm.ts";
 import * as xaiPkg from "../../xai/src/index.ts";
@@ -77,6 +81,7 @@ const PROVIDER_SERVICES: AnyService[] = [
   GrokLLMService,
   GroqLLMService,
   GroqSTTService,
+  InceptionLLMService,
   MistralLLMService,
   NebiusLLMService,
   NovitaLLMService,
@@ -84,12 +89,8 @@ const PROVIDER_SERVICES: AnyService[] = [
   PerplexityLLMService,
   QwenLLMService,
   SambaNovaLLMService,
+  SarvamLLMService,
   TogetherLLMService,
-];
-
-const PROVIDER_SERVICES_UNPORTED = [
-  "InceptionLLMService (pipecat.services.inception.llm)",
-  "SarvamLLMService (pipecat.services.sarvam.llm)",
 ];
 
 const BaseWhisperSTTService = Object.getPrototypeOf(OpenAISTTService) as abstract new (
@@ -135,6 +136,7 @@ test("test_every_provider_service_requires_api_key", () => {
     fireworksPkg,
     grokPkg,
     groqPkg,
+    inceptionPkg,
     mistralPkg,
     nebiusPkg,
     novitaPkg,
@@ -143,6 +145,7 @@ test("test_every_provider_service_requires_api_key", () => {
     perplexityPkg,
     qwenPkg,
     sambanovaPkg,
+    sarvamPkg,
     togetherPkg,
     xaiPkg,
   ];
@@ -187,9 +190,6 @@ describe("test_missing_api_key_raises", () => {
       });
     }
   }
-  for (const name of PROVIDER_SERVICES_UNPORTED) {
-    test.todo(`${name} with api_key null and ""`);
-  }
 });
 
 describe("test_explicit_api_key_is_used", () => {
@@ -198,9 +198,6 @@ describe("test_explicit_api_key_is_used", () => {
       const service = new cls({ apiKey: "provider-key" }) as WithClient;
       expect(service._client.apiKey).toBe("provider-key");
     });
-  }
-  for (const name of PROVIDER_SERVICES_UNPORTED) {
-    test.todo(name);
   }
   test.todo("NvidiaLLMService (pipecat.services.nvidia.llm)");
 });

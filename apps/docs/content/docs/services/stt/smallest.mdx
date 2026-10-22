@@ -1,0 +1,99 @@
+---
+title: "Smallest AI"
+description: "Realtime speech-to-text with SmallestSTTService, over Smallest AI's Pulse WebSocket API."
+---
+
+## Overview
+
+- **`SmallestSTTService`**: streams audio over a persistent WebSocket to Smallest AI's Pulse speech-to-text endpoint. Interim transcripts become `InterimTranscriptionFrame`s; when the VAD sees the user stop, the service sends `finalize` and the final becomes a `TranscriptionFrame`.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/smallest">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/smallest/src">
+    `packages/smallest/src/stt.ts`.
+  </Card>
+  <Card title="Smallest AI docs" href="https://docs.smallest.ai/waves/documentation/speech-to-text-pulse/realtime-web-socket">
+    The realtime WebSocket reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/smallest
+```
+
+```ts
+import { SmallestSTTService } from "@pipedog/smallest/stt";
+```
+
+## Prerequisites
+
+- A Smallest AI account and an API key from [Smallest AI](https://smallest.ai/).
+- Pass the key as `apiKey`. The examples read it from `SMALLEST_API_KEY`.
+
+## SmallestSTTService
+
+Connects to `wss://api.smallest.ai/waves/v1/stt/live`, with the key as a Bearer token on the handshake.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/smallest/src/stt.ts" name="SmallestSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new SmallestSTTService.Settings({...})`
+(`SmallestSTTSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `"pulse" \| "pulse-2"` | `"pulse"` | `pulse-2` is English-only and adds per-utterance emotion and gender. |
+| `language` | `Language` | `Language.EN` | Language of the audio. A non-English language with `pulse-2` throws. |
+| `wordTimestamps` | `boolean` | `false` | Word-level timestamps. |
+| `fullTranscript` | `boolean` | `false` | Include the cumulative transcript. |
+| `sentenceTimestamps` | `boolean` | `false` | Sentence-level timestamps. |
+| `redactPii` | `boolean` | `false` | Redact personally identifiable information. |
+| `redactPci` | `boolean` | `false` | Redact payment card information. |
+| `numerals` | `string` | `"auto"` | Convert spoken numerals to digits. |
+| `diarize` | `boolean` | `false` | Speaker diarization. |
+| `endpointing` | `boolean` | `true` | Finalize promptly on trailing silence. No effect on `pulse-2`. |
+| `keywords` | `string` | `""` | Comma-separated `KEYWORD:INTENSIFIER` pairs, such as `"NVIDIA:2"`. |
+| `format` | `boolean` | `true` | Punctuation and capitalization. |
+| `emotionDetection` | `boolean` | `true` | `pulse-2` only: a six-class `emotion` on each final. |
+| `genderDetection` | `boolean` | `true` | `pulse-2` only: a `gender` estimate on each final. |
+| `itnNormalize` | `boolean` | `false` | Inverse text normalization ("twenty five" becomes "25"). |
+| `noFormatDelay` | `boolean` | `false` | With `itnNormalize`, emit finals at once instead of holding back a number still being dictated. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-smallest.ts#usage</include>
+
+Pulse 2.0, English only:
+
+<include cwd>snippets/services/stt-smallest.ts#pulse2</include>
+
+Change settings mid-call with an `STTUpdateSettingsFrame`:
+
+<include cwd>snippets/services/stt-smallest.ts#update</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The WebSocket connected. |
+| `on_disconnected` | The WebSocket closed. |
+
+### Notes
+
+- `encoding` is `"linear16"` by default. `sampleRate` defaults to the pipeline's input rate.
+- Settings are query parameters of the connection, so changing one reconnects.
+
+<RuntimeMatrix pkg="@pipedog/smallest" />
+
+## Runtime notes
+
+- The WebSocket goes through the core `websocketConnect`, with headers on the handshake.
+- Upstream sets a keepalive interval without implementing the keepalive message, so an idle connection logs a warning every few seconds. The port behaves the same way.
+- Tested against local WebSocket servers, as upstream's tests do, not against Smallest AI itself.

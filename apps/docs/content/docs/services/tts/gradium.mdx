@@ -1,0 +1,71 @@
+---
+title: "Gradium"
+description: "Text-to-speech with GradiumTTSService, over Gradium's WebSocket API."
+---
+
+## Overview
+
+- **`GradiumTTSService`**: streams text over a WebSocket to Gradium and pushes 48 kHz audio as it arrives.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/gradium">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/gradium/src">
+    `packages/gradium/src/tts.ts`.
+  </Card>
+  <Card title="Gradium docs" href="https://docs.gradium.ai/api-reference/endpoint/tts-websocket">
+    The text-to-speech WebSocket reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/gradium
+```
+
+```ts
+import { GradiumTTSService } from "@pipedog/gradium/tts";
+```
+
+## Prerequisites
+
+- A Gradium account and an API key from [Gradium](https://gradium.ai/).
+- Pass the key as `apiKey`. The examples read it from `GRADIUM_API_KEY`.
+
+## GradiumTTSService
+
+Connects to `wss://api.gradium.ai/api/speech/tts`, with the key in the `x-api-key` header.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/gradium/src/tts.ts" name="GradiumTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new GradiumTTSService.Settings({...})`
+(`GradiumTTSSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"default"` | Speech model. |
+| `voice` | `string` | `"_6Aslh2DxfmnRLmP"` | Voice id. Changing it reconnects the socket. |
+| `language` | `Language \| null` | `null` | Language. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-gradium.ts#usage</include>
+
+### Notes
+
+- The sample rate is fixed at 48000 Hz.
+- `jsonConfig` takes a JSON string of extra model settings, sent with the setup message.
+
+<RuntimeMatrix pkg="@pipedog/gradium" />
+
+## Runtime notes
+
+- The WebSocket goes through the core `websocketConnect`, with headers on the handshake.
+- The deprecated `InputParams`, `params`, `voice_id` and `model` constructor options are not ported.
+- Tested against a local WebSocket server (upstream has no Gradium TTS test), not against Gradium itself.

@@ -1,0 +1,87 @@
+---
+title: "Gradium"
+description: "Realtime speech-to-text with GradiumSTTService, over Gradium's WebSocket API, with optional server-side turn detection."
+---
+
+## Overview
+
+- **`GradiumSTTService`**: streams audio over a WebSocket to Gradium and pushes interim and final transcriptions. By default the pipeline's VAD closes each utterance by flushing the server. With `enableTurnDetection`, Gradium's end-pointing signal decides when turns start and end instead.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/gradium">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/gradium/src">
+    `packages/gradium/src/stt.ts`.
+  </Card>
+  <Card title="Gradium docs" href="https://docs.gradium.ai/api-reference/endpoint/stt-websocket">
+    The speech-to-text WebSocket reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/gradium
+```
+
+```ts
+import { GradiumSTTService } from "@pipedog/gradium/stt";
+```
+
+## Prerequisites
+
+- A Gradium account and an API key from [Gradium](https://gradium.ai/).
+- Pass the key as `apiKey`. The examples read it from `GRADIUM_API_KEY`.
+
+## GradiumSTTService
+
+Connects to `wss://api.gradium.ai/api/speech/asr`, with the key in the `x-api-key` header.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/gradium/src/stt.ts" name="GradiumSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new GradiumSTTService.Settings({...})`
+(`GradiumSTTSettings`). The `eot*` and `postFlushCooldownFrames` fields tune turn detection and
+are `null` unless `enableTurnDetection` is `true`, which gives them the defaults below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `language` | `Language \| "any"` | `Language.EN` | English, German, Spanish, French or Portuguese; `"any"` has Gradium detect it. |
+| `delayInFrames` | `number \| null` | `12` (960 ms) | Delay, in 80 ms frames, before text is generated. One of 7, 8, 10, 12, 14, 16, 20, 24, 36, 48. Lower is faster. |
+| `eotHorizonS` | `number \| null` | `3.0` | The end-pointing horizon that drives turn decisions. |
+| `eotThreshold` | `number \| null` | `0.5` | Inactivity probability at or above which an open turn ends. |
+| `postFlushCooldownFrames` | `number \| null` | `8` | Step messages to ignore after a flush before the next turn can start or end. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-gradium.ts#usage</include>
+
+With the server's turn detection:
+
+<include cwd>snippets/services/stt-gradium.ts#turns</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The WebSocket connected. |
+| `on_disconnected` | The WebSocket closed. |
+| `on_turn_start` | The end-pointing signal opened a turn (turn detection on). |
+| `on_turn_end` | The end-pointing signal closed the turn (turn detection on). |
+
+### Notes
+
+- `encoding` is `"pcm"` (the sample rate is appended, for example `pcm_16000`), `"wav"` or `"opus"`. Audio at a rate Gradium doesn't accept is resampled.
+- With `enableTurnDetection`, local VAD frames are ignored and the service recommends `ExternalUserTurnStrategies`, which resolve its `ProposedUserStartedSpeakingFrame` and `ProposedUserStoppedSpeakingFrame` into user turns.
+
+<RuntimeMatrix pkg="@pipedog/gradium" />
+
+## Runtime notes
+
+- The WebSocket goes through the core `websocketConnect`, with headers on the handshake.
+- The deprecated `InputParams`, `params` and `json_config` options are not ported.
+- Tested against local WebSocket servers, as upstream's tests do, not against Gradium itself.
