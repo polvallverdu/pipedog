@@ -284,8 +284,8 @@ describe("TestInvalidValues", () => {
   test("NEW: a service that isn't ported isn't offered", () => {
     // Pipecat's values for services pipedog hasn't ported are unknown here, and the message lists
     // what is valid.
-    const errors = errorsOf({ ...base, stt: "gradium_stt" });
-    expect(errors[0]).toContain("Unknown STT service 'gradium_stt'");
+    const errors = errorsOf({ ...base, stt: "fal_stt" });
+    expect(errors[0]).toContain("Unknown STT service 'fal_stt'");
     expect(errors[0]).toContain("deepgram_stt");
   });
 });
