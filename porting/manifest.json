@@ -2337,9 +2337,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/index.ts re-exports what upstream's package __init__ files do (cli, commands, generators, prompts, registry). Not ported: the Typer plugin machinery (pipecat_cli.extensions) and the `pc` alias."
     },
     {
       "module": "pipecat.cli.commands",
@@ -2355,9 +2355,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Re-exported from packages/cli/src/index.ts (initCommand)."
     },
     {
       "module": "pipecat.cli.commands.eval",
@@ -2384,7 +2384,7 @@
       "tests": [],
       "status": "ported",
       "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "Ported to @pipedog/evals as packages/evals/src/cli.ts (bin pipedog-eval: run, judge, suite), not to @pipedog/cli. typer -> node:util parseArgs (typer's exit codes). DIVERGENCE: rich's Live dashboard is a plain-ANSI redraw-in-place table on a TTY and streamed lines otherwise; python-dotenv is a small .env loader (search upward, never overrides). Deprecated --stop-bot and --trigger-disconnect not ported."
+      "notes": "Ported to @pipedog/evals as packages/evals/src/cli.ts (bin pipedog-eval: run, judge, suite), not to @pipedog/cli. typer -> node:util parseArgs (typer's exit codes). DIVERGENCE: rich's Live dashboard is a plain-ANSI redraw-in-place table on a TTY and streamed lines otherwise; python-dotenv is a small .env loader (search upward, never overrides). Deprecated --stop-bot and --trigger-disconnect not ported. | Mounted as `pipedog eval` by packages/cli/src/eval.ts, which imports @pipedog/evals/cli lazily (an optional peer dependency of @pipedog/cli) and says how to install it when it is missing. The commands are not duplicated."
     },
     {
       "module": "pipecat.cli.commands.init",
@@ -2407,9 +2407,9 @@
         "typer"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/init.ts. DIVERGENCE: typer -> node:util parseArgs (with --no-<flag> negations spelled out, and tokens to tell a typed flag from a default); rich -> plain lines through an injectable Io; questionary -> @clack/prompts behind a Prompter. The Context Hub (--context-hub, its subprocess and ~900 MB index build) is replaced by registering @pipedog/mcp in the project's MCP config files (--mcp, --mcp-client; see packages/cli/src/mcp_register.ts, new): .mcp.json (Claude Code), .cursor/mcp.json, .vscode/mcp.json, in the formats of the docs' AI tools page, idempotent, other servers kept, a file that isn't plain JSON left alone. A bare `init` never prompts without a terminal. The guide files (AGENTS.md, CLAUDE.md, GETTING_STARTED.md) are rewritten for pipedog: packages/cli/agent_templates/. Upstream's Pipecat Cloud and Krisp flags are rejected with a reason; their negations and --no-context-hub are accepted. New flags: --runtime, --dockerfile, --mcp-client. Tests: tests/cli/* aren't tracked in the manifest; they are ported as packages/cli/test/test_*.test.ts (config_validator, service_registry, list_options, questions, quickstart, init_in_place, init_interactive, init_non_interactive, init_agent_ready, project_generation, client_generation; test_init_context_hub as test_init_mcp, test_cli_extensions as test_cli_extensions). Daily, Pipecat Cloud, Krisp, React clients and the Context Hub tests are skipped there. Added: test/e2e.test.ts, which runs `init` into a temp dir, installs, links the workspace packages, type-checks a bot for every offered service, and starts a generated bot against a mock OpenAI API and drives it with `pipedog eval run`. Also ported, into packages/evals/test (they test eval.py's own code): test_eval_env, test_eval_judge and the turn tally, verdict and duration tests of test_eval_display (the rest of that file tests rich's dashboard and is skipped there). Not ported: test_hub_status (hub_status is skipped)."
     },
     {
       "module": "pipecat.cli.config_validator",
@@ -2426,9 +2426,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/config_validator.ts. DIVERGENCE: the JSON config file keeps upstream's snake_case keys (camelCase accepted too). Daily PSTN, Twilio + Daily SIP, deploy_to_cloud, enable_krisp and React clients are rejected with a reason (in a config file, ignored with a note); --runtime and --dockerfile are new."
     },
     {
       "module": "pipecat.cli.generators",
@@ -2444,9 +2444,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Re-exported from packages/cli/src/index.ts (ProjectGenerator)."
     },
     {
       "module": "pipecat.cli.generators.project",
@@ -2469,9 +2469,9 @@
         "ruff"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/project.ts, with the templates as TypeScript functions in packages/cli/src/templates/ (server_bot, server_files, readme, gitignore, client) and files in packages/cli/templates/ and packages/cli/agent_templates/ (not tracked in the manifest). DIVERGENCE: Jinja2 -> template functions, no formatter (upstream runs Ruff; the generated bot.ts is checked against Biome and tsc in the tests). The generated project is TypeScript on @pipedog/runner (main({ bot }), createTransport), Bun first with Node (--runtime node), with a startup check for the environment variables its services need. Not generated: server.py/server_utils.py (Daily PSTN, Twilio + Daily SIP), pcc-deploy.toml and the pipecat-base Dockerfile (Pipecat Cloud; a plain Bun or Node Dockerfile is --dockerfile), the React and Next.js clients (and the vendored Pipecat UI snapshot; the runner serves a React client at /client), Whisker (tracing with @pipedog/tracing instead), starter_audio.yaml (needs a speech factory; upstream's local Kokoro and Moonshine defaults aren't ported). Cloudflare Workers has no template: it needs a Durable Object and a wrangler config (examples/workers-durable-voice-agent)."
     },
     {
       "module": "pipecat.cli.hub_status",
@@ -2485,9 +2485,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Not ported: the Pipecat Context Hub's index freshness check (it reads the hub's local SQLite index_metadata and the project's pipecat-ai version from a virtualenv, to warn that the index is stale). pipedog has no hub or index: @pipedog/mcp bundles the docs of its own release, so there is nothing to refresh and no version to drift from; pin it to the project's version instead (see the AI tools docs page). tests/cli/test_hub_status.py is skipped with it."
     },
     {
       "module": "pipecat.cli.main",
@@ -2508,9 +2508,9 @@
         "typer"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/main.ts (run) and __main__.ts, the `pipedog` bin: init, eval, --version, --help, and a `create` stub that points at `init`. It's the only bin, so `npx @pipedog/cli init` and `bunx @pipedog/cli init` pick it. Not ported: the pipecat_cli.extensions plugin machinery, the `cloud` stub (Pipecat Cloud), the `pc` alias, the stale-index warning (hub_status). A `create-pipedog` alias would need its own npm package (npm create / bun create resolve create-<name>), so it isn't provided."
     },
     {
       "module": "pipecat.cli.prompts",
@@ -2526,9 +2526,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Re-exported from packages/cli/src/index.ts (ProjectConfig, askProjectQuestions)."
     },
     {
       "module": "pipecat.cli.prompts.questions",
@@ -2547,9 +2547,9 @@
         "rich"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/questions.ts. DIVERGENCE: questionary -> @clack/prompts (exact 1.8.1) behind a Prompter interface, so the flow can be scripted; replace_question_with_answer is gone (clack keeps the answers on screen). Not asked: Daily, Daily PSTN, Twilio + Daily SIP, the React client questions, Pipecat Cloud and Krisp. New: runtime (Bun or Node) and Dockerfile."
     },
     {
       "module": "pipecat.cli.registry",
@@ -2566,9 +2566,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Re-exported from packages/cli/src/index.ts (ServiceRegistry, ServiceLoader)."
     },
     {
       "module": "pipecat.cli.registry._configs",
@@ -2582,9 +2582,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/_configs.ts. DIVERGENCE: hand-written TypeScript expressions (upstream's file is generated from service_metadata.py by scripts/cli/update_registry.py). test_service_registry takes the generator's place: it checks every module and class against the workspace packages and the OpenAI-compatible LLMs against apps/docs/data/providers.ts, and test/e2e type-checks a bot for every service."
     },
     {
       "module": "pipecat.cli.registry._imports",
@@ -2598,9 +2598,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/_imports.ts. DIVERGENCE: hand-written TypeScript imports (see _configs); merged and sorted by mergeImports in service_loader.ts."
     },
     {
       "module": "pipecat.cli.registry.service_loader",
@@ -2617,9 +2617,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/service_loader.ts. DIVERGENCE: extract_extras_for_services (PyPI extras) -> extractPackagesForServices (the @pipedog/* packages a bot's imports need, plus third-party ones); new getEnvVars, which reads each service's variables from its config for .env.example and the bot's startup check."
     },
     {
       "module": "pipecat.cli.registry.service_metadata",
@@ -2636,9 +2636,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/service_metadata.ts. DIVERGENCE: only services pipedog has ported are listed (about 70: 16 STT, 23 LLM, 14 TTS, 9 realtime, 1 video, 3 web and 4 telephony transports), none of Pipecat's unported ones. NOT_OFFERED records each ported class that isn't offered, with the reason; a test fails when apps/docs/data/providers.ts lists a ported service that is neither offered nor explained, or when a service the docs call unported is offered. `package` is an npm package, not a PyPI extra."
     },
     {
       "module": "pipecat.cli.scaffold",
@@ -2660,9 +2660,9 @@
         "typer"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/cli/src/scaffold.ts. DIVERGENCE: typer's parameter sources -> the set of typed flags; a Pipecat config file's keys with no pipedog counterpart are ignored with a note. The quickstart preset is SmallWebRTC, Deepgram, OpenAI Responses and Cartesia (no Daily, no Pipecat Cloud). --list-options also lists the runtimes and client frameworks."
     },
     {
       "module": "pipecat.clocks",

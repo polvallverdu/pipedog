@@ -4,6 +4,7 @@
     "---Get started---",
     "index",
     "installation",
+    "cli",
     "quickstart",
     "voice-bot",
     "runner",

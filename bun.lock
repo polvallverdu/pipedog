@@ -309,6 +309,25 @@
         "@pipedog/openai": "workspace:*",
       },
     },
+    "packages/cli": {
+      "name": "@pipedog/cli",
+      "version": "0.6.1",
+      "bin": {
+        "pipedog": "./dist/__main__.js",
+      },
+      "dependencies": {
+        "@clack/prompts": "1.8.1",
+      },
+      "devDependencies": {
+        "@types/node": "24.19.1",
+      },
+      "peerDependencies": {
+        "@pipedog/evals": "workspace:*",
+      },
+      "optionalPeers": [
+        "@pipedog/evals",
+      ],
+    },
     "packages/core": {
       "name": "@pipedog/core",
       "version": "0.6.1",
@@ -1350,6 +1369,8 @@
     "@pipedog/cartesia": ["@pipedog/cartesia@workspace:packages/cartesia"],
 
     "@pipedog/cerebras": ["@pipedog/cerebras@workspace:packages/cerebras"],
+
+    "@pipedog/cli": ["@pipedog/cli@workspace:packages/cli"],
 
     "@pipedog/core": ["@pipedog/core@workspace:packages/core"],
 

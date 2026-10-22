@@ -23,6 +23,16 @@ and wire protocols, with camelCase members. So Pipecat's client SDKs (`@pipecat-
 A voice assistant you talk to in the browser, with OpenAI speech-to-text, chat and text-to-speech
 over SmallWebRTC.
 
+The quickest way to a project like this is the CLI, which writes the bot, its `package.json`, a
+README and a guide for your coding agent for the services you pick
+([docs](https://polvallverdu.github.io/pipedog/docs/cli/)):
+
+```sh
+bunx @pipedog/cli init       # or: npx @pipedog/cli init
+```
+
+Or write it by hand:
+
 ### Install
 
 ```sh
@@ -161,7 +171,8 @@ Every package below is verified on all four, except `@pipedog/transport-smallweb
 no UDP), `@pipedog/transport-livekit`, `@pipedog/heygen` and `@pipedog/transport-heygen` (not
 Workers: LiveKit's media SDK is a native addon), `@pipedog/transport-local` (spawns sox or ffmpeg: Bun,
 Node and Deno), `@pipedog/transport-whatsapp` (on Workers only the webhook, signature and API parts
-work: answering a call needs WebRTC), `@pipedog/mcp` (a stdio tool for Bun and Node) and `@pipedog/mcp-client` (on Workers it connects over HTTP or SSE only: a stdio server needs a process). A few entry points inside verified
+work: answering a call needs WebRTC), `@pipedog/mcp` (a stdio tool for Bun and Node), `@pipedog/mcp-client` (on Workers it connects over HTTP or SSE only: a stdio server needs a process) and
+`@pipedog/cli` (a command line tool for Bun, Node and Deno). A few entry points inside verified
 packages don't run on Workers: `@pipedog/aws`'s `SageMakerBidiClient` (HTTP/2), Google's gRPC
 Cloud Speech and Text-to-Speech services, and the servers that listen on a port (the runner's
 `main()` and `serve()`, `serveFetch`). Each package's README has its own runtime table.
@@ -206,6 +217,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/serializer-genesys`](packages/serializer-genesys) | `GenesysAudioHookSerializer` for Genesys Cloud AudioHook. |
 | [`@pipedog/runner`](packages/runner) | Pipecat's development runner: `createTransport()` from the runner arguments, and `main()`, a dev server with the prebuilt browser client, SmallWebRTC signalling, LiveKit session tokens, and telephony webhooks and WebSockets for Twilio, Telnyx, Plivo and Exotel. Also a fetch handler (`createRunnerApp()`) to mount in your own server. |
 | [`@pipedog/evals`](packages/evals) | Pipecat's evals: test a bot end to end with scripted or LLM-simulated users, matchers and an LLM judge, from YAML scenarios, with the `pipedog-eval` CLI and multi-bot suites. |
+| [`@pipedog/cli`](packages/cli) | The `pipedog` command, Pipecat's CLI: `pipedog init` scaffolds a TypeScript bot project (runner, services, client, README, coding-agent guides and the docs MCP server), `pipedog eval` runs evals. `bunx @pipedog/cli init`. |
 | [`@pipedog/audio-silero`](packages/audio-silero) | Silero VAD (`SileroVADAnalyzer`), with the upstream model included. |
 | [`@pipedog/audio-smart-turn`](packages/audio-smart-turn) | Smart Turn end-of-turn detection: local v3 with the upstream model included, and `HttpSmartTurnAnalyzer` for a remote endpoint (`fetch` only). |
 | [`@pipedog/audio-rnnoise-filter`](packages/audio-rnnoise-filter) | `RNNoiseFilter`: RNNoise noise suppression compiled to WebAssembly, on every runtime. |
@@ -240,6 +252,8 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 - [Voice bot over SmallWebRTC](https://polvallverdu.github.io/pipedog/docs/voice-bot/)
 - [Development runner](https://polvallverdu.github.io/pipedog/docs/runner/): `main()`, the
   prebuilt client and phone calls, as in Pipecat's runner
+- [CLI](https://polvallverdu.github.io/pipedog/docs/cli/): `bunx @pipedog/cli init` scaffolds a bot
+  project and sets up your coding agent
 - [Evals](https://polvallverdu.github.io/pipedog/docs/evals/): test a bot end to end with scripted
   or simulated users and an LLM judge (`pipedog-eval`)
 - [Telephony](https://polvallverdu.github.io/pipedog/docs/telephony/): Twilio, Telnyx, Plivo,
@@ -257,21 +271,19 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 ## Status
 
 pipedog is 0.x: expect breaking changes between minor versions. Against the pinned upstream
-commit, 560 of Pipecat's 667 modules are ported (84%, 75% of the lines) and 273 of its 340 test
+commit, 576 of Pipecat's 667 modules are ported (86%, 79% of the lines) and 273 of its 340 test
 files.
 
 - **Core runtime: complete.** All 361 core modules are ported, and all 150 of core's upstream test
   files are ported 1:1 and passing.
-- **Providers: the main ones.** Across 59 packages: OpenAI, Anthropic, Google, Azure, AWS (with Nova
+- **Providers: the main ones.** Across 60 packages: OpenAI, Anthropic, Google, Azure, AWS (with Nova
   Sonic), Deepgram, Cartesia, ElevenLabs, Inworld, Ultravox, 16 OpenAI-compatible providers (Groq,
   Together, Mistral, xAI, DeepSeek, OpenRouter, Ollama and more), HeyGen avatars, the WebSocket,
   SmallWebRTC, LiveKit, WhatsApp and local audio transports, six telephony serializers, the
-  development runner, Pipecat Flows, evals, the MCP client, and the RNNoise filter, soundfile mixer and HTTP
-  Smart Turn.
+  development runner, the `pipedog` CLI, Pipecat Flows, evals, the MCP client, and the RNNoise filter, soundfile
+  mixer and HTTP Smart Turn.
 - **Not ported yet:** the Daily and other room transports (Tavus, LemonSlice, MoQ, the Vonage Video
-  Connector), the Krisp, Koala and AIC filters and models, most of the CLI (`pipecat init`
-  scaffolding, the service registry, hub status and the config validator; the eval command exists
-  as `pipedog-eval`), and 33 other providers (AssemblyAI, Gladia,
+  Connector), the Krisp, Koala and AIC filters and models, and 33 other providers (AssemblyAI, Gladia,
   Speechmatics, Rime, NVIDIA and a long tail). See the
   [roadmap](https://polvallverdu.github.io/pipedog/docs/roadmap/).
 - **Testing: mocks and recordings, not live providers yet.** Every provider is tested against mock

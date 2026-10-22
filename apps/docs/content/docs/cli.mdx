@@ -1,0 +1,210 @@
+---
+title: CLI
+description: Scaffold a TypeScript voice bot with pipedog init, set up your coding agent with the docs MCP server, and run evals, with the pipedog command.
+---
+
+`@pipedog/cli` is the port of Pipecat's `pipecat` command line. Its `pipedog init` writes a new
+bot project: a `bot.ts` on the [development runner](/docs/runner) with the services you pick, a
+`package.json` with the right packages, a client, a README, and the guide files and MCP server
+config that set up your coding agent. `pipedog eval` runs [evals](/docs/evals).
+
+<Cards>
+  <Card title="Upstream" href="https://github.com/pipecat-ai/pipecat/tree/main/src/pipecat/cli">
+    Pipecat's CLI source: `pipecat init` and `pipecat eval`.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/cli/src">
+    `packages/cli/src`: `init.ts`, `scaffold.ts`, `project.ts`, the registry in `service_metadata.ts`.
+  </Card>
+</Cards>
+
+## Create a bot
+
+Run it without installing anything:
+
+<Tabs items={["bun", "npm", "pnpm"]}>
+  <Tab value="bun">
+    ```bash
+    bunx @pipedog/cli init
+    ```
+  </Tab>
+  <Tab value="npm">
+    ```bash
+    npx @pipedog/cli init
+    ```
+  </Tab>
+  <Tab value="pnpm">
+    ```bash
+    pnpm dlx @pipedog/cli init
+    ```
+  </Tab>
+</Tabs>
+
+On a terminal, `init` asks for a directory and how you want to build: **with a coding agent**
+(it writes the guide files and registers the docs MCP server, then you open your agent there) or
+**scaffold a runnable bot now** (the wizard asks for the bot type, transport, pipeline mode,
+services and features). Then:
+
+```bash
+cd my-bot/server
+bun install
+cp .env.example .env     # add your API keys
+bun bot.ts               # open http://localhost:7860 and click Connect
+```
+
+The fastest start is the canned quickstart: SmallWebRTC, Deepgram, OpenAI and Cartesia, in
+`./pipedog-quickstart`.
+
+```bash
+bunx @pipedog/cli init quickstart
+```
+
+### From flags
+
+Any scaffold flag turns the wizard off, so scripts and coding agents never wait on a prompt. The
+directory is `.` or a path (created if missing), and the project name defaults to its name:
+
+```bash
+bunx @pipedog/cli init my-bot \
+  --transport smallwebrtc --mode cascade \
+  --stt deepgram_stt --llm openai_llm --tts cartesia_tts \
+  --eval
+```
+
+The bot type is inferred from the transports: a phone transport makes it a telephony bot, anything
+else a web bot. Repeat `--transport` for several at once (`-t twilio -t smallwebrtc` is a phone bot
+you can also try from a browser). The values of every flag are in `pipedog init --list-options`,
+as JSON, and `--dry-run` prints the config the flags resolve to, without writing anything. A
+mistake lists every problem at once, before any file is written.
+
+| Flag | |
+|---|---|
+| `-n, --name` | The project name (default: the directory's). |
+| `-b, --bot-type` | `web` or `telephony` (default: inferred from `--transport`). |
+| `-t, --transport` | `smallwebrtc`, `websocket`, `livekit`, `twilio`, `telnyx`, `plivo` or `exotel`. Repeatable. |
+| `-m, --mode` | `cascade` (STT, LLM, TTS) or `realtime` (speech-to-speech). |
+| `--stt`, `--llm`, `--tts` | The services of a cascade bot, such as `deepgram_stt`. |
+| `--realtime` | The service of a realtime bot, such as `openai_realtime`. |
+| `--video` | A video avatar service (`heygen_video`). Web bots only. |
+| `--client-framework` | `vanilla` for a Vite client in `client/`, or `none` (the default: the runner serves a client at `/client`). |
+| `--runtime` | `bun` (the default) or `node`. |
+| `--recording`, `--transcription` | Save the call's audio as WAV files; log the transcript. |
+| `--video-input`, `--video-output` | Camera in, video out (web bots). |
+| `--observability` | [OpenTelemetry tracing](/docs/concepts/metrics-and-tracing), on when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. |
+| `--eval` | An `eval` transport and a starter scenario, so `pipedog eval` can drive the bot. |
+| `--dockerfile` | A Dockerfile for Bun or Node. |
+| `-c, --config` | A JSON file with the same settings (below). Flags win over the file. |
+| `--mcp / --no-mcp`, `--mcp-client` | Register the docs MCP server, on by default; for one client only (repeatable). |
+| `--overwrite-guide` | Replace `AGENTS.md`, `CLAUDE.md`, `GETTING_STARTED.md` and a differing MCP entry. |
+
+Every toggle has a `--no-` form, and the last of `--recording --no-recording` wins. The config file
+takes upstream's keys (`project_name`, `bot_type`, `transports`, `mode`, `stt_service`,
+`llm_service`, `tts_service`, `realtime_service`, ...); `--dry-run` prints them, so a file can be
+made from one.
+
+## What it writes
+
+```text
+my-bot/
+├── server/
+│   ├── bot.ts             # the bot: services, pipeline, event handlers; main({ bot })
+│   ├── package.json       # @pipedog/* packages at the CLI's release, and what they need
+│   ├── tsconfig.json
+│   ├── .env.example       # the keys your services read
+│   ├── evals/             # starter_text.yaml, with --eval (cascade bots)
+│   └── Dockerfile         # with --dockerfile
+├── client/                # a Vite client, with --client-framework vanilla
+├── AGENTS.md, CLAUDE.md   # a guide for coding agents
+├── .mcp.json, .cursor/mcp.json, .vscode/mcp.json
+├── README.md              # how to run it, and the phone setup of your provider
+└── .gitignore
+```
+
+`bot.ts` is a bot written the way [the runner's docs](/docs/runner#a-bot) show: it exports
+`bot(runnerArgs)`, builds its transport with `createTransport()`, and starts the runner with
+`main({ bot })` when it is the entry file (on Bun, Deno and Node alike). Its services come from
+the registry, with the keys read from the environment, and it refuses to start without the
+variables its services need, naming the missing ones. Run it with `bun bot.ts`, or `node bot.ts`
+(Node 22.18 or later runs the TypeScript itself) with `--runtime node`; the runner's flags
+(`-t twilio --proxy my.ngrok.io`, `--port`) work as in its docs.
+
+The project is a TypeScript project to keep working in: `npm run typecheck` is `tsc --noEmit`
+against the real packages.
+
+### The services
+
+The list isn't maintained by hand against the docs: a test compares it with the provider catalog
+the [Services](/docs/services) pages are generated from, so every ported speech, LLM, realtime and
+video service is either offered or explained, and no service that isn't ported is offered.
+`pipedog init --list-options` prints what your version offers: the web transports (SmallWebRTC,
+WebSocket, LiveKit), the phone transports (Twilio, Telnyx, Plivo, Exotel), speech-to-text, LLMs
+(including every OpenAI-compatible provider), text-to-speech, realtime services and HeyGen.
+What isn't offered: Daily, Pipecat's services that aren't ported yet, and the HTTP variants and
+processors that have no one-line setup (see the [Differences](#differences-from-pipecat)).
+
+## Coding agents
+
+`init` writes `AGENTS.md` (which most coding agents read) and a `CLAUDE.md` that imports it. The
+guide tells the agent to scaffold with flags rather than by hand, how a pipedog bot is built,
+where to find current facts, and how to verify its work with evals. It points at two sources: the
+[`llms.txt`](https://polvallverdu.github.io/pipedog/llms.txt) index of these docs, and
+[`@pipedog/mcp`](/docs/guides/llms#mcp-server), the local docs server. A bare `init` also writes
+`GETTING_STARTED.md`, for you: how to write the first prompt.
+
+`init` registers the MCP server in the project, in the config format of each client from
+[Docs for AI tools](/docs/guides/llms#mcp-server):
+
+| Client | File |
+|---|---|
+| Claude Code | `.mcp.json` |
+| Cursor | `.cursor/mcp.json` |
+| VS Code | `.vscode/mcp.json` |
+
+It adds the stanza to the file when there is one, leaves the other servers alone, and does nothing
+when it is already there. A file it can't read as plain JSON (VS Code allows comments) is left
+untouched, and `init` prints the stanza to paste. Clients load MCP servers when a session starts,
+so open yours in the project after `init`. To pin the server to your pipedog release, change
+`@pipedog/mcp` to `@pipedog/mcp@<version>`.
+
+Existing guide files are kept, unless you pass `--overwrite-guide`. Each carries a footer with the
+CLI's version, so a later `init` can tell you the guide is out of date (and, on a terminal, offer
+to refresh it).
+
+## Evals
+
+`pipedog eval` is [`pipedog-eval`](/docs/evals): `pipedog eval run`, `judge` and `suite` are the
+same code, which lives in `@pipedog/evals`, loaded when you run the command. It's an optional
+peer dependency: a project created with `--eval` has it, and `bunx pipedog eval` runs from there.
+Without it the command says how to install it.
+
+```bash
+bun bot.ts                                       # one terminal
+bunx pipedog eval run evals/starter_text.yaml -v # another
+```
+
+## Differences from Pipecat
+
+- **A TypeScript project.** The generated bot is `bot.ts` on `@pipedog/runner`, with `bun` or
+  `node` instead of `uv`; `.env.example` and the README are written for it.
+- **Only what's ported is offered.** There is no Daily, so no Daily PSTN or Twilio + Daily SIP,
+  and none of Pipecat's services that aren't ported (AssemblyAI, Sarvam, ...). Their values are
+  errors that list the valid ones. Services whose HTTP variants, base classes or processors have no
+  one-line setup (`OpenAILiveLLMService`, `LangchainProcessor`, ...) are left out on purpose, and
+  the registry's `NOT_OFFERED` says why.
+- **No Pipecat Cloud.** `--deploy-to-cloud` and `--enable-krisp` are errors that say so, and there
+  is no `pcc-deploy.toml`; `--dockerfile` writes a plain Bun or Node image. Deployment is up to
+  you: [Servers](/docs/deployment/servers), [Vercel](/docs/deployment/vercel).
+- **Cloudflare Workers has no template.** A voice agent on Workers needs a Durable Object, a
+  `wrangler` config and provider-side turn detection: start from
+  [`examples/workers-durable-voice-agent`](https://github.com/polvallverdu/pipedog/tree/main/examples/workers-durable-voice-agent)
+  and [Cloudflare Workers](/docs/deployment/cloudflare-workers).
+- **One client.** `--client-framework vanilla` is Pipecat's vanilla JS client; the React clients
+  (Vite and Next.js, with the Pipecat UI components) aren't ported. The runner serves a React
+  client at `/client` for WebRTC, and the Pipecat browser SDKs work unchanged.
+- **The docs MCP server instead of the Context Hub.** There is no index to build:
+  `@pipedog/mcp` bundles the docs of its release, and `init` only writes the config.
+- **The plugin system isn't ported** (`pipecat cloud` and other extensions), nor the `pc` alias
+  or a `create-pipedog` command: that would be its own npm package.
+- **Prompts** are [`@clack/prompts`](https://www.npmjs.com/package/@clack/prompts). `init` never
+  prompts without a terminal.
+
+The CLI itself runs on Bun, Node 22 or later and Deno.
