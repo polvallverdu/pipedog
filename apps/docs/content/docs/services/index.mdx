@@ -7,7 +7,7 @@ description: "Every pipedog service by category: ported, and coming soon from Pi
 
 Services are frame processors that call an AI provider. pipedog ports them from Pipecat with the same
 class names and options (in camelCase), one package per provider: `@pipedog/openai`,
-`@pipedog/deepgram` and so on. 72 service pages are ported so far. The "coming soon"
+`@pipedog/deepgram` and so on. 78 service pages are ported so far. The "coming soon"
 pages link to Pipecat's docs and to a port request.
 
 Each service page follows the same layout as Pipecat's: overview, installation, configuration
@@ -53,6 +53,10 @@ Transcribe the user's speech into TranscriptionFrames. [All speech-to-text servi
 
 | Provider | Classes | Package | Status |
 |---|---|---|---|
+| [AssemblyAI](/docs/services/stt/assemblyai) | `AssemblyAISTTService`, `AssemblyAISyncSTTService` | `@pipedog/assemblyai` | Ported |
+| [Gladia](/docs/services/stt/gladia) | `GladiaSTTService` | `@pipedog/gladia` | Ported |
+| [Speechmatics](/docs/services/stt/speechmatics) | `SpeechmaticsSTTService` | `@pipedog/speechmatics` | Ported |
+| [Soniox](/docs/services/stt/soniox) | `SonioxSTTService` | `@pipedog/soniox` | Ported |
 | [Deepgram](/docs/services/stt/deepgram) | `DeepgramSTTService`, `DeepgramFluxSTTService` | `@pipedog/deepgram` | Ported |
 | [OpenAI](/docs/services/stt/openai) | `OpenAISTTService`, `OpenAIRealtimeSTTService` | `@pipedog/openai` | Ported |
 | [Google](/docs/services/stt/google) | `GoogleSTTService`, `GeminiSTTService` | `@pipedog/google` | Ported |
@@ -68,12 +72,8 @@ Transcribe the user's speech into TranscriptionFrames. [All speech-to-text servi
 | [Mistral](/docs/services/stt/mistral) | `MistralSTTService` | `@pipedog/mistral` | Ported |
 | [Together AI](/docs/services/stt/together) | `TogetherSTTService` | `@pipedog/together` | Ported |
 | [xAI](/docs/services/stt/xai) | `XAISTTService` | `@pipedog/xai` | Ported |
-| [AssemblyAI](/docs/services/stt/assemblyai) | `AssemblyAISTTService`, `AssemblyAISyncSTTService` | | Coming soon |
-| [Gladia](/docs/services/stt/gladia) | `GladiaSTTService` | | Coming soon |
 | [NVIDIA Riva](/docs/services/stt/nvidia) | `NvidiaSTTService`, `NvidiaSegmentedSTTService` | | Coming soon |
 | [Sarvam AI](/docs/services/stt/sarvam) | `SarvamSTTService`, `SarvamRealtimeSTTService` | | Coming soon |
-| [Soniox](/docs/services/stt/soniox) | `SonioxSTTService` | | Coming soon |
-| [Speechmatics](/docs/services/stt/speechmatics) | `SpeechmaticsSTTService` | | Coming soon |
 
 ## Text-to-speech
 
@@ -84,6 +84,8 @@ Turn the bot's text into audio frames. [All text-to-speech services](/docs/servi
 | [OpenAI](/docs/services/tts/openai) | `OpenAITTSService` | `@pipedog/openai` | Ported |
 | [Google](/docs/services/tts/google) | `GoogleTTSService`, `GoogleHttpTTSService`, `GeminiTTSService` | `@pipedog/google` | Ported |
 | [Deepgram](/docs/services/tts/deepgram) | `DeepgramTTSService`, `DeepgramHttpTTSService`, `DeepgramFluxTTSService` | `@pipedog/deepgram` | Ported |
+| [Speechmatics](/docs/services/tts/speechmatics) | `SpeechmaticsTTSService` | `@pipedog/speechmatics` | Ported |
+| [Soniox](/docs/services/tts/soniox) | `SonioxTTSService` | `@pipedog/soniox` | Ported |
 | [Cartesia](/docs/services/tts/cartesia) | `CartesiaTTSService`, `CartesiaHttpTTSService` | `@pipedog/cartesia` | Ported |
 | [ElevenLabs](/docs/services/tts/elevenlabs) | `ElevenLabsTTSService`, `ElevenLabsHttpTTSService`, `ElevenLabsDialogueTTSService` | `@pipedog/elevenlabs` | Ported |
 | [Groq](/docs/services/tts/groq) | `GroqTTSService` | `@pipedog/groq` | Ported |
@@ -101,8 +103,6 @@ Turn the bot's text into audio frames. [All text-to-speech services](/docs/servi
 | [Hume](/docs/services/tts/hume) | `HumeTTSService` | `@pipedog/hume` | Ported |
 | [NVIDIA Riva](/docs/services/tts/nvidia) | `NvidiaTTSService` | | Coming soon |
 | [Sarvam AI](/docs/services/tts/sarvam) | `SarvamTTSService`, `SarvamHttpTTSService` | | Coming soon |
-| [Soniox](/docs/services/tts/soniox) | `SonioxTTSService` | | Coming soon |
-| [Speechmatics](/docs/services/tts/speechmatics) | `SpeechmaticsTTSService` | | Coming soon |
 
 ## Speech-to-speech
 

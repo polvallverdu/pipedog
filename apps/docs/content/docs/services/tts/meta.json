@@ -5,6 +5,8 @@
     "openai",
     "google",
     "deepgram",
+    "speechmatics",
+    "soniox",
     "cartesia",
     "elevenlabs",
     "groq",
@@ -22,8 +24,6 @@
     "hume",
     "---Coming soon---",
     "nvidia",
-    "sarvam",
-    "soniox",
-    "speechmatics"
+    "sarvam"
   ]
 }
