@@ -1,0 +1,58 @@
+{
+  "name": "@pipedog/ai-sdk",
+  "version": "0.8.0",
+  "description": "Vercel AI SDK LLM service for pipedog: run any AI SDK language model (OpenAI, Google, Anthropic, Ollama, ...) in a pipeline.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "ai-sdk",
+    "vercel-ai",
+    "llm"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/ai-sdk"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/ai-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "ai": "^7.0.133"
+  },
+  "devDependencies": {
+    "@ai-sdk/google": "4.0.91",
+    "ai": "7.0.133"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": []
+  }
+}

@@ -261,6 +261,15 @@ ${AWS_CREDENTIALS}
   xai_stt: keyed("XAISTTService", "XAI_API_KEY"),
 
   // LLM services
+  // A model ID string goes through the AI Gateway. Any AI SDK model works in its place, e.g.
+  // `google("gemini-3.5-flash-lite")` from @ai-sdk/google or `openai("gpt-4.1-mini")`.
+  ai_sdk_llm: `new AISDKLLMService({
+  model: process.env.AI_SDK_MODEL ?? "google/gemini-3.5-flash-lite",
+  settings: new AISDKLLMService.Settings({
+    systemInstruction: SYSTEM_INSTRUCTION,
+    maxTokens: 1024,
+  }),
+})`,
   anthropic_llm: keyed(
     "AnthropicLLMService",
     "ANTHROPIC_API_KEY",
