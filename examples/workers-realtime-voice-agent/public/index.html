@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice agent on Cloudflare Realtime</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 36rem;
+        margin: 4rem auto;
+        padding: 0 1rem;
+      }
+      button {
+        font: inherit;
+        padding: 0.5rem 1rem;
+      }
+      #log p {
+        margin: 0.25rem 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Voice agent</h1>
+    <p id="status">Disconnected</p>
+    <button id="call" type="button">Call</button>
+    <div id="log"></div>
+
+    <script type="module">
+      // The browser side of a call. Audio goes over WebRTC to Cloudflare Realtime; the Durable
+      // Object does the signaling (it holds the Realtime app secret) and runs the bot. RTVI
+      // messages go over a WebSocket to the Durable Object, the "messages" socket.
+      const status = document.querySelector("#status");
+      const button = document.querySelector("#call");
+      const log = document.querySelector("#log");
+      // The bot's voice. (Its words appear in the log, from RTVI.)
+      const botAudio = new Audio();
+      botAudio.autoplay = true;
+
+      let pc = null;
+      let messages = null;
+      let base = null;
+
+      const say = (who, text) => {
+        const p = document.createElement("p");
+        p.textContent = `${who}: ${text}`;
+        log.append(p);
+      };
+
+      async function post(action, body = {}) {
+        const response = await fetch(`${base}/${action}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) throw new Error(`${action}: ${(await response.json()).error}`);
+        return response.json();
+      }
+
+      /** Wait for ICE gathering, so the SDP carries the candidates (at most 2 s). */
+      function gathered(pc) {
+        if (pc.iceGatheringState === "complete") return Promise.resolve();
+        return new Promise((resolve) => {
+          const done = () => {
+            if (pc.iceGatheringState === "complete") resolve();
+          };
+          pc.addEventListener("icegatheringstatechange", done);
+          setTimeout(resolve, 2000);
+        });
+      }
+
+      function connected(pc) {
+        if (pc.connectionState === "connected") return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          pc.addEventListener("connectionstatechange", () => {
+            if (pc.connectionState === "connected") resolve();
+            if (pc.connectionState === "failed") reject(new Error("WebRTC connection failed"));
+          });
+          setTimeout(() => reject(new Error("WebRTC connection timed out")), 15000);
+        });
+      }
+
+      function onRtvi(message) {
+        if (message.label !== "rtvi-ai") return;
+        if (message.type === "user-transcription" && message.data.final) say("You", message.data.text);
+        if (message.type === "bot-output" && message.data.spoken !== false) say("Bot", message.data.text);
+      }
+
+      async function start() {
+        base = `/api/call/${crypto.randomUUID()}`;
+        status.textContent = "Connecting…";
+
+        const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+        pc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
+          bundlePolicy: "max-bundle",
+        });
+        pc.addEventListener("track", (event) => {
+          botAudio.srcObject = new MediaStream([event.track]);
+        });
+
+        // 1. Publish the microphone.
+        const transceiver = pc.addTransceiver(mic.getAudioTracks()[0], { direction: "sendonly" });
+        await pc.setLocalDescription(await pc.createOffer());
+        await gathered(pc);
+        const published = await post("offer", {
+          sessionDescription: pc.localDescription,
+          mid: transceiver.mid,
+        });
+        await pc.setRemoteDescription(published.sessionDescription);
+        await connected(pc);
+
+        // 2. The messages socket, for RTVI.
+        const wsBase = `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}${base}`;
+        messages = new WebSocket(`${wsBase}/messages`);
+        messages.addEventListener("message", (event) => onRtvi(JSON.parse(event.data)));
+        messages.addEventListener("close", () => stop());
+        await new Promise((resolve, reject) => {
+          messages.addEventListener("open", resolve, { once: true });
+          messages.addEventListener("error", reject, { once: true });
+        });
+
+        // 3. The SFU attaches the bot; subscribe to its track.
+        const subscription = await post("connect");
+        await pc.setRemoteDescription(subscription.sessionDescription);
+        await pc.setLocalDescription(await pc.createAnswer());
+        await gathered(pc);
+        await post("answer", { sessionDescription: pc.localDescription });
+
+        // 4. Tell the bot we can hear it: RTVI's client-ready. It greets us then.
+        messages.send(
+          JSON.stringify({
+            label: "rtvi-ai",
+            type: "client-ready",
+            id: crypto.randomUUID(),
+            data: { version: "2.0.0", about: { library: "workers-realtime-voice-agent" } },
+          }),
+        );
+        status.textContent = "Connected: say something";
+        button.textContent = "Hang up";
+      }
+
+      async function stop() {
+        if (!pc) return;
+        const call = base;
+        for (const sender of pc.getSenders()) sender.track?.stop();
+        pc.close();
+        pc = null;
+        messages?.close();
+        messages = null;
+        status.textContent = "Disconnected";
+        button.textContent = "Call";
+        await fetch(`${call}/hangup`, { method: "POST" }).catch(() => {});
+      }
+
+      button.addEventListener("click", async () => {
+        if (pc) return stop();
+        try {
+          await start();
+        } catch (e) {
+          status.textContent = `Error: ${e.message}`;
+          await stop();
+        }
+      });
+    </script>
+  </body>
+</html>

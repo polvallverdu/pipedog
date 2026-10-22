@@ -1,0 +1,173 @@
+---
+title: Cloudflare Realtime
+description: CloudflareRealtimeTransport connects a bot to the Cloudflare Realtime SFU over its WebSocket adapters, so users talk over WebRTC while the bot runs in a Worker, a Durable Object or any server.
+---
+
+## Overview
+
+`@pipedog/transport-cloudflare-realtime` connects a bot to
+[Cloudflare Realtime](https://developers.cloudflare.com/realtime/sfu/), Cloudflare's WebRTC SFU
+(formerly Calls). The user talks over WebRTC from a browser or an app, with the SFU handling the
+network. The bot never speaks WebRTC: the SFU's
+[WebSocket adapters](https://developers.cloudflare.com/realtime/sfu/features/media-transport-adapters/websocket-adapter/)
+convert its tracks to and from PCM. That makes WebRTC users possible where the bot can't open UDP
+sockets, in particular [Cloudflare Workers and Durable Objects](/docs/deployment/cloudflare-workers).
+
+This package is pipedog's own; Pipecat has no counterpart. It contains:
+
+- **`CloudflareRealtimeTransport`**: the transport. It takes the sockets the SFU dials, and the
+  browser's messages socket, from your server.
+- **`CloudflareRealtimeAPI`**: a small client for the Realtime HTTPS API: sessions, tracks and
+  WebSocket adapters.
+- **`CloudflareRealtimeCall`**: the API calls for one user talking to one bot, in order, keeping
+  what it allocated so it can release it.
+- The adapter's packet codec (`/packet`).
+
+<Cards>
+  <Card title="Example" href="https://github.com/polvallverdu/pipedog/tree/main/examples/workers-realtime-voice-agent">
+    A Worker, a Durable Object per call, and a browser page.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/transport-cloudflare-realtime/src">
+    `transport.ts`, `api.ts` and `packet.ts`.
+  </Card>
+  <Card title="Realtime SFU docs" href="https://developers.cloudflare.com/realtime/sfu/">
+    Cloudflare's documentation for sessions, tracks and adapters.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/transport-cloudflare-realtime
+```
+
+```ts
+import {
+  CloudflareRealtimeParams,
+  CloudflareRealtimeTransport,
+} from "@pipedog/transport-cloudflare-realtime/transport";
+import { CloudflareRealtimeAPI, CloudflareRealtimeCall } from "@pipedog/transport-cloudflare-realtime/api";
+```
+
+## Prerequisites
+
+- A Realtime SFU app: its App ID and API token (the app secret), from the Cloudflare dashboard
+  (Realtime > SFU). Keep the secret on your backend.
+- A public `wss://` URL for the bot: the SFU dials it, and can't reach `localhost`. For local
+  development, use a tunnel such as `cloudflared tunnel`.
+
+## How it works
+
+```text
+browser ──WebRTC (Opus)──► Realtime SFU ──WebSocket adapter (PCM)──► bot: input socket
+browser ◄──WebRTC (Opus)── Realtime SFU ◄──WebSocket adapter (PCM)── bot: output socket
+browser ◄────────────── WebSocket (RTVI JSON) ─────────────────────► bot: messages socket
+```
+
+- **The SFU dials the bot.** Each adapter connects one track to a WebSocket URL you choose, in one
+  direction. An adapter with `location: "remote"` streams the user's microphone to the bot (the
+  bot's **input**); one with `location: "local"` takes the bot's audio and publishes it as a new
+  track (the bot's **output**). The SFU can't send headers, so authenticate them with a per-call
+  token in the URL.
+- **Audio** on both adapters is 48 kHz stereo 16-bit PCM, one protobuf packet per WebSocket
+  message, at most 32 KB. The transport converts to and from the pipeline's sample rates and
+  channels, and paces the bot's audio in real time, so an interruption stops it at once.
+- **App messages** can't ride the adapters, and SFU DataChannels need a WebRTC peer on both ends,
+  so RTVI goes over a third WebSocket that the browser opens to the bot: the **messages** socket.
+  It carries the same JSON messages SmallWebRTC sends over its data channel, one per text frame.
+- **Reconnects.** The SFU reconnects a dropped input adapter for up to 15 seconds; the transport
+  waits for it (`inputReconnectTimeout`). The output adapter doesn't reconnect.
+
+The order of a call, which `CloudflareRealtimeCall` follows:
+
+1. The browser publishes its microphone: it sends an SDP offer; your backend creates a session,
+   publishes the track (`publishUser`) and returns the SFU's answer.
+2. Once the browser is connected, your backend creates both adapters (`attachBot`). The SFU dials
+   both endpoints before the request returns, so the transport must already exist.
+3. Your backend subscribes the browser's session to the bot's track (`subscribeUser`, or
+   `connectBot` for steps 2 and 3) and returns the SFU's offer. The browser answers, and your
+   backend submits the answer (`renegotiate`).
+4. At the end, `close()` closes the adapters and force-closes the browser's tracks. What it can't
+   close stays in `call.state`, plain JSON you can store and retry from.
+
+## Configuration
+
+`new CloudflareRealtimeTransport(params?, options?)`. `params` is a `CloudflareRealtimeParams`,
+with the usual transport parameters (`audioInEnabled`, `audioOutEnabled`, sample rates, channels,
+filters) plus:
+
+<auto-type-table cwd path="../../packages/transport-cloudflare-realtime/src/transport.ts" name="CloudflareRealtimeParamsOptions" />
+
+`options`:
+
+<auto-type-table cwd path="../../packages/transport-cloudflare-realtime/src/transport.ts" name="CloudflareRealtimeTransportOptions" />
+
+`CloudflareRealtimeAPI` takes:
+
+<auto-type-table cwd path="../../packages/transport-cloudflare-realtime/src/api.ts" name="CloudflareRealtimeAPIOptions" />
+
+## Usage
+
+The bot is an ordinary pipeline around the transport:
+
+<include cwd meta='title="bot.ts"'>snippets/services/transport-cloudflare-realtime.ts#transport</include>
+
+Your server does the signaling for the browser and hands the transport the sockets. As a Durable
+Object, or any fetch handler that keeps one object per call:
+
+<include cwd meta='title="voice_call.ts"'>snippets/services/transport-cloudflare-realtime.ts#server</include>
+
+`acceptSocket(role, request)` upgrades the request and attaches the socket. It upgrades from the
+request alone on Workers, Durable Objects and Deno; on Bun, pass `{ server }` and serve with
+`bunWebSocket`, and on Node serve with `serveFetch()`, as for the
+[WebSocket transport](/docs/transports/websocket). With a socket you upgraded yourself, call
+`attachSocket(role, WebsocketConnection.fromWebSocket(ws))`.
+
+### The browser
+
+There's no Pipecat client SDK transport for Cloudflare Realtime yet, so the browser side is plain
+WebRTC: publish the microphone, play the bot's track, and speak RTVI over the messages socket:
+
+<include cwd meta='title="client.ts"'>snippets/services/transport-cloudflare-realtime.ts#browser</include>
+
+RTVI works as with any transport, since the bot's `RTVIProcessor` sends and receives through the
+transport's message frames: the bot answers `client-ready` with `bot-ready`, and sends
+transcriptions and bot output. A Pipecat client SDK transport would need to do the signaling above
+and carry RTVI over the messages socket.
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_client_connected` | Both adapter sockets are attached. Receives the client (`getClientId` gives its id). |
+| `on_client_disconnected` | The input adapter didn't reconnect within `inputReconnectTimeout`, the output adapter closed, or the messages socket closed (with `disconnectOnMessagesClose`, the default). Not when the transport itself closes. |
+| `on_app_message` | A JSON message arrived on the messages socket. Receives the message and the client's id. |
+
+### Notes
+
+- Greet the user when their browser can hear the bot: the bot's track only plays once the browser
+  has answered the subscription offer. The example greets on RTVI's `on_client_ready`, which the
+  browser triggers after `renegotiate`.
+- The transport doesn't end the call at the SFU: call `CloudflareRealtimeCall.close()` when the bot
+  stops, or the SFU keeps redialing a closed input adapter for 15 seconds.
+- Input is mono at the pipeline's rate; with `audioInChannels: 2` and a 48 kHz pipeline it stays
+  stereo. Set `audioOutSampleRate: 48000` to skip output resampling.
+- Audio that arrives before the pipeline starts is dropped; bot audio sent while the output
+  adapter isn't attached is dropped.
+
+## RealtimeKit
+
+RealtimeKit, Cloudflare's meeting SDK, is out of scope for now: its agent participant can't send
+or receive audio yet (it is "planned" in Cloudflare's capability matrix). This transport uses the
+SFU directly.
+
+## Verification
+
+The transport, the API helper and the example are tested against fakes built from Cloudflare's
+documentation: a fake SFU that dials the bot's endpoints as the adapters do, and a fake API. They
+haven't been run against the real Realtime service yet. A live API test runs when
+`CLOUDFLARE_REALTIME_APP_ID` and `CLOUDFLARE_REALTIME_APP_SECRET` are set.
+
+## Runtime notes
+
+<RuntimeMatrix pkg="@pipedog/transport-cloudflare-realtime" />

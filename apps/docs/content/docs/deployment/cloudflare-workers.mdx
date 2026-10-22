@@ -26,7 +26,10 @@ client ──WebSocket──► Worker ──getByName(id)──► VoiceSession
   same object.
 - The **Durable Object** accepts the WebSocket and runs the agent for as long as the socket is open.
 - The **transport** is the WebSocket transport, carrying audio as protobuf frames in the Pipecat wire
-  format. WebRTC needs UDP, which Workers don't have, so use the WebSocket transport here.
+  format. WebRTC needs UDP, which Workers don't have, so the Worker can't be a WebRTC peer itself.
+  For browser or app users on WebRTC, let [Cloudflare Realtime](/docs/transports/cloudflare-realtime)
+  be the peer: its SFU converts the audio to PCM over WebSockets that the Durable Object accepts
+  (see [`examples/workers-realtime-voice-agent`](https://github.com/polvallverdu/pipedog/tree/main/examples/workers-realtime-voice-agent)).
 
 ## The Durable Object
 
@@ -103,6 +106,8 @@ them usable from any framework that routes requests this way.
   (`createRunnerApp()`) upgrades the same way, though it isn't tested on Workers yet.
 - **WebRTC signaling.** `smallWebRTCOfferHandler` is a plain fetch handler. Its media runs over UDP,
   so the server has to be a long-lived Node, Bun or Deno process. Serverless hosts can't carry it.
+  On Workers, use [Cloudflare Realtime](/docs/transports/cloudflare-realtime) instead: its SFU
+  carries the WebRTC media and hands the bot PCM over WebSockets.
 
 Shapes for the other frameworks:
 
@@ -154,5 +159,6 @@ bun run deploy
   the agent's timers would need to survive a sleep, and this example doesn't do that.
 - **CPU.** Each session still decodes, resamples and serializes audio. Check the CPU limits for your
   plan under real load.
-- **Transport.** WebRTC isn't available here. Audio goes over WebSocket, so the client has to send
-  and receive protobuf frames.
+- **Transport.** The Worker can't be a WebRTC peer. Over the WebSocket transport, the client sends
+  and receives protobuf frames. For WebRTC clients, put
+  [Cloudflare Realtime](/docs/transports/cloudflare-realtime) in between.

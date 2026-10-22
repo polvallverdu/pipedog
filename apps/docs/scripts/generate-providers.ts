@@ -316,7 +316,7 @@ ${page.runtimeMatrix ? `\n<RuntimeMatrix pkg="${page.pkg}" />\n` : ""}
 function portedRows(section: Section): string[] {
   return ported[section].map(
     (page: PortedPage) =>
-      `| [${page.name}](${pageUrl(section, page.slug)}) | ${code(page.classes)} | \`${page.pkg}\` | Ported |`,
+      `| [${page.name}](${pageUrl(section, page.slug)}) | ${code(page.classes)} | \`${page.pkg}\` | ${page.status ?? "Ported"} |`,
   );
 }
 

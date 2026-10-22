@@ -83,6 +83,8 @@ constraints:
 - **No WebRTC.** Workers can't run WebRTC, so the WebRTC-based transports (Daily, SmallWebRTC,
   LiveKit) don't work there. Use a **WebSocket transport** instead; WebSocket-based transports and
   serializers must work on Workers. Pipecat clients can connect over WebSocket with RTVI as usual.
+  For WebRTC users, [Cloudflare Realtime](/docs/transports/cloudflare-realtime) is the WebRTC peer
+  and streams the audio to the bot over WebSockets.
 - **WASM is imported as a module.** workerd refuses to compile WebAssembly from bytes at runtime
   (`WebAssembly.compile(buffer)`), so a `.wasm` file must be imported. Packages with WASM ship two
   entries selected by the **`workerd` export condition**, which wrangler resolves automatically:

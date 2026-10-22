@@ -1,0 +1,53 @@
+{
+  "name": "@pipedog/transport-cloudflare-realtime",
+  "version": "0.8.0",
+  "description": "Cloudflare Realtime transport for pipedog: browser and phone users talk over WebRTC through the Realtime SFU, while the bot runs where WebRTC isn't available, such as a Worker or a Durable Object.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "cloudflare",
+    "cloudflare-realtime",
+    "sfu",
+    "webrtc",
+    "transport"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/transport-cloudflare-realtime"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/transport-cloudflare-realtime#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ]
+  }
+}

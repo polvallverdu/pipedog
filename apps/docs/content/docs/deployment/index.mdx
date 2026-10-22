@@ -10,11 +10,14 @@ whole call. That shapes where it can run. The transport decides most of it:
   Bun, Node or Deno on a VM, a container or a bare-metal host.
 - **WebSocket** sends audio frames over TCP. It runs on the same servers, and also on Cloudflare
   Workers and Durable Objects, and on Vercel's Bun runtime.
+- **Cloudflare Realtime** lets users connect over WebRTC to Cloudflare's SFU, which streams their
+  audio to the bot as PCM over WebSockets. The bot can then run in a Worker or Durable Object (see
+  [Cloudflare Realtime](/docs/transports/cloudflare-realtime)).
 
 | Host | Runtime | SmallWebRTC | WebSocket | Page |
 |---|---|---|---|---|
 | VM, container, bare metal | Bun, Node, Deno | Yes | Yes | [Servers](/docs/deployment/servers), [Bundling](/docs/deployment/bundling) |
-| Cloudflare Workers + Durable Objects | workerd | No (no UDP) | Yes | [Cloudflare Workers](/docs/deployment/cloudflare-workers) |
+| Cloudflare Workers + Durable Objects | workerd | No (no UDP); WebRTC users through [Cloudflare Realtime](/docs/transports/cloudflare-realtime) | Yes | [Cloudflare Workers](/docs/deployment/cloudflare-workers) |
 | Vercel Functions | Bun runtime | No (no UDP) | Yes | [Vercel](/docs/deployment/vercel) |
 | Serverless functions without WebSockets | any | No | No | Signalling only |
 

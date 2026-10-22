@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../../packages/asyncio"
+    },
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/openai"
+    },
+    {
+      "path": "../../packages/transport-cloudflare-realtime"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@pipedog/example-workers-realtime-voice-agent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A browser voice agent over WebRTC on Cloudflare Workers: Cloudflare Realtime carries the audio, a Durable Object runs the bot.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/openai": "workspace:*",
+    "@pipedog/transport-cloudflare-realtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261007.1",
+    "@pipedog/example-test-mocks": "workspace:*",
+    "wrangler": "4.148.0"
+  }
+}
