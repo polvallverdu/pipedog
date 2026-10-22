@@ -1,0 +1,73 @@
+---
+title: "Camb.ai"
+description: "Text-to-speech with Camb.ai's MARS models: CambTTSService streams PCM audio over HTTP."
+---
+
+## Overview
+
+`CambTTSService` posts each sentence to Camb.ai's `tts-stream` endpoint and pushes the streamed 16-bit PCM, kept aligned to whole samples. Models: `mars-flash` (fast, 22.05 kHz, the default), `mars-pro` (high quality, 48 kHz) and `mars-instruct` (22.05 kHz, takes instructions for tone and style).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/camb">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/camb/src">
+    `packages/camb/src/tts.ts`.
+  </Card>
+  <Card title="Camb.ai docs" href="https://docs.camb.ai/api-reference/endpoint/create-tts-stream">
+    The streaming TTS endpoint reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/camb
+```
+
+```ts
+import { CambTTSService } from "@pipedog/camb/tts";
+```
+
+## Prerequisites
+
+- A Camb.ai account and an API key.
+- Pass the key as `apiKey`. The examples read it from `CAMB_API_KEY`.
+
+## Configuration
+
+<auto-type-table cwd path="../../packages/camb/src/tts.ts" name="CambTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new CambTTSService.Settings({...})`
+(`CambTTSSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"mars-flash"` | `mars-flash`, `mars-pro` or `mars-instruct`. |
+| `voice` | `number` | `147320` | Voice id. Camb.ai uses integer ids. |
+| `language` | `Language \| string` | `"en-us"` | Language, as a lowercase BCP-47 tag. |
+| `userInstructions` | `string \| null` | `null` | Instructions for `mars-instruct` only, up to 1000 characters. Ignored by the other models. |
+
+## Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-camb.ts#usage</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-camb.ts#update</include>
+
+## Notes
+
+- Without a `sampleRate`, the service uses the model's: 22050 Hz for `mars-flash` and `mars-instruct`, 48000 Hz for `mars-pro`. A `sampleRate` that differs from the model's logs a warning.
+- Text over 3000 characters is truncated.
+- `timeout` (60 seconds by default, the minimum Camb.ai recommends) limits the wait for the response and the wait for each chunk of audio.
+
+## Runtime notes
+
+- Upstream uses Camb's Python SDK. That SDK is a thin client over one endpoint, so this port sends the same request (`POST /tts-stream` with an `x-api-key` header) with the global `fetch`, which works on Bun, Node, Deno and Cloudflare Workers. `baseUrl` and `fetch` are not upstream options.
+- The deprecated `params` (`InputParams`), `voiceId` and `model` options are not ported. Use `settings`.
+- Upstream has no Camb.ai tests. Ours run against a local fake server, not against Camb.ai itself.
+
+<RuntimeMatrix pkg="@pipedog/camb" />

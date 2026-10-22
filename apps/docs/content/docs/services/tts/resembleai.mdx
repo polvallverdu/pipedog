@@ -1,0 +1,78 @@
+---
+title: "Resemble AI"
+description: "Text-to-speech with Resemble AI: ResembleAITTSService streams audio and word timestamps over WebSocket."
+---
+
+## Overview
+
+`ResembleAITTSService` keeps one WebSocket open to Resemble AI's streaming endpoint and sends each sentence as a JSON request. Audio comes back as base64 JSON frames, which the service buffers (a one-second jitter buffer first, then 2208-byte frames) so playback survives Resemble's bursty delivery.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/resembleai">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/resembleai/src">
+    `packages/resembleai/src/tts.ts`.
+  </Card>
+  <Card title="Resemble AI docs" href="https://docs.resemble.ai/voice-generation/text-to-speech/streaming-websocket">
+    The streaming WebSocket reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/resembleai
+```
+
+```ts
+import { ResembleAITTSService } from "@pipedog/resembleai/tts";
+```
+
+## Prerequisites
+
+- A Resemble AI account on a plan that includes the WebSocket API, an API key, and the UUID of a voice.
+- Pass the key as `apiKey`. The examples read it from `RESEMBLE_API_KEY`.
+
+## Configuration
+
+<auto-type-table cwd path="../../packages/resembleai/src/tts.ts" name="ResembleAITTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new ResembleAITTSService.Settings({...})`
+(`ResembleAITTSSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `voice` | `string \| null` | `null` | UUID of the voice (`voice_uuid`). |
+| `model` | `string \| null` | `null` | Not used. |
+| `language` | `Language \| null` | `null` | Not used. |
+
+## Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-resembleai.ts#usage</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The WebSocket connected. |
+| `on_disconnected` | The WebSocket closed. |
+| `on_connection_error` | The connection failed. |
+
+## Notes
+
+- The sample rate defaults to 22050 Hz (8000, 16000, 22050, 32000 and 44100 work), `precision` to `PCM_16` and `outputFormat` to `wav`. Audio is requested without a WAV header.
+- Word timestamps come from Resemble's per-character timings, so each pushed "word" is one character.
+- A 401 or 403 error from Resemble closes the connection and opens a new one.
+- Resemble doesn't acknowledge the WebSocket closing handshake, so the service doesn't wait for one.
+- `projectUuid` is not an upstream option. Resemble's reference lists `project_uuid` as required, but upstream never sends it, so the service sends it only when you set it.
+
+## Runtime notes
+
+- The WebSocket opens through the core `websocketConnect`, with the key in an `Authorization` header (through `fetch` on Cloudflare Workers), so it works on Bun, Node, Deno and Cloudflare Workers.
+- The deprecated `voiceId` option is not ported. Use `settings`.
+- Tested against a local WebSocket server, not against Resemble AI itself.
+
+<RuntimeMatrix pkg="@pipedog/resembleai" />

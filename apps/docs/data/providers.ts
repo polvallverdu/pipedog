@@ -969,6 +969,43 @@ export const ported: Record<Section, PortedPage[]> = {
     },
     { slug: "fish", name: "Fish Audio", pkg: "@pipedog/fish", classes: ["FishAudioTTSService"] },
     { slug: "hume", name: "Hume", pkg: "@pipedog/hume", classes: ["HumeTTSService"] },
+    {
+      slug: "neuphonic",
+      name: "Neuphonic",
+      pkg: "@pipedog/neuphonic",
+      classes: ["NeuphonicTTSService", "NeuphonicHttpTTSService"],
+    },
+    {
+      slug: "speechify",
+      name: "Speechify",
+      pkg: "@pipedog/speechify",
+      classes: ["SpeechifyHttpTTSService"],
+    },
+    {
+      slug: "minimax",
+      name: "MiniMax",
+      pkg: "@pipedog/minimax",
+      classes: ["MiniMaxHttpTTSService"],
+    },
+    {
+      slug: "resembleai",
+      name: "Resemble AI",
+      pkg: "@pipedog/resembleai",
+      classes: ["ResembleAITTSService"],
+    },
+    { slug: "camb", name: "Camb.ai", pkg: "@pipedog/camb", classes: ["CambTTSService"] },
+    {
+      slug: "asyncai",
+      name: "Async",
+      pkg: "@pipedog/asyncai",
+      classes: ["AsyncAITTSService", "AsyncAIHttpTTSService"],
+    },
+    {
+      slug: "bland",
+      name: "Bland",
+      pkg: "@pipedog/bland",
+      classes: ["BlandTTSService", "BlandHttpTTSService"],
+    },
   ],
   s2s: [
     {
@@ -1383,9 +1420,6 @@ export interface LongTailProvider {
 
 /** Every other upstream service, listed on one page. */
 export const longTail: LongTailProvider[] = [
-  { name: "Async", folder: "asyncai", kinds: ["TTS"], classes: ["AsyncAITTSService"] },
-  { name: "Bland", folder: "bland", kinds: ["TTS"], classes: ["BlandTTSService"] },
-  { name: "Camb.ai", folder: "camb", kinds: ["TTS"], classes: ["CambTTSService"] },
   {
     name: "fal",
     folder: "fal",
@@ -1394,22 +1428,13 @@ export const longTail: LongTailProvider[] = [
   },
   { name: "Keenable", folder: "keenable", kinds: ["Search"], classes: ["KeenableWebSearch"] },
   { name: "Mem0", folder: "mem0", kinds: ["Memory"], classes: ["Mem0MemoryService"] },
-  { name: "MiniMax", folder: "minimax", kinds: ["TTS"], classes: ["MiniMaxHttpTTSService"] },
   { name: "Moondream", folder: "moondream", kinds: ["Vision"], classes: ["MoondreamService"] },
-  { name: "Neuphonic", folder: "neuphonic", kinds: ["TTS"], classes: ["NeuphonicTTSService"] },
   {
     name: "OpenClaw",
     folder: "openclaw",
     kinds: ["Agents"],
     classes: ["OpenClawGatewayService"],
   },
-  {
-    name: "Resemble AI",
-    folder: "resembleai",
-    kinds: ["TTS"],
-    classes: ["ResembleAITTSService"],
-  },
-  { name: "Speechify", folder: "speechify", kinds: ["TTS"], classes: ["SpeechifyHttpTTSService"] },
   { name: "XTTS (deprecated upstream)", folder: "xtts", kinds: ["TTS"], classes: ["XTTSService"] },
 ];
 

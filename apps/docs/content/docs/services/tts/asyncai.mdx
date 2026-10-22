@@ -1,0 +1,98 @@
+---
+title: "Async"
+description: "Text-to-speech with Async: AsyncAITTSService over WebSocket and AsyncAIHttpTTSService over HTTP streaming."
+---
+
+## Overview
+
+- **`AsyncAITTSService`**: keeps one WebSocket open and sends each sentence as a forced transcript on its own context, closing the context when its audio has played or the bot is interrupted.
+- **`AsyncAIHttpTTSService`**: one HTTP request per sentence. The audio is collected and pushed as one frame.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/asyncai">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/asyncai/src">
+    `packages/asyncai/src/tts.ts`.
+  </Card>
+  <Card title="Async docs" href="https://docs.async.com/text-to-speech-websocket-3477526w0.md">
+    The WebSocket API reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/asyncai
+```
+
+```ts
+import { AsyncAIHttpTTSService, AsyncAITTSService } from "@pipedog/asyncai/tts";
+```
+
+## Prerequisites
+
+- An Async account, an API key and the UUID of a voice.
+- Pass the key as `apiKey`. The examples read it from `ASYNC_API_KEY`.
+
+## AsyncAITTSService
+
+Connects to `wss://api.async.com/text_to_speech/websocket/ws`, with the key and API version as query parameters.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/asyncai/src/tts.ts" name="AsyncAITTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new AsyncAITTSService.Settings({...})`
+(`AsyncAITTSSettings`). Any setting you leave out keeps the default below. A change to `model`, `voice` or `language` opens a new session, because they are sent once, in the init message.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"async_flash_v1.5"` | Speech model. |
+| `voice` | `string \| null` | `null` | Voice UUID. |
+| `language` | `Language \| null` | `null` | Language, sent as a two-letter code. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-asyncai.ts#usage</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-asyncai.ts#update</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The WebSocket connected. |
+| `on_disconnected` | The WebSocket closed. |
+| `on_connection_error` | The connection failed. |
+
+## AsyncAIHttpTTSService
+
+Posts each sentence to `https://api.async.com/text_to_speech/streaming`.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/asyncai/src/tts.ts" name="AsyncAIHttpTTSServiceOptions" />
+
+It takes the same settings as the WebSocket service.
+
+### Usage
+
+<include cwd>snippets/services/tts-asyncai.ts#http</include>
+
+## Notes
+
+- Audio is raw `pcm_s16le` by default (`encoding` and `container` change that) at the pipeline's sample rate.
+- The WebSocket sends a blank transcript every 10 seconds to keep the connection open.
+
+## Runtime notes
+
+- The WebSocket opens through the core `websocketConnect`. Async takes the key in the URL, so no header is needed. The HTTP service uses the global `fetch`; pass `fetch` to use another one (upstream takes an aiohttp session). Both work on Bun, Node, Deno and Cloudflare Workers.
+- The deprecated `params` (`InputParams`), `voiceId`, `model` and `aggregateSentences` options are not ported. Use `settings` and `textAggregationMode`.
+- Tested against local servers, as upstream's tests do for the settings updates, not against Async itself.
+
+<RuntimeMatrix pkg="@pipedog/asyncai" />

@@ -207,6 +207,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/fish`](packages/fish) | Fish Audio TTS. |
 | [`@pipedog/hume`](packages/hume) | Hume TTS (Octave). |
 | [`@pipedog/inworld`](packages/inworld) | Inworld services: Realtime speech-to-speech, WebSocket and HTTP TTS. |
+| [`@pipedog/neuphonic`](packages/neuphonic), [`@pipedog/speechify`](packages/speechify), [`@pipedog/minimax`](packages/minimax), [`@pipedog/resembleai`](packages/resembleai), [`@pipedog/camb`](packages/camb), [`@pipedog/asyncai`](packages/asyncai), [`@pipedog/bland`](packages/bland) | Text-to-speech services, one package per provider: Neuphonic, Speechify, MiniMax, Resemble AI, Camb.ai, Async and Bland (WebSocket or HTTP, as the provider offers). |
 | [`@pipedog/ultravox`](packages/ultravox) | Ultravox realtime speech-to-speech service. |
 | [`@pipedog/aws`](packages/aws) | AWS services: Bedrock LLM, Transcribe STT, Polly TTS, Nova Sonic, AgentCore, and the SageMaker streaming client. |
 | [`@pipedog/whisper`](packages/whisper) | Whisper: local `WhisperSTTService` and `WhisperSTTServiceMLX` on ONNX Runtime with faster-whisper's decoding, the base STT service for Whisper-compatible APIs (shared by OpenAI and Groq), and probability helpers. |

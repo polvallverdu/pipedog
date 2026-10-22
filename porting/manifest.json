@@ -6842,9 +6842,9 @@
       "tests": [
         "test_asyncai_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/asyncai/src/tts.ts: AsyncAITTSService over core websocketConnect (key in the URL query) and AsyncAIHttpTTSService over fetch. DIVERGENCE: AsyncAIHttpTTSService takes an optional fetch instead of a required aiohttp_session. Deprecated InputParams, params, voice_id, model and aggregate_sentences not ported."
     },
     {
       "module": "pipecat.services.aws",
@@ -7495,9 +7495,9 @@
       "tests": [
         "test_bland_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/bland/src/tts.ts: BlandTTSService over core websocketConnect and BlandHttpTTSService over fetch. DIVERGENCE: BlandHttpTTSService takes an optional fetch instead of an optional aiohttp_session (no session to own or close, so its start/stop/cancel/cleanup overrides are not needed); the ready and close timeouts are instance fields (_readyTimeout, _closeTimeout) because ES module constants cannot be patched by tests."
     },
     {
       "module": "pipecat.services.camb",
@@ -7540,9 +7540,9 @@
         "pydantic"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/camb/src/tts.ts. DIVERGENCE: no camb-sdk. CambTTSService calls POST /tts-stream with fetch and x-api-key (the request camb-sdk 1.5.4 makes), streaming sample-aligned PCM; adds baseUrl and fetch options; the timeout applies to the response wait and to each chunk wait; SDK errors read status_code: N, body: ... Deprecated InputParams, params, model and voice_id not ported. Upstream has no tests; own fake-server tests."
     },
     {
       "module": "pipecat.services.cartesia",
@@ -9986,9 +9986,9 @@
       "tests": [
         "test_minimax_tts_language.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/minimax/src/tts.ts: MiniMaxHttpTTSService over fetch. DIVERGENCE: optional fetch instead of a required aiohttp_session. Deprecated InputParams, params, model and voice_id not ported; MiniMaxTTSSettings.fromMapping keeps the legacy voice_setting destructuring."
     },
     {
       "module": "pipecat.services.mistral",
@@ -10255,9 +10255,9 @@
         "websockets"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/neuphonic/src/tts.ts: NeuphonicTTSService over core websocketConnect and NeuphonicHttpTTSService over fetch (upstream also talks to the API directly, not through pyneuphonic). DIVERGENCE: NeuphonicHttpTTSService takes an optional fetch instead of a required aiohttp_session. Float query values are written as Python writes them (speed=1.0). Deprecated voice_id, params (InputParams) and aggregate_sentences not ported. Upstream has no tests; own fake-server tests."
     },
     {
       "module": "pipecat.services.novita",
@@ -11303,9 +11303,9 @@
       "tests": [
         "test_resembleai_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/resembleai/src/tts.ts: ResembleAITTSService over core websocketConnect (closeTimeout 0). Deprecated voice_id not ported. DIVERGENCE: optional projectUuid option (Resemble's WebSocket reference lists project_uuid as required; upstream never sends it); sent only when set. Like upstream, _connect does not call super._connect."
     },
     {
       "module": "pipecat.services.rime",
@@ -11883,9 +11883,9 @@
       "tests": [
         "test_speechify_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "packages/speechify/src/tts.ts: SpeechifyHttpTTSService streams SSE over fetch. DIVERGENCE: optional fetch instead of a required aiohttp_session. Speech-mark offsets index the text by code point, as Python indexes a str."
     },
     {
       "module": "pipecat.services.speechmatics",
@@ -16752,8 +16752,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo. Adds fake-server tests for the WebSocket and HTTP services."
     },
     {
       "file": "tests/test_audio_buffer_processor.py",
@@ -17129,8 +17129,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 130,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "35 pass, 0 fail, 0 skip, 0 todo. websockets and aiohttp servers are Bun.serve servers; the idle-close test has a 15 s timeout because its fake never answers close, so shutdown waits out the 5 s settle timeout as upstream's does."
     },
     {
       "file": "tests/test_bot_capabilities.py",
@@ -19118,8 +19118,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "5 pass, 0 fail, 0 skip, 0 todo. Adds fake-server tests for MiniMaxHttpTTSService and the legacy voice_setting mapping."
     },
     {
       "file": "tests/test_mistral_llm.py",
@@ -19875,8 +19875,8 @@
         "pipecat.services.resembleai.tts"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo. The websockets server is a Bun.serve server; adds a pipeline test of the jitter buffer and audio_end."
     },
     {
       "file": "tests/test_rime_tts.py",
@@ -20664,8 +20664,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "39 pass, 0 fail, 0 skip, 0 todo. Parametrized cases are expanded; adds fake-server tests for SpeechifyHttpTTSService and a code-point offset test."
     },
     {
       "file": "tests/test_speechmatics_stt.py",
