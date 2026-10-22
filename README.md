@@ -57,7 +57,7 @@ camelCase members. So Pipecat's client SDKs (`@pipecat-ai/client-js`,
     </td>
     <td width="33%" valign="top">
       <h3>Fast</h3>
-      2.5–3.4× the frame throughput of Pipecat on CPython, 5–7× lower per-frame latency, ~45 ms
+      About 5× the frame throughput of Pipecat on CPython, 10–14× lower per-frame latency, ~45 ms
       cold starts.
     </td>
   </tr>

@@ -73,19 +73,19 @@ const runtimes = [
 
 const stats = [
   {
-    value: "2.5–3.4×",
+    value: "4.8–5.7×",
     label: "frame throughput",
     detail: "of Pipecat on CPython 3.13, on every runtime",
   },
   {
-    value: "5–7×",
+    value: "10–14×",
     label: "lower per-frame latency",
     detail: "on Bun, Node and Deno",
   },
   {
     value: "~45 ms",
     label: "cold start",
-    detail: "on Bun, against 401 ms on CPython",
+    detail: "on Bun, against 396 ms on CPython",
   },
   {
     value: String(packageCount),
