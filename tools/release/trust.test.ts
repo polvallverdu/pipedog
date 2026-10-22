@@ -33,6 +33,36 @@ describe("classifyTrustList", () => {
     ).toBe("ours");
   });
 
+  test("the real output for a configured package, with npm's warning after it, is ours", () => {
+    // `npm trust list @pipedog/core --json` as the script captures it: stdout (a blank line, one
+    // object whose "permissions" holds an array), then stderr. It used to be read as an error
+    // because the warning after the JSON broke JSON.parse.
+    const stdout = `
+{
+  "id": "7825e2b9-1c81-43fa-974d-c233973c4d03",
+  "type": "github",
+  "file": "release.yml",
+  "repository": "polvallverdu/pipedog",
+  "environment": "npm",
+  "permissions": [
+    "createPackage",
+    "createStagedPackage"
+  ]
+}
+`;
+    const stderr =
+      "npm warn cli npm v12.2.0 does not support Node.js v24.14.0. This version of npm supports the following node versions: `^22.22.2 || ^24.15.0 || >=26.0.0`.\n";
+    expect(classify(0, stdout + stderr)).toBe("ours");
+    expect(classify(0, stdout)).toBe("ours");
+    expect(classify(0, `${stderr}${stdout}`)).toBe("ours");
+  });
+
+  test("brackets and braces inside strings don't end the JSON early", () => {
+    const note = 'a } b ] " c';
+    const out = `${JSON.stringify({ file: WORKFLOW, repository: REPO, note })}\nnpm warn {x}`;
+    expect(classify(0, out)).toBe("ours");
+  });
+
   test("a listing for another repo or workflow is someone else's", () => {
     expect(classify(0, JSON.stringify([{ repository: "someone/else", file: WORKFLOW }]))).toBe(
       "other",

@@ -17,15 +17,39 @@ export type TrustState = "ours" | "other" | "none" | "otp" | "error";
 
 const OTP = /EOTP|one-time password/i;
 
-/** The JSON in a command's output, which may have `npm warn` lines around it. */
-function parseJson(output: string): unknown {
-  const starts = [output.indexOf("["), output.indexOf("{")].filter((i) => i >= 0);
-  if (starts.length === 0) return undefined;
-  try {
-    return JSON.parse(output.slice(Math.min(...starts)));
-  } catch {
-    return undefined;
+/** The end of the JSON value that starts at `start`, found by matching brackets outside strings. */
+function jsonEnd(text: string, start: number): number {
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      if (c === "\\") i++;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === "{" || c === "[") depth++;
+    else if ((c === "}" || c === "]") && --depth === 0) return i + 1;
   }
+  return -1;
+}
+
+/**
+ * The first JSON value in a command's output. The output is stdout followed by stderr, so the
+ * JSON can have `npm warn` lines after it (npm prints a Node version warning there) as well as
+ * before it; a value starts at the beginning of a line.
+ */
+function parseJson(output: string): unknown {
+  for (const match of output.matchAll(/^[[{]/gm)) {
+    const start = match.index ?? 0;
+    const end = jsonEnd(output, start);
+    if (end < 0) continue;
+    try {
+      return JSON.parse(output.slice(start, end));
+    } catch {
+      // not JSON after all: try the next line that looks like a start
+    }
+  }
+  return undefined;
 }
 
 function strings(value: unknown): string[] {
