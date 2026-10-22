@@ -27,6 +27,7 @@ import type { UserBotLatencyObserver } from "../../observers/user_bot_latency_ob
 import { logger } from "../logger.ts";
 import {
   getOpenTelemetry,
+  getTracerName,
   isTracingAvailable,
   type OtelAttributeValue,
   type OtelSpan,
@@ -78,7 +79,7 @@ export class TurnTraceObserver extends BaseObserver {
     this._turnTracker = options.turnTracker;
     this._latencyTracker = options.latencyTracker;
     this._tracingContext = options.tracingContext || new TracingContext();
-    this._tracer = getOpenTelemetry()?.api.trace.getTracer("pipecat.turn") ?? null;
+    this._tracer = this._createTracer();
 
     this._conversationId = options.conversationId ?? null;
     this._additionalSpanAttributes = options.additionalSpanAttributes || {};
@@ -110,8 +111,17 @@ export class TurnTraceObserver extends BaseObserver {
    * yet when the observer was built (core imports it asynchronously).
    */
   protected _getTracer(): OtelTracer | null {
-    this._tracer ??= getOpenTelemetry()?.api.trace.getTracer("pipecat.turn") ?? null;
+    this._tracer ??= this._createTracer();
     return this._tracer;
+  }
+
+  /**
+   * DIVERGENCE: upstream's turn tracer is always "pipecat.turn". Here it is `<tracer name>.turn`,
+   * "pipedog.turn" by default (see `DEFAULT_TRACER_NAME`). It is fetched when the observer is
+   * built, so `setTracerName()` has to come before the pipeline.
+   */
+  private _createTracer(): OtelTracer | null {
+    return getOpenTelemetry()?.api.trace.getTracer(`${getTracerName()}.turn`) ?? null;
   }
 
   /**

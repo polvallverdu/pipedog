@@ -93,6 +93,28 @@ it at a hosted backend is a matter of URL and headers:
 
 <include cwd>snippets/tracing.ts#vendors</include>
 
+### Names: pipedog by default, pipecat for compatibility
+
+Span names and attribute keys are upstream's (see below). Two names that say which library made
+the trace differ, so a pipedog bot can be told apart from a Pipecat one:
+
+| | pipedog | Pipecat |
+| --- | --- | --- |
+| Tracer (instrumentation scope, `otel.scope.name`): service spans | `pipedog` | `pipecat` |
+| Tracer: conversation and turn spans | `pipedog.turn` | `pipecat.turn` |
+| Default `service.name` (when you don't pass `serviceName`) | `pipedog` | `pipecat` |
+
+Always set your own `serviceName` in production: it should name your app, not the library.
+
+**If anything filters on Pipecat's tracer names** (a dashboard, an alert, a query on
+`otel.scope.name`, or a Python and a TypeScript bot reporting to the same place), switch them back
+with `setTracerName("pipecat")`, or `tracerName: "pipecat"` in `setupTracing`. Do it at startup,
+before a pipeline is created, because the turn tracer is fetched when its observer is built. Span
+names (`conversation`, `turn`, `stt`, `llm`, `tts`) and attribute keys (`gen_ai.*`,
+`metrics.ttfb`, ...) don't depend on this: they are the same either way.
+
+<include cwd>snippets/tracing.ts#names</include>
+
 ### Spans and attributes
 
 ```

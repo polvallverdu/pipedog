@@ -58,6 +58,7 @@ import {
 } from "./service_attributes.ts";
 import {
   getOpenTelemetry,
+  getTracerName,
   isTracingAvailable,
   type OtelContext,
   type OtelSpan,
@@ -117,7 +118,8 @@ function getTracer(): OtelTracer {
   if (!otel) {
     throw new Error("OpenTelemetry is not registered");
   }
-  return otel.api.trace.getTracer("pipecat");
+  // DIVERGENCE: upstream's tracer is always "pipecat"; see `DEFAULT_TRACER_NAME`.
+  return otel.api.trace.getTracer(getTracerName());
 }
 
 /**
@@ -136,7 +138,7 @@ async function withCurrentSpan<T>(
   }
   const api = otel.api;
   const span = api.trace
-    .getTracer("pipecat")
+    .getTracer(getTracerName())
     .startSpan(name, {}, parent ?? undefined) as TracedSpan;
   const contextApi = api.context as typeof api.context & {
     with?<R>(context: OtelContext, fn: () => R): R;
