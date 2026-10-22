@@ -285,6 +285,8 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 - [Frameworks](https://polvallverdu.github.io/pipedog/docs/frameworks/): Express, Hono, Next.js and more
 - [Coming from Pipecat (Python)](https://polvallverdu.github.io/pipedog/docs/coming-from-pipecat/)
 - [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/)
+- [Performance](https://polvallverdu.github.io/pipedog/docs/performance/): pipedog on Bun, Node, Deno
+  and Workers against Pipecat on CPython
 - [Docs for AI tools](https://polvallverdu.github.io/pipedog/docs/guides/llms/): llms.txt, Markdown pages
   and the [`@pipedog/mcp`](packages/mcp) server for coding agents
 
