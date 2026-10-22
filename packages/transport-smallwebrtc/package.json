@@ -22,7 +22,9 @@
     "url": "https://github.com/polvallverdu/pipedog/issues"
   },
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/reflect_metadata.ts"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./*": "./src/*.ts"
@@ -39,6 +41,7 @@
     "@pipedog/asyncio": "workspace:*",
     "@pipedog/core": "workspace:*",
     "libopus-wasm": "0.4.1",
+    "reflect-metadata": "0.2.2",
     "werift": "0.25.0"
   },
   "devDependencies": {

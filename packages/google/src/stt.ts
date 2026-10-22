@@ -681,6 +681,19 @@ export interface GoogleSTTServiceOptions extends STTServiceOptions {
    * the credentials alone.
    */
   clientOptions?: Record<string, unknown> | null;
+  /**
+   * The `@google-cloud/speech` module (`import * as speech from "@google-cloud/speech"`),
+   * instead of importing it by name on first connect. A bundler (`bun build`) cannot see an
+   * import by name, so a bundled app imports the SDK itself and passes it here.
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  speechModule?: GoogleSpeechModule | null;
+}
+
+/** The part of `@google-cloud/speech` the service uses: its v2 `SpeechClient`. */
+export interface GoogleSpeechModule {
+  v2: { SpeechClient: new (options: any) => any };
 }
 
 /**
@@ -739,6 +752,7 @@ export class GoogleSTTService extends STTService {
   }
   #credentialsPath: string | null = null;
   #clientOptions: Record<string, unknown> | null = null;
+  #speechModule: GoogleSpeechModule | null = null;
 
   /**
    * Initialize the Google STT service.
@@ -758,8 +772,16 @@ export class GoogleSTTService extends STTService {
    *   Other options are passed to STTService.
    */
   constructor(options: GoogleSTTServiceOptions = {}) {
-    const { credentials, credentialsPath, location, client, clientOptions, settings, ...rest } =
-      options;
+    const {
+      credentials,
+      credentialsPath,
+      location,
+      client,
+      clientOptions,
+      speechModule,
+      settings,
+      ...rest
+    } = options;
 
     // 1. Initialize default_settings with hardcoded defaults
     const defaultSettings = new GoogleSTTSettings({
@@ -801,6 +823,7 @@ export class GoogleSTTService extends STTService {
     this._location = location ?? "global";
     this._client = client ?? null;
     this.#clientOptions = clientOptions ?? null;
+    this.#speechModule = speechModule ?? null;
 
     // Extract project ID. With a credentials file or default credentials the
     // client (and the project ID) are resolved on first connect.
@@ -985,7 +1008,8 @@ export class GoogleSTTService extends STTService {
 
       let speech: NodeSpeechModuleLike;
       try {
-        const mod = (await import(GOOGLE_CLOUD_SPEECH)) as NodeSpeechModuleLike & {
+        const mod = (this.#speechModule ??
+          (await import(GOOGLE_CLOUD_SPEECH))) as NodeSpeechModuleLike & {
           default?: NodeSpeechModuleLike;
         };
         speech = mod.v2 ? mod : (mod.default as NodeSpeechModuleLike);
@@ -993,7 +1017,9 @@ export class GoogleSTTService extends STTService {
         rethrowIfCancelled(e);
         logger.error(`Exception: ${errorMessage(e)}`);
         logger.error(
-          "In order to use Google STT, you need to install `@google-cloud/speech`. Also, set `GOOGLE_APPLICATION_CREDENTIALS` environment variable.",
+          "In order to use Google STT, you need to install `@google-cloud/speech`. Also, set `GOOGLE_APPLICATION_CREDENTIALS` environment variable. " +
+            "In a bundled app (bun build) it is not found by name: import it yourself " +
+            "(`import * as speechModule`) and pass `speechModule` to the service.",
         );
         throw new Error(`Missing module: ${GOOGLE_CLOUD_SPEECH}`, { cause: e });
       }

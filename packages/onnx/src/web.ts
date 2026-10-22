@@ -23,9 +23,27 @@ import { loadModelBytes } from "./model.ts";
 // its .wasm file next to itself at runtime).
 const ONNXRUNTIME_WEB = "onnxruntime-web";
 
+/** Where onnxruntime-web finds its WebAssembly module and the `.mjs` loader next to it. */
+export interface WebWasmPaths {
+  /** The loader, `ort-wasm-simd-threaded.mjs` (a `file:` or `http(s):` URL, or an absolute path). */
+  mjs: string | URL;
+  /** The module, `ort-wasm-simd-threaded.wasm`. */
+  wasm: string | URL;
+}
+
 export interface WebBackendOptions {
-  /** An already imported `onnxruntime-web` module (else it is imported). */
+  /**
+   * An already imported `onnxruntime-web` module (else it is imported by name at run time).
+   * Import it yourself, with `import * as ort from "onnxruntime-web"`, for a bundler to include
+   * it in the bundle.
+   */
   ort?: OrtModuleLike;
+  /**
+   * Where onnxruntime-web loads its `.mjs` loader and `.wasm` module from. By default it looks
+   * next to its own script, which does not exist after bundling: import both files with
+   * `with { type: "file" }` and pass them here (see the Bundling guide).
+   */
+  wasmPaths?: WebWasmPaths;
 }
 
 /** Import `onnxruntime-web`, or throw a helpful error if it is not installed. */
@@ -51,6 +69,12 @@ export function configureWebEnv(ort: OrtModuleLike): void {
 export async function createWebBackend(options: WebBackendOptions = {}): Promise<OnnxBackend> {
   const ort = options.ort ?? (await importOnnxruntimeWeb());
   configureWebEnv(ort);
+  if (options.wasmPaths) {
+    ort.env.wasm.wasmPaths = {
+      mjs: String(options.wasmPaths.mjs),
+      wasm: String(options.wasmPaths.wasm),
+    };
+  }
   return {
     name: "onnxruntime-web",
     async createSession(model, sessionOptions: OnnxSessionOptions = {}) {

@@ -31,7 +31,9 @@
         "@pipedog/assemblyai": "workspace:*",
         "@pipedog/asyncai": "workspace:*",
         "@pipedog/asyncio": "workspace:*",
+        "@pipedog/audio-rnnoise-filter": "workspace:*",
         "@pipedog/audio-silero": "workspace:*",
+        "@pipedog/audio-smart-turn": "workspace:*",
         "@pipedog/aws": "workspace:*",
         "@pipedog/azure": "workspace:*",
         "@pipedog/baseten": "workspace:*",
@@ -69,12 +71,14 @@
         "@pipedog/neuphonic": "workspace:*",
         "@pipedog/novita": "workspace:*",
         "@pipedog/ollama": "workspace:*",
+        "@pipedog/onnx": "workspace:*",
         "@pipedog/openai": "workspace:*",
         "@pipedog/openrouter": "workspace:*",
         "@pipedog/perplexity": "workspace:*",
         "@pipedog/piper": "workspace:*",
         "@pipedog/pocket-tts": "workspace:*",
         "@pipedog/qwen": "workspace:*",
+        "@pipedog/resampler-wasm": "workspace:*",
         "@pipedog/resembleai": "workspace:*",
         "@pipedog/rime": "workspace:*",
         "@pipedog/runner": "workspace:*",
@@ -115,14 +119,45 @@
         "react-dom": "19.3.0",
       },
       "devDependencies": {
+        "@google-cloud/speech": "8.1.1",
+        "@google-cloud/text-to-speech": "7.1.1",
         "@tailwindcss/postcss": "4.3.3",
         "@types/mdx": "2.0.14",
         "@types/node": "24.19.1",
         "@types/react": "19.3.0",
         "@types/react-dom": "19.3.0",
+        "onnxruntime-web": "1.30.0",
         "postcss": "8.5.28",
         "tailwindcss": "4.3.3",
         "typescript": "7.0.2",
+      },
+    },
+    "examples/bundle-check": {
+      "name": "@pipedog/example-bundle-check",
+      "version": "0.0.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/audio-rnnoise-filter": "workspace:*",
+        "@pipedog/audio-silero": "workspace:*",
+        "@pipedog/audio-smart-turn": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/google": "workspace:*",
+        "@pipedog/onnx": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+        "@pipedog/resampler-wasm": "workspace:*",
+        "@pipedog/runner": "workspace:*",
+        "@pipedog/serializer-protobuf": "workspace:*",
+        "@pipedog/serializer-telnyx": "workspace:*",
+        "@pipedog/transport-smallwebrtc": "workspace:*",
+        "@pipedog/transport-websocket": "workspace:*",
+      },
+      "devDependencies": {
+        "@google-cloud/speech": "8.1.1",
+        "@google-cloud/text-to-speech": "7.1.1",
+        "@grpc/grpc-js": "1.14.6",
+        "@pipedog/example-test-mocks": "workspace:*",
+        "onnxruntime-node": "1.30.0",
+        "onnxruntime-web": "1.30.0",
       },
     },
     "examples/framework-snippets": {
@@ -767,6 +802,7 @@
       "name": "@pipedog/onnx",
       "version": "0.7.0",
       "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
       },
       "devDependencies": {
@@ -1099,6 +1135,7 @@
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
         "libopus-wasm": "0.4.1",
+        "reflect-metadata": "0.2.2",
         "werift": "0.25.0",
       },
       "devDependencies": {
@@ -1423,7 +1460,7 @@
 
     "@google/genai": ["@google/genai@2.27.0", "", { "dependencies": { "google-auth-library": "^10.3.0", "p-retry": "^4.6.2", "protobufjs": "^7.5.4", "ws": "^8.18.0" }, "peerDependencies": { "@modelcontextprotocol/sdk": "^1.25.2" }, "optionalPeers": ["@modelcontextprotocol/sdk"] }, "sha512-W6F9Y9d4h7cVQNa85IPCOVVP9PiUzve/ZQPBvQnBmnBJcLvxstEw+R2X/RyCH0SOe0HVDQzeKDpDUf6ZRtbmdQ=="],
 
-    "@grpc/grpc-js": ["@grpc/grpc-js@1.14.5", "", { "dependencies": { "@grpc/proto-loader": "^0.8.0", "@js-sdsl/ordered-map": "^4.4.2" } }, "sha512-7VZM+SVdEcUUqSQeNI3zM8Qs/BhQKZndPo2h5VkYkAM8Iz0wJIa8mKV5ekQGqG8UUsnkQ0NMxIxwkIHYvj0qOw=="],
+    "@grpc/grpc-js": ["@grpc/grpc-js@1.14.6", "", { "dependencies": { "@grpc/proto-loader": "^0.8.0", "@js-sdsl/ordered-map": "^4.4.2" } }, "sha512-SgC/B3/VZ8lTyOZ4Cwk6f1skWhmkNAaVfiX90qd5u1rRXGKk1//8FTUEN9GvOUq7rfWIqAYkA3CoyumYVpOS6g=="],
 
     "@grpc/proto-loader": ["@grpc/proto-loader@0.8.1", "", { "dependencies": { "lodash.camelcase": "^4.3.0", "long": "^5.0.0", "protobufjs": "^7.5.5", "yargs": "^17.7.2" }, "bin": { "proto-loader-gen-types": "build/bin/proto-loader-gen-types.js" } }, "sha512-wtF6h+DY6M3YaDBPAmvuuA6jV8Sif9MjtOI5euKFWRgCDl5PeDpPsHR9u2l6St5ceY8AZgoNDww5+HvEsXFsGg=="],
 
@@ -1680,6 +1717,8 @@
     "@pipedog/espeak-ng": ["@pipedog/espeak-ng@workspace:packages/espeak-ng"],
 
     "@pipedog/evals": ["@pipedog/evals@workspace:packages/evals"],
+
+    "@pipedog/example-bundle-check": ["@pipedog/example-bundle-check@workspace:examples/bundle-check"],
 
     "@pipedog/example-framework-snippets": ["@pipedog/example-framework-snippets@workspace:examples/framework-snippets"],
 
@@ -3335,6 +3374,8 @@
 
     "@livekit/rtc-ffi-bindings/@bufbuild/protobuf": ["@bufbuild/protobuf@1.10.1", "", {}, "sha512-wJ8ReQbHxsAfXhrf9ixl0aYbZorRuOWpBNzm8pL8ftmSxQx/wnJD5Eg861NwJU/czy2VXFIebCeZnZrI9rktIQ=="],
 
+    "@pipedog/google/@grpc/grpc-js": ["@grpc/grpc-js@1.14.5", "", { "dependencies": { "@grpc/proto-loader": "^0.8.0", "@js-sdsl/ordered-map": "^4.4.2" } }, "sha512-7VZM+SVdEcUUqSQeNI3zM8Qs/BhQKZndPo2h5VkYkAM8Iz0wJIa8mKV5ekQGqG8UUsnkQ0NMxIxwkIHYvj0qOw=="],
+
     "@protobuf-ts/plugin/typescript": ["typescript@3.9.10", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-w6fIxVE/H1PkLKcCPsFqKE7Kv7QUwhU8qQY2MueZXWx5cPZdwFupLgKK3vntcK98BtNHZtAF4LA/yl2a7k8R6Q=="],
 
     "@sentry-internal/browser-utils/@sentry/core": ["@sentry/core@8.55.2", "", {}, "sha512-YlEBwybUcOQ/KjMHDmof1vwweVnBtBxYlQp7DE3fOdtW4pqqdHWTnTntQs4VgYfxzjJYgtkd9LHlGtg8qy+JVQ=="],
@@ -3398,8 +3439,6 @@
     "gcp-metadata/google-logging-utils": ["google-logging-utils@1.1.3", "", {}, "sha512-eAmLkjDjAFCVXg7A1unxHsLf961m6y17QFqXqAXGj/gVkKFrEICfStRfwUlGNfeCEjNRa32JEWOUTlYXPyyKvA=="],
 
     "google-auth-library/google-logging-utils": ["google-logging-utils@1.1.3", "", {}, "sha512-eAmLkjDjAFCVXg7A1unxHsLf961m6y17QFqXqAXGj/gVkKFrEICfStRfwUlGNfeCEjNRa32JEWOUTlYXPyyKvA=="],
-
-    "google-gax/@grpc/grpc-js": ["@grpc/grpc-js@1.14.6", "", { "dependencies": { "@grpc/proto-loader": "^0.8.0", "@js-sdsl/ordered-map": "^4.4.2" } }, "sha512-SgC/B3/VZ8lTyOZ4Cwk6f1skWhmkNAaVfiX90qd5u1rRXGKk1//8FTUEN9GvOUq7rfWIqAYkA3CoyumYVpOS6g=="],
 
     "google-gax/google-auth-library": ["google-auth-library@11.3.1", "", { "dependencies": { "base64-js": "^1.3.0", "ecdsa-sig-formatter": "^1.0.11", "gaxios": "^8.3.0", "gcp-metadata": "^9.0.0", "google-logging-utils": "^2.0.0", "jws": "^4.0.0" } }, "sha512-mQS0R2Ev/DKkzuWSYtDeq15uhDeaWuT2qzLYqJ41LmooxVKHmn5ut3pc6dlHY6wfHW/D7FBmOYjAtkjaD1A7qA=="],
 

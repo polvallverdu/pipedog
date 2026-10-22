@@ -188,6 +188,20 @@ export interface GoogleCloudTTSClientOptions {
    * `port`, `sslCreds`), merged over the ones above.
    */
   clientOptions?: Record<string, unknown> | null;
+  /**
+   * The `@google-cloud/text-to-speech` module (`import * as textToSpeech from
+   * "@google-cloud/text-to-speech"`), instead of importing it by name on the first request.
+   * A bundler (`bun build`) cannot see an import by name, so a bundled app imports the SDK
+   * itself and passes it here.
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  module?: GoogleTextToSpeechModule | null;
+}
+
+/** The part of `@google-cloud/text-to-speech` the services use: its v1 `TextToSpeechClient`. */
+export interface GoogleTextToSpeechModule {
+  v1: { TextToSpeechClient: new (options: any) => any };
 }
 
 // A variable specifier keeps the Node-only SDK out of bundles and static
@@ -224,9 +238,8 @@ export function createGoogleCloudTTSClient(
     client ??= (async () => {
       let sdk: NodeTextToSpeechModule;
       try {
-        const mod = (await import(
-          /* @vite-ignore */ TEXT_TO_SPEECH_SDK
-        )) as NodeTextToSpeechModule & {
+        const mod = (options.module ??
+          (await import(/* @vite-ignore */ TEXT_TO_SPEECH_SDK))) as NodeTextToSpeechModule & {
           default?: NodeTextToSpeechModule;
         };
         // A CommonJS package: its exports may only be reachable as `default`.
@@ -236,7 +249,9 @@ export function createGoogleCloudTTSClient(
         logger.error(`Exception: ${errorMessage(e)}`);
         logger.error(
           "In order to use Google Cloud Text-to-Speech, you need to install " +
-            "`@google-cloud/text-to-speech`. Also, set `GOOGLE_APPLICATION_CREDENTIALS` environment variable.",
+            "`@google-cloud/text-to-speech`. Also, set `GOOGLE_APPLICATION_CREDENTIALS` environment variable. " +
+            "In a bundled app (bun build) it is not found by name: import it yourself " +
+            "(`import * as textToSpeechModule`) and pass `textToSpeechModule` to the service.",
         );
         throw new Error(`Missing module: ${TEXT_TO_SPEECH_SDK}`, { cause: e });
       }
@@ -834,8 +849,9 @@ function cloudTTSClientOptions(
   credentialsPath: string | null,
   location: string | null,
   clientOptions: Record<string, unknown> | null = null,
+  module: GoogleTextToSpeechModule | null = null,
 ): GoogleCloudTTSClientOptions {
-  const options: GoogleCloudTTSClientOptions = { clientOptions };
+  const options: GoogleCloudTTSClientOptions = { clientOptions, module };
 
   if (credentials) {
     // Use provided credentials JSON string
@@ -873,6 +889,8 @@ export interface GoogleHttpTTSServiceOptions extends TTSServiceOptions {
    * the credentials alone.
    */
   clientOptions?: Record<string, unknown> | null;
+  /** The `@google-cloud/text-to-speech` module, for a bundled app: see `GoogleCloudTTSClientOptions.module`. */
+  textToSpeechModule?: GoogleTextToSpeechModule | null;
   /** Runtime-updatable settings. */
   settings?: GoogleHttpTTSSettings | null;
 }
@@ -900,6 +918,7 @@ export class GoogleHttpTTSService extends TTSService {
 
   protected _location: string | null;
   protected _clientOptions: Record<string, unknown> | null = null;
+  protected _textToSpeechModule: GoogleTextToSpeechModule | null = null;
   protected _client: GoogleCloudTTSClient;
 
   /**
@@ -945,6 +964,7 @@ export class GoogleHttpTTSService extends TTSService {
 
     this._location = options.location ?? null;
     this._clientOptions = options.clientOptions ?? null;
+    this._textToSpeechModule = options.textToSpeechModule ?? null;
     this._client = this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
   }
 
@@ -960,7 +980,13 @@ export class GoogleHttpTTSService extends TTSService {
     credentialsPath: string | null,
   ): GoogleCloudTTSClient {
     return createGoogleCloudTTSClient(
-      cloudTTSClientOptions(credentials, credentialsPath, this._location, this._clientOptions),
+      cloudTTSClientOptions(
+        credentials,
+        credentialsPath,
+        this._location,
+        this._clientOptions,
+        this._textToSpeechModule,
+      ),
     );
   }
 
@@ -1146,6 +1172,7 @@ export class GoogleHttpTTSService extends TTSService {
 export abstract class GoogleBaseTTSService extends TTSService {
   protected _location: string | null = null;
   protected _clientOptions: Record<string, unknown> | null = null;
+  protected _textToSpeechModule: GoogleTextToSpeechModule | null = null;
 
   // Subclasses build the client in their constructor. Gemini can run against
   // the GenAI API instead of GCP, so each backend's code path casts to the
@@ -1164,7 +1191,13 @@ export abstract class GoogleBaseTTSService extends TTSService {
     credentialsPath: string | null,
   ): GoogleCloudTTSClient | GoogleGenAI {
     return createGoogleCloudTTSClient(
-      cloudTTSClientOptions(credentials, credentialsPath, this._location, this._clientOptions),
+      cloudTTSClientOptions(
+        credentials,
+        credentialsPath,
+        this._location,
+        this._clientOptions,
+        this._textToSpeechModule,
+      ),
     );
   }
 
@@ -1281,6 +1314,8 @@ export interface GoogleTTSServiceOptions extends TTSServiceOptions {
    * the credentials alone.
    */
   clientOptions?: Record<string, unknown> | null;
+  /** The `@google-cloud/text-to-speech` module, for a bundled app: see `GoogleCloudTTSClientOptions.module`. */
+  textToSpeechModule?: GoogleTextToSpeechModule | null;
   /** Runtime-updatable settings. */
   settings?: GoogleTTSSettings | null;
 }
@@ -1355,6 +1390,7 @@ export class GoogleTTSService extends GoogleBaseTTSService {
 
     this._location = options.location ?? null;
     this._clientOptions = options.clientOptions ?? null;
+    this._textToSpeechModule = options.textToSpeechModule ?? null;
     this._voiceCloningKey = options.voiceCloningKey ?? null;
     this._client = this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
   }
@@ -1445,6 +1481,8 @@ export interface GeminiTTSServiceOptions extends TTSServiceOptions {
    * the credentials alone.
    */
   clientOptions?: Record<string, unknown> | null;
+  /** The `@google-cloud/text-to-speech` module, for a bundled app: see `GoogleCloudTTSClientOptions.module`. */
+  textToSpeechModule?: GoogleTextToSpeechModule | null;
   /** Runtime-updatable settings. */
   settings?: GeminiTTSSettings | null;
   /** Force use of the google-genai client if true. */
@@ -1621,6 +1659,7 @@ export class GeminiTTSService extends GoogleBaseTTSService {
 
     this._location = options.location ?? null;
     this._clientOptions = options.clientOptions ?? null;
+    this._textToSpeechModule = options.textToSpeechModule ?? null;
     this._client = this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
 
     // Warn once now about settings the GenAI backend ignores, rather than on

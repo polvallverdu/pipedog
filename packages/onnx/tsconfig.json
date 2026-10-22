@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist", "types": [] },
   "include": ["src"],
-  "references": [{ "path": "../core" }]
+  "references": [{ "path": "../asyncio" }, { "path": "../core" }]
 }

@@ -23,6 +23,10 @@ export { createWorkerdBackend, type WorkerdBackendOptions } from "./workerd.ts";
 export interface CreateOnnxBackendOptions {
   /** Ignored on workerd: only the WebAssembly backend exists there. */
   prefer?: "native" | "web";
+  /** Ignored on workerd. */
+  native?: unknown;
+  /** Ignored on workerd. */
+  web?: unknown;
 }
 
 let defaultBackend: Promise<OnnxBackend> | null = null;

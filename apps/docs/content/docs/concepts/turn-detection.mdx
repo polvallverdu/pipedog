@@ -25,7 +25,8 @@ is done or only paused. This is Pipecat's default, and pipedog's:
 
 The default turn strategies use Smart Turn from `@pipedog/audio-smart-turn`, so install it next to
 `@pipedog/audio-silero`. Without it, turns end on silence (the VAD-only mode), and pipedog logs a
-warning once.
+warning once. In a bundled app, pass the analyzer to the strategy yourself; see
+[Bundling](/docs/deployment/bundling).
 
 Both models share one inference session per process: the first call loads them, and later calls
 reuse them. Measured on Bun with `onnxruntime-node`, the first call takes about 100 MB for the runtime

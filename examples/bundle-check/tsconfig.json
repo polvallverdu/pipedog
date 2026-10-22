@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["bun"]
+  },
+  "include": ["src", "test"],
+  "references": [
+    { "path": "../../packages/asyncio" },
+    { "path": "../../packages/audio-rnnoise-filter" },
+    { "path": "../../packages/audio-silero" },
+    { "path": "../../packages/audio-smart-turn" },
+    { "path": "../../packages/core" },
+    { "path": "../../packages/google" },
+    { "path": "../../packages/onnx" },
+    { "path": "../../packages/openai" },
+    { "path": "../../packages/runner" },
+    { "path": "../../packages/serializer-protobuf" },
+    { "path": "../../packages/transport-smallwebrtc" },
+    { "path": "../../packages/transport-websocket" },
+    { "path": "../test-mocks" }
+  ]
+}

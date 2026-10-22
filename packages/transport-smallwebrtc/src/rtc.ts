@@ -29,6 +29,8 @@
 
 import { createTask, rethrowIfCancelled, type Task } from "@pipedog/asyncio";
 import { logger } from "@pipedog/core/utils/logger";
+// Before werift: see reflect_metadata.ts.
+import "./reflect_metadata.ts";
 import {
   RTCRtpCodecParameters,
   RtpHeader,

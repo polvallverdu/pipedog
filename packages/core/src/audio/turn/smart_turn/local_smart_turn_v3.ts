@@ -191,7 +191,10 @@ export class LocalSmartTurnAnalyzerV3 extends BaseSmartTurn {
               warnedFallback = true;
               logger.warning(
                 "Smart Turn is unavailable, so user turns end when the VAD hears silence. Install " +
-                  `@pipedog/audio-smart-turn to detect the end of a turn from speech. (${e})`,
+                  "@pipedog/audio-smart-turn to detect the end of a turn from speech. In a bundled " +
+                  "app (bun build) it is not found by name: import createLocalSmartTurnAnalyzerV3 " +
+                  "from it and pass the analyzer to TurnAnalyzerUserTurnStopStrategy. " +
+                  `(${e})`,
               );
             }
             return null;

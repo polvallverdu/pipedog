@@ -41,6 +41,7 @@ import {
   type OnnxModelSource,
   type OnnxSession,
   sharedSession,
+  withDefaultModelHint,
 } from "@pipedog/onnx";
 
 // Model state resets.
@@ -138,10 +139,20 @@ export class SileroOnnxModel {
     // DIVERGENCE: upstream loads a session per model; sessions are shared here
     // by default, since a bot builds one VAD per call.
     this._ownsSession = options.shareSession === false;
-    this.session = Promise.resolve(backend).then((b) =>
+    const create = (b: OnnxBackend) =>
       this._ownsSession
         ? b.createSession(path, sessionOptions)
-        : sharedSession(b, path, sessionOptions),
+        : sharedSession(b, path, sessionOptions);
+    // The package's own file is not there after bundling: say how to pass it.
+    const isDefault = path instanceof URL && path.href === defaultSileroModelUrl().href;
+    this.session = Promise.resolve(backend).then((b) =>
+      isDefault
+        ? withDefaultModelHint(() => create(b), {
+            what: "the Silero VAD model",
+            specifier: "@pipedog/audio-silero/silero_vad.onnx",
+            usage: "`new SileroVADAnalyzer({ model })`",
+          })
+        : create(b),
     );
     // Errors surface on first use; don't report an unhandled rejection now.
     this.session.catch(() => {});
