@@ -1,0 +1,147 @@
+---
+title: MCP client
+description: Give the bot the tools of an MCP server (stdio, SSE or streamable HTTP) with MCPClient.
+---
+
+## Overview
+
+`MCPClient` connects to a [Model Context Protocol](https://modelcontextprotocol.io) server, lists
+its tools, and gives them to the LLM as function-call tools. When the model calls one, the client
+runs it on the server and returns the text to the model.
+
+- **`MCPClient`**: the client. It keeps one persistent session with the server, opened by the first
+  call to `tools()` (or by `start()`).
+- **`StreamableHttpParameters`, `SseServerParameters`, `StdioServerParameters`**: how to reach the
+  server.
+
+This is the MCP *client*. For the MCP server that serves these docs to coding agents, see
+[`@pipedog/mcp`](/docs/guides/llms#mcp-server).
+
+<Cards>
+  <Card title="Upstream source" href="https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/mcp_service.py">
+    Pipecat's `MCPClient` (`services/mcp_service.py`).
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/mcp-client/src">
+    `packages/mcp-client/src/mcp_service.ts`.
+  </Card>
+  <Card title="MCP docs" href="https://modelcontextprotocol.io/docs/getting-started/intro">
+    The protocol, and servers to connect to.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/mcp-client
+```
+
+```ts
+import { MCPClient, StreamableHttpParameters } from "@pipedog/mcp-client";
+```
+
+It runs on the official [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk),
+which is a dependency.
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/mcp-client" />
+
+| Transport | Bun | Node | Deno | Cloudflare Workers |
+|---|---|---|---|---|
+| Streamable HTTP | ✅ | ✅ | ✅ | ✅ |
+| SSE | ✅ | ✅ | ✅ | ✅ |
+| stdio | ✅ | ✅ | ✅ | no |
+
+Streamable HTTP and SSE go through `fetch`. A stdio server is a child process, which Workers cannot
+start: there `tools()` rejects with an error that says to use an HTTP server. The stdio code is a
+separate module that the `workerd` export condition replaces with that error, so a Worker bundle
+does not include the SDK's process spawner.
+
+## Prerequisites
+
+- An MCP server to connect to: its URL (streamable HTTP or SSE), or the command that starts it
+  (stdio). Pass credentials as `headers` (HTTP) or `env` (stdio).
+
+## MCPClient
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/mcp-client/src/mcp_service.ts" name="MCPClientOptions" />
+
+Server parameters:
+
+<auto-type-table cwd path="../../packages/mcp-client/src/mcp_service.ts" name="StreamableHttpParametersOptions" />
+
+<auto-type-table cwd path="../../packages/mcp-client/src/mcp_service.ts" name="SseServerParametersOptions" />
+
+<auto-type-table cwd path="../../packages/mcp-client/src/mcp_service.ts" name="StdioServerParametersOptions" />
+
+### Usage
+
+Create the client, call `tools()`, and put the result in the context. There is no
+`registerFunction` call: each schema carries its handler, and the LLM service registers it when the
+context advertises the tools.
+
+<include cwd meta='title="mcp-client.ts"'>snippets/services/mcp-client.ts#usage</include>
+
+The connection closes by itself when the pipeline is torn down, because the handlers tell the LLM
+service to close the client at cleanup.
+
+### Transports
+
+<include cwd meta='title="transports.ts"'>snippets/services/mcp-client.ts#transports</include>
+
+### Filtering tools
+
+`toolsFilter` limits which tools are registered. `toolsOutputFilters` processes the text a tool
+returns. `toolsArguments` fixes arguments: they are removed from the schema the model sees, merged
+into every call, and win over anything the model sends. That is how to pin a setting, or pass an
+identifier the model should not choose.
+
+<include cwd meta='title="filters.ts"'>snippets/services/mcp-client.ts#filters</include>
+
+### Sessions and errors
+
+One session serves every call, as in Pipecat.
+
+- A call that returns an error returns the line `Error calling mcp tool <name>: <reason>` to the
+  model, cut to 200 characters. An empty result returns `Sorry, could not call the mcp tool`.
+- A call that finds the connection gone returns its error to the model and drops the session. The
+  next call connects again.
+- `close()` releases the connection early. A closed client stays closed until `start()` or
+  `tools()`; a tool call on it throws (it is a wiring mistake, not something for the model).
+- `start()` and `close()` can be called from different tasks, and from several at once.
+
+<include cwd meta='title="lifecycle.ts"'>snippets/services/mcp-client.ts#lifecycle</include>
+
+### Serving a connection in process
+
+`StreamableHttpParameters` and `SseServerParameters` take a `fetch`, so a test, or a Worker with a
+service binding, can serve the connection without a network. Pipecat has no such option.
+
+<include cwd meta='title="fetch.ts"'>snippets/services/mcp-client.ts#fetch</include>
+
+## Differences from Pipecat
+
+- **The constructor takes one options object**: `new MCPClient({ serverParams, toolsFilter, ... })`.
+- **`async with` is `await using`**, or `await mcp.scoped(async (mcp) => { ... })`.
+- **Deprecated methods are not ported**: `register_tools`, `get_tools_schema` and
+  `register_tools_schema`. Use `tools()`.
+- **Timeouts.** With `fetch` there is no separate connect timeout. `timeout` bounds the `initialize`
+  handshake and `sseReadTimeout` the wait for the response headers of a request; an idle SSE stream
+  is not timed out.
+- **`tools()` follows the server's pagination cursor.** Pipecat reads the first page.
+- **Lost connections** are recognised from what the SDK raises (`McpError` with code
+  `ConnectionClosed`, or `Not connected`), where Pipecat reads anyio's stream errors. A request that
+  fails at the network level is reported to the model and keeps the session.
+- **The SDK's `MCP error -32000:` prefix is left off** the line the model reads.
+- **On Workers the SDK does not check a result against the tool's output schema.** The check needs
+  code generation, which Workers forbid.
+
+## Runtime notes
+
+- Calls are cancellation points: when a function call is cancelled (an interruption, a timeout),
+  the request to the server is cancelled with it.
+- The SDK's own request timeout is off, as Pipecat's session has none, so a slow tool is waited for.
+  Set `functionCallTimeoutSecs` on the LLM service if the bot should not wait.
+- On Deno, stdio servers need `--allow-run`, and HTTP ones `--allow-net`.

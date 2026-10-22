@@ -1,4 +1,4 @@
 {
   "title": "Services",
-  "pages": ["index", "llm", "stt", "tts", "s2s", "image", "video", "other-upstream"]
+  "pages": ["index", "llm", "stt", "tts", "s2s", "image", "video", "mcp-client", "other-upstream"]
 }

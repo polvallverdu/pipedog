@@ -34,6 +34,7 @@
     "@pipedog/heygen": "workspace:*",
     "@pipedog/inworld": "workspace:*",
     "@pipedog/langchain": "workspace:*",
+    "@pipedog/mcp-client": "workspace:*",
     "@pipedog/mistral": "workspace:*",
     "@pipedog/nebius": "workspace:*",
     "@pipedog/novita": "workspace:*",

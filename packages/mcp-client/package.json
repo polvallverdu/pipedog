@@ -1,0 +1,77 @@
+{
+  "name": "@pipedog/mcp-client",
+  "version": "0.6.1",
+  "description": "MCP client for pipedog: a port of Pipecat's MCPClient. Connects to MCP servers (stdio, SSE or streamable HTTP) and gives their tools to an LLM service as function-call tools.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "mcp",
+    "model-context-protocol",
+    "tools",
+    "function-calling"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/mcp-client"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/mcp-client#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./stdio_transport": {
+      "types": "./src/stdio_transport.ts",
+      "workerd": "./src/stdio_transport.workerd.ts",
+      "default": "./src/stdio_transport.ts"
+    },
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@pipedog/google": "workspace:*",
+    "@pipedog/openai": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/services/mcp_service.py"
+    ],
+    "compat": {
+      "partialRuntimes": [
+        "workerd"
+      ],
+      "needs": {
+        "all": "An MCP server to connect to: a URL (streamable HTTP or SSE), or a command (stdio).",
+        "bun": "Stdio servers start as child processes.",
+        "node": "Stdio servers start as child processes.",
+        "deno": "Stdio servers start as child processes: run with --allow-run. HTTP servers need --allow-net.",
+        "workerd": "Streamable HTTP and SSE only. Workers cannot start processes, so a stdio server is refused with an error."
+      }
+    }
+  }
+}

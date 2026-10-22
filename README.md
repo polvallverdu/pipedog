@@ -161,7 +161,7 @@ Every package below is verified on all four, except `@pipedog/transport-smallweb
 no UDP), `@pipedog/transport-livekit`, `@pipedog/heygen` and `@pipedog/transport-heygen` (not
 Workers: LiveKit's media SDK is a native addon), `@pipedog/transport-local` (spawns sox or ffmpeg: Bun,
 Node and Deno), `@pipedog/transport-whatsapp` (on Workers only the webhook, signature and API parts
-work: answering a call needs WebRTC) and `@pipedog/mcp` (a stdio tool for Bun and Node). A few entry points inside verified
+work: answering a call needs WebRTC), `@pipedog/mcp` (a stdio tool for Bun and Node) and `@pipedog/mcp-client` (on Workers it connects over HTTP or SSE only: a stdio server needs a process). A few entry points inside verified
 packages don't run on Workers: `@pipedog/aws`'s `SageMakerBidiClient` (HTTP/2), Google's gRPC
 Cloud Speech and Text-to-Speech services, and the servers that listen on a port (the runner's
 `main()` and `serve()`, `serveFetch`). Each package's README has its own runtime table.
@@ -214,6 +214,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/resampler-wasm`](packages/resampler-wasm) | High-quality PCM resampling (rubato sinc, compiled to WebAssembly), one-shot and streaming. |
 | [`@pipedog/sentencex-wasm`](packages/sentencex-wasm) | Wikimedia sentencex sentence segmentation, compiled to WebAssembly. |
 | [`@pipedog/tracing`](packages/tracing) | OpenTelemetry setup (`setupTracing()`) with OTLP/HTTP and console exporters. |
+| [`@pipedog/mcp-client`](packages/mcp-client) | `MCPClient`: connects to an MCP server over stdio, SSE or streamable HTTP and gives its tools to an LLM service as function-call tools. |
 | [`@pipedog/mcp`](packages/mcp) | A local MCP server with these docs and the API of every package, for coding agents: `claude mcp add pipedog -- npx -y @pipedog/mcp`. |
 
 Where Python installs `pipecat-ai[deepgram,openai]`, you add `@pipedog/core`, `@pipedog/deepgram`
@@ -256,21 +257,21 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 ## Status
 
 pipedog is 0.x: expect breaking changes between minor versions. Against the pinned upstream
-commit, 559 of Pipecat's 667 modules are ported (84%, 75% of the lines) and 272 of its 340 test
+commit, 560 of Pipecat's 667 modules are ported (84%, 75% of the lines) and 273 of its 340 test
 files.
 
 - **Core runtime: complete.** All 361 core modules are ported, and all 150 of core's upstream test
   files are ported 1:1 and passing.
-- **Providers: the main ones.** Across 58 packages: OpenAI, Anthropic, Google, Azure, AWS (with Nova
+- **Providers: the main ones.** Across 59 packages: OpenAI, Anthropic, Google, Azure, AWS (with Nova
   Sonic), Deepgram, Cartesia, ElevenLabs, Inworld, Ultravox, 16 OpenAI-compatible providers (Groq,
   Together, Mistral, xAI, DeepSeek, OpenRouter, Ollama and more), HeyGen avatars, the WebSocket,
   SmallWebRTC, LiveKit, WhatsApp and local audio transports, six telephony serializers, the
-  development runner, Pipecat Flows, evals, and the RNNoise filter, soundfile mixer and HTTP Smart
-  Turn.
+  development runner, Pipecat Flows, evals, the MCP client, and the RNNoise filter, soundfile mixer and HTTP
+  Smart Turn.
 - **Not ported yet:** the Daily and other room transports (Tavus, LemonSlice, MoQ, the Vonage Video
   Connector), the Krisp, Koala and AIC filters and models, most of the CLI (`pipecat init`
   scaffolding, the service registry, hub status and the config validator; the eval command exists
-  as `pipedog-eval`), the MCP client service, and 33 other providers (AssemblyAI, Gladia,
+  as `pipedog-eval`), and 33 other providers (AssemblyAI, Gladia,
   Speechmatics, Rime, NVIDIA and a long tail). See the
   [roadmap](https://polvallverdu.github.io/pipedog/docs/roadmap/).
 - **Testing: mocks and recordings, not live providers yet.** Every provider is tested against mock

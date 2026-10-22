@@ -47,6 +47,17 @@ function plannedPackage(page: UpcomingPage): string | undefined {
 }
 
 const categories: Category[] = ["llm", "stt", "tts", "s2s", "image", "video"];
+// Service pages that are not a provider, written by hand: listed in the sidebar and the overview.
+const toolPages = [
+  {
+    slug: "mcp-client",
+    name: "MCP client",
+    classes: ["MCPClient"],
+    pkg: "@pipedog/mcp-client",
+    about:
+      "Give the bot the tools of an MCP server (stdio, SSE or streamable HTTP) as function-call tools.",
+  },
+];
 const check = process.argv.includes("--check");
 const stale: string[] = [];
 
@@ -392,6 +403,14 @@ options, settings, usage, and runtime notes for Bun, Node, Deno and Cloudflare W
 
 ${parts.join("\n\n")}
 
+## Tools
+
+${toolPages.map((page) => page.about).join(" ")}
+
+| Service | Classes | Package | Status |
+|---|---|---|---|
+${toolPages.map((page) => `| [${page.name}](/docs/services/${page.slug}) | ${code(page.classes)} | \`${page.pkg}\` | Ported |`).join("\n")}
+
 ## Not listed here
 
 Pipecat has more providers than this page lists. See [Other upstream providers](/docs/services/other-upstream)
@@ -453,7 +472,10 @@ await write("services/index.mdx", servicesIndex());
 await write("services/other-upstream.mdx", otherUpstream());
 await write(
   "services/meta.json",
-  json({ title: "Services", pages: ["index", ...categories, "other-upstream"] }),
+  json({
+    title: "Services",
+    pages: ["index", ...categories, ...toolPages.map((page) => page.slug), "other-upstream"],
+  }),
 );
 
 if (stale.length) {
