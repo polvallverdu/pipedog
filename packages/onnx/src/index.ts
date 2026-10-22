@@ -16,6 +16,7 @@ import { createNativeBackend } from "./native.ts";
 import { createWebBackend } from "./web.ts";
 
 export * from "./backend.ts";
+export * from "./cache.ts";
 export * from "./model.ts";
 export * from "./native.ts";
 export * from "./shared.ts";

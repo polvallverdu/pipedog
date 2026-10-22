@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": []
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../asyncio"
+    },
+    {
+      "path": "../audio-silero"
+    },
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../onnx"
+    }
+  ]
+}

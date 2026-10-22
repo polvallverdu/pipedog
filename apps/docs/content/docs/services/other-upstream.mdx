@@ -15,24 +15,19 @@ existing one in the [issues](https://github.com/polvallverdu/pipedog/issues).
 | Bland | TTS | `BlandTTSService` | [`services/bland`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/bland) |
 | Camb.ai | TTS | `CambTTSService` | [`services/camb`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/camb) |
 | fal | STT, Image | `FalSTTService`, `FalImageGenService` | [`services/fal`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/fal) |
-| FunASR | STT | `FunASRSTTService` | [`services/funasr`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/funasr) |
 | Gradium | STT, TTS | `GradiumSTTService`, `GradiumTTSService` | [`services/gradium`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/gradium) |
 | Inception | LLM | `InceptionLLMService` | [`services/inception`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/inception) |
 | Keenable | Search | `KeenableWebSearch` | [`services/keenable`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/keenable) |
-| Kokoro | TTS | `KokoroTTSService` | [`services/kokoro`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/kokoro) |
 | Mem0 | Memory | `Mem0MemoryService` | [`services/mem0`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/mem0) |
 | Meta | STT | `MetaSTTService` | [`services/meta`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/meta) |
 | MiniMax | TTS | `MiniMaxHttpTTSService` | [`services/minimax`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/minimax) |
 | Moondream | Vision | `MoondreamService` | [`services/moondream`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/moondream) |
-| Moonshine | STT | `MoonshineSTTService` | [`services/moonshine`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/moonshine) |
 | Neuphonic | TTS | `NeuphonicTTSService` | [`services/neuphonic`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/neuphonic) |
 | OpenClaw | Agents | `OpenClawGatewayService` | [`services/openclaw`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/openclaw) |
-| Piper | TTS | `PiperTTSService` | [`services/piper`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/piper) |
-| Pocket TTS | TTS | `PocketTTSService` | [`services/pocket_tts`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/pocket_tts) |
 | Resemble AI | TTS | `ResembleAITTSService` | [`services/resembleai`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/resembleai) |
 | Smallest AI | STT, TTS | `SmallestSTTService`, `SmallestTTSService` | [`services/smallest`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/smallest) |
 | Speechify | TTS | `SpeechifyHttpTTSService` | [`services/speechify`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/speechify) |
-| XTTS | TTS | `XTTSService` | [`services/xtts`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/xtts) |
+| XTTS (deprecated upstream) | TTS | `XTTSService` | [`services/xtts`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/xtts) |
 
 ## Variants of ported providers
 
@@ -42,5 +37,4 @@ These providers are ported, but these classes aren't yet:
 |---|---|---|
 | Deepgram on SageMaker | `DeepgramSageMakerSTTService`, `DeepgramSageMakerTTSService`, `DeepgramFluxSageMakerSTTService`, `DeepgramFluxSageMakerTTSService` | [`services/deepgram/sagemaker/`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/deepgram/sagemaker/), [`services/deepgram/flux/sagemaker/`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/deepgram/flux/sagemaker/) |
 | ElevenLabs Dialogue | `ElevenLabsDialogueTTSService` | [`services/elevenlabs/dialogue/tts.py`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/elevenlabs/dialogue/tts.py) |
-| Local Whisper | `WhisperSTTService` | [`services/whisper/stt.py`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/whisper/stt.py) |
 | NVIDIA on SageMaker | `NvidiaSageMakerSTTService`, `NvidiaSageMakerTTSService` | [`services/nvidia/sagemaker/`](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/nvidia/sagemaker/) |

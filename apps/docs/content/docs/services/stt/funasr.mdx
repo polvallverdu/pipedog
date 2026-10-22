@@ -1,0 +1,122 @@
+---
+title: FunASR
+description: Local multilingual speech-to-text with FunASRSTTService, running SenseVoiceSmall on ONNX Runtime. Strong on Chinese, with emotion and audio-event tags. No API key.
+---
+
+## Overview
+
+- **`FunASRSTTService`**: a segmented STT service that transcribes each speech segment, cut by the
+  pipeline's VAD, with [SenseVoiceSmall](https://huggingface.co/FunAudioLLM/SenseVoiceSmall) on
+  your machine. SenseVoice is multilingual (Chinese, Cantonese, English, Japanese, Korean), with
+  strong Chinese accuracy and fast non-autoregressive inference. No account, no API key.
+- **`AutoModel`** (`@pipedog/funasr/funasr`): the engine. Upstream runs the model with the `funasr`
+  Python package (PyTorch). This one runs the same weights on ONNX Runtime through
+  `@pipedog/onnx`, and mirrors the part of `funasr` the service uses: `AutoModel`, `generate()` and
+  `richTranscriptionPostprocess()`. Its transcripts match sherpa-onnx's for the same model.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/funasr">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/funasr/src">
+    `packages/funasr/src/stt.ts` and the engine, `funasr.ts`.
+  </Card>
+  <Card title="SenseVoice" href="https://github.com/FunAudioLLM/SenseVoice">
+    The model, its languages and tags.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/funasr onnxruntime-node
+```
+
+`onnxruntime-node` is an optional peer of `@pipedog/onnx`. `onnxruntime-web@1.30.0` (WebAssembly)
+works too, about 10x slower (1.2 s instead of 0.11 s for a 7 s clip on an M4 Pro).
+
+```ts
+import { FunASRSTTService } from "@pipedog/funasr/stt";
+```
+
+## What you need
+
+| | |
+|---|---|
+| Model | sherpa-onnx's ONNX export of `iic/SenseVoiceSmall`, from Hugging Face [`csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17`](https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17) (pinned revision): `model.int8.onnx` (239 MB, the default) or `model.onnx` (938 MB, with `modelOptions: { quantized: false }`), plus `tokens.txt` (316 KB) |
+| Download | Automatic, once, when the pipeline starts (or on the first transcription). No account or token needed |
+| Cache | `$PIPEDOG_CACHE_DIR/funasr`, else `$XDG_CACHE_HOME/pipedog/funasr`, else `~/.cache/pipedog/funasr`, or `modelOptions: { cacheDir }` |
+| Input | 16 kHz, 16-bit mono PCM, and a VAD in the pipeline |
+
+To use local files instead, set the `model` setting to a directory holding `model.int8.onnx` (or
+`model.onnx`) and `tokens.txt`, or to the `.onnx` file's path with `tokens.txt` next to it, or pass
+explicit files:
+
+<include cwd>snippets/services/stt-funasr.ts#paths</include>
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/funasr" />
+
+Cloudflare Workers is not supported: the model (239 MB as int8) doesn't fit a Worker's 128 MB of
+memory or its 10 MB bundle limit.
+
+## FunASRSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/funasr/src/stt.ts" name="FunASRSTTServiceOptions" />
+
+`modelOptions` (pipedog only) takes `cacheDir`, `quantized`, `modelFile`, `tokens`, `backend`,
+`shareSession` and `fetch`.
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new FunASRSTTService.Settings({...})`
+(`FunASRSTTSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"iic/SenseVoiceSmall"` | `"iic/SenseVoiceSmall"` or `"FunAudioLLM/SenseVoiceSmall"` to download the model, or a local directory or `.onnx` path. |
+| `language` | `Language` | `Language.EN` | `ZH`, `EN`, `JA`, `KO` or `YUE`. Any other language means auto-detect. |
+| `useItn` | `boolean` | `true` | Inverse text normalization: punctuation and digits ("nine" becomes "9"). |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-funasr.ts#usage</include>
+
+Change the language mid-call with an `STTUpdateSettingsFrame`:
+
+<include cwd>snippets/services/stt-funasr.ts#update</include>
+
+The engine works on its own too. `generate()` returns FunASR's raw text with its `<|...|>` language,
+emotion and event tags, and `richTranscriptionPostprocess()` strips them:
+
+<include cwd>snippets/services/stt-funasr.ts#engine</include>
+
+### Notes
+
+- Emits one `TranscriptionFrame` per segment, with the detected language. There are no interim
+  results.
+- The front end computes FunASR's `WavFrontend` features (Kaldi fbank, LFR, CMVN from the model's
+  metadata), within 2e-4 of kaldi-native-fbank's, then decodes with CTC greedy search, as FunASR
+  does.
+- FunASR's PyTorch checkpoints and other ModelScope model ids are not supported.
+
+## Differences from upstream
+
+- The model runs on onnxruntime on the CPU, not PyTorch. `device` is accepted, but `"cuda"`
+  doesn't select a GPU.
+- The model downloads and loads in `start()` (or on the first transcription), not in the
+  constructor.
+- No dither in the front end (FunASR's `WavFrontend` adds dither 1.0 by default), so results are
+  deterministic.
+- `modelOptions` is a pipedog option, and the engine's options are camelCase (`disableUpdate`,
+  `useItn`).
+
+## Licenses
+
+- `@pipedog/funasr`: BSD 2-Clause. `postprocess_utils.ts` is adapted from
+  [FunASR](https://github.com/modelscope/FunASR) (MIT, Copyright (c) 2022 Alibaba).
+- SenseVoiceSmall weights: the [FunASR model license](https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE)
+  (attribution required; check its terms for your use). The ONNX export is by k2-fsa/sherpa-onnx.

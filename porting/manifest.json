@@ -8527,9 +8527,9 @@
         "numpy"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Runs SenseVoiceSmall via @pipedog/onnx using sherpa-onnx's ONNX export of iic/SenseVoiceSmall (HF csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17, pinned; model.int8.onnx 239 MB + tokens.txt, downloaded once to ~/.cache/pipedog/funasr). Own engine src/funasr.ts mirrors funasr's AutoModel/generate/rich_transcription_postprocess (FunASR WavFrontend fbank+LFR+CMVN, CTC greedy, SentencePiece detok); transcripts match sherpa-onnx and features match kaldi-native-fbank. Divergences: CPU-only (device 'cuda' ignored), model loads in start()/first use instead of the constructor, no dither, camelCase engine options, extra modelOptions; model setting accepts SenseVoiceSmall ids or a local ONNX dir/file (no PyTorch checkpoints). Kept upstream quirk: receives WAV segments (header read as samples). Untested: model.onnx fp32 variant, onnxruntime-web in CI (verified manually), non-16 kHz input."
     },
     {
       "module": "pipecat.services.gladia",
@@ -9752,9 +9752,9 @@
         "test_kokoro_tts_language.py",
         "test_kokoro_tts_voice.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Engine: own kokoro_onnx.ts reimplementing kokoro-onnx 0.6.1 on @pipedog/onnx (same model/voices files, phonemizer-identical espeak-ng phonemization via @pipedog/espeak-ng, batching, style lookup, librosa trim, pauses); audio bit-identical to kokoro-onnx for the int8 model. Dropped (deprecated): voice_id, InputParams/params. DIVERGENCE: model download/load moved from constructor to start()/first use, so an unknown voice is reported at load; cache dir ~/.cache/pipedog/kokoro; embedded-vocab and model input dtypes not read (vocab/inputTypes options). Not ported: create_timed/continuous. Upstream test test_unknown_voice_is_rejected_at_construction asserts on _loadKokoro(). Untested: fp32 kokoro-v1.0.onnx (e2e uses int8), non-English voices end to end."
     },
     {
       "module": "pipecat.services.llm_service",
@@ -10170,9 +10170,9 @@
         "numpy"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Engine: own TS port of moonshine_voice's batch path (src/moonshine_voice*.ts) on @pipedog/onnx using the same download.moonshine.ai .ort files (all 6 archs incl. streaming; split frontend weights run once at load), Silero VAD segmentation as in the C++ (model from @pipedog/audio-silero, verified identical), same token budgets/greedy decoding. DIVERGENCE: model resolved in constructor, downloaded/loaded in start() or first transcription; getModelForLanguage returns the cache path without downloading; English spelling-model prefetch dropped; _updateSettings awaits the new model's load before swapping. Not ported: streaming API, word timestamps, diarization, key-term biasing, spelling mode (unused by the service). Untested: medium-streaming and the non-English base/tiny models at runtime (catalog only); not bit-compared against the native lib."
     },
     {
       "module": "pipecat.services.nebius",
@@ -11176,9 +11176,9 @@
       "tests": [
         "test_piper_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Engine: own piper_voice.ts mirroring piper-tts 1.8.0 on @pipedog/onnx (PiperConfig, phonemes_to_ids, espeak phonemization with clause terminators via @pipedog/espeak-ng's ReadClause-equivalent splitter, inference inputs, normalize/volume/int16 conversion, download_voice). PiperHttpTTSService uses fetch (aiohttp_session -> optional fetch) and runs on workerd; the local engine is lazily imported. Dropped (deprecated): voice_id. DIVERGENCE: voice download/load moved from constructor to start()/first use; download dir ~/.cache/pipedog/piper; use_cuda accepted but ignored (CPU). Not ported: pinyin/hebrew/japanese/thai phoneme types, Arabic tashkeel, alignments. Phonemes differ slightly from piper for en-gb-x-rp/pt-br/it (newer espeak data in piper-tts). Untested: multi-speaker voices with real models, medium/high voices, against a real Piper HTTP server."
     },
     {
       "module": "pipecat.services.pocket_tts",
@@ -11221,9 +11221,9 @@
       "tests": [
         "test_pockettts_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported 1:1; no deprecated APIs upstream. pocket_tts (PyTorch) is replaced by own-code src/pocket_tts.ts: same TTSModel surface, run on onnxruntime-node via @pipedog/onnx. Graphs: KevinAHM/pocket-tts-onnx@58a6d00 (CC-BY-4.0). Tokenizer and predefined voice states: kyutai/pocket-tts-without-voice-cloning at the revisions pocket-tts 2.1.0 pins. Tokenizer: own SentencePiece Unigram reader. fp32 graphs verified against pocket-tts 2.1.0 for english/german/spanish/italian/portuguese/french_24l (~1e-6 per module; temp=0 audio within 1.6e-4). Divergences: model and voice load in start()/first use; Math.random noise; quantize = ORT int8 flow-LM graph, not torchao; fixed 1000-position KV cache (generation clamped with a warning); WAV-only voice prompts; no custom config; voice cloning needs a user-supplied encoder exported from Kyutai's gated weights. onnxruntime-web unsupported (fails reading the graphs' empty state outputs). Untested: voice cloning path, *_24l german/italian/portuguese/spanish, noiseClamp against upstream."
     },
     {
       "module": "pipecat.services.qwen",
@@ -12407,9 +12407,9 @@
         "test_whisper_stt_language.py",
         "test_whisper_stt_transcribe.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Engine: own faster-whisper port on @pipedog/onnx (src/faster_whisper.ts) with HF ONNX exports of the same checkpoints; fp32 output matches faster-whisper/CT2 on whisper tiny (text, avg_logprob, no_speech_prob). Beam search, temperature fallback, timestamp rules, suppress_tokens/blank, hotwords/initial_prompt prompt and language detection implemented; vad_filter, word_timestamps, hallucination_silence_threshold, clip_timestamps, multilingual, repetition_penalty, no_repeat_ngram_size not implemented. Deprecated ctor args (model, no_speech_prob, language, temperature) not ported. Model loads in start()/first segment instead of the constructor. WhisperSTTServiceMLX is NOT MLX (no MLX runtime in JS): same ONNX engine, MLXModel names mapped to ONNX exports of the same checkpoints, greedy at the configured temperature. fp16 weights unsupported (no float16 tensors in @pipedog/onnx). Upstream thread assertion in test_whisper_stt_transcribe replaced (no threads). Untested: large models and onnxruntime-web with real weights."
     },
     {
       "module": "pipecat.services.whisper.utils",
@@ -12425,9 +12425,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "result is the provider JSON (OpenAI/Groq SDK JSON, Deepgram Results message); DIVERGENCE: extractOpenaiGpt4oProbability reads each logprob entry's .logprob (upstream sums the objects)."
     },
     {
       "module": "pipecat.services.xai",
@@ -12670,9 +12670,9 @@
       "tests": [
         "test_xtts_tts_voice.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Not ported: the whole module is deprecated upstream (XTTSService deprecated since 1.7.0, removed in 2.0.0, no replacement; upstream points to KokoroTTSService and PiperTTSService, both ported in @pipedog/kokoro and @pipedog/piper). XTTS would otherwise be a plain fetch client for Coqui's xtts-streaming-server (GET /studio_speakers, POST /tts_stream, raw 24 kHz PCM), so it could be added later if needed. No TS file or package was written."
     },
     {
       "module": "pipecat.tests",
@@ -18236,8 +18236,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 113,
-      "status": "ported",
-      "notes": "0 pass, 0 fail, 0 skip, 9 todo"
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_function_call_observer.py",
@@ -18656,8 +18656,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_kokoro_tts_voice.py",
@@ -18668,8 +18668,8 @@
         "pipecat.services.kokoro.tts"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo (unknown voice asserted at load: DIVERGENCE)"
     },
     {
       "file": "tests/test_krisp_ip_user_turn_start_strategy.py",
@@ -19144,8 +19144,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 113,
-      "status": "ported",
-      "notes": "0 pass, 0 fail, 0 skip, 14 todo"
+      "status": "tested",
+      "notes": "14 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_moq_transport.py",
@@ -19635,8 +19635,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 130,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_pockettts_tts.py",
@@ -19649,8 +19649,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 130,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_processor_unusable_policy.py",
@@ -21720,8 +21720,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "11 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_whisper_stt_transcribe.py",
@@ -21733,8 +21733,8 @@
         "pipecat.services.whisper.stt"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "1 pass, 0 fail, 0 skip, 0 todo (thread-id assertion replaced: no threads in JS)"
     },
     {
       "file": "tests/test_word_completion_tracker.py",
@@ -21871,8 +21871,8 @@
         "pipecat.services.xtts.tts"
       ],
       "needsModules": 129,
-      "status": "todo",
-      "notes": ""
+      "status": "skipped",
+      "notes": "Only exercises the deprecated XTTSService (pipecat.services.xtts.tts, deprecated since 1.7.0), which is not ported."
     }
   ]
 }

@@ -1,56 +1,185 @@
 ---
 title: Whisper
-description: BaseWhisperSTTService, the base class for speech-to-text over Whisper-compatible transcription APIs. The local WhisperSTTService is not ported.
+description: Speech-to-text with Whisper. WhisperSTTService and WhisperSTTServiceMLX run Whisper locally on ONNX Runtime, and BaseWhisperSTTService is the base for Whisper-compatible APIs.
 ---
 
 ## Overview
 
-`@pipedog/whisper` holds the shared base for services that call a Whisper-style transcription
-API (OpenAI's `/v1/audio/transcriptions` and compatible servers).
+`@pipedog/whisper` is a port of Pipecat's `pipecat.services.whisper` (`base_stt`, `stt`, `utils`):
 
-- **`BaseWhisperSTTService`**: a segmented STT service. It sends each speech segment, cut by the
-  pipeline's VAD, as a WAV file and pushes the transcript. It owns an OpenAI SDK client, settings,
-  language mapping, metrics and error handling. Subclasses implement `_transcribe()`.
-  [`OpenAISTTService`](/docs/services/stt/openai) extends it.
+- **`WhisperSTTService`** (`@pipedog/whisper/stt`): transcribes each speech segment, cut by the
+  pipeline's VAD, with a Whisper model on your machine. No account, no API key. Upstream wraps
+  faster-whisper (CTranslate2); this one runs faster-whisper's algorithm on ONNX Runtime
+  (`@pipedog/whisper/faster_whisper`), with ONNX exports of the same Whisper checkpoints.
+- **`WhisperSTTServiceMLX`** (`@pipedog/whisper/stt`): upstream's MLX Whisper service, for Apple
+  Silicon. It is **not MLX** here: it keeps upstream's class, settings, model names and filtering,
+  and runs the same ONNX engine, decoding like mlx_whisper. It works on any platform.
+- **`BaseWhisperSTTService`** (`@pipedog/whisper/base_stt`): the base for services that call a
+  Whisper-style transcription API (OpenAI's `/v1/audio/transcriptions` and compatible servers).
+  [`OpenAISTTService`](/docs/services/stt/openai) and [`GroqSTTService`](/docs/services/stt/groq)
+  extend it.
+- **Probability helpers** (`@pipedog/whisper/utils`): `extractWhisperProbability`,
+  `extractOpenaiGpt4oProbability` and `extractDeepgramProbability` read a confidence from a
+  `TranscriptionFrame`'s `result`.
 
-<Callout type="warn">
-  Pipecat's Whisper page documents `WhisperSTTService` and `WhisperSTTServiceMLX`, which run
-  Whisper models locally (faster-whisper, MLX). They are not ported to pipedog yet
-  (`services/whisper/stt.py` and `utils.py` are still to do). This page covers only the base
-  class for Whisper-compatible APIs.
-</Callout>
+Local Whisper is one of upstream's keyless local defaults for [evals](/docs/evals): set
+`service: whisper` to transcribe the bot's speech with it instead of Moonshine.
 
 <Cards>
   <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/whisper">
-    Pipecat's page, for the local Whisper services.
+    Pipecat's documentation for the same services.
   </Card>
   <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/whisper/src">
-    `packages/whisper/src/base_stt.ts`.
+    `stt.ts`, the engine `faster_whisper.ts`, `base_stt.ts` and `utils.ts`.
   </Card>
-  <Card title="OpenAI docs" href="https://platform.openai.com/docs/guides/speech-to-text">
-    The transcription API that Whisper-compatible servers follow.
+  <Card title="faster-whisper" href="https://github.com/SYSTRAN/faster-whisper">
+    The decoding algorithm the local services follow.
   </Card>
 </Cards>
 
 ## Installation
 
-To use a Whisper-compatible server through OpenAI's service, install `@pipedog/openai`. Install
-`@pipedog/whisper` to subclass the base yourself.
-
 ```bash
-bun add @pipedog/openai @pipedog/whisper
+bun add @pipedog/whisper
+# for the local services, also an ONNX runtime:
+bun add onnxruntime-node
 ```
+
+`onnxruntime-node` (native, fastest on Bun, Node and Deno) or `onnxruntime-web@1.30.0`
+(WebAssembly) are optional peers of `@pipedog/onnx`. The tokenizer,
+[`@huggingface/tokenizers`](https://www.npmjs.com/package/@huggingface/tokenizers) (pure JS), is a
+dependency.
 
 ```ts
-import { OpenAISTTService } from "@pipedog/openai/stt";
-import { BaseWhisperSTTService, type Transcription } from "@pipedog/whisper/base_stt";
+import { Model, WhisperSTTService, WhisperSTTServiceMLX } from "@pipedog/whisper/stt";
+import { BaseWhisperSTTService } from "@pipedog/whisper/base_stt";
+import { extractWhisperProbability } from "@pipedog/whisper/utils";
 ```
 
-## Prerequisites
+The package root re-exports `base_stt` and `utils` only. Import the local services from
+`@pipedog/whisper/stt`: they pull in the ONNX runtime and the tokenizer, which the API services
+don't need.
 
-- A Whisper-compatible transcription endpoint and its API key, if it needs one. The examples read
-  it from `WHISPER_API_KEY`.
-- VAD in the pipeline (on the user aggregator): segments are cut where the VAD starts and stops.
+## What you need
+
+**Local services**: the model files, downloaded once from Hugging Face when the pipeline starts,
+into `$PIPEDOG_CACHE_DIR/whisper`, else `$XDG_CACHE_HOME/pipedog/whisper`, else
+`~/.cache/pipedog/whisper` (one folder per repo). Input must be 16 kHz (the pipeline's input
+sample rate), as upstream: segments are not resampled. And a VAD in the pipeline.
+
+Upstream's model names map to the ONNX export of the same checkpoint:
+
+| `Model` / name | ONNX repo | Default download (fp32 encoder, int8 decoder) | `computeType: "int8"` |
+|---|---|---|---|
+| `TINY` (`tiny`) | `onnx-community/whisper-tiny` | 64 MB | 41 MB |
+| `BASE` (`base`) | `onnx-community/whisper-base` | 136 MB | 77 MB |
+| `SMALL` (`small`) | `onnx-community/whisper-small` | 510 MB | 249 MB |
+| `MEDIUM` (`medium`) | `onnx-community/whisper-medium-ONNX` | 1.9 GB | 986 MB |
+| `LARGE` (`large-v3`) | `onnx-community/whisper-large-v3-ONNX` | 3.7 GB | 1.8 GB |
+| `LARGE_V3_TURBO` | `onnx-community/whisper-large-v3-turbo` | 3.0 GB | 1.1 GB |
+| `DISTIL_LARGE_V2` | `distil-whisper/distil-large-v2` | 2.7 GB | 767 MB |
+| `DISTIL_MEDIUM_EN` (the default) | `distil-whisper/distil-medium.en` | 1.3 GB | 402 MB |
+
+Plus the tokenizer (2.5 MB) and configs. Every other faster-whisper name works too (`tiny.en`,
+`base.en`, `small.en`, `medium.en`, `large-v1`, `large-v2`, `distil-small.en`, `distil-large-v3`,
+`distil-large-v3.5`, `large-v3-turbo`, `turbo`), as does any Hugging Face repo with the same ONNX
+layout (`onnx/encoder_model*.onnx`, `onnx/decoder_model_merged*.onnx`).
+
+To control where the files come from, use `modelOptions`:
+
+- `downloadRoot`: another cache directory.
+- `localFilesOnly: true`: never download.
+- A local directory with the same layout as a model name, as the `model` setting.
+- `files`: every file explicitly, as bytes, paths or URLs (`config.json`,
+  `generation_config.json`, `preprocessor_config.json`, `tokenizer.json`, the encoder and the
+  decoder).
+
+<include cwd>snippets/services/stt-whisper.ts#modelOptions</include>
+
+`computeType` (faster-whisper's `compute_type`) picks the weights: `default` is an fp32 encoder
+and an int8 (`q8`) decoder, `int8*` is `q8` for both, `float32` is fp32 for both, or pass an ONNX
+dtype (`fp32`, `q8`, `int8`, `uint8`, `q4`, `bnb4`) or `modelOptions: { dtype: { encoder,
+decoder } }`. The `distil-whisper/*` exports have only `fp32` and `q8`, and fp16 isn't supported.
+The large fp32 models keep their weights in a separate `.onnx_data` file, which needs
+`onnxruntime-node`: use `int8` with `onnxruntime-web`.
+
+**`BaseWhisperSTTService`**: a Whisper-compatible transcription endpoint and its API key, if it
+needs one (the examples read it from `WHISPER_API_KEY`), and a VAD in the pipeline.
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/whisper" />
+
+`BaseWhisperSTTService` and the probability helpers run on Cloudflare Workers. The local services
+don't: Whisper models (41 MB to 3.7 GB) don't fit a Worker's 128 MB of memory or its 10 MB bundle
+limit, and there is no model cache. Their code is smoke-tested there with a fake engine.
+
+## WhisperSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/whisper/src/stt.ts" name="WhisperSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new WhisperSTTService.Settings({...})`
+(`WhisperSTTSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `Model.DISTIL_MEDIUM_EN` | A `Model`, a faster-whisper name, a Hugging Face repo or a local directory. |
+| `language` | `Language \| null` | `Language.EN` | Transcription language. English-only models reject other languages. |
+| `noSpeechProb` | `number` | `0.4` | Segments whose no-speech probability is at or above this are dropped. |
+| `hotwords` | `string \| null` | `null` | Words or phrases to bias the transcription towards, space-separated. |
+| `initialPrompt` | `string \| null` | `null` | Text given to the decoder as preceding context, to steer style, punctuation and spelling. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-whisper.ts#local</include>
+
+The engine works on its own too, with faster-whisper's API:
+
+<include cwd>snippets/services/stt-whisper.ts#engine</include>
+
+### Notes
+
+- Emits one `TranscriptionFrame` per segment. There are no interim results.
+- Decoding follows faster-whisper: the same log-mel features, prompt, `hotwords` and
+  `initialPrompt`, `no_speech_prob`, token suppression, timestamp rules, beam search (beam 5), the
+  temperature fallback with best-of-5 sampling, segment splitting and language detection. With
+  fp32 weights, whisper tiny gives the same text, `avg_logprob` and `no_speech_prob` (to 4
+  decimals) as faster-whisper on the test clip.
+- The model files load in `start()`. A failed load is pushed as an error and retried on the next
+  segment.
+- `device: "cpu"` forces the CPU provider. `cuda` can't be selected.
+
+## WhisperSTTServiceMLX
+
+The MLX service's class, settings, model names and filtering, on the same ONNX engine. Each
+`MLXModel` selects the ONNX export of the same checkpoint (`LARGE_V3_TURBO_Q4` selects its 4-bit
+`q4` weights). It decodes like mlx_whisper: greedy, at the configured temperature only, and drops
+likely hallucinations. The model loads on the first segment.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/whisper/src/stt.ts" name="WhisperSTTServiceMLXOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new WhisperSTTServiceMLX.Settings({...})`
+(`WhisperMLXSTTSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `MLXModel.TINY` | `TINY`, `MEDIUM`, `LARGE_V3`, `LARGE_V3_TURBO`, `LARGE_V3_TURBO_Q4` or `DISTIL_LARGE_V3`, or another model name. |
+| `language` | `Language \| null` | `Language.EN` | Transcription language. |
+| `noSpeechProb` | `number` | `0.6` | Segments whose no-speech probability is at or above this are dropped. |
+| `temperature` | `number` | `0.0` | Sampling temperature, 0 to 1. |
+| `engine` | `string` | `"mlx"` | Kept from upstream; it has no effect here. |
+
+### Usage
+
+<include cwd>snippets/services/stt-whisper.ts#mlx</include>
 
 ## BaseWhisperSTTService
 
@@ -95,14 +224,48 @@ with the OpenAI client it built from `apiKey`, `baseUrl` and `httpClient`:
 - Set the static `_requiresApiKey` to `true` in a subclass for a provider other than OpenAI.
   Without it, a missing key makes the OpenAI client fall back to `OPENAI_API_KEY` and send it to
   that provider.
+- The HTTP client is the `openai` JS SDK over `fetch`. `httpClient` replaces its `fetch`, for a
+  longer timeout for example. Upstream takes an httpx client, so its `Timeout` and connection
+  limits do not carry over.
 
-## Runtime notes
+## Probability helpers
 
-- The HTTP client is the `openai` JS SDK, which uses `fetch` and runs on Bun, Node, Deno and
-  Cloudflare Workers. `httpClient` replaces its `fetch`, for a longer timeout for example.
-  Upstream takes an httpx client, so its `Timeout` and connection limits do not carry over.
-- The deprecated `model`, `language`, `prompt` and `temperature` constructor options are not
-  ported. Use `settings`.
-- Not ported yet: the local `WhisperSTTService` and `WhisperSTTServiceMLX`
-  (`services/whisper/stt.py`), and `GroqSTTService` (`services/groq/stt.py`), the other upstream
-  service built on this base.
+Each reads a confidence (0 to 1) from a `TranscriptionFrame`'s `result`, or returns `null`:
+
+| Function | Reads | For |
+|---|---|---|
+| `extractWhisperProbability` | `segments[0].avg_logprob` (verbose JSON) | `OpenAISTTService` and `GroqSTTService` with Whisper models and `includeProbMetrics: true` |
+| `extractOpenaiGpt4oProbability` | the average of `logprobs` | `OpenAISTTService` with GPT transcription models and `includeProbMetrics: true` |
+| `extractDeepgramProbability` | the first alternative's `confidence`, or its words' average | `DeepgramSTTService` |
+
+<include cwd>snippets/services/stt-whisper.ts#probability</include>
+
+## Differences from upstream
+
+- The local services run on ONNX exports of the same checkpoints, not CTranslate2 conversions.
+  int8 quantization differs from CTranslate2's, so quantized outputs differ slightly.
+- `WhisperSTTServiceMLX` is not MLX (above). Its features are faster-whisper's, not mlx_whisper's
+  (which pads 30 s of silence before computing them).
+- Model files load in `start()`; upstream loads them in the constructor, blocking. The
+  English-only language check still runs in the constructor for faster-whisper's names, and after
+  loading for custom models.
+- There are no threads: segments are consumed on the event loop, and each decoder step awaits the
+  runtime (`onnxruntime-node` runs it on its own threads).
+- Sampling at temperature above 0 uses `Math.random` (no seed).
+- Not implemented (faster-whisper options the services never use): `vad_filter`,
+  `word_timestamps`, `hallucination_silence_threshold`, `clip_timestamps`,
+  `repetition_penalty`, `no_repeat_ngram_size`, the batched pipeline.
+- `modelOptions` is a pipedog option.
+- `extractOpenaiGpt4oProbability` reads each entry's `logprob`, since the API returns
+  `{ token, logprob, bytes }` objects that upstream's `sum()` can't add.
+- The deprecated constructor arguments (`model`, `no_speech_prob`, `language`, `temperature`,
+  `prompt`) are not ported. Use `settings`.
+
+## Licenses
+
+- `@pipedog/whisper`: BSD 2-Clause. `faster_whisper.ts` follows faster-whisper (MIT, Copyright (c)
+  2023 SYSTRAN) and OpenAI Whisper (MIT).
+- Models: OpenAI's Whisper weights and the distil-whisper models are MIT. The ONNX exports are by
+  the Hugging Face `onnx-community`, `Xenova` and `distil-whisper` accounts. They are downloaded at
+  runtime, not shipped.
+- `@huggingface/tokenizers`: Apache-2.0.

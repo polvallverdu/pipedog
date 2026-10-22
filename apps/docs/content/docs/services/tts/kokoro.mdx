@@ -1,0 +1,138 @@
+---
+title: Kokoro
+description: Local text-to-speech with KokoroTTSService, running the Kokoro-82M ONNX model on your machine with eSpeak NG phonemization. No API key.
+---
+
+## Overview
+
+- **`KokoroTTSService`**: synthesizes each sentence locally with
+  [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M), an 82M-parameter model that runs on the
+  CPU, and streams 24 kHz audio resampled to the pipeline's rate. No account, no API key.
+- **`Kokoro`**: the engine behind it, a TypeScript reimplementation of the Python
+  [kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) package (0.6.1) on `@pipedog/onnx` and
+  `@pipedog/espeak-ng`. Its audio is bit-identical to kokoro-onnx's for the int8 model.
+
+Kokoro is one of upstream's keyless local defaults for [evals](/docs/evals): it speaks the
+simulated user's turns in audio scenarios (`service: kokoro`).
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/kokoro">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/kokoro/src">
+    `packages/kokoro/src/tts.ts` and the engine, `kokoro_onnx.ts`.
+  </Card>
+  <Card title="Kokoro-82M" href="https://huggingface.co/hexgrad/Kokoro-82M">
+    The model card, with its voices and languages.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/kokoro onnxruntime-node @echogarden/espeak-ng-emscripten
+```
+
+- `onnxruntime-node` runs the model. `onnxruntime-web@1.30.0` (WebAssembly) works too, slower.
+- `@echogarden/espeak-ng-emscripten` is eSpeak NG compiled to WebAssembly, for phonemization. It
+  is GPL-3.0 (see [Licenses](#licenses)).
+
+Both are optional peer dependencies, loaded on first use.
+
+```ts
+import { KokoroTTSService } from "@pipedog/kokoro/tts";
+```
+
+## What you need
+
+The same files upstream uses, from kokoro-onnx's `model-files-v1.0` GitHub release. They are
+downloaded once, when the pipeline starts, if they are missing:
+
+| File | Size | Default location |
+|---|---|---|
+| `kokoro-v1.0.onnx` | 310 MiB | `<cache>/kokoro-v1.0.onnx` |
+| `voices-v1.0.bin` (54 voices) | 27 MiB | `<cache>/voices-v1.0.bin` |
+
+`<cache>` is `$PIPEDOG_CACHE_DIR/kokoro`, else `$XDG_CACHE_HOME/pipedog/kokoro`, else
+`~/.cache/pipedog/kokoro`. Pass `cacheDir` to use another directory.
+
+To use files you already have, pass `modelPath` and `voicesPath`. A path that exists is used as is;
+a missing one is downloaded there from `modelUrl` / `voicesUrl`. The same release has smaller
+variants of the model, such as `kokoro-v1.0.int8.onnx` (88 MiB):
+
+<include cwd>snippets/services/tts-kokoro.ts#paths</include>
+
+eSpeak NG adds about 25 MB (the WebAssembly build and its voice data), loaded into memory once per
+process. `@pipedog/espeak-ng` wraps it: `phonemize()` reproduces the Python `phonemizer` package
+that kokoro-onnx uses, so the same text gives the same phonemes.
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/kokoro" />
+
+Cloudflare Workers is not supported: the model (88-310 MiB), the voices and eSpeak NG's data don't
+fit a Worker's 128 MB of memory or its 10 MB bundle limit.
+
+## KokoroTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/kokoro/src/tts.ts" name="KokoroTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new KokoroTTSService.Settings({...})`
+(`KokoroTTSSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `null` | `null` | Not used: the model is `modelPath`. |
+| `voice` | `string` | none, required | Voice from the voices file, for example `"af_heart"`. |
+| `language` | `Language` | `Language.EN` | Language, mapped to an espeak-ng code. |
+| `speed` | `number` | `1.0` | Speech rate multiplier, 0.5 to 2.0. |
+
+Languages: English (US and GB), Spanish, French, Hindi, Italian, Japanese, Portuguese (PT and BR)
+and Mandarin. Pick a voice for the language: `af_*` / `am_*` American English, `bf_*` / `bm_*`
+British, `ef_*` Spanish, `ff_*` French, `hf_*` Hindi, `if_*` Italian, `jf_*` Japanese, `pf_*`
+Portuguese, `zf_*` Mandarin.
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-kokoro.ts#usage</include>
+
+Change the voice, language or speed mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-kokoro.ts#update</include>
+
+The engine works on its own too:
+
+<include cwd>snippets/services/tts-kokoro.ts#engine</include>
+
+### Notes
+
+- The model and voices load in `start()` (or on the first sentence). Services in one process
+  share one model session and one copy of the voices; set `shareSession: false` to opt out.
+- A missing or blank voice is rejected by the constructor. A voice that isn't in the voices file
+  is reported when the model loads.
+- Text is phonemized with espeak-ng, split into batches of at most 510 phonemes at sentence,
+  clause and word boundaries, and the next batch is synthesized while the current one plays.
+- `backend` takes any `OnnxBackend`, for example one built on `onnxruntime-web`.
+
+## Differences from upstream
+
+- The model is downloaded and loaded in `start()`, not in the constructor, since loading is
+  asynchronous.
+- Default cache directory: `~/.cache/pipedog/kokoro`, where upstream uses
+  `~/.cache/pipecat/kokoro-onnx`.
+- `cacheDir`, `modelUrl`, `voicesUrl`, `fetch`, `backend` and `shareSession` are pipedog options.
+- The deprecated `voice_id` and `params` (`InputParams`) arguments are not ported. Use `settings`.
+- Not ported from kokoro-onnx: timed synthesis (`create_timed`), which needs a re-exported model.
+
+## Licenses
+
+- `@pipedog/kokoro`: BSD 2-Clause.
+- Kokoro-82M model and voices: Apache-2.0 (hexgrad). The ONNX export and voice pack come from
+  kokoro-onnx (MIT).
+- eSpeak NG and `@echogarden/espeak-ng-emscripten`: **GPL-3.0**. Distributing an application that
+  includes them may subject it to the GPL's terms. Upstream is in the same position: kokoro-onnx
+  ships espeak-ng through espeakng-loader.

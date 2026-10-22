@@ -712,9 +712,21 @@ export const ported: Record<Section, PortedPage[]> = {
     },
     {
       slug: "whisper",
-      name: "Whisper (base)",
+      name: "Whisper",
       pkg: "@pipedog/whisper",
-      classes: ["BaseWhisperSTTService"],
+      classes: ["WhisperSTTService", "WhisperSTTServiceMLX", "BaseWhisperSTTService"],
+    },
+    {
+      slug: "moonshine",
+      name: "Moonshine (local)",
+      pkg: "@pipedog/moonshine",
+      classes: ["MoonshineSTTService"],
+    },
+    {
+      slug: "funasr",
+      name: "FunASR SenseVoice (local)",
+      pkg: "@pipedog/funasr",
+      classes: ["FunASRSTTService"],
     },
     { slug: "groq", name: "Groq", pkg: "@pipedog/groq", classes: ["GroqSTTService"] },
     { slug: "mistral", name: "Mistral", pkg: "@pipedog/mistral", classes: ["MistralSTTService"] },
@@ -778,6 +790,24 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "Azure Speech",
       pkg: "@pipedog/azure",
       classes: ["AzureTTSService", "AzureHttpTTSService"],
+    },
+    {
+      slug: "kokoro",
+      name: "Kokoro (local)",
+      pkg: "@pipedog/kokoro",
+      classes: ["KokoroTTSService"],
+    },
+    {
+      slug: "piper",
+      name: "Piper",
+      pkg: "@pipedog/piper",
+      classes: ["PiperTTSService", "PiperHttpTTSService"],
+    },
+    {
+      slug: "pocket-tts",
+      name: "Pocket TTS (local)",
+      pkg: "@pipedog/pocket-tts",
+      classes: ["PocketTTSService"],
     },
   ],
   s2s: [
@@ -1298,7 +1328,6 @@ export const longTail: LongTailProvider[] = [
     kinds: ["STT", "Image"],
     classes: ["FalSTTService", "FalImageGenService"],
   },
-  { name: "FunASR", folder: "funasr", kinds: ["STT"], classes: ["FunASRSTTService"] },
   {
     name: "Gradium",
     folder: "gradium",
@@ -1307,12 +1336,10 @@ export const longTail: LongTailProvider[] = [
   },
   { name: "Inception", folder: "inception", kinds: ["LLM"], classes: ["InceptionLLMService"] },
   { name: "Keenable", folder: "keenable", kinds: ["Search"], classes: ["KeenableWebSearch"] },
-  { name: "Kokoro", folder: "kokoro", kinds: ["TTS"], classes: ["KokoroTTSService"] },
   { name: "Mem0", folder: "mem0", kinds: ["Memory"], classes: ["Mem0MemoryService"] },
   { name: "Meta", folder: "meta", kinds: ["STT"], classes: ["MetaSTTService"] },
   { name: "MiniMax", folder: "minimax", kinds: ["TTS"], classes: ["MiniMaxHttpTTSService"] },
   { name: "Moondream", folder: "moondream", kinds: ["Vision"], classes: ["MoondreamService"] },
-  { name: "Moonshine", folder: "moonshine", kinds: ["STT"], classes: ["MoonshineSTTService"] },
   { name: "Neuphonic", folder: "neuphonic", kinds: ["TTS"], classes: ["NeuphonicTTSService"] },
   {
     name: "OpenClaw",
@@ -1320,8 +1347,6 @@ export const longTail: LongTailProvider[] = [
     kinds: ["Agents"],
     classes: ["OpenClawGatewayService"],
   },
-  { name: "Piper", folder: "piper", kinds: ["TTS"], classes: ["PiperTTSService"] },
-  { name: "Pocket TTS", folder: "pocket_tts", kinds: ["TTS"], classes: ["PocketTTSService"] },
   {
     name: "Resemble AI",
     folder: "resembleai",
@@ -1335,7 +1360,7 @@ export const longTail: LongTailProvider[] = [
     classes: ["SmallestSTTService", "SmallestTTSService"],
   },
   { name: "Speechify", folder: "speechify", kinds: ["TTS"], classes: ["SpeechifyHttpTTSService"] },
-  { name: "XTTS", folder: "xtts", kinds: ["TTS"], classes: ["XTTSService"] },
+  { name: "XTTS (deprecated upstream)", folder: "xtts", kinds: ["TTS"], classes: ["XTTSService"] },
 ];
 
 /** Classes of ported providers that aren't ported yet themselves. */
@@ -1354,11 +1379,6 @@ export const unportedVariants: { name: string; classes: string[]; modules: strin
     name: "ElevenLabs Dialogue",
     classes: ["ElevenLabsDialogueTTSService"],
     modules: ["services/elevenlabs/dialogue/tts.py"],
-  },
-  {
-    name: "Local Whisper",
-    classes: ["WhisperSTTService"],
-    modules: ["services/whisper/stt.py"],
   },
   {
     name: "NVIDIA on SageMaker",

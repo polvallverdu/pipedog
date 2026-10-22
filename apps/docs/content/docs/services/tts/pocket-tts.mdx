@@ -1,0 +1,144 @@
+---
+title: Pocket TTS
+description: Local text-to-speech with PocketTTSService, running Kyutai's 100M-parameter Pocket TTS on ONNX Runtime, faster than real time on a CPU. No API key.
+---
+
+## Overview
+
+- **`PocketTTSService`**: synthesizes speech locally with Kyutai's
+  [Pocket TTS](https://github.com/kyutai-labs/pocket-tts), a 100M-parameter streaming model that
+  runs faster than real time on a CPU. No GPU, no account, no API key. Audio streams in 80 ms
+  frames at 24 kHz.
+- **`TTSModel`** (`@pipedog/pocket-tts/pocket_tts`): the engine. Upstream wraps the `pocket_tts`
+  Python package (PyTorch); this one runs the same model on ONNX Runtime through `@pipedog/onnx`,
+  with the tokenizer, text chunking, flow-LM loop, LSD sampler and streaming Mimi decoding
+  reimplemented in TypeScript.
+
+At `temp: 0` it produces the same audio as pocket-tts 2.1.0 to within 2e-4 per sample. At the
+default temperature the noise comes from a different generator, so the audio differs sample by
+sample, as two seeds would.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/pocket-tts">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/pocket-tts/src">
+    `packages/pocket-tts/src/tts.ts` and the engine, `pocket_tts.ts`.
+  </Card>
+  <Card title="Pocket TTS" href="https://github.com/kyutai-labs/pocket-tts">
+    Kyutai's repository, with the voices and the terms of use.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/pocket-tts onnxruntime-node
+```
+
+`onnxruntime-node` is an optional peer of `@pipedog/onnx`, and it is required here:
+`onnxruntime-web` 1.30 can't read the graphs' empty state outputs.
+
+```ts
+import { PocketTTSService } from "@pipedog/pocket-tts/tts";
+```
+
+## What you need
+
+Downloaded once, from Hugging Face, when the pipeline starts (or on the first utterance). No
+account or token is needed.
+
+| | |
+|---|---|
+| Graphs | The ONNX export of Kyutai's weights, [`KevinAHM/pocket-tts-onnx`](https://huggingface.co/KevinAHM/pocket-tts-onnx) (pinned revision): `text_conditioner.onnx`, `flow_lm_main.onnx` (or `flow_lm_main_int8.onnx` with `quantize`), `flow_lm_flow.onnx`, `mimi_decoder.onnx`, `bundle.json` |
+| Tokenizer and voices | Kyutai's own files, from [`kyutai/pocket-tts-without-voice-cloning`](https://huggingface.co/kyutai/pocket-tts-without-voice-cloning), at the revisions pocket-tts 2.1.0 pins |
+| Sizes | 6-layer languages: 405 MB, or 180 MB with `quantize`. `french_24l`: 1.31 GB, or 400 MB with `quantize`. About 6 MB per voice |
+| Cache | `$PIPEDOG_CACHE_DIR/pocket-tts`, else `$XDG_CACHE_HOME/pipedog/pocket-tts`, else `~/.cache/pipedog/pocket-tts`, or `modelOptions.cacheDir`. Files go in `<cacheDir>/<repo>/<revision>/<path>` |
+
+To use files you already have, put them in one directory and pass `modelOptions: { modelDir }`.
+Anything missing there is downloaded:
+
+<include cwd>snippets/services/tts-pocket-tts.ts#modelDir</include>
+
+`modelOptions.hfToken` (default `$HF_TOKEN`) is sent to huggingface.co only, for private or gated
+files.
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/pocket-tts" />
+
+Cloudflare Workers is not supported: the flow-LM graph (76 MB to 1.2 GB) and its ~50 MB per-step
+KV-cache state don't fit a Worker's 128 MB of memory or its 10 MB bundle limit.
+
+On an Apple M4 Pro with Bun and `onnxruntime-node`, English, 2.24 s of audio takes 0.37 s (6x real
+time), with the first 80 ms chunk after about 45 ms.
+
+## PocketTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/pocket-tts/src/tts.ts" name="PocketTTSServiceOptions" />
+
+`modelOptions` (pipedog only) takes `TTSModel.loadModel`'s options: `backend`, `sessionOptions`
+(default `{ intraOpNumThreads: 4, interOpNumThreads: 1 }`), `shareSessions`, `modelDir`,
+`cacheDir`, `fetch`, `hfToken`, `voiceCloningModel`, `lsdDecodeSteps` (1), `noiseClamp` (`null`),
+`eosThreshold` (-4) and `random`.
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new PocketTTSService.Settings({...})`
+(`PocketTTSSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `null` | `null` | Not used. |
+| `voice` | `string` | `"alba"` | A predefined voice, a `.safetensors` voice state, or a WAV file to clone (path, `https://` or `hf://` URL). Re-derived on the next utterance when it changes. |
+| `language` | `Language` | `Language.EN` | `EN`, `DE`, `ES`, `IT`, `PT` or `FR` (and regional variants), mapped to `english`, `german`, `spanish`, `italian`, `portuguese` and `french_24l`. Stored but not applied after construction, as upstream: the weights are loaded per language. |
+
+The 26 predefined voices: `alba`, `marius`, `javert`, `jean`, `fantine`, `cosette`, `eponine`,
+`azelma`, `anna`, `vera`, `charles`, `paul`, `george`, `mary`, `jane`, `michael`, `eve`,
+`bill_boerst`, `peter_yearsley`, `stuart_bell`, `caro_davy`, `giovanni`, `lola`, `juergen`,
+`rafael`, `estelle`.
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-pocket-tts.ts#usage</include>
+
+Change the voice mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-pocket-tts.ts#update</include>
+
+The engine works on its own too:
+
+<include cwd>snippets/services/tts-pocket-tts.ts#engine</include>
+
+### Notes
+
+- The constructor rejects a missing voice or language. The model and the voice state load in
+  `start()` (or on the first utterance).
+- Voice cloning from a WAV file needs the Mimi encoder with Kyutai's speaker projection, which only
+  exists in the **gated** `kyutai/pocket-tts` weights. It is not downloaded for you: accept Kyutai's
+  terms, export the encoder to ONNX and pass it as `modelOptions.voiceCloningModel`. This path was
+  not checked against upstream.
+- `TTSModel.loadModel` also accepts `german_24l`, `italian_24l`, `portuguese_24l` and
+  `spanish_24l` (same export, not checked numerically).
+
+## Differences from upstream
+
+- The model and the voice state load in `start()`, not in the constructor.
+- Sampling noise comes from `Math.random` (or the `random` option), not torch's generator.
+- `quantize` uses ONNX Runtime's dynamic int8 quantization of the flow-LM transformer instead of
+  torchao's, so quantized output is not bit-identical to upstream's.
+- The exported flow LM has a fixed 1000-position KV cache. A text chunk that would overflow it is
+  cut short with a warning; pocket-tts' 50-token chunks with the predefined voices stay far below it.
+- Audio prompts are read from WAV only, and resampled to 24 kHz with soxr.
+- `TTSModel.loadModel` has no `config` argument (custom YAML model configs).
+- `modelOptions` is a pipedog option: pocket-tts downloads to its own cache.
+
+## Licenses
+
+- `@pipedog/pocket-tts`: BSD 2-Clause. The engine reimplements parts of pocket-tts (MIT) and of
+  SentencePiece's Unigram encoder (Apache-2.0).
+- Kyutai's Pocket TTS weights, tokenizers and voices, and the ONNX export: CC-BY-4.0 (attribution:
+  Kyutai). They are downloaded at runtime, not shipped. Kyutai's terms forbid voice impersonation
+  or cloning without consent, among other uses.

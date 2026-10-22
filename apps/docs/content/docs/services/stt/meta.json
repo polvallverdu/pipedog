@@ -11,6 +11,8 @@
     "aws-sagemaker",
     "azure",
     "whisper",
+    "moonshine",
+    "funasr",
     "groq",
     "mistral",
     "together",

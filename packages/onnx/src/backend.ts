@@ -11,12 +11,15 @@
  */
 
 /** Element types the models use. */
-export type OnnxTensorType = "float32" | "int64";
+export type OnnxTensorType = "float32" | "int64" | "int32" | "bool";
+
+/** The typed array behind each tensor type (`bool` is one byte per element, 0 or 1). */
+export type OnnxTensorData = Float32Array | BigInt64Array | Int32Array | Uint8Array;
 
 /** A tensor: row-major data plus its dimensions. */
 export interface OnnxTensor {
   type: OnnxTensorType;
-  data: Float32Array | BigInt64Array;
+  data: OnnxTensorData;
   dims: readonly number[];
 }
 
@@ -60,6 +63,16 @@ export function int64Tensor(data: BigInt64Array, dims: readonly number[]): OnnxT
   return { type: "int64", data, dims };
 }
 
+/** An int32 tensor. */
+export function int32Tensor(data: Int32Array, dims: readonly number[]): OnnxTensor {
+  return { type: "int32", data, dims };
+}
+
+/** A bool tensor (one byte per element, 0 or 1). */
+export function boolTensor(data: Uint8Array, dims: readonly number[]): OnnxTensor {
+  return { type: "bool", data, dims };
+}
+
 // ---------------------------------------------------------------------------
 // onnxruntime adapters. Structural types for the part of the onnxruntime JS
 // API we use (shared by onnxruntime-node and onnxruntime-web), so this package
@@ -85,11 +98,7 @@ export interface OrtModuleLike {
   InferenceSession: {
     create(model: Uint8Array | string, options?: Record<string, unknown>): Promise<unknown>;
   };
-  Tensor: new (
-    type: string,
-    data: Float32Array | BigInt64Array,
-    dims: readonly number[],
-  ) => OrtTensorLike;
+  Tensor: new (type: string, data: OnnxTensorData, dims: readonly number[]) => OrtTensorLike;
   env: any;
 }
 
@@ -123,7 +132,7 @@ export function wrapOrtSession(ort: OrtModuleLike, session: OrtSessionLike): Onn
       for (const [name, t] of Object.entries(results)) {
         out[name] = {
           type: t.type as OnnxTensorType,
-          data: t.data as Float32Array | BigInt64Array,
+          data: t.data as OnnxTensorData,
           dims: t.dims,
         };
       }

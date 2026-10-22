@@ -1,7 +1,7 @@
 {
   "name": "@pipedog/whisper",
   "version": "0.6.1",
-  "description": "Base speech-to-text service for Whisper-compatible APIs, shared by the pipedog STT services that speak the Whisper protocol.",
+  "description": "Whisper for pipedog: the base service for Whisper-compatible APIs (shared by the OpenAI and Groq STT services), probability helpers, and local Whisper models (WhisperSTTService) on ONNX Runtime with faster-whisper's decoding.",
   "keywords": [
     "pipecat",
     "pipedog",
@@ -10,7 +10,9 @@
     "realtime",
     "whisper",
     "stt",
-    "speech"
+    "speech",
+    "faster-whisper",
+    "onnx"
   ],
   "license": "BSD-2-Clause",
   "repository": {
@@ -32,9 +34,14 @@
     "dist",
     "src"
   ],
+  "scripts": {
+    "test": "bun test"
+  },
   "dependencies": {
+    "@huggingface/tokenizers": "^0.2.0",
     "@pipedog/asyncio": "workspace:*",
     "@pipedog/core": "workspace:*",
+    "@pipedog/onnx": "workspace:*",
     "openai": "^6.49.0"
   },
   "pipecat": {
@@ -45,7 +52,19 @@
       "workerd"
     ],
     "upstream": [
-      "src/pipecat/services/whisper/base_stt.py"
-    ]
+      "src/pipecat/services/whisper/base_stt.py",
+      "src/pipecat/services/whisper/stt.py",
+      "src/pipecat/services/whisper/utils.py"
+    ],
+    "compat": {
+      "usesOptionalPeers": [
+        "onnxruntime-node",
+        "onnxruntime-web"
+      ],
+      "needs": {
+        "all": "BaseWhisperSTTService and utils: only fetch. WhisperSTTService / WhisperSTTServiceMLX (@pipedog/whisper/stt): onnxruntime-node or onnxruntime-web, a filesystem for the model cache (or the model files passed as bytes), and 16 kHz input.",
+        "workerd": "BaseWhisperSTTService and utils. The local services' code runs there (smoke-tested with a fake engine), but real Whisper models don't fit a Worker's memory and there is no model cache: not supported."
+      }
+    }
   }
 }

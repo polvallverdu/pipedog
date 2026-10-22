@@ -16,14 +16,15 @@ Against the pinned upstream commit (counts from `porting/manifest.json`):
 
 | | Ported | Upstream | Share |
 |---|---|---|---|
-| Modules | 576 | 667 | 86% (79% of the lines) |
-| Test files | 273 | 340 | 80% |
+| Modules | 584 | 667 | 88% (80% of the lines) |
+| Test files | 280 | 340 | 82% |
 | Core modules (`@pipedog/core`) | 361 | 361 | 100% |
 | Core test files | 150 | 150 | 100% |
-| Target packages | 54 started, 51 not | 105 | |
+| Target packages | 60 started, 45 not | 105 | |
 
-pipedog publishes 60 packages: all 54 of those, plus six with no upstream counterpart
-(`@pipedog/asyncio`, `@pipedog/mcp`, `@pipedog/onnx`, `@pipedog/resampler-wasm`,
+pipedog publishes 66 packages: 59 of those 60 (`@pipedog/xtts`'s one module is skipped because it
+is deprecated upstream), plus seven with no upstream counterpart (`@pipedog/asyncio`,
+`@pipedog/espeak-ng`, `@pipedog/mcp`, `@pipedog/onnx`, `@pipedog/resampler-wasm`,
 `@pipedog/sentencex-wasm`, `@pipedog/tracing`).
 
 <Callout title="How it is tested">
@@ -41,8 +42,12 @@ pipedog publishes 60 packages: all 54 of those, plus six with no upstream counte
 - **Local audio models and filters**: Silero VAD and Smart Turn (local v3, and
   `HttpSmartTurnAnalyzer` for a remote endpoint), the RNNoise noise filter and the soundfile mixer.
   See [Turn detection](/docs/concepts/turn-detection).
-- **Services**: OpenAI, Google, Anthropic, Deepgram, Cartesia, ElevenLabs, the Whisper base and
-  LangChain. See [Supported services](/docs/services).
+- **Services**: OpenAI, Google, Anthropic, Deepgram, Cartesia, ElevenLabs, Whisper and LangChain.
+  See [Supported services](/docs/services).
+- **Local speech models**, keyless, on ONNX Runtime: [Whisper](/docs/services/stt/whisper)
+  (`WhisperSTTService`, `WhisperSTTServiceMLX`), [Moonshine](/docs/services/stt/moonshine),
+  [FunASR SenseVoice](/docs/services/stt/funasr), [Kokoro](/docs/services/tts/kokoro),
+  [Piper](/docs/services/tts/piper) (also over HTTP) and [Pocket TTS](/docs/services/tts/pocket-tts).
 - **Cloud platforms**: Azure (Azure OpenAI LLM, Realtime and image, Voice Live, Azure Speech STT
   and TTS) and AWS (Bedrock LLM, Transcribe STT, Polly TTS, Nova Sonic, AgentCore and the
   SageMaker streaming client).
@@ -82,7 +87,7 @@ pipedog publishes 60 packages: all 54 of those, plus six with no upstream counte
 
 ## What's not ported yet
 
-91 upstream modules (21% of the lines) and 67 test files are still to do. Every upstream provider
+83 upstream modules (20% of the lines) and 60 test files are still to do. Every upstream provider
 that isn't ported has a "coming soon" page, or a row on
 [Other upstream providers](/docs/services/other-upstream). The main gaps, with their remaining
 upstream modules:
@@ -93,8 +98,8 @@ upstream modules:
 | Audio filters and analyzers | 7 | Noise filters (Krisp VIVA, Koala, AIC), and the Krisp and AIC VAD and turn models. Smart Turn v3, RNNoise, the soundfile mixer and HTTP Smart Turn are ported. |
 | Extensions | 5 | The IVR navigator and voicemail detector in `pipecat.extensions` (`@pipedog/extensions`). |
 | Providers with a page | 25 | 11 providers: AssemblyAI, Gladia, NVIDIA (LLM, Riva STT and TTS), Sarvam AI, Soniox, Speechmatics, Fish Audio, Hume, Rime, and the Simli and Tavus video avatars. |
-| Long-tail providers | 24 | 22 smaller providers, from Async to XTTS, listed on [Other upstream providers](/docs/services/other-upstream). |
-| Variants of ported providers | 10 | Deepgram and NVIDIA on SageMaker, ElevenLabs Dialogue, local Whisper. |
+| Long-tail providers | 18 | 17 smaller providers, from Async to XTTS (deprecated upstream, and skipped), listed on [Other upstream providers](/docs/services/other-upstream). |
+| Variants of ported providers | 8 | Deepgram and NVIDIA on SageMaker, ElevenLabs Dialogue. |
 | Message buses | 3 | The Redis and pgmq buses (`@pipedog/bus-redis`, `@pipedog/bus-pgmq`). |
 | Other | 8 | Sentry metrics, the OpenClaw gateway, Strands Agents, the WebSocket worker proxy, GStreamer. |
 

@@ -58,7 +58,18 @@ jobs:
         if: matrix.package == 'examples/smallwebrtc-voice-bot' || matrix.package == 'examples/websocket-voice-bot' || matrix.package == 'packages/runner'
         working-directory: ${{ matrix.package }}
         run: bunx playwright-core install --with-deps chromium
+      # The local-model packages run one real inference each (e2e_*.test.ts), downloading a small
+      # model on first use. Cache the downloads per package so later runs don't fetch them again.
+      # Set the PIPEDOG_E2E repository variable to 0 to skip those tests.
+      - name: Model cache for the local-model e2e tests
+        if: contains(fromJSON('["packages/kokoro","packages/piper","packages/pocket-tts","packages/moonshine","packages/funasr","packages/whisper"]'), matrix.package)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pipedog
+          key: pipedog-models-${{ matrix.package }}-v1
       - run: bun test ${{ matrix.package }}
+        env:
+          PIPEDOG_E2E: ${{ vars.PIPEDOG_E2E || '1' }}
 
   compat:
     runs-on: ubuntu-latest

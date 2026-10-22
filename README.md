@@ -172,7 +172,10 @@ no UDP), `@pipedog/transport-livekit`, `@pipedog/heygen` and `@pipedog/transport
 Workers: LiveKit's media SDK is a native addon), `@pipedog/transport-local` (spawns sox or ffmpeg: Bun,
 Node and Deno), `@pipedog/transport-whatsapp` (on Workers only the webhook, signature and API parts
 work: answering a call needs WebRTC), `@pipedog/mcp` (a stdio tool for Bun and Node), `@pipedog/mcp-client` (on Workers it connects over HTTP or SSE only: a stdio server needs a process) and
-`@pipedog/cli` (a command line tool for Bun, Node and Deno). A few entry points inside verified
+`@pipedog/cli` (a command line tool for Bun, Node and Deno), and the local speech models
+(`@pipedog/moonshine`, `@pipedog/funasr`, `@pipedog/kokoro`, `@pipedog/pocket-tts`,
+`@pipedog/espeak-ng`, `@pipedog/piper`'s `PiperTTSService` and `@pipedog/whisper`'s local services:
+Bun, Node and Deno, since their models exceed Workers' memory and bundle limits). A few entry points inside verified
 packages don't run on Workers: `@pipedog/aws`'s `SageMakerBidiClient` (HTTP/2), Google's gRPC
 Cloud Speech and Text-to-Speech services, and the servers that listen on a port (the runner's
 `main()` and `serve()`, `serveFetch`). Each package's README has its own runtime table.
@@ -198,7 +201,13 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/inworld`](packages/inworld) | Inworld services: Realtime speech-to-speech, WebSocket and HTTP TTS. |
 | [`@pipedog/ultravox`](packages/ultravox) | Ultravox realtime speech-to-speech service. |
 | [`@pipedog/aws`](packages/aws) | AWS services: Bedrock LLM, Transcribe STT, Polly TTS, Nova Sonic, AgentCore, and the SageMaker streaming client. |
-| [`@pipedog/whisper`](packages/whisper) | Base STT service for Whisper-compatible APIs, shared by the services that speak that protocol. |
+| [`@pipedog/whisper`](packages/whisper) | Whisper: local `WhisperSTTService` and `WhisperSTTServiceMLX` on ONNX Runtime with faster-whisper's decoding, the base STT service for Whisper-compatible APIs (shared by OpenAI and Groq), and probability helpers. |
+| [`@pipedog/moonshine`](packages/moonshine) | `MoonshineSTTService`: Moonshine's small, fast ASR models, run locally on ONNX Runtime. |
+| [`@pipedog/funasr`](packages/funasr) | `FunASRSTTService`: SenseVoiceSmall multilingual speech-to-text (strong on Chinese), run locally on ONNX Runtime. |
+| [`@pipedog/kokoro`](packages/kokoro) | `KokoroTTSService`: the Kokoro-82M text-to-speech model, run locally on ONNX Runtime. |
+| [`@pipedog/piper`](packages/piper) | Piper text-to-speech: `PiperTTSService` runs Piper voices locally on ONNX Runtime, `PiperHttpTTSService` calls a Piper HTTP server. |
+| [`@pipedog/pocket-tts`](packages/pocket-tts) | `PocketTTSService`: Kyutai's Pocket TTS, run locally on ONNX Runtime, faster than real time on a CPU. |
+| [`@pipedog/espeak-ng`](packages/espeak-ng) | eSpeak NG phonemization (WebAssembly, GPL-3.0 optional peer) for the local Kokoro and Piper voices. |
 | [`@pipedog/langchain`](packages/langchain) | LangChain integration (`LangchainProcessor`). |
 | [`@pipedog/flows`](packages/flows) | Structured conversations from nodes, functions and actions (Pipecat Flows), as code or YAML/JSON configs. |
 | [`@pipedog/transport-smallwebrtc`](packages/transport-smallwebrtc) | Peer-to-peer WebRTC transport (werift, Opus via WASM) for the Pipecat browser SDK's `SmallWebRTCTransport`. |
@@ -271,19 +280,20 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 ## Status
 
 pipedog is 0.x: expect breaking changes between minor versions. Against the pinned upstream
-commit, 576 of Pipecat's 667 modules are ported (86%, 79% of the lines) and 273 of its 340 test
+commit, 584 of Pipecat's 667 modules are ported (88%, 80% of the lines) and 280 of its 340 test
 files.
 
 - **Core runtime: complete.** All 361 core modules are ported, and all 150 of core's upstream test
   files are ported 1:1 and passing.
-- **Providers: the main ones.** Across 60 packages: OpenAI, Anthropic, Google, Azure, AWS (with Nova
+- **Providers: the main ones.** Across 66 packages: OpenAI, Anthropic, Google, Azure, AWS (with Nova
   Sonic), Deepgram, Cartesia, ElevenLabs, Inworld, Ultravox, 16 OpenAI-compatible providers (Groq,
   Together, Mistral, xAI, DeepSeek, OpenRouter, Ollama and more), HeyGen avatars, the WebSocket,
   SmallWebRTC, LiveKit, WhatsApp and local audio transports, six telephony serializers, the
   development runner, the `pipedog` CLI, Pipecat Flows, evals, the MCP client, and the RNNoise filter, soundfile
-  mixer and HTTP Smart Turn.
+  mixer, HTTP Smart Turn, and keyless local speech models on ONNX Runtime (Whisper, Moonshine,
+  FunASR SenseVoice, Kokoro, Piper, Pocket TTS).
 - **Not ported yet:** the Daily and other room transports (Tavus, LemonSlice, MoQ, the Vonage Video
-  Connector), the Krisp, Koala and AIC filters and models, and 33 other providers (AssemblyAI, Gladia,
+  Connector), the Krisp, Koala and AIC filters and models, and 28 other providers (AssemblyAI, Gladia,
   Speechmatics, Rime, NVIDIA and a long tail). See the
   [roadmap](https://polvallverdu.github.io/pipedog/docs/roadmap/).
 - **Testing: mocks and recordings, not live providers yet.** Every provider is tested against mock

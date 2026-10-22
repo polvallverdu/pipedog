@@ -14,7 +14,9 @@ the `@pipedog` scope and released together at one version: upgrade them together
 | `@pipedog/audio-silero`, `@pipedog/audio-smart-turn`, `@pipedog/onnx` | Silero VAD and Smart Turn (local v3, and an HTTP analyzer for a remote endpoint), and the ONNX backend they run on |
 | `@pipedog/audio-rnnoise-filter`, `@pipedog/audio-soundfile-mixer` | RNNoise noise suppression (WebAssembly), and background sound from WAV files mixed into the bot's audio |
 | `@pipedog/openai`, `@pipedog/google`, `@pipedog/anthropic`, `@pipedog/azure`, `@pipedog/aws` | LLM, speech, realtime and image services |
-| `@pipedog/deepgram`, `@pipedog/cartesia`, `@pipedog/elevenlabs`, `@pipedog/inworld`, `@pipedog/whisper` | speech-to-text and text-to-speech (Inworld also realtime) |
+| `@pipedog/deepgram`, `@pipedog/cartesia`, `@pipedog/elevenlabs`, `@pipedog/inworld` | speech-to-text and text-to-speech (Inworld also realtime) |
+| `@pipedog/whisper`, `@pipedog/moonshine`, `@pipedog/funasr` | local speech-to-text on ONNX Runtime, no API key: [Whisper](/docs/services/stt/whisper) (also the base for Whisper-compatible APIs), [Moonshine](/docs/services/stt/moonshine), [FunASR SenseVoice](/docs/services/stt/funasr) |
+| `@pipedog/kokoro`, `@pipedog/piper`, `@pipedog/pocket-tts`, `@pipedog/espeak-ng` | local text-to-speech on ONNX Runtime, no API key: [Kokoro](/docs/services/tts/kokoro), [Piper](/docs/services/tts/piper) (also over HTTP), [Pocket TTS](/docs/services/tts/pocket-tts), and the eSpeak NG phonemizer Kokoro and Piper use |
 | `@pipedog/ultravox` | Ultravox realtime speech-to-speech |
 | `@pipedog/groq`, `@pipedog/mistral`, `@pipedog/together`, `@pipedog/xai` | OpenAI-compatible LLMs with the provider's STT and TTS (xAI also realtime); `@pipedog/grok` is the deprecated alias of `@pipedog/xai` |
 | `@pipedog/baseten`, `@pipedog/cerebras`, `@pipedog/crusoe`, `@pipedog/deepseek`, `@pipedog/fireworks`, `@pipedog/nebius`, `@pipedog/novita`, `@pipedog/ollama`, `@pipedog/openrouter`, `@pipedog/perplexity`, `@pipedog/qwen`, `@pipedog/sambanova` | OpenAI-compatible LLMs, one package per provider |

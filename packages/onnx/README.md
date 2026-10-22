@@ -1,7 +1,8 @@
 # @pipedog/onnx
 
 A tiny ONNX inference backend for pipedog's local models (`@pipedog/audio-silero`,
-`@pipedog/audio-smart-turn`). It wraps whichever ONNX runtime is available behind one small
+`@pipedog/audio-smart-turn`, and the local speech models: `@pipedog/kokoro`, `@pipedog/piper`,
+`@pipedog/moonshine`, `@pipedog/whisper`, `@pipedog/funasr`). It wraps whichever ONNX runtime is available behind one small
 interface, so the models never depend on a particular runtime and you can pass your own.
 
 ```ts
@@ -41,13 +42,30 @@ interface OnnxBackend {
 interface OnnxSession {
   readonly inputNames: readonly string[];
   readonly outputNames: readonly string[];
-  run(feeds: Record<string, OnnxTensor>): Promise<Record<string, OnnxTensor>>; // float32 / int64 tensors
+  run(feeds: Record<string, OnnxTensor>): Promise<Record<string, OnnxTensor>>; // float32 / int64 / int32 / bool tensors
   dispose(): Promise<void>;
 }
 ```
 
 Models are bytes, a filesystem path, a `file:` URL (read with `node:fs`) or an `http(s):` URL
 (fetched). Anything implementing `OnnxBackend` can be passed to the model packages as `backend`.
+
+`sharedSession(backend, model, options)` returns one session per backend, model and options for the
+whole process, so stateless models load once however many pipelines use them.
+
+## Downloaded models
+
+Models too large to ship in a package are downloaded on first use and cached:
+
+```ts
+import { downloadModelFile, modelCacheDir } from "@pipedog/onnx";
+
+const dir = await modelCacheDir("kokoro"); // $PIPEDOG_CACHE_DIR/kokoro, $XDG_CACHE_HOME/pipedog/kokoro or ~/.cache/pipedog/kokoro
+const path = await downloadModelFile("https://…/model.onnx", `${dir}/model.onnx`);
+```
+
+`downloadModelFile` skips files that already exist, writes to `<dest>.part` and renames when complete,
+and shares one download between concurrent callers. It needs a filesystem (Bun, Node, Deno).
 
 ## Cloudflare Workers
 

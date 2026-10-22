@@ -115,9 +115,14 @@ or a `file:` URL. The export is a function that takes the config block and retur
   turns are cached on disk.
 - `judge.transcription`: the transcriber for the bot's speech, when `judge.modality: audio`.
 
-<Callout type="warn">
-  Upstream's keyless local defaults for audio, Kokoro for the user's voice and Moonshine or local
-  Whisper for the transcriber, aren't ported yet. Audio scenarios need a `factory:` for both.
+Audio scenarios use upstream's keyless local defaults: [Kokoro](/docs/services/tts/kokoro)
+(`service: kokoro`) for the user's voice, and [Moonshine](/docs/services/stt/moonshine) (the default)
+or [local Whisper](/docs/services/stt/whisper) (`service: whisper`) for the transcriber. They are
+optional peer dependencies of `@pipedog/evals`: install `@pipedog/kokoro`, `@pipedog/moonshine` or
+`@pipedog/whisper` with `onnxruntime-node` (Kokoro also needs `@echogarden/espeak-ng-emscripten`).
+Models download on first use into `~/.cache/pipedog`.
+
+<Callout>
   WAV files work as `audio:` recordings; other formats need a decoder.
 </Callout>
 
