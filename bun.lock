@@ -45,6 +45,7 @@
         "@pipedog/camb": "workspace:*",
         "@pipedog/cartesia": "workspace:*",
         "@pipedog/cerebras": "workspace:*",
+        "@pipedog/cloudflare": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/crusoe": "workspace:*",
         "@pipedog/deepgram": "workspace:*",
@@ -446,6 +447,16 @@
       "optionalPeers": [
         "@pipedog/evals",
       ],
+    },
+    "packages/cloudflare": {
+      "name": "@pipedog/cloudflare",
+      "version": "0.8.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/deepgram": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
     },
     "packages/core": {
       "name": "@pipedog/core",
@@ -1758,6 +1769,8 @@
     "@pipedog/cerebras": ["@pipedog/cerebras@workspace:packages/cerebras"],
 
     "@pipedog/cli": ["@pipedog/cli@workspace:packages/cli"],
+
+    "@pipedog/cloudflare": ["@pipedog/cloudflare@workspace:packages/cloudflare"],
 
     "@pipedog/core": ["@pipedog/core@workspace:packages/core"],
 

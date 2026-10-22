@@ -753,6 +753,12 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/ai-sdk",
       classes: ["AISDKLLMService"],
     },
+    {
+      slug: "cloudflare",
+      name: "Cloudflare Workers AI",
+      pkg: "@pipedog/cloudflare",
+      classes: ["WorkersAILLMService"],
+    },
     ...[...compatibleLlm]
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((page) => ({
@@ -792,6 +798,16 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "Deepgram",
       pkg: "@pipedog/deepgram",
       classes: ["DeepgramSTTService", "DeepgramFluxSTTService"],
+    },
+    {
+      slug: "cloudflare",
+      name: "Cloudflare Workers AI",
+      pkg: "@pipedog/cloudflare",
+      classes: [
+        "WorkersAIFluxSTTService",
+        "WorkersAINova3STTService",
+        "WorkersAIWhisperSTTService",
+      ],
     },
     {
       slug: "openai",
@@ -895,6 +911,16 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "Deepgram",
       pkg: "@pipedog/deepgram",
       classes: ["DeepgramTTSService", "DeepgramHttpTTSService", "DeepgramFluxTTSService"],
+    },
+    {
+      slug: "cloudflare",
+      name: "Cloudflare Workers AI",
+      pkg: "@pipedog/cloudflare",
+      classes: [
+        "WorkersAIAuraTTSService",
+        "WorkersAIAuraHttpTTSService",
+        "WorkersAIMeloTTSService",
+      ],
     },
     {
       slug: "speechmatics",

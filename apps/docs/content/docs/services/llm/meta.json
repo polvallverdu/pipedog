@@ -12,6 +12,7 @@
     "aws-agentcore",
     "langchain",
     "ai-sdk",
+    "cloudflare",
     "baseten",
     "cerebras",
     "crusoe",

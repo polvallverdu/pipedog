@@ -42,6 +42,8 @@ const ENV_DESCRIPTIONS: Record<string, string> = {
   ASSEMBLYAI_API_KEY: "https://www.assemblyai.com/dashboard/api-keys",
   DEEPGRAM_API_KEY: "https://console.deepgram.com/",
   CARTESIA_API_KEY: "https://play.cartesia.ai/keys",
+  CLOUDFLARE_ACCOUNT_ID: "https://dash.cloudflare.com/ (Workers AI > Use REST API)",
+  CLOUDFLARE_API_TOKEN: "https://dash.cloudflare.com/profile/api-tokens (Workers AI permission)",
   ELEVENLABS_API_KEY: "https://elevenlabs.io/app/settings/api-keys",
   ELEVENLABS_VOICE_ID: "a voice from your ElevenLabs voice library",
   GLADIA_API_KEY: "https://app.gladia.io/",

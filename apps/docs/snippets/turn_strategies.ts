@@ -6,6 +6,7 @@
 
 import { SileroVADAnalyzer } from "@pipedog/audio-silero";
 import { createLocalSmartTurnAnalyzerV3, HttpSmartTurnAnalyzer } from "@pipedog/audio-smart-turn";
+import { WorkersAISmartTurnAnalyzer } from "@pipedog/cloudflare/smart_turn";
 import { type Frame, TranscriptionFrame } from "@pipedog/core/frames/frames";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import {
@@ -110,6 +111,25 @@ const context = new LLMContext();
     }),
   });
   // #endregion http-smart-turn
+  void userParams;
+}
+
+{
+  const env = { AI: { run: async (_model: string, _input: unknown) => ({}) } };
+  // #region workers-ai-smart-turn
+  // Smart Turn v2 on Workers AI: the AI binding in a Worker, or accountId and apiToken elsewhere.
+  const userParams = new LLMUserAggregatorParams({
+    vadAnalyzer: new SileroVADAnalyzer(),
+    userTurnStrategies: new UserTurnStrategies({
+      start: [new VADUserTurnStartStrategy(), new TranscriptionUserTurnStartStrategy()],
+      stop: [
+        new TurnAnalyzerUserTurnStopStrategy({
+          turnAnalyzer: new WorkersAISmartTurnAnalyzer({ ai: env.AI }),
+        }),
+      ],
+    }),
+  });
+  // #endregion workers-ai-smart-turn
   void userParams;
 }
 

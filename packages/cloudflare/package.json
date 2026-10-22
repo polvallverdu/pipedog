@@ -1,0 +1,63 @@
+{
+  "name": "@pipedog/cloudflare",
+  "version": "0.8.0",
+  "description": "Cloudflare Workers AI services for pipedog: Deepgram Flux, Nova-3 and Whisper STT, Aura and MeloTTS TTS, Workers AI LLMs and Smart Turn v2, over the AI binding or the REST API.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "cloudflare",
+    "workers-ai",
+    "cloudflare-workers",
+    "deepgram",
+    "flux",
+    "whisper",
+    "aura",
+    "melotts",
+    "smart-turn",
+    "llm",
+    "stt",
+    "tts",
+    "openai-compatible"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/cloudflare"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/cloudflare#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/deepgram": "workspace:*",
+    "@pipedog/openai": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": []
+  }
+}

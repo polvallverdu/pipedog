@@ -304,6 +304,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/azure`](packages/azure) | Azure services: Azure OpenAI (LLM, Realtime, image), Voice Live, Azure Speech STT and TTS. |
 | [`@pipedog/google`](packages/google) | Google services: Gemini (LLM, Live), Cloud Speech-to-Text, Cloud Text-to-Speech. |
 | [`@pipedog/deepgram`](packages/deepgram) | Deepgram services: STT, TTS, Flux STT and TTS. |
+| [`@pipedog/cloudflare`](packages/cloudflare) | Cloudflare Workers AI services (pipedog-only): Deepgram Flux, Nova-3 and Whisper STT, Aura and MeloTTS TTS, Workers AI LLMs and Smart Turn v2, over the Worker's `AI` binding or the REST API. |
 | [`@pipedog/assemblyai`](packages/assemblyai) | AssemblyAI services: Universal-Streaming STT and sync STT. |
 | [`@pipedog/speechmatics`](packages/speechmatics) | Speechmatics services: STT and TTS. |
 | [`@pipedog/gladia`](packages/gladia) | Gladia realtime STT. |

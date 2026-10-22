@@ -1,0 +1,107 @@
+---
+title: "Cloudflare Workers AI"
+description: "Text-to-speech on Workers AI: Deepgram Aura streaming over a WebSocket or per sentence over HTTP, and MeloTTS, over the AI binding or the REST API."
+---
+
+## Overview
+
+`@pipedog/cloudflare` has three text-to-speech services on Workers AI:
+
+- **`WorkersAIAuraTTSService`**: Deepgram Aura (`@cf/deepgram/aura-2-en`, `aura-2-es`, `aura-1`),
+  streamed over a WebSocket. Workers AI carries Deepgram's `/v1/speak` protocol, so this is
+  [`DeepgramTTSService`](/docs/services/tts/deepgram) opening its socket through Workers AI.
+- **`WorkersAIAuraHttpTTSService`**: Aura, one request per sentence, the PCM streamed back.
+- **`WorkersAIMeloTTSService`**: MeloTTS (`@cf/myshell-ai/melotts`), one request per sentence. It
+  answers in MP3, so it needs a decoder you pass in.
+
+This package is pipedog's own: Pipecat has no Workers AI services.
+
+<Cards>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/cloudflare/src">
+    `packages/cloudflare/src/tts.ts` and `melotts.ts`.
+  </Card>
+  <Card title="Workers AI models" href="https://developers.cloudflare.com/workers-ai/models/">
+    Speakers, inputs and pricing of each model.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/cloudflare
+```
+
+```ts
+import { WorkersAIAuraHttpTTSService, WorkersAIAuraTTSService } from "@pipedog/cloudflare/tts";
+import { WorkersAIMeloTTSService } from "@pipedog/cloudflare/melotts";
+```
+
+## Prerequisites
+
+Inside a Worker, pass the AI binding as `ai: env.AI`. Elsewhere, pass `accountId` and `apiToken`
+(an API token with the Workers AI permission). See
+[the speech-to-text page](/docs/services/stt/cloudflare#prerequisites) for both paths.
+
+## WorkersAIAuraTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/cloudflare/src/tts.ts" name="WorkersAIAuraTTSServiceOptions" />
+
+### Settings
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"@cf/deepgram/aura-2-en"` | `WorkersAIAuraModel.AURA_2_EN`, `.AURA_2_ES` or `.AURA_1`. |
+| `voice` | `string` | the model's default | The `speaker`: `luna` (aura-2-en), `aquila` (aura-2-es), `angus` (aura-1). See the model pages for the others. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-cloudflare.ts#aura</include>
+
+Over the REST API:
+
+<include cwd>snippets/services/tts-cloudflare.ts#aura-rest</include>
+
+Change the voice mid-call with a `TTSUpdateSettingsFrame` (it reconnects):
+
+<include cwd>snippets/services/tts-cloudflare.ts#update</include>
+
+### Notes
+
+- Text is sent with `Speak` as it arrives and flushed (`Flush`) at the end of each LLM response; an
+  interruption sends `Clear`. Output is 16-bit PCM at the service's sample rate.
+- The session parameters are `speaker`, `encoding` and `sample_rate`. Deepgram's `speed` isn't in
+  Workers AI's schema and isn't sent.
+
+## WorkersAIAuraHttpTTSService
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-cloudflare.ts#aura-http</include>
+
+Each sentence is a request for `encoding: "linear16"`, `container: "none"` at the service's sample
+rate, and the body is streamed back as audio frames. Use it when you'd rather not hold a socket open.
+
+## WorkersAIMeloTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/cloudflare/src/melotts.ts" name="WorkersAIMeloTTSServiceOptions" />
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-cloudflare.ts#melotts</include>
+
+### Notes
+
+- MeloTTS answers with MP3 only. pipedog ships no MP3 decoder (Workers have no Web Audio, and a
+  WebAssembly decoder has to be imported as a module there), so pass `decodeAudio`. The decoded audio
+  is mixed to mono and resampled to the service rate.
+- `language` picks the voice: English, Spanish, French, Chinese, Japanese or Korean.
+
+## Runtime notes
+
+<RuntimeMatrix pkg="@pipedog/cloudflare" />
+
+- Tested against a local fake of Workers AI over both paths, not against Workers AI itself. Whether
+  Aura's WebSocket opens through the binding (`websocket: true`) is documented for Flux but not for
+  Aura: if it doesn't for you, use `WorkersAIAuraHttpTTSService` or the REST path.

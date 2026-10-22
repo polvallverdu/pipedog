@@ -28,6 +28,7 @@
     "@pipedog/bland": "workspace:*",
     "@pipedog/camb": "workspace:*",
     "@pipedog/cartesia": "workspace:*",
+    "@pipedog/cloudflare": "workspace:*",
     "@pipedog/cerebras": "workspace:*",
     "@pipedog/core": "workspace:*",
     "@pipedog/crusoe": "workspace:*",

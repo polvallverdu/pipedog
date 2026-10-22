@@ -5,6 +5,7 @@
     "openai",
     "google",
     "deepgram",
+    "cloudflare",
     "speechmatics",
     "soniox",
     "cartesia",

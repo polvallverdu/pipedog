@@ -1,0 +1,165 @@
+---
+title: "Cloudflare Workers AI"
+description: "Speech-to-text on Workers AI: Deepgram Flux with turn detection, Deepgram Nova-3 streaming, and Whisper, over the AI binding or the REST API."
+---
+
+## Overview
+
+Workers AI hosts speech-to-text models on Cloudflare's network. `@pipedog/cloudflare` has a service
+for each kind:
+
+- **`WorkersAIFluxSTTService`**: Deepgram Flux (`@cf/deepgram/flux`), conversational STT that also
+  detects the end of the user's turn. It replaces VAD and Smart Turn.
+- **`WorkersAINova3STTService`**: Deepgram Nova-3 (`@cf/deepgram/nova-3`) over a WebSocket, with
+  interim results. Use it with a VAD, as with Deepgram.
+- **`WorkersAIWhisperSTTService`**: Whisper (`@cf/openai/whisper-large-v3-turbo`, `@cf/openai/whisper`,
+  `@cf/openai/whisper-tiny-en`), one request per speech segment.
+
+This package is pipedog's own: Pipecat has no Workers AI services. The Flux and Nova-3 services are
+the [Deepgram](/docs/services/stt/deepgram) services with a different way to open the socket, since
+Workers AI carries Deepgram's WebSocket protocol, so they behave and emit frames the same way.
+
+<Cards>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/cloudflare/src">
+    `packages/cloudflare/src/flux_stt.ts`, `stt.ts` and `whisper.ts`.
+  </Card>
+  <Card title="Workers AI models" href="https://developers.cloudflare.com/workers-ai/models/">
+    Inputs, outputs and pricing of each model.
+  </Card>
+  <Card title="Voice agent fully on Cloudflare" href="/docs/deployment/cloudflare-workers-ai">
+    Flux, a Workers AI LLM and Aura in a Durable Object.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/cloudflare
+```
+
+```ts
+import { WorkersAIFluxSTTService } from "@pipedog/cloudflare/flux_stt";
+import { WorkersAINova3STTService } from "@pipedog/cloudflare/stt";
+import { WorkersAIWhisperSTTService } from "@pipedog/cloudflare/whisper";
+```
+
+## Prerequisites
+
+Every Workers AI service reaches the models one of two ways:
+
+- **The `AI` binding**, inside a Worker or Durable Object. Add `"ai": { "binding": "AI" }` to
+  `wrangler.jsonc` and pass `ai: env.AI`. No token is needed. The realtime models open their socket
+  with `env.AI.run(model, input, { websocket: true })`.
+- **The REST API**, anywhere: pass `accountId` and `apiToken` (a [Cloudflare API
+  token](https://dash.cloudflare.com/profile/api-tokens) with the Workers AI permission). Requests go to
+  `https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/run/{model}`, and the realtime models
+  open `wss://` on the same URL, with the session parameters in the query string. The examples read
+  them from `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`.
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-cloudflare.ts#flux-rest</include>
+
+To share one connection setup between services, build a `WorkersAIClient` and pass it as `client`:
+
+<include cwd>snippets/services/stt-cloudflare.ts#client</include>
+
+## WorkersAIFluxSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/cloudflare/src/flux_stt.ts" name="WorkersAIFluxSTTServiceOptions" />
+
+### Settings
+
+`WorkersAIFluxSTTService.Settings` is Deepgram Flux's settings class; see
+[Deepgram Flux settings](/docs/services/stt/deepgram#deepgramfluxsttservice). The ones Workers AI
+documents:
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"@cf/deepgram/flux"` | The Workers AI model ID. |
+| `eotThreshold` | `number \| null` | `null` (Flux: 0.7) | End-of-turn confidence that ends a turn, 0.5 to 0.9. |
+| `eagerEotThreshold` | `number \| null` | `null` | Enables `EagerEndOfTurn` and `TurnResumed`, 0.3 to 0.9. |
+| `eotTimeoutMs` | `number \| null` | `null` (Flux: 5000) | Ends a turn this long after speech, whatever the confidence. |
+| `keyterm` | `string[]` | `[]` | Terms to boost. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-cloudflare.ts#flux-binding</include>
+
+Flux owns turn detection: use it with no VAD analyzer, and the user aggregator follows its turn
+events, as with `DeepgramFluxSTTService` (see [Turn detection](/docs/concepts/turn-detection)).
+
+Change settings mid-call with an `STTUpdateSettingsFrame`:
+
+<include cwd>snippets/services/stt-cloudflare.ts#update</include>
+
+### Event handlers
+
+The same as `DeepgramFluxSTTService`: `on_start_of_turn`, `on_end_of_turn`,
+`on_eager_end_of_turn`, `on_turn_resumed`, `on_update`, plus `on_connected`, `on_disconnected` and
+`on_connection_error`.
+
+### Notes
+
+- The session parameters are the model's inputs (`encoding`, `sample_rate`, `eot_threshold`,
+  `eager_eot_threshold`, `eot_timeout_ms`, `keyterm`, `mip_opt_out`, `tag`). The model is the URL
+  path, not a `model` parameter.
+- Workers AI's turn messages carry an `event` and no `type`; they are read as Deepgram's `TurnInfo`.
+  Workers AI doesn't document Deepgram's `Connected` message, so an open socket counts as confirmed.
+- Audio is 16-bit PCM (`linear16`) at the pipeline's input rate.
+
+## WorkersAINova3STTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/cloudflare/src/stt.ts" name="WorkersAINova3STTServiceOptions" />
+
+### Settings
+
+`WorkersAINova3STTService.Settings` is Deepgram's settings class (see
+[DeepgramSTTService settings](/docs/services/stt/deepgram#settings)), with `model` defaulting to
+`"@cf/deepgram/nova-3"`.
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-cloudflare.ts#nova</include>
+
+### Notes
+
+- Every Deepgram parameter but the model is sent as a session parameter. Workers AI documents
+  `interim_results`, `endpointing`, `vad_events`, `utterance_end_ms`, `smart_format`, `punctuate`,
+  `keyterm`, `language` and more on the model page.
+
+## WorkersAIWhisperSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/cloudflare/src/whisper.ts" name="WorkersAIWhisperSTTServiceOptions" />
+
+### Settings
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"@cf/openai/whisper-large-v3-turbo"` | `WorkersAIWhisperModel.LARGE_V3_TURBO`, `.WHISPER` or `.TINY_EN`. |
+| `language` | `Language \| null` | `null` | The audio's language, sent as its ISO 639-1 code; `null` detects it. Turbo only. |
+| `prompt` | `string \| null` | `null` | Context for the model (`initial_prompt`). Turbo only. |
+| `vadFilter` | `boolean \| null` | `null` | Run Whisper's own VAD first (`vad_filter`). Turbo only. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-cloudflare.ts#whisper</include>
+
+### Notes
+
+- A segmented service: it needs a VAD analyzer. The audio between the VAD's start and stop is sent
+  as a WAV file, base64 for turbo and an array of bytes for the original models.
+
+## Runtime notes
+
+<RuntimeMatrix pkg="@pipedog/cloudflare" />
+
+- No dependencies beyond pipedog's own packages. HTTP goes through `fetch` and WebSockets through
+  the core `websocketConnect` (REST) or the binding's socket (Workers).
+- Tested against a local fake of Workers AI (both paths), not against Workers AI itself. A live test
+  (`packages/cloudflare/test/live_workers_ai.test.ts`) runs when `CLOUDFLARE_ACCOUNT_ID` and
+  `CLOUDFLARE_API_TOKEN` are set.

@@ -169,6 +169,10 @@ export const NOT_OFFERED: Record<string, string> = {
   NeuphonicHttpTTSService: "the HTTP variant of NeuphonicTTSService, which is offered",
   AsyncAIHttpTTSService: "the HTTP variant of AsyncAITTSService, which is offered",
   BlandHttpTTSService: "the HTTP variant of BlandTTSService, which is offered",
+  WorkersAINova3STTService:
+    "the Nova-3 variant on Workers AI; the Flux and Whisper services on Workers AI are offered",
+  WorkersAIAuraHttpTTSService: "the HTTP variant of WorkersAIAuraTTSService, which is offered",
+  WorkersAIMeloTTSService: "needs an MP3 decoder passed in by hand",
   HeyGenTransport: "a transport, not a video service (HeyGenVideoService is offered)",
   WhisperSTTServiceMLX:
     "upstream doesn't offer it either; in pipedog it runs the same ONNX engine as WhisperSTTService, which is offered",
@@ -269,6 +273,12 @@ export class ServiceRegistry {
     svc("azure_stt", "Azure Speech", "@pipedog/azure", ["AzureSTTService"]),
     svc("cartesia_stt", "Cartesia", "@pipedog/cartesia", ["CartesiaSTTService"]),
     svc("cartesia_turns_stt", "Cartesia Turns", "@pipedog/cartesia", ["CartesiaTurnsSTTService"]),
+    svc("cloudflare_flux_stt", "Cloudflare Workers AI (Flux)", "@pipedog/cloudflare", [
+      "WorkersAIFluxSTTService",
+    ]),
+    svc("cloudflare_whisper_stt", "Cloudflare Workers AI (Whisper)", "@pipedog/cloudflare", [
+      "WorkersAIWhisperSTTService",
+    ]),
     svc("assemblyai_stt", "AssemblyAI", "@pipedog/assemblyai", ["AssemblyAISTTService"]),
     svc("deepgram_stt", "Deepgram", "@pipedog/deepgram", ["DeepgramSTTService"]),
     svc("deepgram_flux_stt", "Deepgram Flux", "@pipedog/deepgram", ["DeepgramFluxSTTService"]),
@@ -329,6 +339,7 @@ export class ServiceRegistry {
     }),
     svc("aws_bedrock_llm", "AWS Bedrock", "@pipedog/aws", ["AWSBedrockLLMService"]),
     svc("azure_llm", "Azure OpenAI", "@pipedog/azure", ["AzureLLMService"]),
+    svc("cloudflare_llm", "Cloudflare Workers AI", "@pipedog/cloudflare", ["WorkersAILLMService"]),
     svc("google_gemini_llm", "Google Gemini", "@pipedog/google", ["GoogleLLMService"]),
     svc("google_vertex_llm", "Google Vertex AI", "@pipedog/google", ["GoogleVertexLLMService"], {
       note: "Uses Google's Node SDK for credentials: runs on Bun and Node.",
@@ -349,6 +360,9 @@ export class ServiceRegistry {
     svc("bland_tts", "Bland", "@pipedog/bland", ["BlandTTSService"]),
     svc("camb_tts", "Camb.ai", "@pipedog/camb", ["CambTTSService"]),
     svc("cartesia_tts", "Cartesia", "@pipedog/cartesia", ["CartesiaTTSService"]),
+    svc("cloudflare_aura_tts", "Cloudflare Workers AI (Aura)", "@pipedog/cloudflare", [
+      "WorkersAIAuraTTSService",
+    ]),
     svc("deepgram_tts", "Deepgram", "@pipedog/deepgram", ["DeepgramTTSService"]),
     svc("deepgram_flux_tts", "Deepgram Flux", "@pipedog/deepgram", ["DeepgramFluxTTSService"]),
     svc("elevenlabs_tts", "ElevenLabs", "@pipedog/elevenlabs", ["ElevenLabsTTSService"]),

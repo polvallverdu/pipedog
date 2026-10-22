@@ -1,0 +1,119 @@
+---
+title: Voice agent fully on Cloudflare
+description: Run the whole voice stack on Cloudflare, with Deepgram Flux speech-to-text, a Workers AI LLM and Aura text-to-speech in a Durable Object.
+---
+
+[Voice agents on Workers and Durable Objects](/docs/deployment/cloudflare-workers) runs one agent per
+Durable Object, with the models at OpenAI. This page swaps the models for Workers AI, so the
+transport, the agent and the models all run on Cloudflare's network, and the only secrets are a
+Cloudflare account ID and API token:
+
+| Step | Service | Workers AI model |
+| --- | --- | --- |
+| Speech-to-text and turn detection | `WorkersAIFluxSTTService` | `@cf/deepgram/flux` |
+| LLM | `WorkersAILLMService` | `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (or any chat model) |
+| Text-to-speech | `WorkersAIAuraTTSService` | `@cf/deepgram/aura-2-en` |
+
+```text
+client ──WebSocket──► Worker ──getByName(id)──► VoiceSession (Durable Object)
+                                                   │ FastAPIWebsocketTransport
+                                                   │ Flux (env.AI, WebSocket): transcripts and turns
+                                                   │ Workers AI LLM (OpenAI-compatible REST)
+                                                   │ Aura (env.AI, WebSocket): speech
+```
+
+## Install
+
+```bash
+bun add @pipedog/core @pipedog/asyncio @pipedog/cloudflare \
+  @pipedog/transport-websocket @pipedog/serializer-protobuf
+```
+
+## Configure the Worker
+
+Add the AI binding next to the Durable Object in `wrangler.jsonc`:
+
+```jsonc
+{
+  "name": "voice-agent",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [{ "name": "VOICE_SESSION", "class_name": "VoiceSession" }]
+  },
+  "migrations": [{ "tag": "v1", "new_classes": ["VoiceSession"] }]
+}
+```
+
+The speech services use the binding, with no token. The LLM uses Workers AI's OpenAI-compatible REST
+endpoint (the binding answers chat requests in Workers AI's own format), so it needs the account ID
+and an API token with the Workers AI permission:
+
+```sh
+bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID
+bunx wrangler secret put CLOUDFLARE_API_TOKEN
+```
+
+<include cwd meta='title="env.ts"'>snippets/workers_ai.ts#env</include>
+
+## The agent
+
+The pipeline is the same as in any voice bot. What changes is the services:
+
+<include cwd meta='title="bot.ts"'>snippets/workers_ai.ts#agent</include>
+
+Flux detects turns on Cloudflare's side and the user aggregator follows its turn events, so there is
+no VAD analyzer and no Smart Turn model: the Worker loads no ONNX runtime and stays small (see
+[turn detection on Workers](/docs/deployment/cloudflare-workers#turn-detection)).
+
+## The Durable Object and the Worker
+
+They are those of [Voice agents on Workers](/docs/deployment/cloudflare-workers), with
+`runVoiceAgent` from above:
+
+```ts
+import { DurableObject } from "cloudflare:workers";
+import { websocketFetchHandler } from "@pipedog/transport-websocket/fetch";
+
+export class VoiceSession extends DurableObject<Env> {
+  readonly #handler = websocketFetchHandler((connection) => runVoiceAgent(connection, this.env));
+
+  override fetch(request: Request): Promise<Response> {
+    return this.#handler(request);
+  }
+}
+
+export default {
+  async fetch(request: Request, env: Env & { VOICE_SESSION: DurableObjectNamespace<VoiceSession> }) {
+    const id = new URL(request.url).pathname.split("/")[3];
+    return env.VOICE_SESSION.getByName(id).fetch(request);
+  },
+};
+```
+
+The [example](https://github.com/polvallverdu/pipedog/tree/main/examples/workers-durable-voice-agent)
+adds reconnection, tracing and alerts on top, and runs the same way: replace its `bot.ts` services
+with the ones above and add the AI binding.
+
+## Variations
+
+- **Nova-3 or Whisper instead of Flux.** `WorkersAINova3STTService` (streaming) and
+  `WorkersAIWhisperSTTService` (one request per utterance) need a VAD and a turn analyzer. On Workers,
+  Smart Turn v2 runs on Workers AI too (`WorkersAISmartTurnAnalyzer`, see
+  [turn detection](/docs/concepts/turn-detection#smart-turn-on-workers-ai)); the newer local Smart
+  Turn v3.2 also runs on Workers but makes the bundle much larger.
+- **Aura over HTTP.** `WorkersAIAuraHttpTTSService` makes one request per sentence instead of holding
+  a WebSocket.
+- **Outside Workers.** Every service takes `accountId` and `apiToken` instead of `ai`, and works on
+  Bun, Node and Deno over the REST API.
+
+## Limits to plan for
+
+- The Durable Object limits of [Voice agents on Workers](/docs/deployment/cloudflare-workers#limits-to-plan-for)
+  apply: billed duration while a session is connected, CPU per session, WebSocket audio only.
+- Workers AI bills Flux and Aura per audio minute and per character; see each
+  [model page](https://developers.cloudflare.com/workers-ai/models/).
+- The services are tested against a local fake of Workers AI (binding and REST), not against Workers
+  AI itself.
