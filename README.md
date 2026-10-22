@@ -20,11 +20,16 @@ and wire protocols, with camelCase members. So Pipecat's client SDKs (`@pipecat-
 
 ## Why TypeScript?
 
-<!-- DRAFT: replace these placeholders with the reasons before merging. -->
-
-- _TODO: reason._
-- _TODO: reason._
-- _TODO: reason._
+- **One language across the stack.** Bot, backend and web client in TypeScript: shared types,
+  one toolchain, no separate Python service to deploy and operate.
+- **Runs where your app runs.** Bun, Node, Deno and Cloudflare Workers, bundled to a single file.
+  Deploy a voice agent to serverless or the edge, close to your users.
+- **Less overhead.** 2.5–3.4× the frame throughput of Pipecat on CPython, 5–7× lower per-frame
+  latency, and cold starts around 45 ms instead of 400 ms ([Performance](#performance)).
+- **The JavaScript ecosystem.** npm packages, your existing deploy pipeline, and the language most
+  web teams already write.
+- **Still Pipecat.** Same architecture, frames and wire protocols, so Pipecat's client SDKs, docs
+  and patterns carry over.
 
 ## Quickstart
 
