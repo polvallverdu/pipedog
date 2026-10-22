@@ -196,6 +196,10 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/azure`](packages/azure) | Azure services: Azure OpenAI (LLM, Realtime, image), Voice Live, Azure Speech STT and TTS. |
 | [`@pipedog/google`](packages/google) | Google services: Gemini (LLM, Live), Cloud Speech-to-Text, Cloud Text-to-Speech. |
 | [`@pipedog/deepgram`](packages/deepgram) | Deepgram services: STT, TTS, Flux STT and TTS. |
+| [`@pipedog/assemblyai`](packages/assemblyai) | AssemblyAI services: Universal-Streaming STT and sync STT. |
+| [`@pipedog/speechmatics`](packages/speechmatics) | Speechmatics services: STT and TTS. |
+| [`@pipedog/gladia`](packages/gladia) | Gladia realtime STT. |
+| [`@pipedog/soniox`](packages/soniox) | Soniox services: STT and TTS. |
 | [`@pipedog/cartesia`](packages/cartesia) | Cartesia services: STT, Ink-2 turn-based STT, WebSocket and HTTP TTS. |
 | [`@pipedog/elevenlabs`](packages/elevenlabs) | ElevenLabs services: STT, Realtime STT, WebSocket and HTTP TTS, Text to Dialogue. |
 | [`@pipedog/rime`](packages/rime) | Rime services: WebSocket, HTTP and WebSocket v1 TTS. |
