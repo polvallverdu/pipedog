@@ -16,13 +16,13 @@ Against the pinned upstream commit (counts from `porting/manifest.json`):
 
 | | Ported | Upstream | Share |
 |---|---|---|---|
-| Modules | 584 | 667 | 88% (80% of the lines) |
-| Test files | 280 | 340 | 82% |
+| Modules | 622 | 667 | 93% (90% of the lines) |
+| Test files | 305 | 340 | 90% |
 | Core modules (`@pipedog/core`) | 361 | 361 | 100% |
 | Core test files | 150 | 150 | 100% |
-| Target packages | 60 started, 45 not | 105 | |
+| Target packages | 81 started, 24 not | 105 | |
 
-pipedog publishes 66 packages: 59 of those 60 (`@pipedog/xtts`'s one module is skipped because it
+pipedog publishes 87 packages: 80 of those 81 (`@pipedog/xtts`'s one module is skipped because it
 is deprecated upstream), plus seven with no upstream counterpart (`@pipedog/asyncio`,
 `@pipedog/espeak-ng`, `@pipedog/mcp`, `@pipedog/onnx`, `@pipedog/resampler-wasm`,
 `@pipedog/sentencex-wasm`, `@pipedog/tracing`).
@@ -57,8 +57,10 @@ is deprecated upstream), plus seven with no upstream counterpart (`@pipedog/asyn
   Mistral, Nebius, Novita AI, Ollama, OpenRouter, Perplexity, Qwen, SambaNova, Together AI and xAI
   (plus `@pipedog/grok`, the deprecated alias), one small package each. Groq, Mistral, Together AI
   and xAI come with their speech-to-text and text-to-speech services.
-- **Speech providers**: Inworld TTS, alongside the Deepgram, Cartesia, ElevenLabs, Google, Azure
-  and AWS speech services above.
+- **Speech providers**: Inworld TTS, AssemblyAI, Speechmatics, Gladia, Soniox, Rime, Fish Audio,
+  Hume, Sarvam AI, Smallest AI, Gradium, Meta, Inception, Neuphonic, Speechify, MiniMax, Resemble
+  AI, Camb.ai, Async and Bland, alongside the Deepgram, Cartesia, ElevenLabs, Google, Azure and AWS
+  speech services above. See [Supported services](/docs/services).
 - **Transports**: [WebSocket](/docs/transports/websocket) (server, client, fetch handlers, and
   `serveFetch` for WebSocket upgrades on Bun, Node and Deno),
   [SmallWebRTC](/docs/transports/smallwebrtc), [LiveKit](/docs/transports/livekit),
@@ -82,12 +84,17 @@ is deprecated upstream), plus seven with no upstream counterpart (`@pipedog/asyn
   the docs MCP server) and `pipedog eval`. The Context Hub's freshness check is skipped.
 - **Flows**: [Pipecat Flows](/docs/flows) in `@pipedog/flows`: nodes, functions, actions, and
   YAML/JSON configs.
+- **Extensions**: the IVR navigator and voicemail detector in `@pipedog/extensions`. See
+  [Telephony extensions](/docs/telephony/extensions).
+- **MCP client**: [`@pipedog/mcp-client`](/docs/services/mcp-client), which exposes an MCP
+  server's tools to the LLM.
+- **Sentry**: [Sentry metrics](/docs/concepts/sentry-metrics) in `@pipedog/sentry`.
 - **Tracing**: OpenTelemetry, in `@pipedog/tracing`. See
   [Metrics & tracing](/docs/concepts/metrics-and-tracing).
 
 ## What's not ported yet
 
-83 upstream modules (20% of the lines) and 60 test files are still to do. Every upstream provider
+45 upstream modules (10% of the lines) and 35 test files are still to do. Every upstream provider
 that isn't ported has a "coming soon" page, or a row on
 [Other upstream providers](/docs/services/other-upstream). The main gaps, with their remaining
 upstream modules:
@@ -96,12 +103,11 @@ upstream modules:
 |---|---|---|
 | Transports | 9 | [Daily](/docs/transports/daily) (with its runner routes and dial-in), the [Vonage Video Connector](/docs/transports/vonage), and the Tavus, LemonSlice and MoQ transports. |
 | Audio filters and analyzers | 7 | Noise filters (Krisp VIVA, Koala, AIC), and the Krisp and AIC VAD and turn models. Smart Turn v3, RNNoise, the soundfile mixer and HTTP Smart Turn are ported. |
-| Extensions | 5 | The IVR navigator and voicemail detector in `pipecat.extensions` (`@pipedog/extensions`). |
-| Providers with a page | 25 | 11 providers: AssemblyAI, Gladia, NVIDIA (LLM, Riva STT and TTS), Sarvam AI, Soniox, Speechmatics, Fish Audio, Hume, Rime, and the Simli and Tavus video avatars. |
-| Long-tail providers | 18 | 17 smaller providers, from Async to XTTS (deprecated upstream, and skipped), listed on [Other upstream providers](/docs/services/other-upstream). |
-| Variants of ported providers | 8 | Deepgram and NVIDIA on SageMaker, ElevenLabs Dialogue. |
+| Variants of ported providers | 9 | Deepgram and NVIDIA speech services on SageMaker. The `SageMakerBidiClient` under them is ported. |
+| Providers with a page | 5 | NVIDIA (LLM, Riva STT and TTS), and the Simli and Tavus video avatars. |
+| Long-tail providers | 5 | Four smaller providers: fal, Keenable, Mem0 and Moondream, listed on [Other upstream providers](/docs/services/other-upstream). XTTS is deprecated upstream, and skipped. |
 | Message buses | 3 | The Redis and pgmq buses (`@pipedog/bus-redis`, `@pipedog/bus-pgmq`). |
-| Other | 8 | Sentry metrics, the OpenClaw gateway, Strands Agents, the WebSocket worker proxy, GStreamer. |
+| Other | 7 | The OpenClaw gateway, Strands Agents, the WebSocket worker proxy server, GStreamer. |
 
 There are no dates. Ports happen in the order people need them.
 

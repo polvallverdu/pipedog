@@ -71,6 +71,8 @@ Runtime-updatable settings, passed as `settings: new AzureImageGenServiceREST.Se
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/azure" />
+
 - All requests go through `fetch` (the global one, or the `fetch` option), which replaces
   upstream's required `aiohttp_session`. The service works on Bun, Node, Deno and Cloudflare
   Workers.

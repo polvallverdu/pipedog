@@ -101,6 +101,8 @@ work as on [Gemini Live](/docs/services/s2s/gemini-live#methods).
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/google" />
+
 Authentication goes through google-auth-library, which only the Node build of `@google/genai`
 supports. This service runs on Bun, Node and Deno, not on Cloudflare Workers. On Workers, use
 [`GeminiLiveLLMService`](/docs/services/s2s/gemini-live) with a Gemini API key.

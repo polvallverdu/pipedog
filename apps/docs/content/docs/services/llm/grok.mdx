@@ -93,9 +93,11 @@ Change settings mid-call with an `LLMUpdateSettingsFrame`. The next completion u
 - "developer" messages are sent as is: the API supports that role.
 - xAI reports reasoning tokens apart from `completion_tokens`, so they are added to the completion count in token usage metrics when the total says so.
 - `@pipedog/grok` re-exports `GrokLLMService` from `@pipedog/xai/llm`, as upstream's deprecated `pipecat.services.grok.llm` does. Import from `@pipedog/xai/llm`.
-- The same package has xAI's [speech-to-text](/docs/services/stt/xai) and [text-to-speech](/docs/services/tts/xai) services. The Grok realtime (speech-to-speech) service isn't ported yet.
+- The same package has xAI's [speech-to-text](/docs/services/stt/xai) and [text-to-speech](/docs/services/tts/xai) services, and [Grok Voice Agent](/docs/services/s2s/grok), the realtime (speech-to-speech) service.
 
 ## Runtime notes
+
+<RuntimeMatrix pkg="@pipedog/xai" />
 
 - The client is the official `openai` JS SDK (through `@pipedog/openai`), which talks through
   `fetch`. It works on Bun, Node, Deno and Cloudflare Workers.

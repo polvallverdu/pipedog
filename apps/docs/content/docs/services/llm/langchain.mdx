@@ -105,6 +105,8 @@ Then wrap it in the processor, in place of an LLM service:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/langchain" />
+
 - Each step of the stream is a cancellation point, so an interruption stops the chain mid-stream.
   The iterator is closed in a `finally` block.
 - Upstream logs a warning on Python's `GeneratorExit`. That branch has no JS equivalent and is not

@@ -116,6 +116,8 @@ Inherited from `LLMService`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/aws" />
+
 - Runs on Bun, Node, Deno and Cloudflare Workers: requests are signed with SigV4 on WebCrypto,
   and the `application/vnd.amazon.eventstream` response is decoded in the package.
 - There is no default AWS credential chain (profiles, IMDS, ECS roles, SSO). Use the keys, the

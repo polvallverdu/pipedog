@@ -113,6 +113,8 @@ change applies from the next one:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/azure" />
+
 Both services work on Bun, Node, Deno and Cloudflare Workers: `AzureTTSService` uses core's
 `websocketConnect`, `AzureHttpTTSService` uses `fetch`. The key is sent as the
 `Ocp-Apim-Subscription-Key` header, and `AzureTTSService` also sends it as a query parameter, as

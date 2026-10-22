@@ -69,6 +69,8 @@ Change settings mid-call with an `TTSUpdateSettingsFrame`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/mistral" />
+
 - Requests go through `fetch`, with the Server-Sent Events parsed in the service (upstream uses the `mistralai` SDK). It works on Bun, Node, Deno and Cloudflare Workers.
 - The request and events follow Mistral's SDK (`@mistralai/mistralai` 3.1.0,
   `audioSpeechComplete`) and the [streaming docs](https://docs.mistral.ai/studio/audio/text-to-speech/stream-speech):

@@ -74,6 +74,8 @@ A transformer that returns `null` skips the call (for the payload) or the line (
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/aws" />
+
 - Runs on Bun, Node, Deno and Cloudflare Workers: `POST /runtimes/{arn}/invocations` with `fetch`,
   signed with SigV4 on WebCrypto.
 - There is no default AWS credential chain. Use keys, the environment, or `credentialsProvider`.

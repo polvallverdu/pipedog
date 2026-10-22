@@ -68,6 +68,8 @@ import { SageMakerBidiClient } from "@pipedog/aws/sagemaker/bidi_client";
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/aws" />
+
 - The API needs a full-duplex HTTP/2 stream, which `fetch` cannot do and Cloudflare Workers do
   not offer. The default client is the AWS SDK on Node's `http2`: it runs on Node and Bun. Deno is
   untested, and Workers are not supported.

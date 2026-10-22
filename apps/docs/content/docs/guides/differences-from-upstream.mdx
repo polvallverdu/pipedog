@@ -233,9 +233,9 @@ These differences apply everywhere, not to one module. They come from the portin
 - **The prebuilt client ships in the package.** Upstream installs it from the
   `pipecat-ai-prebuilt` wheel; `@pipedog/runner` bundles the same built client.
   `packages/runner/src/prebuilt.ts`
-- **Unported transports fail clearly.** Daily (with `--direct` and the dial-in webhook), MOQ,
-  the Vonage Video Connector and WhatsApp are recognized, and fail with a message naming
-  them. An eval harness's `eval-connect` message is not detected. `packages/runner/src/run.ts`,
+- **Unported transports fail clearly.** Daily (with `--direct` and the dial-in webhook), MOQ
+  and the Vonage Video Connector are recognized, and fail with a message naming them.
+  WhatsApp (`--whatsapp`) is ported. An eval harness's `eval-connect` message is not detected. `packages/runner/src/run.ts`,
   `packages/runner/src/utils.ts`
 - **Hang-ups during the handshake are typed.** A caller who hangs up before the provider's `start`
   message is a `TelephonyCallEndedError` (a subclass of upstream's error), logged at info level.
@@ -265,6 +265,44 @@ runtime, Workers included.
   helpers (`websocketFetchHandler`, `upgradeWebSocket`, `serveFetch`) accept the socket on each
   runtime: from the request on Deno and Workers, with the server on Bun and Node.
   `packages/transport-websocket/src/socket.ts`, `packages/transport-websocket/src/fastapi.ts`
+
+## Other packages
+
+Most newer packages list their own differences next to their usage, on the page named below. The
+main ones, in short:
+
+- **Flows** behave as upstream; the API is camelCase, a tool returns `[result, nextNode]`, and files
+  are read through a `readFile` function you pass in. See
+  [Flows](/docs/flows#differences-from-pipecat).
+- **Evals** are the `pipedog-eval` bin, `factory:` entries are imported with `import()`, each suite
+  run is a child process, and the deprecated `EvalTransport` server and `harness` are left out. See
+  [Evals](/docs/evals#differences-from-upstream).
+- **The CLI** is a TypeScript project scaffold: no Pipecat Cloud, no Daily, no plugin system, and
+  the docs MCP server in place of the Context Hub. See [CLI](/docs/cli#differences-from-pipecat).
+- **The MCP client** follows a server's `tools/list` cursor, where upstream reads the first page,
+  and on Workers does not validate a result against the tool's output schema (the validator needs
+  `new Function`). See [MCP client](/docs/services/mcp-client#differences-from-pipecat).
+- **LiveKit and HeyGen** take a `fetch` option in place of upstream's `aiohttp` session, and the
+  token helpers are async (WebCrypto signs the JWT). HeyGen's LiveAvatar fields that its API reference
+  documents as optional (`livekitAgentToken`, `wsUrl`) are optional here, where upstream's model
+  rejects a session without them. See [LiveKit](/docs/transports/livekit) and
+  [HeyGen](/docs/services/video/heygen).
+- **WhatsApp, local audio, Sentry, RNNoise and the soundfile mixer** each have a section:
+  [WhatsApp](/docs/transports/whatsapp#differences-from-upstream),
+  [local audio](/docs/transports/local-audio#differences-from-upstream),
+  [Sentry metrics](/docs/concepts/sentry-metrics#differences-from-upstream),
+  [RNNoise](/docs/audio/rnnoise-filter#differences-from-upstream) and
+  [soundfile mixer](/docs/audio/soundfile-mixer#differences-from-upstream).
+- **Local speech models** (Whisper, Moonshine, FunASR, Kokoro, Piper, Pocket TTS) run on ONNX
+  Runtime instead of the Python libraries. Each page has a Differences section, for example
+  [Kokoro](/docs/services/tts/kokoro#differences-from-upstream).
+- **The speech providers** (AssemblyAI, Speechmatics, Gladia, Soniox, Rime, Fish, Hume, Sarvam,
+  Smallest, Gradium, Meta, Neuphonic, Speechify, MiniMax, Resemble AI, Camb.ai, Async, Bland) follow the
+  rules in [Across the codebase](#across-the-codebase): a `fetch` option in place of the `aiohttp` session
+  or the provider's SDK client, a direct WebSocket client where upstream uses a Python SDK
+  (Sarvam, Camb.ai), and no deprecated `InputParams`. Where a service sends floats as JSON or
+  MessagePack, a whole number such as `speed: 1.0` is written `1`, because JavaScript has one number
+  type. Each page's notes list what it leaves out.
 
 ## Reporting a difference
 

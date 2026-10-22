@@ -100,6 +100,8 @@ To use HTTP/2 through the AWS SDK, as upstream does:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/aws" />
+
 - The default transport is Bedrock's WebSocket endpoint for `InvokeModelWithBidirectionalStream`,
   the one the AWS SDK for JavaScript uses in browsers. pipedog presigns the URL and signs each
   event with SigV4 on WebCrypto, so it runs on Bun, Node, Deno and Cloudflare Workers.

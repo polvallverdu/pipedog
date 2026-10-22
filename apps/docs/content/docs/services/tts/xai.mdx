@@ -113,5 +113,7 @@ Runtime-updatable settings, passed as `settings: new XAIHttpTTSService.Settings(
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/xai" />
+
 - HTTP goes through `fetch` and the WebSocket through the core `websocketConnect`. Both work on Bun, Node, Deno and Cloudflare Workers.
 - Tested against local servers, as upstream's tests do, not against xAI itself.

@@ -138,6 +138,8 @@ fields (including `model`) are ignored with a warning:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/azure" />
+
 - The socket is opened with `websocketConnect()` from core, with the key in an `api-key` header or
   the Entra token in an `Authorization: Bearer` header. Bun, Node and Deno send headers from the
   global `WebSocket`; on Cloudflare Workers core opens the socket through `fetch`. Browsers can't

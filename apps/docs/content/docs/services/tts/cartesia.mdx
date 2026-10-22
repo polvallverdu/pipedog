@@ -136,6 +136,8 @@ Same as [`CartesiaTTSService`](#settings), with the same defaults.
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/cartesia" />
+
 - `CartesiaTTSService` uses the global `WebSocket` and sends the key as an `X-API-Key` header on
   the handshake. The Bun, Node and Deno `WebSocket` support handshake headers, and on Cloudflare
   Workers the socket is opened through `fetch`.

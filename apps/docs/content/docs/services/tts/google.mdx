@@ -175,6 +175,8 @@ All three services inherit the `TTSService` events, for example `on_tts_request`
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/google" />
+
 Cloud Text-to-Speech streaming is gRPC only, so `GoogleTTSService`, `GoogleHttpTTSService` and
 the Cloud backend of `GeminiTTSService` use the Node SDK `@google-cloud/text-to-speech`. It is
 imported on the first request, so importing the module is safe everywhere, but these classes

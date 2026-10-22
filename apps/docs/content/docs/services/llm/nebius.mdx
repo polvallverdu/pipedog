@@ -89,6 +89,8 @@ Change settings mid-call with an `LLMUpdateSettingsFrame`. The next completion u
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/nebius" />
+
 - The client is the official `openai` JS SDK (through `@pipedog/openai`), which talks through
   `fetch`. It works on Bun, Node, Deno and Cloudflare Workers.
 - The deprecated `model` constructor option is not ported. Use `settings`.

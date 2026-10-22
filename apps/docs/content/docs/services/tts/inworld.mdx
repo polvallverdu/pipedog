@@ -88,6 +88,8 @@ Change the voice mid-call with a `TTSUpdateSettingsFrame`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/inworld" />
+
 - `InworldTTSService` opens its socket with `websocketConnect()` from core, with the key in the
   `Authorization` header (through `fetch` on Cloudflare Workers). `InworldHttpTTSService` uses
   the global `fetch`; pass `fetch` to use another one (upstream takes an aiohttp session).

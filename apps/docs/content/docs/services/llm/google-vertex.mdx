@@ -100,6 +100,8 @@ The same as [`GoogleLLMService`](/docs/services/llm/google#event-handlers).
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/google" />
+
 Authentication goes through google-auth-library, which only the Node build of `@google/genai`
 supports. `GoogleVertexLLMService` runs on Bun, Node and Deno, not on Cloudflare Workers. On
 Workers, use [`GoogleLLMService`](/docs/services/llm/google) with a Gemini API key.

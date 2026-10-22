@@ -137,6 +137,8 @@ Multilingual, with language hints:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/deepgram" />
+
 Both services use the global `WebSocket` and send the key as an `Authorization` header on the
 handshake. That works on Bun, Node, Deno and Cloudflare Workers (where the socket is opened
 through `fetch`). Pass `webSocketFactory` to open the socket some other way, through a proxy for

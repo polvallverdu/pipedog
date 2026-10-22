@@ -88,6 +88,8 @@ Change the language mid-call with an `STTUpdateSettingsFrame`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/aws" />
+
 - Runs on Bun, Node, Deno and Cloudflare Workers. The URL is presigned with SigV4 on WebCrypto,
   and the socket is the global `WebSocket` (opened through `fetch` on Workers).
 - Only the `Origin` handshake header is sent; the runtime's `WebSocket` sets the others.

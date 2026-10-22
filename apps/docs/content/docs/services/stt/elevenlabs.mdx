@@ -137,6 +137,8 @@ Inherited from `STTService`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/elevenlabs" />
+
 - `ElevenLabsSTTService` uploads with `fetch` and `FormData`. Upstream's required
   `aiohttp_session` is replaced by an optional `fetch` option (the global `fetch` by default).
 - `ElevenLabsRealtimeSTTService` uses the global `WebSocket` and sends the key as an

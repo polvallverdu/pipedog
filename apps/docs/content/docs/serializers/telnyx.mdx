@@ -91,6 +91,8 @@ Without auto hang-up, the call control ID and API key are not needed:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/serializer-telnyx" />
+
 The serializer uses the global `fetch` for the hang-up and runs on Bun, Node, Deno and Cloudflare
 Workers. On Workers, accept the Telnyx WebSocket with `websocketFetchHandler`; see
 [WebSocket](/docs/transports/websocket).

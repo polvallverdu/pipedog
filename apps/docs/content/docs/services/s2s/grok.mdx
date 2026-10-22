@@ -114,6 +114,8 @@ ignored with a warning:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/xai" />
+
 - The socket is opened with `websocketConnect()` from core, with the key in the `Authorization`
   header. Bun, Node and Deno send it from the global `WebSocket`; on Cloudflare Workers core opens
   the socket through `fetch`.

@@ -80,5 +80,7 @@ Change settings mid-call with an `STTUpdateSettingsFrame`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/xai" />
+
 - The WebSocket goes through the core `websocketConnect`, with headers on the handshake. It works on Bun, Node, Deno and Cloudflare Workers.
 - Tested against a local WebSocket server, as upstream's tests do, not against xAI itself.

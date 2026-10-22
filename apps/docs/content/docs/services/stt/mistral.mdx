@@ -80,6 +80,8 @@ Change settings mid-call with an `STTUpdateSettingsFrame`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/mistral" />
+
 - The WebSocket goes through the core `websocketConnect` (upstream uses the `mistralai` SDK's realtime connection). It works on Bun, Node, Deno and Cloudflare Workers.
 - The protocol follows Mistral's SDK (`mistralai` 3.3.0 and `@mistralai/mistralai` 3.1.0,
   `extra/realtime`) and the [realtime transcription docs](https://docs.mistral.ai/studio/audio/speech-to-text/transcribe-in-realtime).

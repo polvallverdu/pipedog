@@ -75,5 +75,7 @@ Change settings mid-call with an `STTUpdateSettingsFrame`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/together" />
+
 - The WebSocket goes through the core `websocketConnect`, with headers on the handshake. It works on Bun, Node, Deno and Cloudflare Workers.
 - Tested against a local WebSocket fake, not against Together AI itself.

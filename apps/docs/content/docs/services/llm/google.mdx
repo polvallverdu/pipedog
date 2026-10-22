@@ -143,6 +143,8 @@ Inherited from `LLMService`.
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/google" />
+
 The client is `GoogleGenAI` from `@google/genai`, which uses `fetch`, so the service runs on
 Bun, Node, Deno and Cloudflare Workers. Subclasses can override `createClient()`. Image
 decoding (upstream uses Pillow) is not ported: pass an `imageDecoder` built on `sharp`,

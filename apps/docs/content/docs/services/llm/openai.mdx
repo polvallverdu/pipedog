@@ -120,6 +120,8 @@ These come from the `LLMService` base class.
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/openai" />
+
 - The client is the official `openai` JS SDK, which talks through `fetch`. It works on Bun,
   Node, Deno and Cloudflare Workers.
 - Upstream builds the client with an httpx connection pool. `fetch` has no such object, so

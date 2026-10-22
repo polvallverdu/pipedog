@@ -162,6 +162,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     notes: [
       'Baseten\'s message roles are system, user, assistant and tool, so "developer" messages are sent as "user" messages.',
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "cerebras",
@@ -193,6 +194,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     notes: [
       "Cerebras honors `max_tokens`, `max_completion_tokens` and the penalties, so they are sent when set.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "crusoe",
@@ -209,6 +211,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     links: [{ title: "Crusoe", href: "https://crusoe.ai/", text: "Crusoe Cloud and its docs." }],
     developerRole: false,
     notes: [],
+    runtimeMatrix: true,
   },
   {
     slug: "deepseek",
@@ -251,6 +254,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
       "`seed`, `max_completion_tokens` and `service_tier` are not sent: DeepSeek doesn't support them.",
       "DeepSeek can't enforce a response schema (`supportsResponseSchema` is `false`), so `runInference` ignores `responseSchema`, with a warning.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "fireworks",
@@ -276,6 +280,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
       "Model names use the `accounts/fireworks/models/` prefix.",
       "`seed`, `max_completion_tokens`, `stream_options` and `service_tier` are not sent. Without `stream_options`, token usage is reported only when Fireworks includes it anyway.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "nebius",
@@ -299,6 +304,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     ],
     developerRole: false,
     notes: [],
+    runtimeMatrix: true,
   },
   {
     slug: "novita",
@@ -317,6 +323,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     ],
     developerRole: true,
     notes: [],
+    runtimeMatrix: true,
   },
   {
     slug: "ollama",
@@ -349,6 +356,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
       "`OLLamaLLMService` doesn't require an API key, unlike the other OpenAI-compatible services, and never falls back to `OPENAI_API_KEY`.",
       'Ollama seems to ignore "developer" messages, so they are sent as "user" messages.',
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "openrouter",
@@ -391,6 +399,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
       "For Gemini models, every system message after the first is sent as a user message.",
       "A `provider` in `extra.extra_body` wins over the `provider` setting.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "perplexity",
@@ -421,6 +430,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     notes: [
       "Only `model`, `messages` and the sampling settings that are set (`temperature`, `topP`, `maxTokens`, the penalties) are sent: Perplexity doesn't take tools, so function calling isn't available.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "qwen",
@@ -446,6 +456,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     notes: [
       "The default `baseUrl` is DashScope's international endpoint. Pass your region's endpoint as `baseUrl` if your key belongs to another one.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "sambanova",
@@ -468,6 +479,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
       "`service_tier` is not sent: SambaNova doesn't support it.",
       "SambaNova's tool calls may come without an index. The service skips tool calls whose arguments are empty, and runs function calls only when the last one has arguments.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "groq",
@@ -502,6 +514,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     notes: [
       "The same package has Groq's [speech-to-text](/docs/services/stt/groq) and [text-to-speech](/docs/services/tts/groq) services.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "mistral",
@@ -530,6 +543,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
       "Mistral detects function calls from the whole history, so calls that already have a tool result in the context are skipped instead of run twice. `on_function_calls_started` may still fire twice.",
       "The same package has Mistral's [speech-to-text](/docs/services/stt/mistral) and [text-to-speech](/docs/services/tts/mistral) services.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "together",
@@ -564,6 +578,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     notes: [
       "The same package has Together's [speech-to-text](/docs/services/stt/together) and [text-to-speech](/docs/services/tts/together) services.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "grok",
@@ -597,8 +612,9 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     notes: [
       "xAI reports reasoning tokens apart from `completion_tokens`, so they are added to the completion count in token usage metrics when the total says so.",
       "`@pipedog/grok` re-exports `GrokLLMService` from `@pipedog/xai/llm`, as upstream's deprecated `pipecat.services.grok.llm` does. Import from `@pipedog/xai/llm`.",
-      "The same package has xAI's [speech-to-text](/docs/services/stt/xai) and [text-to-speech](/docs/services/tts/xai) services. The Grok realtime (speech-to-speech) service isn't ported yet.",
+      "The same package has xAI's [speech-to-text](/docs/services/stt/xai) and [text-to-speech](/docs/services/tts/xai) services, and [Grok Voice Agent](/docs/services/s2s/grok), the realtime (speech-to-speech) service.",
     ],
+    runtimeMatrix: true,
   },
   {
     slug: "inception",

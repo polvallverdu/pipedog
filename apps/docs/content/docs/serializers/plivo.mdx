@@ -86,6 +86,8 @@ Without auto hang-up, only the stream ID is needed:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/serializer-plivo" />
+
 Runs on Bun, Node, Deno and Cloudflare Workers (`fetch` for the hang-up, core's WASM resampler for
 the audio). The package's golden tests replay vectors recorded from upstream: at 8 kHz the wire
 output is byte-identical.

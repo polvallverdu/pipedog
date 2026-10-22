@@ -80,6 +80,8 @@ Change the voice mid-call with a `TTSUpdateSettingsFrame`:
 
 ## Runtime notes
 
+<RuntimeMatrix pkg="@pipedog/aws" />
+
 - Runs on Bun, Node, Deno and Cloudflare Workers: `POST /v1/speech` with `fetch`, signed with
   SigV4 on WebCrypto.
 - There is no default AWS credential chain (profiles, IMDS, ECS roles, SSO). Use keys, the
