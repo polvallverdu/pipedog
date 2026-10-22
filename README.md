@@ -80,6 +80,11 @@ camelCase members. So Pipecat's client SDKs (`@pipecat-ai/client-js`,
   </tr>
 </table>
 
+## Sponsors
+
+**Top sponsor: [Nexi Health](https://nexi-health.com).** A medical device AI startup that runs
+pipedog in production, handling 100+ calls every day.
+
 ## Why TypeScript?
 
 - **One language across the stack.** Bot, backend and web client in TypeScript: shared types,

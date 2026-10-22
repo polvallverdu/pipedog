@@ -171,6 +171,33 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Sponsor */}
+      <section className="border-b">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div>
+            <p className="font-mono text-xs font-medium tracking-wider text-fd-primary uppercase">
+              Top sponsor · In production
+            </p>
+            <p className="mt-2 max-w-2xl text-fd-muted-foreground">
+              <a
+                href="https://nexi-health.com"
+                className="font-semibold text-fd-foreground underline underline-offset-4 decoration-fd-primary/50 hover:decoration-fd-primary"
+              >
+                Nexi Health
+              </a>
+              , a medical device AI startup, runs pipedog in production, handling 100+ calls every
+              day.
+            </p>
+          </div>
+          <a
+            href="https://nexi-health.com"
+            className="inline-flex shrink-0 items-center gap-1 self-start rounded-xl border bg-fd-card px-4 py-2 text-sm font-medium transition-colors hover:bg-fd-accent sm:self-auto"
+          >
+            nexi-health.com <ArrowUpRight className="size-3.5" />
+          </a>
+        </div>
+      </section>
+
       {/* Features */}
       <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 md:py-24">
         <SectionHeading
