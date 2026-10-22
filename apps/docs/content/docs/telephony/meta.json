@@ -1,4 +1,4 @@
 {
   "title": "Telephony",
-  "pages": ["index", "twilio-quickstart"]
+  "pages": ["index", "twilio-quickstart", "extensions"]
 }

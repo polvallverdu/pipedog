@@ -225,6 +225,8 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/onnx`](packages/onnx) | Small ONNX inference backend: `onnxruntime-node` when installed, else `onnxruntime-web`, with a Workers variant. |
 | [`@pipedog/resampler-wasm`](packages/resampler-wasm) | High-quality PCM resampling (rubato sinc, compiled to WebAssembly), one-shot and streaming. |
 | [`@pipedog/sentencex-wasm`](packages/sentencex-wasm) | Wikimedia sentencex sentence segmentation, compiled to WebAssembly. |
+| [`@pipedog/extensions`](packages/extensions) | Pipecat's extensions: `IVRNavigator` (an LLM navigates phone menus with DTMF) and `VoicemailDetector` with `TTSGate` (person or voicemail on outbound calls). |
+| [`@pipedog/sentry`](packages/sentry) | `SentryMetrics`: TTFB and processing time as Sentry transactions, with the Sentry SDK of any runtime. |
 | [`@pipedog/tracing`](packages/tracing) | OpenTelemetry setup (`setupTracing()`) with OTLP/HTTP and console exporters. |
 | [`@pipedog/mcp-client`](packages/mcp-client) | `MCPClient`: connects to an MCP server over stdio, SSE or streamable HTTP and gives its tools to an LLM service as function-call tools. |
 | [`@pipedog/mcp`](packages/mcp) | A local MCP server with these docs and the API of every package, for coding agents: `claude mcp add pipedog -- npx -y @pipedog/mcp`. |

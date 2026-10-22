@@ -1,0 +1,123 @@
+---
+title: Telephony extensions
+description: IVRNavigator walks a phone menu with DTMF, and VoicemailDetector tells a person from a voicemail on outbound calls. Port of pipecat.extensions.
+---
+
+## Overview
+
+Two pieces of call logic that sit on top of any [phone serializer](/docs/telephony), ported from
+Pipecat's `pipecat.extensions`:
+
+- **`IVRNavigator`** is a pipeline segment around your LLM. It classifies the other side as a person
+  or an automated menu, and in a menu it has the LLM press keys (`<dtmf>1</dtmf>`) or speak until it
+  reaches a goal you set.
+- **`VoicemailDetector`** tells a person from a voicemail greeting on an **outbound** call. Until it
+  has decided, `TTSGate` holds the bot's speech, so a greeting is never talked over.
+
+Both are plain frame processors with no I/O of their own, so they run on Bun, Node, Deno and
+Cloudflare Workers.
+
+<Cards>
+  <Card title="Upstream" href="https://github.com/pipecat-ai/pipecat/tree/main/src/pipecat/extensions">
+    Pipecat's `pipecat.extensions`.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/extensions/src">
+    `ivr_navigator.ts` and `voicemail_detector.ts`.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/extensions
+```
+
+```ts
+import { IVRNavigator, VoicemailDetector } from "@pipedog/extensions";
+```
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/extensions" />
+
+## IVR navigation
+
+<include cwd>snippets/extensions.ts#ivr</include>
+
+How it works:
+
+1. At `StartFrame` the `IVRProcessor` inside the navigator sets the **classifier prompt** on the LLM.
+   The LLM answers `<mode>ivr</mode>` or `<mode>conversation</mode>` for what it hears.
+2. `<mode>conversation</mode>` fires `on_conversation_detected` with the conversation history saved
+   so far (the context without its first, system message).
+3. `<mode>ivr</mode>` switches the context to the **navigation prompt** (your `ivrPrompt` inside the
+   built-in instructions), with the history after it, runs the LLM, and switches the VAD to
+   `ivrVadParams` (default `stopSecs: 2.0`) so the bot waits out the menu's pauses.
+4. In navigation mode the LLM answers with tags that the processor strips from the text:
+
+   | Tag | Effect |
+   |---|---|
+   | `<dtmf>1</dtmf>` | Pushes an `OutputDTMFUrgentFrame` for that key (`0`-`9`, `*`, `#`). Other values are logged and ignored. One tag per digit. |
+   | `<ivr>detected</ivr>` | Back to navigation mode. Fires `on_ivr_status_changed`. |
+   | `<ivr>completed</ivr>` | The goal is reached, usually a transfer. Fires `on_ivr_status_changed`. |
+   | `<ivr>stuck</ivr>` | No way forward. Fires `on_ivr_status_changed` so you can end or retry. |
+   | `<ivr>wait</ivr>` | The menu is incomplete; wait for more transcription. |
+
+   Everything else is pushed on as `AggregatedTextFrame`s, which the TTS service speaks. The tags
+   themselves are added to the context as `TextFrame`s with `skipTts`, so the LLM sees what it did.
+
+`on_ivr_status_changed` receives an `IVRStatus` (`"detected"`, `"completed"`, `"stuck"`, `"wait"`).
+`addEventHandler` on the navigator registers the two events on its `IVRProcessor`.
+
+### With the phone serializers
+
+- **Sending keys.** `OutputDTMFUrgentFrame` reaches the output transport, which plays the key as a
+  tone in the audio stream when the transport has no native DTMF (the WebSocket transport has
+  none). The Twilio, Telnyx, Plivo, Exotel, Vonage and Genesys serializers then send that audio like
+  any other, so the menu hears the keys. This is checked end to end for Twilio in the package's
+  tests.
+- **Hearing keys.** If the menu or a person presses keys, the serializers produce
+  `InputDTMFFrame`s. Put a `DTMFAggregator` (`@pipedog/core/processors/aggregators/dtmf_aggregator`) between the STT service and the user
+  aggregator, as above, and sequences such as `12#` arrive in the LLM context as `DTMF: 12#`.
+
+### Options
+
+<auto-type-table cwd path="../../packages/extensions/src/ivr_navigator.ts" name="IVRNavigatorOptions" />
+
+## Voicemail detection
+
+<include cwd>snippets/extensions.ts#voicemail</include>
+
+The detector sits after the STT service. It passes every frame through, collects what the other side
+says, and after each transcription asks its **classifier** in the background whether the call
+reached a person or a voicemail. Once the caller has been quiet for `decisionTimeout`, the latest
+answer decides:
+
+- **Conversation.** The gate releases the speech it held, in order, and `on_conversation_detected`
+  fires.
+- **Voicemail.** The held speech is dropped, the pipeline is interrupted, and nothing but lifecycle
+  frames (system frames, `EndFrame`, `StopFrame`, worker frames) passes the detector from then on.
+  `on_voicemail_detected` fires once the greeting has been quiet for `voicemailResponseDelay`
+  seconds, and only once. Speak the message from the handler by pushing a `TTSSpeakFrame` through
+  the processor it receives.
+
+A classifier that fails or does not answer in time counts as no answer. With no answer at all after
+the silence, the detector assumes a conversation.
+
+Any `BaseClassifier` works. `JevClassifier` is what upstream's example uses; an `LLMClassifier`
+needs a service that implements `runInference()`, so a realtime (speech-to-speech) LLM cannot back
+it. The classifier's `on_metrics` becomes a `MetricsFrame` in the pipeline.
+
+### Options
+
+<auto-type-table cwd path="../../packages/extensions/src/voicemail_detector.ts" name="VoicemailDetectorOptions" />
+
+Upstream's deprecated `llm` and `customSystemPrompt` parameters are not ported; pass a `classifier`.
+
+## Testing without a phone
+
+Both classes are covered by ports of upstream's tests (`test_ivr_navigation.py`,
+`test_voicemail_detector.py`), which use `runTest` and a scripted classifier. The same approach
+works for your handlers: drive the processor with `LLMTextFrame`s or `TranscriptionFrame`s and read
+the frames and events back. Nothing here has been run against a live IVR or a real carrier's
+voicemail, so the prompts and classifier thresholds are upstream's, unverified by us.

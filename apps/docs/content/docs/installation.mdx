@@ -11,6 +11,7 @@ the `@pipedog` scope and released together at one version: upgrade them together
 | `@pipedog/asyncio` | asyncio semantics for JavaScript: tasks, cooperative cancellation, queues, events |
 | `@pipedog/core` | frames, processors, pipelines, workers, bus, observers, RTVI, base services, transports and serializers |
 | `@pipedog/tracing` | OpenTelemetry setup (`setupTracing()`, OTLP and console exporters), like `pipecat-ai[tracing]` |
+| `@pipedog/sentry` | [Sentry metrics](/docs/concepts/sentry-metrics): `SentryMetrics` reports TTFB and processing time as Sentry transactions, with the Sentry SDK of your runtime |
 | `@pipedog/audio-silero`, `@pipedog/audio-smart-turn`, `@pipedog/onnx` | Silero VAD and Smart Turn (local v3, and an HTTP analyzer for a remote endpoint), and the ONNX backend they run on |
 | `@pipedog/audio-rnnoise-filter`, `@pipedog/audio-soundfile-mixer` | RNNoise noise suppression (WebAssembly), and background sound from WAV files mixed into the bot's audio |
 | `@pipedog/openai`, `@pipedog/google`, `@pipedog/anthropic`, `@pipedog/azure`, `@pipedog/aws` | LLM, speech, realtime and image services |
@@ -28,6 +29,7 @@ the `@pipedog` scope and released together at one version: upgrade them together
 | `@pipedog/serializer-protobuf`, `@pipedog/serializer-rtvi-client` | serializers for Pipecat clients |
 | `@pipedog/serializer-twilio`, `@pipedog/serializer-telnyx`, `@pipedog/serializer-plivo`, `@pipedog/serializer-exotel`, `@pipedog/serializer-vonage`, `@pipedog/serializer-genesys` | telephony serializers (see [Telephony](/docs/telephony)) |
 | `@pipedog/runner` | the [development runner](/docs/runner): `main()`, `createTransport()`, the prebuilt client |
+| `@pipedog/extensions` | [telephony extensions](/docs/telephony/extensions): `IVRNavigator` for phone menus and `VoicemailDetector` for outbound calls |
 | `@pipedog/evals` | [evals](/docs/evals): end-to-end tests of a bot with scripted or simulated users and an LLM judge, and the `pipedog-eval` CLI |
 | `@pipedog/cli` | the [`pipedog` command](/docs/cli): `pipedog init` scaffolds a bot project and sets up coding agents, `pipedog eval` runs evals |
 | `@pipedog/resampler-wasm`, `@pipedog/sentencex-wasm` | high-quality resampling and sentence segmentation, compiled to WebAssembly |
