@@ -1,0 +1,73 @@
+{
+  "name": "@pipedog/espeak-ng",
+  "version": "0.6.1",
+  "description": "eSpeak NG phonemization for pipedog's local TTS models (Kokoro, Piper): espeak-ng compiled to WebAssembly, loaded lazily as an optional peer dependency.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "espeak-ng",
+    "phonemizer",
+    "g2p",
+    "tts",
+    "wasm"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/espeak-ng"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/espeak-ng#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@echogarden/espeak-ng-emscripten": "^0.3.5"
+  },
+  "peerDependenciesMeta": {
+    "@echogarden/espeak-ng-emscripten": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@echogarden/espeak-ng-emscripten": "0.3.5"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno"
+    ],
+    "compat": {
+      "unsupportedRuntimes": [
+        "workerd"
+      ],
+      "usesOptionalPeers": [
+        "@echogarden/espeak-ng-emscripten"
+      ],
+      "needs": {
+        "all": "@echogarden/espeak-ng-emscripten (GPL-3.0, ~25 MB: eSpeak NG compiled to WebAssembly with its voice data).",
+        "workerd": "Not supported: the 24 MB voice data is read from the filesystem and exceeds Workers' bundle limits."
+      }
+    }
+  }
+}

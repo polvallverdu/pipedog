@@ -13,6 +13,7 @@ import type { OnnxBackend } from "./backend.ts";
 import { createWorkerdBackend, type WorkerdBackendOptions } from "./workerd.ts";
 
 export * from "./backend.ts";
+export * from "./cache.ts";
 export * from "./model.ts";
 export type { NativeBackendOptions } from "./native.ts";
 export * from "./shared.ts";

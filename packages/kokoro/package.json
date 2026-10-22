@@ -1,0 +1,70 @@
+{
+  "name": "@pipedog/kokoro",
+  "version": "0.6.1",
+  "description": "Kokoro text-to-speech for pipedog: a port of Pipecat's KokoroTTSService, running the Kokoro-82M ONNX model locally through @pipedog/onnx with espeak-ng phonemization.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "kokoro",
+    "tts",
+    "text-to-speech",
+    "onnx",
+    "local"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/kokoro"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/kokoro#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/onnx": "workspace:*",
+    "@pipedog/espeak-ng": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno"
+    ],
+    "upstream": [
+      "src/pipecat/services/kokoro/tts.py"
+    ],
+    "compat": {
+      "unsupportedRuntimes": [
+        "workerd"
+      ],
+      "usesOptionalPeers": [
+        "onnxruntime-node",
+        "onnxruntime-web",
+        "@echogarden/espeak-ng-emscripten"
+      ],
+      "needs": {
+        "all": "onnxruntime-node (or onnxruntime-web) and @echogarden/espeak-ng-emscripten; the Kokoro model (310 MB, or 88 MB int8) and voices (27 MB), downloaded on first use.",
+        "workerd": "Not supported: the model and eSpeak NG data exceed Workers' memory and bundle limits."
+      }
+    }
+  }
+}

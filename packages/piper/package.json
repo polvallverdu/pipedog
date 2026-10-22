@@ -1,0 +1,68 @@
+{
+  "name": "@pipedog/piper",
+  "version": "0.6.1",
+  "description": "Piper text-to-speech for pipedog: a port of Pipecat's PiperTTSService (Piper ONNX voices run locally through @pipedog/onnx, espeak-ng phonemization) and PiperHttpTTSService (a Piper HTTP server, over fetch).",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "piper",
+    "tts",
+    "text-to-speech",
+    "onnx",
+    "local"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/piper"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/piper#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/onnx": "workspace:*",
+    "@pipedog/espeak-ng": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/services/piper/tts.py"
+    ],
+    "compat": {
+      "usesOptionalPeers": [
+        "onnxruntime-node",
+        "onnxruntime-web",
+        "@echogarden/espeak-ng-emscripten"
+      ],
+      "needs": {
+        "all": "PiperTTSService: onnxruntime-node (or onnxruntime-web) and @echogarden/espeak-ng-emscripten, plus a Piper voice (20-136 MB) downloaded on first use. PiperHttpTTSService: only fetch and a Piper HTTP server.",
+        "workerd": "PiperHttpTTSService only (PiperTTSService needs a filesystem and exceeds Workers' limits)."
+      }
+    }
+  }
+}

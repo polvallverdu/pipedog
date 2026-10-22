@@ -162,6 +162,11 @@ export const NOT_OFFERED: Record<string, string> = {
   InworldHttpTTSService: "the HTTP variant of InworldTTSService, which is offered",
   AzureHttpTTSService: "the HTTP variant of AzureTTSService, which is offered",
   HeyGenTransport: "a transport, not a video service (HeyGenVideoService is offered)",
+  WhisperSTTServiceMLX:
+    "upstream doesn't offer it either; in pipedog it runs the same ONNX engine as WhisperSTTService, which is offered",
+  FunASRSTTService: "upstream doesn't offer it; a local SenseVoice model, mainly for Chinese",
+  PiperHttpTTSService:
+    "needs a separately run Piper HTTP server (PiperTTSService, which runs Piper in process, is offered)",
 };
 
 export class ServiceRegistry {
@@ -268,9 +273,17 @@ export class ServiceRegistry {
     }),
     svc("groq_stt", "Groq (Whisper)", "@pipedog/groq", ["GroqSTTService"]),
     svc("mistral_stt", "Mistral", "@pipedog/mistral", ["MistralSTTService"]),
+    svc("moonshine_stt", "Moonshine", "@pipedog/moonshine", ["MoonshineSTTService"], {
+      extraDependencies: { "onnxruntime-node": "^1.30.0" },
+      note: "Runs the model locally (downloaded on first use into ~/.cache/pipedog): Bun, Node and Deno, not Workers.",
+    }),
     svc("openai_stt", "OpenAI (Whisper)", "@pipedog/openai", ["OpenAISTTService"]),
     svc("openai_realtime_stt", "OpenAI Realtime", "@pipedog/openai", ["OpenAIRealtimeSTTService"]),
     svc("together_stt", "Together AI", "@pipedog/together", ["TogetherSTTService"]),
+    svc("whisper_stt", "Whisper (Local)", "@pipedog/whisper", ["WhisperSTTService"], {
+      extraDependencies: { "onnxruntime-node": "^1.30.0" },
+      note: "Runs the model locally (downloaded on first use into ~/.cache/pipedog): Bun, Node and Deno, not Workers.",
+    }),
     svc("xai_stt", "xAI", "@pipedog/xai", ["XAISTTService"]),
   ];
 
@@ -305,8 +318,26 @@ export class ServiceRegistry {
     }),
     svc("groq_tts", "Groq TTS", "@pipedog/groq", ["GroqTTSService"]),
     svc("inworld_tts", "Inworld", "@pipedog/inworld", ["InworldTTSService"]),
+    svc("kokoro_tts", "Kokoro", "@pipedog/kokoro", ["KokoroTTSService"], {
+      extraDependencies: {
+        "onnxruntime-node": "^1.30.0",
+        "@echogarden/espeak-ng-emscripten": "^0.3.5",
+      },
+      note: "Runs the model locally (downloaded on first use into ~/.cache/pipedog): Bun, Node and Deno, not Workers.",
+    }),
     svc("mistral_tts", "Mistral", "@pipedog/mistral", ["MistralTTSService"]),
     svc("openai_tts", "OpenAI TTS", "@pipedog/openai", ["OpenAITTSService"]),
+    svc("piper_tts", "Piper", "@pipedog/piper", ["PiperTTSService"], {
+      extraDependencies: {
+        "onnxruntime-node": "^1.30.0",
+        "@echogarden/espeak-ng-emscripten": "^0.3.5",
+      },
+      note: "Runs the model locally (downloaded on first use into ~/.cache/pipedog): Bun, Node and Deno, not Workers.",
+    }),
+    svc("pockettts_tts", "Pocket TTS", "@pipedog/pocket-tts", ["PocketTTSService"], {
+      extraDependencies: { "onnxruntime-node": "^1.30.0" },
+      note: "Runs the model locally (downloaded on first use into ~/.cache/pipedog): Bun, Node and Deno, not Workers.",
+    }),
     svc("together_tts", "Together AI", "@pipedog/together", ["TogetherTTSService"]),
     svc("xai_tts", "xAI", "@pipedog/xai", ["XAITTSService"]),
   ];

@@ -166,10 +166,10 @@ export async function sttServiceFromConfig(config: ServiceConfig | null): Promis
 
   const name = pyStr(cfg.service ?? "moonshine").toLowerCase();
   if (name === "whisper") {
-    return whisperService(cfg);
+    return await whisperService(cfg);
   }
   if (name === "moonshine") {
-    return moonshineService(cfg);
+    return await moonshineService(cfg);
   }
 
   throw new Error(
@@ -217,7 +217,7 @@ export async function ttsServiceFromConfig(
       throw new Error("user_audio config requires at least 'service' and 'voice'");
     }
     if (name === "kokoro") {
-      inner = kokoroService(voiceCfg);
+      inner = await kokoroService(voiceCfg);
     } else {
       throw new Error(
         `Unknown TTS service: ${pyRepr(name)}. Known: kokoro. ` +
@@ -236,53 +236,110 @@ export async function ttsServiceFromConfig(
 /**
  * Build a local Kokoro TTS service from the `user_audio` config.
  *
- * DIVERGENCE: Kokoro (`pipecat.services.kokoro`) is not ported to pipedog, so
- * this always throws. Use a `factory` returning an HTTP or local TTS service.
+ * No API key and no per-run cost; the model is downloaded once and cached
+ * under `~/.cache/pipedog/kokoro` (see `@pipedog/kokoro`).
  *
- * @param _voiceCfg The `user.speech` config mapping.
- * @throws Error Always: the Kokoro TTS service is not ported.
+ * DIVERGENCE: async, since `@pipedog/kokoro` (an optional peer dependency) is
+ * imported on demand.
+ *
+ * @param voiceCfg The `user.speech` config mapping:
+ *   - `voice`: Kokoro voice id (e.g. `af_heart`).
+ *   - `language`: Optional language code (e.g. `zh`) or `Language`. When
+ *     omitted, Kokoro keeps its own default (English). Voices are
+ *     language-specific, so a non-English language needs a matching voice;
+ *     `af_heart` speaks US English whatever the language is set to.
+ *   - `speed`: Optional speech rate multiplier (Kokoro accepts 0.5 to 2.0;
+ *     1.0 is its default). Pauses scale with it too, so a faster rate also
+ *     shortens the silences at commas.
  */
-export function kokoroService(_voiceCfg: VoiceConfig): TTSService {
-  throw new Error(
-    "The Kokoro TTS service (pipecat.services.kokoro) is not ported to pipedog. " +
-      "Set user_audio.factory to a 'module.func' returning a local or HTTP TTSService " +
-      "(e.g. CartesiaHttpTTSService from @pipedog/cartesia/tts).",
-  );
+export async function kokoroService(voiceCfg: VoiceConfig): Promise<TTSService> {
+  const { KokoroTTSService } = await import("@pipedog/kokoro/tts");
+
+  const settings = new KokoroTTSService.Settings({
+    voice: pyStr(voiceCfg.voice ?? ""),
+    language: _cfgLanguage(voiceCfg),
+  });
+  if (voiceCfg.speed !== undefined && voiceCfg.speed !== null) {
+    settings.speed = Number(voiceCfg.speed);
+  }
+  return new KokoroTTSService({ settings });
 }
 
 /**
  * Build a local Whisper STT service from the `bot_audio` config.
  *
- * DIVERGENCE: the local Whisper STT (`pipecat.services.whisper.stt`, over
- * faster-whisper) is not ported to pipedog, so this always throws. Use a
- * `factory` returning any pipeline STT.
+ * It runs on the CPU by default, leaving the GPU to the judge and the audio
+ * models; transcription is off the hot path, so the latency is fine.
  *
- * @param _config The `judge.transcription` config mapping.
- * @throws Error Always: the local Whisper STT service is not ported.
+ * Whisper's non-speech filter is disabled: it only ever hears the bot's own
+ * speech, and the default threshold drops correct transcriptions of TTS
+ * speech run to run.
+ *
+ * DIVERGENCE: async, since `@pipedog/whisper/stt` is imported on demand. The
+ * engine is pipedog's ONNX port of faster-whisper, so `device` only selects
+ * the CPU and `compute_type` picks the ONNX weights (`int8` by default on CPU,
+ * as upstream).
+ *
+ * @param config The `judge.transcription` config mapping:
+ *   - `device`: `cpu` (default) or `cuda`.
+ *   - `compute_type`: Whisper compute type (`int8` on CPU).
+ *   - `model`: Optional Whisper model (left unset to use Whisper's own).
+ *     Whisper's default is English-only, as is every `.en` model, so a
+ *     non-English `language` needs a multilingual model here (e.g.
+ *     `large-v3-turbo`).
+ *   - `language`: Optional language code (e.g. `es`) or `Language`. When
+ *     omitted, Whisper keeps its own default (English); it does not
+ *     auto-detect, so a non-English bot needs this set.
+ * @throws Error If `language` names a language the chosen model can't
+ *   transcribe (raised by `WhisperSTTService`).
  */
-export function whisperService(_config: ServiceConfig): STTService {
-  throw new Error(
-    "The local Whisper STT service (pipecat.services.whisper.stt) is not ported to pipedog. " +
-      "Set transcription.factory to a 'module.func' returning an STTService " +
-      "(e.g. OpenAISTTService from @pipedog/openai/stt).",
-  );
+export async function whisperService(config: ServiceConfig): Promise<STTService> {
+  const { WhisperSTTService } = await import("@pipedog/whisper/stt");
+
+  const device = pyStr(config.device ?? "cpu");
+  // int8 keeps CPU transcription reasonably fast with negligible accuracy loss;
+  // the default ("default") would pick float32 on CPU, which is much slower.
+  const computeType = pyStr(config.compute_type ?? (device === "cpu" ? "int8" : "default"));
+  // NOT_GIVEN (not null) leaves the model unset so Whisper uses its own default.
+  return new WhisperSTTService({
+    device,
+    computeType,
+    settings: new WhisperSTTService.Settings({
+      noSpeechProb: 1.0,
+      model: config.model === undefined ? NOT_GIVEN : (config.model as string),
+      language: _cfgLanguage(config),
+    }),
+  });
 }
 
 /**
  * Build a local Moonshine STT service from the `bot_audio` config.
  *
- * DIVERGENCE: Moonshine (`pipecat.services.moonshine`) is not ported to
- * pipedog, so this always throws. Use a `factory` returning any pipeline STT.
+ * Small and fast on the CPU, and steadier than Whisper on the short
+ * bot-answer segments the harness transcribes.
  *
- * @param _config The `judge.transcription` config mapping.
- * @throws Error Always: the Moonshine STT service is not ported.
+ * Prefer `whisperService` for a non-English bot: Moonshine's non-English
+ * models transcribe synthesized speech unreliably, returning an empty
+ * transcript or dropping the tail of an utterance, and an empty transcript is
+ * indistinguishable from a bot that said nothing.
+ *
+ * DIVERGENCE: async, since `@pipedog/moonshine` is imported on demand.
+ *
+ * @param config The `judge.transcription` config mapping:
+ *   - `model`: Optional architecture, as a `Model` value or the equivalent
+ *     string (default `Model.SMALL_STREAMING`).
+ *   - `language`: Optional language code (e.g. `es`) or `Language`. When
+ *     omitted, Moonshine keeps its own default (English).
  */
-export function moonshineService(_config: ServiceConfig): STTService {
-  throw new Error(
-    "The Moonshine STT service (pipecat.services.moonshine) is not ported to pipedog. " +
-      "Set transcription.factory to a 'module.func' returning an STTService " +
-      "(e.g. OpenAISTTService from @pipedog/openai/stt).",
-  );
+export async function moonshineService(config: ServiceConfig): Promise<STTService> {
+  const { Model, MoonshineSTTService } = await import("@pipedog/moonshine/stt");
+
+  return new MoonshineSTTService({
+    settings: new MoonshineSTTService.Settings({
+      model: (config.model as string | undefined) || Model.SMALL_STREAMING,
+      language: _cfgLanguage(config),
+    }),
+  });
 }
 
 export const DEFAULT_OLLAMA_JUDGE_MODEL = "gemma4:12b";

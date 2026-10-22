@@ -1,0 +1,170 @@
+---
+title: Piper
+description: Text-to-speech with Piper voices, run locally by PiperTTSService or through a Piper HTTP server by PiperHttpTTSService.
+---
+
+## Overview
+
+- **`PiperTTSService`**: runs a [Piper](https://github.com/OHF-Voice/piper1-gpl) voice on your
+  machine, on the CPU, with no API key. Its engine (`@pipedog/piper/piper_voice`) is a TypeScript
+  reimplementation of what upstream uses from the Python `piper-tts` package (1.8.0), on
+  `@pipedog/onnx` and `@pipedog/espeak-ng`.
+- **`PiperHttpTTSService`**: posts each sentence to a
+  [Piper HTTP server](https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/API_HTTP.md) over
+  `fetch`. It needs no model, no ONNX runtime and no eSpeak NG, and runs on Cloudflare Workers.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/piper">
+    Pipecat's documentation for the same services.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/piper/src">
+    `packages/piper/src/tts.ts` and the engine, `piper_voice.ts`.
+  </Card>
+  <Card title="Piper voices" href="https://huggingface.co/rhasspy/piper-voices">
+    Every voice, by language and quality, with samples.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/piper
+# for PiperTTSService (local voices) only:
+bun add onnxruntime-node @echogarden/espeak-ng-emscripten
+```
+
+- `onnxruntime-node` runs the voice model. `onnxruntime-web@1.30.0` (WebAssembly) works too, slower.
+- `@echogarden/espeak-ng-emscripten` is eSpeak NG compiled to WebAssembly, for phonemization. It
+  is GPL-3.0 (see [Licenses](#licenses)).
+
+`PiperHttpTTSService` needs neither: the local engine is imported lazily, only by
+`PiperTTSService`.
+
+```ts
+import { PiperHttpTTSService, PiperTTSService } from "@pipedog/piper/tts";
+```
+
+## What you need
+
+**`PiperTTSService`**: a Piper voice, `<voice>.onnx` and `<voice>.onnx.json` from Hugging Face
+[`rhasspy/piper-voices`](https://huggingface.co/rhasspy/piper-voices). It is downloaded once, when
+the pipeline starts, into `downloadDir` if it is missing, as `piper.download_voices` does. Sizes
+depend on the quality:
+
+| Quality | Sample rate | Size |
+|---|---|---|
+| `x_low` | 16 kHz | 20-28 MB |
+| `low` | 16 kHz | 28-69 MB |
+| `medium` | 22.05 kHz | 62-81 MB |
+| `high` | 22.05 kHz | 63-136 MB |
+
+Audio is resampled to the pipeline's output rate. `downloadDir` defaults to
+`$PIPEDOG_CACHE_DIR/piper`, else `$XDG_CACHE_HOME/pipedog/piper`, else `~/.cache/pipedog/piper`.
+Put the two files there yourself to skip the download:
+
+<include cwd>snippets/services/tts-piper.ts#downloadDir</include>
+
+eSpeak NG adds about 25 MB (the WebAssembly build and its voice data), loaded into memory once per
+process. `@pipedog/espeak-ng` wraps it and reproduces piper-tts' clause-by-clause phonemization, so
+the phonemes match piper-tts 1.8.0's for the tested languages, except where piper-tts bundles newer
+espeak-ng data (`en-gb-x-rp`, `pt-br` and `it` differ slightly).
+
+**`PiperHttpTTSService`**: a running Piper HTTP server, for example:
+
+```bash
+uv pip install "piper-tts[http]"
+uv run python -m piper.http_server -m en_US-ryan-high
+```
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/piper" />
+
+`PiperHttpTTSService` runs on Cloudflare Workers. `PiperTTSService` does not: it needs a filesystem
+for the voice cache, and the voice model (20-136 MB) and eSpeak NG's data don't fit a Worker's
+128 MB of memory or its 10 MB bundle limit.
+
+## PiperTTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/piper/src/tts.ts" name="PiperTTSServiceOptions" />
+
+### Settings
+
+Settings, passed as `settings: new PiperTTSService.Settings({...})` (`PiperTTSSettings`).
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `null` | `null` | Not used. |
+| `voice` | `string` | none, required | Piper voice name, for example `"en_US-ryan-high"`. |
+| `language` | `null` | `null` | Not used: the voice sets the language. |
+
+The voice is loaded once. Settings changes are stored but not applied, with a warning, as upstream.
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-piper.ts#usage</include>
+
+The engine works on its own too:
+
+<include cwd>snippets/services/tts-piper.ts#engine</include>
+
+### Notes
+
+- The voice is downloaded and loaded in `start()`. A failure is pushed as an error and retried on
+  the first sentence.
+- Two services with the same voice in one process share one model session.
+- Each sentence is phonemized clause by clause, synthesized, and pushed as 16-bit PCM.
+- `forceRedownload: true` downloads the voice again even if it is on disk.
+- `useCuda` is accepted but has no effect: inference runs on the ONNX backend's default (CPU)
+  execution provider.
+- Not supported: voices whose phoneme type isn't `espeak` or `text` (Chinese, Hebrew, Japanese and
+  Thai voices need other G2P models), and Arabic diacritization.
+
+## PiperHttpTTSService
+
+Posts `{ text, voice }` to `baseUrl` for each sentence and streams the WAV reply, without its
+header.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/piper/src/tts.ts" name="PiperHttpTTSServiceOptions" />
+
+### Settings
+
+Settings, passed as `settings: new PiperHttpTTSService.Settings({...})` (`PiperHttpTTSSettings`).
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `null` | `null` | Not used. |
+| `voice` | `string \| null` | `null` | Voice the server should use. `null` leaves the server's default. |
+| `language` | `null` | `null` | Not used. |
+
+### Usage
+
+<include cwd>snippets/services/tts-piper.ts#http</include>
+
+### Notes
+
+- A trailing slash on `baseUrl` is removed, with a warning.
+- A non-200 reply is pushed as an `ErrorFrame`.
+- `fetch` replaces the global `fetch`.
+
+## Differences from upstream
+
+- `PiperTTSService` downloads and loads the voice in `start()`, not in the constructor, since
+  loading is asynchronous. A missing or blank voice is still rejected by the constructor.
+- Default download directory: `~/.cache/pipedog/piper`, where upstream uses
+  `~/.cache/pipecat/piper`.
+- `useCuda` has no effect (above). `fetch` and `backend` are pipedog options.
+- `PiperHttpTTSService`: upstream's required `aiohttp_session` is an optional `fetch`.
+- The deprecated `voice_id` argument is not ported. Use `settings`.
+
+## Licenses
+
+- `@pipedog/piper`: BSD 2-Clause.
+- Piper voices: each has its own license, in its `MODEL_CARD` on Hugging Face.
+- eSpeak NG and `@echogarden/espeak-ng-emscripten`, used by `PiperTTSService`: **GPL-3.0**.
+  Upstream's `PiperTTSService` uses `piper-tts`, which is GPL-3.0 itself. To keep GPL code out of
+  your application, use `PiperHttpTTSService` with a separately installed Piper server.

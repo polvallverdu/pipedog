@@ -1,0 +1,70 @@
+{
+  "name": "@pipedog/moonshine",
+  "version": "0.6.1",
+  "description": "Moonshine speech-to-text for pipedog: a port of Pipecat's MoonshineSTTService, running Moonshine's models locally through @pipedog/onnx.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "moonshine",
+    "stt",
+    "speech-to-text",
+    "asr",
+    "onnx",
+    "local"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/moonshine"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/moonshine#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/audio-silero": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/onnx": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno"
+    ],
+    "upstream": [
+      "src/pipecat/services/moonshine/stt.py"
+    ],
+    "compat": {
+      "unsupportedRuntimes": [
+        "workerd"
+      ],
+      "usesOptionalPeers": [
+        "onnxruntime-node",
+        "onnxruntime-web"
+      ],
+      "needs": {
+        "all": "onnxruntime-node (or onnxruntime-web) and a filesystem for the model cache: models download on first use from download.moonshine.ai (tiny 44 MB; the default, small-streaming, 142 MB).",
+        "workerd": "Not supported: the models (32-269 MB) and their inference sessions exceed Workers' memory and bundle limits."
+      }
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "name": "@pipedog/funasr",
+  "version": "0.6.1",
+  "description": "FunASR speech-to-text for pipedog: a port of Pipecat's FunASRSTTService, running SenseVoice locally through @pipedog/onnx.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "funasr",
+    "sensevoice",
+    "stt",
+    "speech-to-text",
+    "asr",
+    "onnx",
+    "local"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/funasr"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/funasr#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/onnx": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno"
+    ],
+    "upstream": [
+      "src/pipecat/services/funasr/stt.py"
+    ],
+    "compat": {
+      "unsupportedRuntimes": [
+        "workerd"
+      ],
+      "usesOptionalPeers": [
+        "onnxruntime-node",
+        "onnxruntime-web"
+      ],
+      "needs": {
+        "all": "onnxruntime-node (or onnxruntime-web) and the SenseVoiceSmall ONNX export (model.int8.onnx 239 MB + tokens.txt), downloaded once from Hugging Face to ~/.cache/pipedog/funasr.",
+        "workerd": "Not supported: the model (239 MB int8) exceeds Workers' memory and bundle limits."
+      }
+    }
+  }
+}

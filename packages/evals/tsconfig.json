@@ -24,6 +24,15 @@
     },
     {
       "path": "../ollama"
+    },
+    {
+      "path": "../kokoro"
+    },
+    {
+      "path": "../moonshine"
+    },
+    {
+      "path": "../whisper"
     }
   ]
 }

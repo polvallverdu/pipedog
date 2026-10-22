@@ -45,13 +45,25 @@
   },
   "peerDependencies": {
     "@pipedog/audio-silero": "workspace:*",
-    "@pipedog/ollama": "workspace:*"
+    "@pipedog/kokoro": "workspace:*",
+    "@pipedog/moonshine": "workspace:*",
+    "@pipedog/ollama": "workspace:*",
+    "@pipedog/whisper": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@pipedog/audio-silero": {
       "optional": true
     },
+    "@pipedog/kokoro": {
+      "optional": true
+    },
+    "@pipedog/moonshine": {
+      "optional": true
+    },
     "@pipedog/ollama": {
+      "optional": true
+    },
+    "@pipedog/whisper": {
       "optional": true
     }
   },

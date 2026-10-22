@@ -1,0 +1,138 @@
+---
+title: Moonshine
+description: Local speech-to-text with MoonshineSTTService, running Moonshine's small, fast ASR models on the CPU. No API key.
+---
+
+## Overview
+
+- **`MoonshineSTTService`**: a segmented STT service that transcribes each speech segment, cut by
+  the pipeline's VAD, with a [Moonshine](https://github.com/moonshine-ai/moonshine) model on your
+  machine. Moonshine is a small, fast ASR family that runs on the CPU: no GPU, no account, no API
+  key.
+- **`Transcriber`** (`@pipedog/moonshine/moonshine_voice`): the engine. Upstream wraps the
+  `moonshine_voice` Python package (a C++ core on ONNX Runtime). This one runs the **same quantized
+  `.ort` model files** through `@pipedog/onnx`, with the part of Moonshine's C++ core that
+  `transcribe_without_streaming` runs ported to TypeScript.
+
+Moonshine is the default transcriber of upstream's keyless local defaults for
+[evals](/docs/evals): it transcribes the bot's speech in audio scenarios.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/moonshine">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/moonshine/src">
+    `packages/moonshine/src/stt.ts` and the engine, `moonshine_voice.ts`.
+  </Card>
+  <Card title="Moonshine" href="https://github.com/moonshine-ai/moonshine">
+    The models, languages and licenses.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/moonshine onnxruntime-node
+```
+
+`onnxruntime-node` is an optional peer of `@pipedog/onnx`. `onnxruntime-web@1.30.0` (WebAssembly)
+loads the same `.ort` files and gives the same transcripts, about 3x slower.
+
+```ts
+import { Model, MoonshineSTTService } from "@pipedog/moonshine/stt";
+```
+
+## What you need
+
+| | |
+|---|---|
+| Models | Moonshine's quantized ORT-format models from `https://download.moonshine.ai/model/...`, the files and versions `moonshine_voice` 0.1.5 uses. Each download is checked against Moonshine's published size and CRC32C |
+| Sizes | English: `tiny` 44 MB, `tiny-streaming` 45 MB, `base` 141 MB, `small-streaming` 142 MB (the default), `medium-streaming` 269 MB. Other languages: `tiny-streaming` 32 MB, `small-streaming` 122 MB, `base` 65-141 MB, `tiny` (ja, ko) 72 MB |
+| Download | Automatic, once, when the pipeline starts (or on the first transcription) |
+| Cache | `$PIPEDOG_CACHE_DIR/moonshine`, else `$XDG_CACHE_HOME/pipedog/moonshine`, else `~/.cache/pipedog/moonshine`, or the `cacheRoot` option |
+| VAD | Silero VAD, the `silero_vad.onnx` shipped with `@pipedog/audio-silero` (a dependency), for the segmentation Moonshine applies inside each batch |
+| Input | 16 kHz, 16-bit mono PCM, and a VAD in the pipeline |
+
+Files go in `<cacheRoot>/download.moonshine.ai/model/<model>/...`, the layout `moonshine_voice`
+uses, so you can copy a `moonshine_voice` cache over. To use files you already have, pass
+`cacheRoot`:
+
+<include cwd>snippets/services/stt-moonshine.ts#cacheRoot</include>
+
+Or give the engine any model directory directly (see [Usage](#usage)), or the model files in
+memory with `transcriberOptions.files`. `downloadModel(language, arch?)` downloads a model ahead
+of time.
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/moonshine" />
+
+Cloudflare Workers is not supported: the models (32-269 MB) and their inference sessions don't fit
+a Worker's 128 MB of memory or its 10 MB bundle limit.
+
+For the 11 s JFK clip (4 segments), on an Apple M4 Pro with Bun and `onnxruntime-node`: `tiny`
+0.1 s, `base` 0.12 s, `tiny-streaming` 0.2 s, `small-streaming` 0.35 s.
+
+## MoonshineSTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/moonshine/src/stt.ts" name="MoonshineSTTServiceOptions" />
+
+`transcriberOptions` (pipedog only) takes the `Transcriber`'s options: `backend` (any
+`OnnxBackend`), `fetch` for downloads, `files` (model files in memory), `vadModel`,
+`shareSessions`, and Moonshine's `maxTokensPerSecond` (6.5), `vadThreshold` (0.5),
+`vadWindowDuration` (0.5 s), `vadHopSize` (512), `vadLookBehindSampleCount` (8192) and
+`vadMaxSegmentDuration` (15 s).
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new MoonshineSTTService.Settings({...})`
+(`MoonshineSTTSettings`). Any setting you leave out keeps the default below. A change reloads the
+model, and keeps the old one if the new one fails to load.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `Model \| string` | `Model.SMALL_STREAMING` | Architecture: `TINY`, `BASE`, `TINY_STREAMING`, `BASE_STREAMING`, `SMALL_STREAMING` or `MEDIUM_STREAMING` (or the string, such as `"small-streaming"`). |
+| `language` | `Language` | `Language.EN` | Arabic, Chinese, English, German, Japanese, Korean, Spanish, Tagalog, Ukrainian or Vietnamese. Regional variants resolve to the base code. An architecture a language doesn't publish falls back to that language's default, as upstream. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-moonshine.ts#usage</include>
+
+Change the language or model mid-call with an `STTUpdateSettingsFrame`:
+
+<include cwd>snippets/services/stt-moonshine.ts#update</include>
+
+The engine works on its own, with any model directory:
+
+<include cwd>snippets/services/stt-moonshine.ts#engine</include>
+
+### Notes
+
+- Emits one `TranscriptionFrame` per segment. There are no interim results.
+- Every model, streaming ones included, is run in one batch per segment
+  (`transcribeWithoutStreaming`).
+- The constructor rejects a missing model or language, a model that names no architecture, and a
+  language Moonshine publishes no model for.
+
+## Differences from upstream
+
+- The model is resolved in the constructor but downloaded and loaded in `start()` (or on the first
+  transcription). Upstream downloads and loads it in the constructor.
+- Upstream also prefetches the optional English spelling model, which
+  `transcribe_without_streaming` never uses. It is not downloaded.
+- Only what `transcribe_without_streaming` needs is ported: no streaming API (`create_stream`),
+  word timestamps, speaker diarization, key-term biasing or spelling mode.
+- Inference runs on onnxruntime 1.30, where Moonshine bundles 1.23.2: the same graphs, so the same
+  transcripts up to floating-point rounding.
+- `cacheRoot` and `transcriberOptions` are pipedog options.
+
+## Licenses
+
+- `@pipedog/moonshine`: BSD 2-Clause. The engine ports parts of Moonshine (MIT).
+- Models: MIT in every language and size, except the non-streaming models (`tiny`, `base`) for
+  languages other than English, which are under the non-commercial
+  [Moonshine Community License](https://www.moonshine.ai/license). They are downloaded at
+  runtime, not shipped.
+- Silero VAD (through `@pipedog/audio-silero`): MIT.
