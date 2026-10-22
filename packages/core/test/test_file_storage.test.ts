@@ -24,6 +24,25 @@ async function withTemporaryDirectory(fn: (dir: string) => Promise<void>): Promi
 
 // @pipedog/core has no filesystem access of its own; the storage is given one.
 
+/**
+ * The filesystem, with every written file stamped a second later than the one
+ * before. Trimming keeps the newest files by mtime, and files written within
+ * one tick of the filesystem's clock (ext4 on a CI runner: a few milliseconds)
+ * share an mtime, so which of them is "oldest" would be down to readdir order.
+ * DIVERGENCE: upstream's test relies on the real clock telling them apart.
+ */
+function steadyClockFs(): typeof fs {
+  let seconds = 1_000_000;
+  return {
+    ...fs,
+    writeFile: async (path: Parameters<typeof fs.writeFile>[0], data: never) => {
+      await fs.writeFile(path, data);
+      seconds += 1;
+      await fs.utimes(path, seconds, seconds);
+    },
+  } as typeof fs;
+}
+
 describe("TestLocalFileStorage", () => {
   test("test_save_then_load_roundtrips_contents", async () => {
     await withTemporaryDirectory(async (tmp) => {
@@ -92,7 +111,7 @@ describe("TestLocalFileStorage", () => {
 
   test("test_save_trims_oldest_file_once_over_max", async () => {
     await withTemporaryDirectory(async (tmp) => {
-      const storage = new LocalFileStorage({ folder: tmp, maxFiles: 2, fs });
+      const storage = new LocalFileStorage({ folder: tmp, maxFiles: 2, fs: steadyClockFs() });
       const first = await storage.save("a.txt", new TextEncoder().encode("1"));
       await storage.save("b.txt", new TextEncoder().encode("2"));
       await storage.save("c.txt", new TextEncoder().encode("3"));
