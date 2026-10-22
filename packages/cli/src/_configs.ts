@@ -95,6 +95,14 @@ export const COMPATIBLE_LLMS: readonly CompatibleLlm[] = [
     model: "openai/gpt-oss-120b",
   },
   {
+    value: "inception_llm",
+    label: "Inception",
+    pkg: "@pipedog/inception",
+    cls: "InceptionLLMService",
+    env: "INCEPTION_API_KEY",
+    model: "mercury-2",
+  },
+  {
     value: "mistral_llm",
     label: "Mistral",
     pkg: "@pipedog/mistral",
@@ -159,6 +167,14 @@ export const COMPATIBLE_LLMS: readonly CompatibleLlm[] = [
     model: "Meta-Llama-3.3-70B-Instruct",
   },
   {
+    value: "sarvam_llm",
+    label: "Sarvam AI",
+    pkg: "@pipedog/sarvam",
+    cls: "SarvamLLMService",
+    env: "SARVAM_API_KEY",
+    model: "sarvam-105b",
+  },
+  {
     value: "together_llm",
     label: "Together AI",
     pkg: "@pipedog/together",
@@ -216,7 +232,9 @@ ${AWS_CREDENTIALS}
   google_stt: `new GoogleSTTService({
   credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",
 })`,
+  gradium_stt: keyed("GradiumSTTService", "GRADIUM_API_KEY"),
   groq_stt: keyed("GroqSTTService", "GROQ_API_KEY"),
+  meta_stt: keyed("MetaSTTService", "META_API_KEY"),
   mistral_stt: keyed("MistralSTTService", "MISTRAL_API_KEY"),
   moonshine_stt: `new MoonshineSTTService({
   settings: new MoonshineSTTService.Settings({
@@ -231,6 +249,9 @@ ${AWS_CREDENTIALS}
 })`,
   soniox_stt: keyed("SonioxSTTService", "SONIOX_API_KEY"),
   speechmatics_stt: keyed("SpeechmaticsSTTService", "SPEECHMATICS_API_KEY"),
+  sarvam_stt: keyed("SarvamSTTService", "SARVAM_API_KEY"),
+  sarvam_realtime_stt: keyed("SarvamRealtimeSTTService", "SARVAM_API_KEY"),
+  smallest_stt: keyed("SmallestSTTService", "SMALLEST_API_KEY"),
   together_stt: keyed("TogetherSTTService", "TOGETHER_API_KEY"),
   whisper_stt: `new WhisperSTTService({
   settings: new WhisperSTTService.Settings({
@@ -346,6 +367,7 @@ ${AWS_CREDENTIALS}
     voice: process.env.GOOGLE_VOICE_ID ?? "en-US-Chirp3-HD-Charon",
   }),
 })`,
+  gradium_tts: keyed("GradiumTTSService", "GRADIUM_API_KEY"),
   groq_tts: keyed(
     "GroqTTSService",
     "GROQ_API_KEY",
@@ -394,6 +416,8 @@ ${AWS_CREDENTIALS}
     "TOGETHER_API_KEY",
     `    voice: process.env.TOGETHER_VOICE_ID ?? "af_heart",`,
   ),
+  sarvam_tts: keyed("SarvamTTSService", "SARVAM_API_KEY"),
+  smallest_tts: keyed("SmallestTTSService", "SMALLEST_API_KEY"),
   xai_tts: keyed("XAITTSService", "XAI_API_KEY", `    voice: process.env.XAI_VOICE_ID ?? "eve",`),
 
   // Realtime (speech-to-speech) services

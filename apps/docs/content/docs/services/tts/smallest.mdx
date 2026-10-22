@@ -1,0 +1,78 @@
+---
+title: "Smallest AI"
+description: "Realtime text-to-speech with SmallestTTSService, over Smallest AI's WebSocket API, with word timestamps."
+---
+
+## Overview
+
+- **`SmallestTTSService`**: streams text over a WebSocket and pushes audio as it arrives. Fragments of one LLM turn share a continuation context, so the voice keeps its prosody across them. An interruption reconnects the socket.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/smallest">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/smallest/src">
+    `packages/smallest/src/tts.ts`.
+  </Card>
+  <Card title="Smallest AI docs" href="https://docs.smallest.ai/">
+    The text-to-speech API reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/smallest
+```
+
+```ts
+import { SmallestTTSService } from "@pipedog/smallest/tts";
+```
+
+## Prerequisites
+
+- A Smallest AI account and an API key from [Smallest AI](https://smallest.ai/).
+- Pass the key as `apiKey`. The examples read it from `SMALLEST_API_KEY`.
+
+## SmallestTTSService
+
+Connects to `wss://api.smallest.ai`, with the key as a Bearer token on the handshake.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/smallest/src/tts.ts" name="SmallestTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new SmallestTTSService.Settings({...})`
+(`SmallestTTSSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `"lightning_v3.1" \| "lightning_v3.1_pro"` | `"lightning_v3.1_pro"` | Speech model. |
+| `voice` | `string` | `"meher"` (`"sophia"` for `lightning_v3.1`) | Voice. |
+| `language` | `Language` | `Language.EN` | Language. |
+| `speed` | `number \| null` | `null` | Speed multiplier, 0.5 to 2.0. `null` uses the API default. |
+| `mathNotation` | `boolean \| null` | `null` | Read operators between digits as words ("2 + 2" as "two plus two"). |
+| `contentFilter` | `"reject" \| "flag" \| string \| null` | `null` | Check the text against a profanity list; `"reject"` fails the request, `"flag"` synthesizes and records the match. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-smallest.ts#usage</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-smallest.ts#update</include>
+
+### Notes
+
+- `outputFormat` is `"pcm"` by default; it is fixed when the service is created.
+- `wordTimestamps` (on by default) makes the service push aligned per-word `TTSTextFrame`s. It works on `meher`, `devansh`, `kartik`, `maithili`, `liam` and `avery`; other voices send no word events, so leaving it on is safe.
+- `maxBufferDelayMs` (0 to 5000) bounds how long the server holds a continuation fragment. `null` keeps the server's 3000 ms.
+
+<RuntimeMatrix pkg="@pipedog/smallest" />
+
+## Runtime notes
+
+- The WebSocket goes through the core `websocketConnect`, with headers on the handshake.
+- Tested against local WebSocket servers, as upstream's tests do, not against Smallest AI itself.

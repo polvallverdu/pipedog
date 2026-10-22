@@ -17,6 +17,7 @@
     "deepseek",
     "fireworks",
     "groq",
+    "inception",
     "mistral",
     "nebius",
     "novita",
@@ -25,10 +26,10 @@
     "perplexity",
     "qwen",
     "sambanova",
+    "sarvam",
     "together",
     "grok",
     "---Coming soon---",
-    "nvidia",
-    "sarvam"
+    "nvidia"
   ]
 }

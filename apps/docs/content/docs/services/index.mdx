@@ -7,7 +7,7 @@ description: "Every pipedog service by category: ported, and coming soon from Pi
 
 Services are frame processors that call an AI provider. pipedog ports them from Pipecat with the same
 class names and options (in camelCase), one package per provider: `@pipedog/openai`,
-`@pipedog/deepgram` and so on. 78 service pages are ported so far. The "coming soon"
+`@pipedog/deepgram` and so on. 87 service pages are ported so far. The "coming soon"
 pages link to Pipecat's docs and to a port request.
 
 Each service page follows the same layout as Pipecat's: overview, installation, configuration
@@ -34,6 +34,7 @@ Chat models that turn the conversation context into a response. [All llm service
 | [DeepSeek](/docs/services/llm/deepseek) | `DeepSeekLLMService` | `@pipedog/deepseek` | Ported |
 | [Fireworks AI](/docs/services/llm/fireworks) | `FireworksLLMService` | `@pipedog/fireworks` | Ported |
 | [Groq](/docs/services/llm/groq) | `GroqLLMService` | `@pipedog/groq` | Ported |
+| [Inception](/docs/services/llm/inception) | `InceptionLLMService` | `@pipedog/inception` | Ported |
 | [Mistral](/docs/services/llm/mistral) | `MistralLLMService` | `@pipedog/mistral` | Ported |
 | [Nebius](/docs/services/llm/nebius) | `NebiusLLMService` | `@pipedog/nebius` | Ported |
 | [Novita AI](/docs/services/llm/novita) | `NovitaLLMService` | `@pipedog/novita` | Ported |
@@ -42,10 +43,10 @@ Chat models that turn the conversation context into a response. [All llm service
 | [Perplexity](/docs/services/llm/perplexity) | `PerplexityLLMService` | `@pipedog/perplexity` | Ported |
 | [Qwen](/docs/services/llm/qwen) | `QwenLLMService` | `@pipedog/qwen` | Ported |
 | [SambaNova](/docs/services/llm/sambanova) | `SambaNovaLLMService` | `@pipedog/sambanova` | Ported |
+| [Sarvam AI](/docs/services/llm/sarvam) | `SarvamLLMService` | `@pipedog/sarvam` | Ported |
 | [Together AI](/docs/services/llm/together) | `TogetherLLMService` | `@pipedog/together` | Ported |
 | [xAI Grok](/docs/services/llm/grok) | `GrokLLMService` | `@pipedog/xai` | Ported |
 | [NVIDIA](/docs/services/llm/nvidia) | `NvidiaLLMService` | | Coming soon |
-| [Sarvam AI](/docs/services/llm/sarvam) | `SarvamLLMService` | | Coming soon |
 
 ## Speech-to-text
 
@@ -72,8 +73,11 @@ Transcribe the user's speech into TranscriptionFrames. [All speech-to-text servi
 | [Mistral](/docs/services/stt/mistral) | `MistralSTTService` | `@pipedog/mistral` | Ported |
 | [Together AI](/docs/services/stt/together) | `TogetherSTTService` | `@pipedog/together` | Ported |
 | [xAI](/docs/services/stt/xai) | `XAISTTService` | `@pipedog/xai` | Ported |
+| [Sarvam AI](/docs/services/stt/sarvam) | `SarvamSTTService`, `SarvamRealtimeSTTService` | `@pipedog/sarvam` | Ported |
+| [Smallest AI](/docs/services/stt/smallest) | `SmallestSTTService` | `@pipedog/smallest` | Ported |
+| [Gradium](/docs/services/stt/gradium) | `GradiumSTTService` | `@pipedog/gradium` | Ported |
+| [Meta](/docs/services/stt/meta) | `MetaSTTService` | `@pipedog/meta` | Ported |
 | [NVIDIA Riva](/docs/services/stt/nvidia) | `NvidiaSTTService`, `NvidiaSegmentedSTTService` | | Coming soon |
-| [Sarvam AI](/docs/services/stt/sarvam) | `SarvamSTTService`, `SarvamRealtimeSTTService` | | Coming soon |
 
 ## Text-to-speech
 
@@ -92,6 +96,9 @@ Turn the bot's text into audio frames. [All text-to-speech services](/docs/servi
 | [Mistral](/docs/services/tts/mistral) | `MistralTTSService` | `@pipedog/mistral` | Ported |
 | [Together AI](/docs/services/tts/together) | `TogetherTTSService` | `@pipedog/together` | Ported |
 | [xAI](/docs/services/tts/xai) | `XAITTSService`, `XAIHttpTTSService` | `@pipedog/xai` | Ported |
+| [Sarvam AI](/docs/services/tts/sarvam) | `SarvamTTSService`, `SarvamHttpTTSService` | `@pipedog/sarvam` | Ported |
+| [Smallest AI](/docs/services/tts/smallest) | `SmallestTTSService` | `@pipedog/smallest` | Ported |
+| [Gradium](/docs/services/tts/gradium) | `GradiumTTSService` | `@pipedog/gradium` | Ported |
 | [Inworld](/docs/services/tts/inworld) | `InworldTTSService`, `InworldHttpTTSService` | `@pipedog/inworld` | Ported |
 | [AWS Polly](/docs/services/tts/aws) | `AWSPollyTTSService` | `@pipedog/aws` | Ported |
 | [Azure Speech](/docs/services/tts/azure) | `AzureTTSService`, `AzureHttpTTSService` | `@pipedog/azure` | Ported |
@@ -102,7 +109,6 @@ Turn the bot's text into audio frames. [All text-to-speech services](/docs/servi
 | [Fish Audio](/docs/services/tts/fish) | `FishAudioTTSService` | `@pipedog/fish` | Ported |
 | [Hume](/docs/services/tts/hume) | `HumeTTSService` | `@pipedog/hume` | Ported |
 | [NVIDIA Riva](/docs/services/tts/nvidia) | `NvidiaTTSService` | | Coming soon |
-| [Sarvam AI](/docs/services/tts/sarvam) | `SarvamTTSService`, `SarvamHttpTTSService` | | Coming soon |
 
 ## Speech-to-speech
 

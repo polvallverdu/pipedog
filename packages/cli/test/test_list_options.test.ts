@@ -92,7 +92,7 @@ describe("TestListOptions", () => {
   test("NEW: no value is one that isn't ported", async () => {
     const data = JSON.parse((await cli(["init", "--list-options"])).stdout);
     expect(data.transports.web).not.toContain("daily");
-    expect(data.stt).not.toContain("gradium_stt");
+    expect(data.stt).not.toContain("fal_stt");
     expect(data.video).not.toContain("tavus_video");
   });
 });

@@ -25,7 +25,9 @@ import {
 } from "@pipedog/core/adapters/services/open_ai_adapter";
 import { NOT_GIVEN } from "@pipedog/core/utils/types";
 import { BaseOpenAILLMService } from "@pipedog/openai/base_llm";
+import { InceptionLLMService } from "../../inception/src/llm.ts";
 import { OpenRouterLLMService } from "../../openrouter/src/llm.ts";
+import { SarvamLLMService } from "../../sarvam/src/llm.ts";
 import { TogetherLLMService } from "../../together/src/llm.ts";
 import { GrokLLMService } from "../../xai/src/llm.ts";
 import { DeepSeekLLMService } from "../src/llm.ts";
@@ -50,7 +52,9 @@ function construct<T>(serviceClass: { prototype: any }, build: () => T): T {
 function buildParams(
   serviceClass:
     | typeof DeepSeekLLMService
+    | typeof InceptionLLMService
     | typeof OpenRouterLLMService
+    | typeof SarvamLLMService
     | typeof TogetherLLMService
     | typeof GrokLLMService,
   settings: unknown = null,
@@ -147,11 +151,39 @@ test("test_deepseek_thinking_keeps_user_extra_body", () => {
   expect(params.extra_body).toEqual({ thinking: { type: "enabled" }, user_field: 1 });
 });
 
-test.todo("test_inception_realtime_keeps_user_extra_body: needs pipecat.services.inception.llm");
-test.todo(
-  "test_sarvam_wiki_grounding_does_not_modify_settings_extra: needs pipecat.services.sarvam.llm",
-);
-test.todo("test_sarvam_user_extra_body_wins: needs pipecat.services.sarvam.llm");
+test("test_inception_realtime_keeps_user_extra_body", () => {
+  const params = buildParams(
+    InceptionLLMService,
+    new InceptionLLMService.Settings({ realtime: true, extra: { extra_body: { user_field: 1 } } }),
+  );
+  expect(params.extra_body).toEqual({ realtime: true, user_field: 1 });
+});
+
+test("test_sarvam_wiki_grounding_does_not_modify_settings_extra", () => {
+  const userExtraBody = { user_field: 1 };
+  const params = buildParams(
+    SarvamLLMService,
+    new SarvamLLMService.Settings({
+      model: "sarvam-105b",
+      wikiGrounding: true,
+      extra: { extra_body: userExtraBody },
+    }),
+  );
+  expect(params.extra_body).toEqual({ wiki_grounding: true, user_field: 1 });
+  expect(userExtraBody).toEqual({ user_field: 1 });
+});
+
+test("test_sarvam_user_extra_body_wins", () => {
+  const params = buildParams(
+    SarvamLLMService,
+    new SarvamLLMService.Settings({
+      model: "sarvam-105b",
+      wikiGrounding: true,
+      extra: { extra_body: { wiki_grounding: false } },
+    }),
+  );
+  expect(params.extra_body).toEqual({ wiki_grounding: false });
+});
 
 test("test_openrouter_provider_unset_by_default", () => {
   const params = buildParams(OpenRouterLLMService);

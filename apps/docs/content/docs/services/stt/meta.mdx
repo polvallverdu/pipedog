@@ -1,0 +1,82 @@
+---
+title: "Meta"
+description: "Realtime speech-to-text with MetaSTTService, over Meta's Muse Voice WebSocket API."
+---
+
+## Overview
+
+- **`MetaSTTService`**: streams audio over a WebSocket to Meta's realtime transcription endpoint. Cumulative partials become `InterimTranscriptionFrame`s; the post-processed text of each segment becomes a `TranscriptionFrame`.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/meta">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/meta/src">
+    `packages/meta/src/stt.ts`.
+  </Card>
+  <Card title="Meta docs" href="https://dev.meta.ai/docs/api-reference/voice/realtime">
+    The realtime voice API reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/meta
+```
+
+```ts
+import { MetaSTTService } from "@pipedog/meta/stt";
+```
+
+## Prerequisites
+
+- A Meta Model API key from [Meta's developer site](https://dev.meta.ai/).
+- Pass the key as `apiKey`. The examples read it from `META_API_KEY`.
+
+## MetaSTTService
+
+Connects to `wss://api.meta.ai/v1/asr/realtime`. The key travels in the handshake message as a Bearer token, not in an HTTP header, and the session's configuration is fixed once the server accepts it, so a settings change reconnects.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/meta/src/stt.ts" name="MetaSTTServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new MetaSTTService.Settings({...})`
+(`MetaSTTSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"muse-voice-transcribe-1.0"` | Transcription model. |
+| `language` | `Language \| null` | `Language.EN` | Language to bias recognition toward. Leave it and `languageBias` unset to auto-detect. |
+| `languageBias` | `Language[] \| null` | `null` | Languages to bias toward, for speech that switches between them. Replaces `language` when set. |
+| `mode` | `string` | `"ENDPOINTING"` | `"ENDPOINTING"` (the model marks turn boundaries), `"PUSH_TO_TALK"` or `"DIARIZATION"`. |
+| `keywords` | `string[] \| null` | `null` | Terms to bias recognition toward. Biasing doesn't guarantee a spelling. |
+| `emitAudioProgress` | `boolean` | `false` | Have the server report progress for every processed audio chunk. |
+| `zdrOverride` | `boolean \| null` | `null` | `true` forces metadata-only logging; `false` allows content retention; `null` uses the account's setting. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-meta.ts#usage</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The WebSocket connected. |
+| `on_disconnected` | The WebSocket closed. |
+
+### Notes
+
+- Audio is sent at 24000 Hz, or 16000 Hz for any other pipeline rate (resampled), the only two rates the API accepts.
+- The server's turn boundaries only segment transcripts. The VAD and turn strategies still decide when the user's turn ends.
+- Sessions are capped at 60 minutes. The server then closes the socket, and the service reconnects into a fresh one.
+
+<RuntimeMatrix pkg="@pipedog/meta" />
+
+## Runtime notes
+
+- The WebSocket goes through the core `websocketConnect`. It works on Bun, Node, Deno and Cloudflare Workers.
+- Tested against local WebSocket servers, as upstream's tests do, not against Meta itself.

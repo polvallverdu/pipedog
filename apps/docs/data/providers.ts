@@ -125,6 +125,8 @@ export interface CompatibleLlmPage {
   usage?: { region: string; intro: string }[];
   /** Provider-specific notes (Markdown bullets, without the leading dash). */
   notes: string[];
+  /** Show the package's runtime matrix on the page. */
+  runtimeMatrix?: boolean;
 }
 
 export const compatibleLlm: CompatibleLlmPage[] = [
@@ -598,6 +600,83 @@ export const compatibleLlm: CompatibleLlmPage[] = [
       "The same package has xAI's [speech-to-text](/docs/services/stt/xai) and [text-to-speech](/docs/services/tts/xai) services. The Grok realtime (speech-to-speech) service isn't ported yet.",
     ],
   },
+  {
+    slug: "inception",
+    name: "Inception",
+    pkg: "@pipedog/inception",
+    cls: "InceptionLLMService",
+    settings: "InceptionLLMSettings",
+    about:
+      "Inception serves Mercury-2, a diffusion-based reasoning language model, over an OpenAI-compatible API.",
+    baseUrl: "https://api.inceptionlabs.ai/v1",
+    model: "mercury-2",
+    models: [],
+    env: "INCEPTION_API_KEY",
+    account:
+      "An Inception account and an API key from [Inception](https://docs.inceptionlabs.ai/).",
+    links: [
+      {
+        title: "Inception docs",
+        href: "https://docs.inceptionlabs.ai/",
+        text: "Models and the API reference.",
+      },
+    ],
+    developerRole: false,
+    settingsRows: [
+      '| `reasoningEffort` | `"instant" \\| "low" \\| "medium" \\| "high" \\| null` | `null` | Sent as `reasoning_effort` when set. When unset, Inception\'s server-side default applies. |',
+      "| `realtime` | `boolean \\| null` | `true` | Sent as `realtime` in the request body, to cut the time to the first diffusion block. |",
+    ],
+    usage: [
+      {
+        region: "reasoning",
+        intro: "Trade reasoning for speed with `reasoningEffort`:",
+      },
+    ],
+    notes: [
+      "`realtime` and `reasoningEffort` go out in the request's `extra_body`. A field you put in `settings.extra` under `extra_body` wins over the service's own.",
+    ],
+    runtimeMatrix: true,
+  },
+  {
+    slug: "sarvam",
+    name: "Sarvam AI",
+    pkg: "@pipedog/sarvam",
+    cls: "SarvamLLMService",
+    settings: "SarvamLLMSettings",
+    about:
+      "Sarvam AI's models for Indian languages, over an OpenAI-compatible API (`sarvam-105b`, plus a few hosted open models).",
+    baseUrl: "https://api.sarvam.ai/v2",
+    model: "sarvam-105b",
+    models: ["sarvam-105b-conversations", "gemma4", "glm5.3", "deepseekv4.1-flash"],
+    env: "SARVAM_API_KEY",
+    account:
+      "A Sarvam account and an API key from the [Sarvam dashboard](https://dashboard.sarvam.ai/).",
+    links: [
+      {
+        title: "Sarvam docs",
+        href: "https://docs.sarvam.ai/",
+        text: "Models and the API reference.",
+      },
+    ],
+    developerRole: false,
+    settingsRows: [
+      "| `wikiGrounding` | `boolean \\| null` | `null` | Sent as `wiki_grounding` when set. Only `sarvam-105b` and `gemma4` support it. |",
+      '| `reasoningEffort` | `"low" \\| "medium" \\| "high" \\| null` | `null` | Sent as `reasoning_effort` when set, on the models that reason. |',
+    ],
+    usage: [
+      {
+        region: "grounding",
+        intro: "Ground answers in Wikipedia and set the reasoning effort:",
+      },
+    ],
+    notes: [
+      "Only `deepseekv4.1-flash`, `gemma4`, `glm5.3`, `sarvam-105b` and `sarvam-105b-conversations` are accepted as the model. Any other raises when the service is constructed.",
+      "When you don't pass `baseUrl`, it is chosen from the model: `/v1` for `sarvam-105b-conversations` and `/v2` for the rest.",
+      "A context that a model can't serve (an image for a model without vision, say) fails with a non-fatal `ErrorFrame`, not an exception, so an `LLMSwitcher` can fall back to another service.",
+      "The same package has Sarvam's [speech-to-text](/docs/services/stt/sarvam) and [text-to-speech](/docs/services/tts/sarvam) services.",
+    ],
+    runtimeMatrix: true,
+  },
 ];
 
 /** Ported pages (hand-written, except the OpenAI-compatible LLMs above), in sidebar order. */
@@ -761,6 +840,25 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["TogetherSTTService"],
     },
     { slug: "xai", name: "xAI", pkg: "@pipedog/xai", classes: ["XAISTTService"] },
+    {
+      slug: "sarvam",
+      name: "Sarvam AI",
+      pkg: "@pipedog/sarvam",
+      classes: ["SarvamSTTService", "SarvamRealtimeSTTService"],
+    },
+    {
+      slug: "smallest",
+      name: "Smallest AI",
+      pkg: "@pipedog/smallest",
+      classes: ["SmallestSTTService"],
+    },
+    {
+      slug: "gradium",
+      name: "Gradium",
+      pkg: "@pipedog/gradium",
+      classes: ["GradiumSTTService"],
+    },
+    { slug: "meta", name: "Meta", pkg: "@pipedog/meta", classes: ["MetaSTTService"] },
   ],
   tts: [
     { slug: "openai", name: "OpenAI", pkg: "@pipedog/openai", classes: ["OpenAITTSService"] },
@@ -813,6 +911,24 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "xAI",
       pkg: "@pipedog/xai",
       classes: ["XAITTSService", "XAIHttpTTSService"],
+    },
+    {
+      slug: "sarvam",
+      name: "Sarvam AI",
+      pkg: "@pipedog/sarvam",
+      classes: ["SarvamTTSService", "SarvamHttpTTSService"],
+    },
+    {
+      slug: "smallest",
+      name: "Smallest AI",
+      pkg: "@pipedog/smallest",
+      classes: ["SmallestTTSService"],
+    },
+    {
+      slug: "gradium",
+      name: "Gradium",
+      pkg: "@pipedog/gradium",
+      classes: ["GradiumTTSService"],
     },
     {
       slug: "inworld",
@@ -1075,14 +1191,6 @@ export const upcoming: UpcomingPage[] = [
     classes: ["NvidiaLLMService"],
     modules: ["services/nvidia/llm.py"],
   },
-  {
-    section: "llm",
-    slug: "sarvam",
-    name: "Sarvam AI",
-    about: "Sarvam AI's models for Indian languages.",
-    classes: ["SarvamLLMService"],
-    modules: ["services/sarvam/llm.py"],
-  },
   // STT
   {
     section: "stt",
@@ -1092,14 +1200,6 @@ export const upcoming: UpcomingPage[] = [
     classes: ["NvidiaSTTService", "NvidiaSegmentedSTTService"],
     modules: ["services/nvidia/stt.py"],
   },
-  {
-    section: "stt",
-    slug: "sarvam",
-    name: "Sarvam AI",
-    about: "Speech recognition for Indian languages from Sarvam AI.",
-    classes: ["SarvamSTTService", "SarvamRealtimeSTTService"],
-    modules: ["services/sarvam/stt.py"],
-  },
   // TTS
   {
     section: "tts",
@@ -1108,14 +1208,6 @@ export const upcoming: UpcomingPage[] = [
     about: "Speech synthesis from NVIDIA Riva.",
     classes: ["NvidiaTTSService"],
     modules: ["services/nvidia/tts.py"],
-  },
-  {
-    section: "tts",
-    slug: "sarvam",
-    name: "Sarvam AI",
-    about: "Speech synthesis for Indian languages from Sarvam AI.",
-    classes: ["SarvamTTSService", "SarvamHttpTTSService"],
-    modules: ["services/sarvam/tts.py"],
   },
   // Speech-to-speech
   // Image
@@ -1300,16 +1392,8 @@ export const longTail: LongTailProvider[] = [
     kinds: ["STT", "Image"],
     classes: ["FalSTTService", "FalImageGenService"],
   },
-  {
-    name: "Gradium",
-    folder: "gradium",
-    kinds: ["STT", "TTS"],
-    classes: ["GradiumSTTService", "GradiumTTSService"],
-  },
-  { name: "Inception", folder: "inception", kinds: ["LLM"], classes: ["InceptionLLMService"] },
   { name: "Keenable", folder: "keenable", kinds: ["Search"], classes: ["KeenableWebSearch"] },
   { name: "Mem0", folder: "mem0", kinds: ["Memory"], classes: ["Mem0MemoryService"] },
-  { name: "Meta", folder: "meta", kinds: ["STT"], classes: ["MetaSTTService"] },
   { name: "MiniMax", folder: "minimax", kinds: ["TTS"], classes: ["MiniMaxHttpTTSService"] },
   { name: "Moondream", folder: "moondream", kinds: ["Vision"], classes: ["MoondreamService"] },
   { name: "Neuphonic", folder: "neuphonic", kinds: ["TTS"], classes: ["NeuphonicTTSService"] },
@@ -1324,12 +1408,6 @@ export const longTail: LongTailProvider[] = [
     folder: "resembleai",
     kinds: ["TTS"],
     classes: ["ResembleAITTSService"],
-  },
-  {
-    name: "Smallest AI",
-    folder: "smallest",
-    kinds: ["STT", "TTS"],
-    classes: ["SmallestSTTService", "SmallestTTSService"],
   },
   { name: "Speechify", folder: "speechify", kinds: ["TTS"], classes: ["SpeechifyHttpTTSService"] },
   { name: "XTTS (deprecated upstream)", folder: "xtts", kinds: ["TTS"], classes: ["XTTSService"] },

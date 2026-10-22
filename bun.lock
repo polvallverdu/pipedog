@@ -49,13 +49,16 @@
         "@pipedog/funasr": "workspace:*",
         "@pipedog/gladia": "workspace:*",
         "@pipedog/google": "workspace:*",
+        "@pipedog/gradium": "workspace:*",
         "@pipedog/groq": "workspace:*",
         "@pipedog/heygen": "workspace:*",
         "@pipedog/hume": "workspace:*",
+        "@pipedog/inception": "workspace:*",
         "@pipedog/inworld": "workspace:*",
         "@pipedog/kokoro": "workspace:*",
         "@pipedog/langchain": "workspace:*",
         "@pipedog/mcp-client": "workspace:*",
+        "@pipedog/meta": "workspace:*",
         "@pipedog/mistral": "workspace:*",
         "@pipedog/moonshine": "workspace:*",
         "@pipedog/nebius": "workspace:*",
@@ -70,6 +73,7 @@
         "@pipedog/rime": "workspace:*",
         "@pipedog/runner": "workspace:*",
         "@pipedog/sambanova": "workspace:*",
+        "@pipedog/sarvam": "workspace:*",
         "@pipedog/sentry": "workspace:*",
         "@pipedog/serializer-exotel": "workspace:*",
         "@pipedog/serializer-genesys": "workspace:*",
@@ -79,6 +83,7 @@
         "@pipedog/serializer-telnyx": "workspace:*",
         "@pipedog/serializer-twilio": "workspace:*",
         "@pipedog/serializer-vonage": "workspace:*",
+        "@pipedog/smallest": "workspace:*",
         "@pipedog/soniox": "workspace:*",
         "@pipedog/speechmatics": "workspace:*",
         "@pipedog/together": "workspace:*",
@@ -536,6 +541,14 @@
         "@google-cloud/text-to-speech",
       ],
     },
+    "packages/gradium": {
+      "name": "@pipedog/gradium",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
     "packages/grok": {
       "name": "@pipedog/grok",
       "version": "0.6.1",
@@ -577,6 +590,15 @@
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/inception": {
+      "name": "@pipedog/inception",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
       },
     },
     "packages/inworld": {
@@ -638,6 +660,14 @@
       "devDependencies": {
         "@pipedog/google": "workspace:*",
         "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/meta": {
+      "name": "@pipedog/meta",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
       },
     },
     "packages/mistral": {
@@ -816,6 +846,15 @@
         "@pipedog/openai": "workspace:*",
       },
     },
+    "packages/sarvam": {
+      "name": "@pipedog/sarvam",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+      },
+    },
     "packages/sentencex-wasm": {
       "name": "@pipedog/sentencex-wasm",
       "version": "0.6.1",
@@ -891,6 +930,14 @@
     },
     "packages/serializer-vonage": {
       "name": "@pipedog/serializer-vonage",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/smallest": {
+      "name": "@pipedog/smallest",
       "version": "0.6.1",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
@@ -1591,6 +1638,8 @@
 
     "@pipedog/google": ["@pipedog/google@workspace:packages/google"],
 
+    "@pipedog/gradium": ["@pipedog/gradium@workspace:packages/gradium"],
+
     "@pipedog/grok": ["@pipedog/grok@workspace:packages/grok"],
 
     "@pipedog/groq": ["@pipedog/groq@workspace:packages/groq"],
@@ -1598,6 +1647,8 @@
     "@pipedog/heygen": ["@pipedog/heygen@workspace:packages/heygen"],
 
     "@pipedog/hume": ["@pipedog/hume@workspace:packages/hume"],
+
+    "@pipedog/inception": ["@pipedog/inception@workspace:packages/inception"],
 
     "@pipedog/inworld": ["@pipedog/inworld@workspace:packages/inworld"],
 
@@ -1608,6 +1659,8 @@
     "@pipedog/mcp": ["@pipedog/mcp@workspace:packages/mcp"],
 
     "@pipedog/mcp-client": ["@pipedog/mcp-client@workspace:packages/mcp-client"],
+
+    "@pipedog/meta": ["@pipedog/meta@workspace:packages/meta"],
 
     "@pipedog/mistral": ["@pipedog/mistral@workspace:packages/mistral"],
 
@@ -1641,6 +1694,8 @@
 
     "@pipedog/sambanova": ["@pipedog/sambanova@workspace:packages/sambanova"],
 
+    "@pipedog/sarvam": ["@pipedog/sarvam@workspace:packages/sarvam"],
+
     "@pipedog/sentencex-wasm": ["@pipedog/sentencex-wasm@workspace:packages/sentencex-wasm"],
 
     "@pipedog/sentry": ["@pipedog/sentry@workspace:packages/sentry"],
@@ -1660,6 +1715,8 @@
     "@pipedog/serializer-twilio": ["@pipedog/serializer-twilio@workspace:packages/serializer-twilio"],
 
     "@pipedog/serializer-vonage": ["@pipedog/serializer-vonage@workspace:packages/serializer-vonage"],
+
+    "@pipedog/smallest": ["@pipedog/smallest@workspace:packages/smallest"],
 
     "@pipedog/soniox": ["@pipedog/soniox@workspace:packages/soniox"],
 

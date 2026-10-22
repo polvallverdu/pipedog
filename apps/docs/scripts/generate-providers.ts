@@ -305,7 +305,7 @@ ${usage}Change settings mid-call with an \`LLMUpdateSettingsFrame\`. The next co
 ${notes.map((note) => `- ${note}`).join("\n")}
 
 ## Runtime notes
-
+${page.runtimeMatrix ? `\n<RuntimeMatrix pkg="${page.pkg}" />\n` : ""}
 - The client is the official \`openai\` JS SDK (through \`@pipedog/openai\`), which talks through
   \`fetch\`. It works on Bun, Node, Deno and Cloudflare Workers.
 - The deprecated \`model\` constructor option is not ported. Use \`settings\`.
