@@ -1,0 +1,80 @@
+---
+title: "MiniMax"
+description: "Text-to-speech with MiniMax's T2A API: MiniMaxHttpTTSService streams PCM audio over HTTP."
+---
+
+## Overview
+
+`MiniMaxHttpTTSService` posts each sentence to MiniMax's T2A (Text-to-Audio) endpoint with streaming on, and pushes the hex-encoded PCM audio of each streamed `data:` block as it arrives.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/minimax">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/minimax/src">
+    `packages/minimax/src/tts.ts`.
+  </Card>
+  <Card title="MiniMax docs" href="https://platform.minimax.io/docs/api-reference/speech-t2a-http">
+    The T2A HTTP API reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/minimax
+```
+
+```ts
+import { MiniMaxHttpTTSService } from "@pipedog/minimax/tts";
+```
+
+## Prerequisites
+
+- A MiniMax account, an API key and your group id.
+- Pass them as `apiKey` and `groupId`. The examples read them from `MINIMAX_API_KEY` and `MINIMAX_GROUP_ID`.
+
+## Configuration
+
+<auto-type-table cwd path="../../packages/minimax/src/tts.ts" name="MiniMaxHttpTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new MiniMaxHttpTTSService.Settings({...})`
+(`MiniMaxTTSSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"speech-2.8-turbo"` | Speech model. |
+| `voice` | `string` | `"Calm_Woman"` | Voice id. |
+| `language` | `Language \| null` | `null` | Not sent. Use `languageBoost`. |
+| `speed` | `number \| null` | `1.0` | Speed, 0.5 to 2.0. |
+| `volume` | `number \| null` | `1.0` | Volume, above 0 up to 10. |
+| `pitch` | `number \| null` | `0` | Pitch, -12 to 12. |
+| `emotion` | `string \| null` | `null` | Emotional tone: `happy`, `sad`, `angry`, `fearful`, `disgusted`, `surprised`, `calm` or `fluent`. |
+| `textNormalization` | `boolean \| null` | `null` | Text normalization (Chinese and English). |
+| `latexRead` | `boolean \| null` | `null` | Read LaTeX formulas. |
+| `languageBoost` | `string \| null` | `null` | A language name to boost, such as `English`. `languageToMinimaxLanguage()` maps a `Language`. |
+
+## Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-minimax.ts#usage</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-minimax.ts#update</include>
+
+## Notes
+
+- `baseUrl` picks the region: `https://api.minimax.io/v1/t2a_v2` (global, the default), `https://api.minimaxi.chat/v1/t2a_v2` (mainland China) or `https://api-uw.minimax.io/v1/t2a_v2` (western United States). The group id is added as `?GroupId=`.
+- The last streamed block repeats the whole utterance and carries `extra_info`. It is skipped, so no audio is played twice.
+- The audio is 16-bit PCM at the pipeline's sample rate, one channel.
+- `MiniMaxTTSSettings.fromMapping()` also accepts the older nested `voice_setting` dict (with `vol` for `volume`).
+
+## Runtime notes
+
+- It uses the global `fetch`, so it works on Bun, Node, Deno and Cloudflare Workers. Pass `fetch` to use another one (upstream takes an aiohttp session).
+- The deprecated `params` (`InputParams`), `model` and `voiceId` constructor options are not ported. Use `settings`.
+- Tested against a local server, not against MiniMax itself.
+
+<RuntimeMatrix pkg="@pipedog/minimax" />

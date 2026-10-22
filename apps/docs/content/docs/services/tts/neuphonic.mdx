@@ -1,0 +1,102 @@
+---
+title: "Neuphonic"
+description: "Text-to-speech with Neuphonic: NeuphonicTTSService over WebSocket and NeuphonicHttpTTSService over server-sent events."
+---
+
+## Overview
+
+- **`NeuphonicTTSService`**: keeps one WebSocket open, sends each sentence followed by `<STOP>`, and pushes the audio as it arrives. When the bot is interrupted while speaking, it reconnects (the service is an `InterruptibleTTSService`).
+- **`NeuphonicHttpTTSService`**: one HTTP request per sentence, read as server-sent events.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/neuphonic">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/neuphonic/src">
+    `packages/neuphonic/src/tts.ts`.
+  </Card>
+  <Card title="Neuphonic docs" href="https://docs.neuphonic.com">
+    The Neuphonic documentation.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/neuphonic
+```
+
+```ts
+import { NeuphonicHttpTTSService, NeuphonicTTSService } from "@pipedog/neuphonic/tts";
+```
+
+## Prerequisites
+
+- A Neuphonic account and an API key.
+- Pass the key as `apiKey`. The examples read it from `NEUPHONIC_API_KEY`.
+
+## NeuphonicTTSService
+
+Connects to `wss://api.neuphonic.com/speak/<language>`.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/neuphonic/src/tts.ts" name="NeuphonicTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new NeuphonicTTSService.Settings({...})`
+(`NeuphonicTTSSettings`). Any setting you leave out keeps the default below. A change reconnects the WebSocket, because the settings are query parameters of the connection.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `voice` | `string \| null` | `null` | Voice id. |
+| `language` | `Language \| null` | `Language.EN` | Language, part of the connection's path. |
+| `speed` | `number` | `1.0` | Speed multiplier. |
+| `temperature` | `number \| null` | `null` | Randomness, 0.0 to 1.0. `null` leaves Neuphonic's default. |
+| `ipaKey` | `string \| null` | `null` | Regional variant for `<phoneme:...>` tags: `es-castilian` or `pt-br`. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-neuphonic.ts#usage</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-neuphonic.ts#update</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The WebSocket connected. |
+| `on_disconnected` | The WebSocket closed. |
+| `on_connection_error` | The connection failed. |
+
+## NeuphonicHttpTTSService
+
+Posts each sentence to `https://api.neuphonic.com/sse/speak/<language>`.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/neuphonic/src/tts.ts" name="NeuphonicHttpTTSServiceOptions" />
+
+It takes the same settings as the WebSocket service.
+
+### Usage
+
+<include cwd>snippets/services/tts-neuphonic.ts#http</include>
+
+## Notes
+
+- The sample rate defaults to 22050 Hz and the encoding to `pcm_linear`.
+- The WebSocket sends a keepalive (`{"text": ""}`) every 10 seconds.
+- An SSE event that carries `errors` is reported as an error frame, and the stream keeps going.
+
+## Runtime notes
+
+- The WebSocket opens through the core `websocketConnect`, with the key in an `x-api-key` header (through `fetch` on Cloudflare Workers). The HTTP service uses the global `fetch`; pass `fetch` to use another one (upstream takes an aiohttp session). Both work on Bun, Node, Deno and Cloudflare Workers.
+- Upstream talks to Neuphonic's API directly rather than through the `pyneuphonic` SDK, and so does this port.
+- The deprecated `params` (`InputParams`), `voiceId` and `aggregateSentences` options are not ported.
+- Upstream has no Neuphonic tests. Ours run against local fake servers, not against Neuphonic itself.
+
+<RuntimeMatrix pkg="@pipedog/neuphonic" />

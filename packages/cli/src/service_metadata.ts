@@ -166,6 +166,9 @@ export const NOT_OFFERED: Record<string, string> = {
   InworldHttpTTSService: "the HTTP variant of InworldTTSService, which is offered",
   AzureHttpTTSService: "the HTTP variant of AzureTTSService, which is offered",
   AssemblyAISyncSTTService: "the sync HTTP variant of AssemblyAISTTService, which is offered",
+  NeuphonicHttpTTSService: "the HTTP variant of NeuphonicTTSService, which is offered",
+  AsyncAIHttpTTSService: "the HTTP variant of AsyncAITTSService, which is offered",
+  BlandHttpTTSService: "the HTTP variant of BlandTTSService, which is offered",
   HeyGenTransport: "a transport, not a video service (HeyGenVideoService is offered)",
   WhisperSTTServiceMLX:
     "upstream doesn't offer it either; in pipedog it runs the same ONNX engine as WhisperSTTService, which is offered",
@@ -322,8 +325,11 @@ export class ServiceRegistry {
 
   /** Text-to-speech services (cascade mode). */
   static readonly TTS_SERVICES: ServiceDefinition[] = [
+    svc("asyncai_tts", "Async", "@pipedog/asyncai", ["AsyncAITTSService"]),
     svc("aws_polly_tts", "AWS Polly", "@pipedog/aws", ["AWSPollyTTSService"]),
     svc("azure_tts", "Azure TTS", "@pipedog/azure", ["AzureTTSService"]),
+    svc("bland_tts", "Bland", "@pipedog/bland", ["BlandTTSService"]),
+    svc("camb_tts", "Camb.ai", "@pipedog/camb", ["CambTTSService"]),
     svc("cartesia_tts", "Cartesia", "@pipedog/cartesia", ["CartesiaTTSService"]),
     svc("deepgram_tts", "Deepgram", "@pipedog/deepgram", ["DeepgramTTSService"]),
     svc("deepgram_flux_tts", "Deepgram Flux", "@pipedog/deepgram", ["DeepgramFluxTTSService"]),
@@ -347,7 +353,9 @@ export class ServiceRegistry {
       },
       note: "Runs the model locally (downloaded on first use into ~/.cache/pipedog): Bun, Node and Deno, not Workers.",
     }),
+    svc("minimax_tts", "MiniMax", "@pipedog/minimax", ["MiniMaxHttpTTSService"]),
     svc("mistral_tts", "Mistral", "@pipedog/mistral", ["MistralTTSService"]),
+    svc("neuphonic_tts", "Neuphonic", "@pipedog/neuphonic", ["NeuphonicTTSService"]),
     svc("openai_tts", "OpenAI TTS", "@pipedog/openai", ["OpenAITTSService"]),
     svc("piper_tts", "Piper", "@pipedog/piper", ["PiperTTSService"], {
       extraDependencies: {
@@ -365,6 +373,8 @@ export class ServiceRegistry {
     svc("speechmatics_tts", "Speechmatics", "@pipedog/speechmatics", ["SpeechmaticsTTSService"]),
     svc("sarvam_tts", "Sarvam AI", "@pipedog/sarvam", ["SarvamTTSService"]),
     svc("smallest_tts", "Smallest AI", "@pipedog/smallest", ["SmallestTTSService"]),
+    svc("resembleai_tts", "Resemble AI", "@pipedog/resembleai", ["ResembleAITTSService"]),
+    svc("speechify_tts", "Speechify", "@pipedog/speechify", ["SpeechifyHttpTTSService"]),
     svc("together_tts", "Together AI", "@pipedog/together", ["TogetherTTSService"]),
     svc("xai_tts", "xAI", "@pipedog/xai", ["XAITTSService"]),
   ];

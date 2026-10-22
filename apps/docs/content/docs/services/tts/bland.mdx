@@ -1,0 +1,101 @@
+---
+title: "Bland"
+description: "Text-to-speech with Bland: BlandTTSService streams LLM tokens over a realtime WebSocket, and BlandHttpTTSService posts whole texts."
+---
+
+## Overview
+
+- **`BlandTTSService`**: one WebSocket for the whole conversation. LLM tokens go to Bland as they arrive (Bland chooses its own synthesis boundaries), audio comes back as binary frames, and a barge-in sends `cancel` without dropping the connection.
+- **`BlandHttpTTSService`**: one request per text to `/v2/tts`. Voice agents should use the WebSocket service.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/bland">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/bland/src">
+    `packages/bland/src/tts.ts`.
+  </Card>
+  <Card title="Bland docs" href="https://docs.bland.ai/api-v2/post/tts-ws">
+    The realtime WebSocket reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/bland
+```
+
+```ts
+import { BlandHttpTTSService, BlandTTSService } from "@pipedog/bland/tts";
+```
+
+## Prerequisites
+
+- A Bland account and an API key.
+- Pass the key as `apiKey`. The examples read it from `BLAND_API_KEY`. An empty key throws.
+
+## BlandTTSService
+
+Connects to `wss://api.bland.ai/v2/tts/ws` and waits for the session's `ready` message, so a session Bland refuses fails at connect, not on the first turn.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/bland/src/tts.ts" name="BlandTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new BlandTTSService.Settings({...})`
+(`BlandTTSSettings`). Any setting you leave out keeps the default below. A change to `voice`, `expressiveness`, `stability` or `autoFormatting` opens a new session, because the session's `init` message fixes them.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `voice` | `string` | `"29158307-9893-4149-8a75-bc9ce313d64e"` | Voice UUID. The voice sets the model. |
+| `expressiveness` | `number \| null` | `null` | 0.0 to 1.0. Higher values vary the intonation more. Calibrated for `BTTS_V3`. |
+| `stability` | `number \| null` | `null` | 0.0 to 1.0. Higher values keep delivery more consistent. |
+| `autoFormatting` | `boolean \| null` | `null` | Rewrite numbers into the form the voice reads best, such as phone numbers digit by digit. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-bland.ts#usage</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-bland.ts#update</include>
+
+### Event handlers
+
+| Event | Description |
+|---|---|
+| `on_connected` | The session is ready. |
+| `on_disconnected` | The WebSocket closed. |
+| `on_connection_error` | The connection failed. |
+
+## BlandHttpTTSService
+
+Posts to `https://api.bland.ai/v2/tts` and streams the raw PCM response into frames.
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/bland/src/tts.ts" name="BlandHttpTTSServiceOptions" />
+
+It takes the same settings as the WebSocket service.
+
+### Usage
+
+<include cwd>snippets/services/tts-bland.ts#http</include>
+
+## Notes
+
+- `textAggregationMode` defaults to `TextAggregationMode.TOKEN` for the WebSocket service. Pass `TextAggregationMode.SENTENCE` to send whole sentences, with a trailing space added.
+- Bland renders 8000, 16000, 24000, 44100 and 48000 Hz. For another pipeline rate the service asks for 48000 Hz, tags its audio frames with that rate and logs a warning, and the output transport resamples.
+- Bland ends a session after 60 seconds without a client message. The service opens a new one without reporting an error, and a turn that was half sent continues on the new session as a new turn.
+- At shutdown the service sends `close` and waits up to five seconds for `done`, so Bland settles the usage.
+- A turn that Bland refuses or fails is reported once as an error frame, and its audio context is closed.
+
+## Runtime notes
+
+- The WebSocket opens through the core `websocketConnect`, with the key in an `Authorization` header (through `fetch` on Cloudflare Workers). The HTTP service uses the global `fetch`; pass `fetch` to use another one (upstream takes an optional aiohttp session, and creates and closes one itself when none is given). Both work on Bun, Node, Deno and Cloudflare Workers.
+- Tested against local servers that follow Bland's documented message flow, not against Bland itself. Bland's HTTP reference doesn't list `auto_formatting`; the service sends it, as upstream does.
+
+<RuntimeMatrix pkg="@pipedog/bland" />

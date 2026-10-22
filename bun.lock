@@ -29,11 +29,14 @@
         "@opentelemetry/api": "1.9.1",
         "@pipedog/anthropic": "workspace:*",
         "@pipedog/assemblyai": "workspace:*",
+        "@pipedog/asyncai": "workspace:*",
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/audio-silero": "workspace:*",
         "@pipedog/aws": "workspace:*",
         "@pipedog/azure": "workspace:*",
         "@pipedog/baseten": "workspace:*",
+        "@pipedog/bland": "workspace:*",
+        "@pipedog/camb": "workspace:*",
         "@pipedog/cartesia": "workspace:*",
         "@pipedog/cerebras": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -59,9 +62,11 @@
         "@pipedog/langchain": "workspace:*",
         "@pipedog/mcp-client": "workspace:*",
         "@pipedog/meta": "workspace:*",
+        "@pipedog/minimax": "workspace:*",
         "@pipedog/mistral": "workspace:*",
         "@pipedog/moonshine": "workspace:*",
         "@pipedog/nebius": "workspace:*",
+        "@pipedog/neuphonic": "workspace:*",
         "@pipedog/novita": "workspace:*",
         "@pipedog/ollama": "workspace:*",
         "@pipedog/openai": "workspace:*",
@@ -70,6 +75,7 @@
         "@pipedog/piper": "workspace:*",
         "@pipedog/pocket-tts": "workspace:*",
         "@pipedog/qwen": "workspace:*",
+        "@pipedog/resembleai": "workspace:*",
         "@pipedog/rime": "workspace:*",
         "@pipedog/runner": "workspace:*",
         "@pipedog/sambanova": "workspace:*",
@@ -85,6 +91,7 @@
         "@pipedog/serializer-vonage": "workspace:*",
         "@pipedog/smallest": "workspace:*",
         "@pipedog/soniox": "workspace:*",
+        "@pipedog/speechify": "workspace:*",
         "@pipedog/speechmatics": "workspace:*",
         "@pipedog/together": "workspace:*",
         "@pipedog/tracing": "workspace:*",
@@ -240,6 +247,14 @@
         "@pipedog/core": "workspace:*",
       },
     },
+    "packages/asyncai": {
+      "name": "@pipedog/asyncai",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
     "packages/asyncio": {
       "name": "@pipedog/asyncio",
       "version": "0.6.1",
@@ -318,6 +333,22 @@
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/bland": {
+      "name": "@pipedog/bland",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/camb": {
+      "name": "@pipedog/camb",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
       },
     },
     "packages/cartesia": {
@@ -670,6 +701,14 @@
         "@pipedog/core": "workspace:*",
       },
     },
+    "packages/minimax": {
+      "name": "@pipedog/minimax",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
     "packages/mistral": {
       "name": "@pipedog/mistral",
       "version": "0.6.1",
@@ -696,6 +735,14 @@
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/neuphonic": {
+      "name": "@pipedog/neuphonic",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
       },
     },
     "packages/novita": {
@@ -795,6 +842,14 @@
     "packages/resampler-wasm": {
       "name": "@pipedog/resampler-wasm",
       "version": "0.6.1",
+    },
+    "packages/resembleai": {
+      "name": "@pipedog/resembleai",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
     },
     "packages/rime": {
       "name": "@pipedog/rime",
@@ -946,6 +1001,14 @@
     },
     "packages/soniox": {
       "name": "@pipedog/soniox",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/speechify": {
+      "name": "@pipedog/speechify",
       "version": "0.6.1",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
@@ -1574,6 +1637,8 @@
 
     "@pipedog/assemblyai": ["@pipedog/assemblyai@workspace:packages/assemblyai"],
 
+    "@pipedog/asyncai": ["@pipedog/asyncai@workspace:packages/asyncai"],
+
     "@pipedog/asyncio": ["@pipedog/asyncio@workspace:packages/asyncio"],
 
     "@pipedog/audio-rnnoise-filter": ["@pipedog/audio-rnnoise-filter@workspace:packages/audio-rnnoise-filter"],
@@ -1589,6 +1654,10 @@
     "@pipedog/azure": ["@pipedog/azure@workspace:packages/azure"],
 
     "@pipedog/baseten": ["@pipedog/baseten@workspace:packages/baseten"],
+
+    "@pipedog/bland": ["@pipedog/bland@workspace:packages/bland"],
+
+    "@pipedog/camb": ["@pipedog/camb@workspace:packages/camb"],
 
     "@pipedog/cartesia": ["@pipedog/cartesia@workspace:packages/cartesia"],
 
@@ -1662,11 +1731,15 @@
 
     "@pipedog/meta": ["@pipedog/meta@workspace:packages/meta"],
 
+    "@pipedog/minimax": ["@pipedog/minimax@workspace:packages/minimax"],
+
     "@pipedog/mistral": ["@pipedog/mistral@workspace:packages/mistral"],
 
     "@pipedog/moonshine": ["@pipedog/moonshine@workspace:packages/moonshine"],
 
     "@pipedog/nebius": ["@pipedog/nebius@workspace:packages/nebius"],
+
+    "@pipedog/neuphonic": ["@pipedog/neuphonic@workspace:packages/neuphonic"],
 
     "@pipedog/novita": ["@pipedog/novita@workspace:packages/novita"],
 
@@ -1687,6 +1760,8 @@
     "@pipedog/qwen": ["@pipedog/qwen@workspace:packages/qwen"],
 
     "@pipedog/resampler-wasm": ["@pipedog/resampler-wasm@workspace:packages/resampler-wasm"],
+
+    "@pipedog/resembleai": ["@pipedog/resembleai@workspace:packages/resembleai"],
 
     "@pipedog/rime": ["@pipedog/rime@workspace:packages/rime"],
 
@@ -1719,6 +1794,8 @@
     "@pipedog/smallest": ["@pipedog/smallest@workspace:packages/smallest"],
 
     "@pipedog/soniox": ["@pipedog/soniox@workspace:packages/soniox"],
+
+    "@pipedog/speechify": ["@pipedog/speechify@workspace:packages/speechify"],
 
     "@pipedog/speechmatics": ["@pipedog/speechmatics@workspace:packages/speechmatics"],
 

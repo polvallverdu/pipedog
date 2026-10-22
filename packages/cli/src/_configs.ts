@@ -334,6 +334,17 @@ ${AWS_CREDENTIALS}
     voice: process.env.AZURE_SPEECH_VOICE ?? "en-US-AvaMultilingualNeural",
   }),
 })`,
+  asyncai_tts: keyed(
+    "AsyncAITTSService",
+    "ASYNC_API_KEY",
+    `    voice: process.env.ASYNC_VOICE_ID ?? "",`,
+  ),
+  bland_tts: keyed(
+    "BlandTTSService",
+    "BLAND_API_KEY",
+    `    voice: process.env.BLAND_VOICE_ID ?? "29158307-9893-4149-8a75-bc9ce313d64e",`,
+  ),
+  camb_tts: keyed("CambTTSService", "CAMB_API_KEY"),
   cartesia_tts: keyed(
     "CartesiaTTSService",
     "CARTESIA_API_KEY",
@@ -384,10 +395,19 @@ ${AWS_CREDENTIALS}
     voice: process.env.KOKORO_VOICE_ID ?? "af_heart",
   }),
 })`,
+  minimax_tts: `new MiniMaxHttpTTSService({
+  apiKey: process.env.MINIMAX_API_KEY ?? "",
+  groupId: process.env.MINIMAX_GROUP_ID ?? "",
+})`,
   mistral_tts: keyed(
     "MistralTTSService",
     "MISTRAL_API_KEY",
     `    voice: process.env.MISTRAL_VOICE_ID ?? "",`,
+  ),
+  neuphonic_tts: keyed(
+    "NeuphonicTTSService",
+    "NEUPHONIC_API_KEY",
+    `    voice: process.env.NEUPHONIC_VOICE_ID ?? "",`,
   ),
   openai_tts: keyed(
     "OpenAITTSService",
@@ -411,6 +431,12 @@ ${AWS_CREDENTIALS}
   ),
   soniox_tts: keyed("SonioxTTSService", "SONIOX_API_KEY"),
   speechmatics_tts: keyed("SpeechmaticsTTSService", "SPEECHMATICS_API_KEY"),
+  resembleai_tts: keyed(
+    "ResembleAITTSService",
+    "RESEMBLE_API_KEY",
+    `    voice: process.env.RESEMBLE_VOICE_UUID ?? "",`,
+  ),
+  speechify_tts: keyed("SpeechifyHttpTTSService", "SPEECHIFY_API_KEY"),
   together_tts: keyed(
     "TogetherTTSService",
     "TOGETHER_API_KEY",

@@ -1,0 +1,75 @@
+---
+title: "Speechify"
+description: "Text-to-speech with Speechify: SpeechifyHttpTTSService streams audio and word timestamps over Server-Sent Events."
+---
+
+## Overview
+
+`SpeechifyHttpTTSService` posts each sentence to Speechify's `/v1/audio/stream/with-timestamps` endpoint and reads the Server-Sent Events it answers with: PCM audio chunks and word-level speech marks. The marks become word timestamps, so the bot's `TTSTextFrame`s follow the audio.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/speechify">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/speechify/src">
+    `packages/speechify/src/tts.ts`.
+  </Card>
+  <Card title="Speechify docs" href="https://docs.speechify.ai/build/api-reference/v1/audio/stream/with-timestamps.md">
+    The stream-with-timestamps API reference.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/speechify
+```
+
+```ts
+import { SpeechifyHttpTTSService } from "@pipedog/speechify/tts";
+```
+
+## Prerequisites
+
+- A Speechify API account and an API key.
+- Pass the key as `apiKey`. The examples read it from `SPEECHIFY_API_KEY`.
+
+## Configuration
+
+<auto-type-table cwd path="../../packages/speechify/src/tts.ts" name="SpeechifyHttpTTSServiceOptions" />
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new SpeechifyHttpTTSService.Settings({...})`
+(`SpeechifyTTSSettings`). Any setting you leave out keeps the default below.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `model` | `string` | `"simba-3.2"` | Speech model: `simba-3.2` (English) or `simba-3.0` (multilingual). |
+| `voice` | `string` | `"geffen_32"` | Voice id. |
+| `language` | `Language \| null` | `null` | Language, sent as a tag such as `en-US`. |
+| `loudnessNormalization` | `boolean \| null` | `null` | Normalize the audio's loudness. Adds latency. |
+| `textNormalization` | `boolean \| null` | `null` | Spell out numbers, dates and similar tokens. Adds latency. |
+| `safetyIdentifier` | `string \| null` | `null` | A stable, opaque id for the end user (1 to 64 characters), so Speechify can limit one user instead of the workspace. Never an email address. |
+
+## Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-speechify.ts#usage</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-speechify.ts#update</include>
+
+## Notes
+
+- The sample rate must be one of Speechify's PCM rates (8000, 16000, 22050, 24000, 44100 or 48000). For any other pipeline rate the service asks for 24000 Hz, tags its audio frames with that rate, and the output transport resamples.
+- Requests pin Speechify's API version (`Speechify-Version: 2026-09-30`), and send `Speechify-Caller: pipecat` with the pipedog version.
+- Speechify marks the pieces of a hyphenated word separately. The service joins marks that touch in the text, so `text-to-speech` is one word timestamp.
+- A mid-stream `speech.error` event is reported as an error frame. A non-200 response is too.
+
+## Runtime notes
+
+- It uses the global `fetch` and reads the response as a stream, so it works on Bun, Node, Deno and Cloudflare Workers. Pass `fetch` to use another one (upstream takes an aiohttp session).
+- Tested against a local server that replays Speechify's event format, as upstream's tests do for the parsing, not against Speechify itself.
+
+<RuntimeMatrix pkg="@pipedog/speechify" />

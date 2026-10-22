@@ -118,8 +118,11 @@ export const IMPORTS: Record<string, readonly string[]> = {
   ...compatibleLlmImports,
 
   // TTS services
+  asyncai_tts: ['import { AsyncAITTSService } from "@pipedog/asyncai/tts";'],
   aws_polly_tts: ['import { AWSPollyTTSService } from "@pipedog/aws/tts";'],
   azure_tts: ['import { AzureTTSService } from "@pipedog/azure/tts";'],
+  bland_tts: ['import { BlandTTSService } from "@pipedog/bland/tts";'],
+  camb_tts: ['import { CambTTSService } from "@pipedog/camb/tts";'],
   cartesia_tts: ['import { CartesiaTTSService } from "@pipedog/cartesia/tts";'],
   deepgram_tts: ['import { DeepgramTTSService } from "@pipedog/deepgram/tts";'],
   deepgram_flux_tts: ['import { DeepgramFluxTTSService } from "@pipedog/deepgram/flux/tts";'],
@@ -135,7 +138,9 @@ export const IMPORTS: Record<string, readonly string[]> = {
   hume_tts: ['import { HumeTTSService } from "@pipedog/hume/tts";'],
   inworld_tts: ['import { InworldTTSService } from "@pipedog/inworld/tts";'],
   kokoro_tts: ['import { KokoroTTSService } from "@pipedog/kokoro/tts";'],
+  minimax_tts: ['import { MiniMaxHttpTTSService } from "@pipedog/minimax/tts";'],
   mistral_tts: ['import { MistralTTSService } from "@pipedog/mistral/tts";'],
+  neuphonic_tts: ['import { NeuphonicTTSService } from "@pipedog/neuphonic/tts";'],
   openai_tts: ['import { OpenAITTSService } from "@pipedog/openai/tts";'],
   piper_tts: ['import { PiperTTSService } from "@pipedog/piper/tts";'],
   pockettts_tts: ['import { PocketTTSService } from "@pipedog/pocket-tts/tts";'],
@@ -144,6 +149,8 @@ export const IMPORTS: Record<string, readonly string[]> = {
   speechmatics_tts: ['import { SpeechmaticsTTSService } from "@pipedog/speechmatics/tts";'],
   sarvam_tts: ['import { SarvamTTSService } from "@pipedog/sarvam/tts";'],
   smallest_tts: ['import { SmallestTTSService } from "@pipedog/smallest/tts";'],
+  resembleai_tts: ['import { ResembleAITTSService } from "@pipedog/resembleai/tts";'],
+  speechify_tts: ['import { SpeechifyHttpTTSService } from "@pipedog/speechify/tts";'],
   together_tts: ['import { TogetherTTSService } from "@pipedog/together/tts";'],
   xai_tts: ['import { XAITTSService } from "@pipedog/xai/tts";'],
 
