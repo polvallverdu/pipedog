@@ -1,0 +1,121 @@
+---
+title: Effect
+description: Use pipedog from Effect with @pipedog/effect. Run a pipeline as a scoped resource, stream its frames, feed it from a Stream, and write frame processors as Effect functions with services from Layers.
+---
+
+[Effect](https://effect.website) apps can drive pipedog with `@pipedog/effect`, a small adapter
+that maps pipedog's asyncio-style tasks onto Effect's fibers and scopes. Pipelines, processors and
+services stay the same; the adapter covers starting and stopping a pipeline, passing frames in and
+out, and writing processors as Effects. It is pipedog-only: Pipecat has no counterpart.
+
+## Installation
+
+```bash
+bun add @pipedog/effect effect
+```
+
+`effect` is a peer dependency (version 4).
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/effect" />
+
+The smoke test on every runtime runs a pipeline with an Effect processor from end to end, interrupts
+a running pipeline and checks that no task is left, and cancels a pipeline while a processor's
+Effect is running and checks that the Effect is interrupted.
+
+## The API
+
+| Export | What it does |
+|---|---|
+| `startPipeline(worker, options?)` | Runs a `PipelineWorker` for the lifetime of the current `Scope` and returns a `PipelineHandle`. |
+| `runPipeline(worker, options?)` | `startPipeline` and `join` in a scope of their own. |
+| `makeProcessor(fn, options?)` | Builds a `FrameProcessor` from `(frame, direction, ctx) => Effect`. Its services come from the context. |
+| `PipelineError` | The tagged error a failed run fails with. |
+
+A `PipelineHandle` has:
+
+| Member | |
+|---|---|
+| `join` | Waits for the pipeline to end. See [How a run ends](#how-a-run-ends). |
+| `queueFrame(frame, direction?)` | `worker.queueFrame` as an Effect. |
+| `queueFrames(framesOrStream, direction?)` | Queues an iterable, or every frame of a `Stream` until it ends. |
+| `frames(...types)` | A scoped subscription to the frames of those classes that reach the end of the pipeline, as a `Stream` that ends with the pipeline. |
+| `stopWhenDone` | Queues an `EndFrame`. |
+| `cancel(reason?)` | Cancels the pipeline. |
+| `worker` | The worker. |
+
+`frames()` subscribes when it runs, not when the stream is read, so subscribe before queueing the
+frames you want to see. Frames are buffered without bound until the stream reads them.
+
+### Options
+
+<auto-type-table cwd path="../../packages/effect/src/pipeline.ts" name="PipelineOptions" />
+
+## A voice agent with Effect
+
+The example below is the [voice bot](/docs/voice-bot) with one addition, written in Effect: every
+final transcription goes through a moderation service before it reaches the LLM.
+
+The service is an ordinary Effect service, with a live Layer that calls OpenAI's moderation endpoint:
+
+<include cwd>snippets/effect.ts#service</include>
+
+The processor is an Effect function. It sees every frame, as `processFrame` does, and passes on what
+should go on with `ctx.push`. `makeProcessor` returns an Effect that needs `Moderation`, so the
+processor gets whichever implementation the program is given:
+
+<include cwd>snippets/effect.ts#processor</include>
+
+A session builds the pipeline and runs it for as long as its scope is open:
+
+<include cwd>snippets/effect.ts#session</include>
+
+Your server forks one fiber per connection, with the live services:
+
+<include cwd>snippets/effect.ts#run</include>
+
+In a test, swap the Layer and look at what reaches the end of the pipeline:
+
+<include cwd>snippets/effect.ts#test</include>
+
+## How a run ends
+
+| The pipeline… | `join` |
+|---|---|
+| ends with an `EndFrame` or `StopFrame` | succeeds |
+| is cancelled: `cancel()`, a `CancelWorkerFrame`, a processor that cancels it, or the scope closing | is interrupted |
+| is cancelled after an error from a processor that can no longer work (`ProcessorUnusablePolicy.CANCEL`) | fails with `PipelineError`, its `frame` set |
+| gets any `ErrorFrame`, with `failOnError: true` | is cancelled, and `join` fails with `PipelineError` |
+| throws from the worker | fails with `PipelineError`, its `cause` set |
+
+Without `failOnError`, `ErrorFrame`s are handled as usual: logged, passed to `on_pipeline_error`, and
+the pipeline goes on.
+
+## Cancellation
+
+Effect interrupts fibers; pipedog cancels tasks, as asyncio does (see
+[Interruptions and cancellation](/docs/concepts/interruptions-and-cancellation)). The adapter maps one
+onto the other in both directions, and never lets either side outlive the other:
+
+- **Interrupting the Effect cancels the pipeline.** `startPipeline` is an `acquireRelease`: closing
+  the scope (because the fiber was interrupted, timed out, or simply finished) cancels a pipeline
+  that is still running and waits until the runner has finished, its processors cleaned up and its
+  tasks done. Release is uninterruptible, as in any Effect finalizer.
+- **Cancelling the pipeline interrupts the Effect.** `join` is interrupted when the pipeline is
+  cancelled from its side. A processor's Effect is interrupted when its task is cancelled, which
+  happens when the pipeline is cancelled and when an `InterruptionFrame` (a user barging in)
+  cancels the processing of an interruptible frame. The processor waits for the Effect's finalizers before it
+  lets the cancellation through.
+- **Every call into the pipeline runs in a task of its own.** `queueFrame`, `stopWhenDone`,
+  `cancel` and the rest start an asyncio task and wait for it: interrupting the Effect cancels that
+  task and waits for it; the task ending cancelled interrupts the Effect.
+- **Frames a processor's Effect pushes are pushed by the processor's own task**, in order, as a
+  Python processor pushes from `process_frame`.
+
+`startPipeline` turns the runner's signal handling off: an Effect app handles `SIGINT` with its
+runtime (`NodeRuntime.runMain` and friends interrupt the main fiber), and that interruption cancels
+the pipeline.
+
+A failure or defect of a processor's Effect becomes `pushError` on the processor: an `ErrorFrame`
+upstream, with the error as its `exception`. An Effect that interrupts itself drops the frame.

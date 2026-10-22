@@ -47,6 +47,7 @@
         "@pipedog/crusoe": "workspace:*",
         "@pipedog/deepgram": "workspace:*",
         "@pipedog/deepseek": "workspace:*",
+        "@pipedog/effect": "workspace:*",
         "@pipedog/elevenlabs": "workspace:*",
         "@pipedog/evals": "workspace:*",
         "@pipedog/extensions": "workspace:*",
@@ -110,6 +111,7 @@
         "@pipedog/xai": "workspace:*",
         "@sentry/core": "11.5.0",
         "cn": "0.4.0",
+        "effect": "4.0.2",
         "fumadocs-core": "16.16.2",
         "fumadocs-mdx": "15.4.6",
         "fumadocs-twoslash": "4.0.1",
@@ -476,6 +478,20 @@
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/effect": {
+      "name": "@pipedog/effect",
+      "version": "0.8.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+      "devDependencies": {
+        "effect": "4.0.2",
+      },
+      "peerDependencies": {
+        "effect": "^4.0.2",
       },
     },
     "packages/elevenlabs": {
@@ -1725,6 +1741,8 @@
 
     "@pipedog/docs": ["@pipedog/docs@workspace:apps/docs"],
 
+    "@pipedog/effect": ["@pipedog/effect@workspace:packages/effect"],
+
     "@pipedog/elevenlabs": ["@pipedog/elevenlabs@workspace:packages/elevenlabs"],
 
     "@pipedog/espeak-ng": ["@pipedog/espeak-ng@workspace:packages/espeak-ng"],
@@ -2446,6 +2464,8 @@
     "ecdsa-sig-formatter": ["ecdsa-sig-formatter@1.0.11", "", { "dependencies": { "safe-buffer": "^5.0.1" } }, "sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ=="],
 
     "ee-first": ["ee-first@1.1.1", "", {}, "sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow=="],
+
+    "effect": ["effect@4.0.2", "", {}, "sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A=="],
 
     "electron-to-chromium": ["electron-to-chromium@1.5.463", "", {}, "sha512-nVWNU6ltFjopvOdD44J4zoBkgO0M+WZiFKKFV7EjebOH9z0KNphk6bCEjplXtJofL21ARIuuwWOCsFkBVklm6w=="],
 
