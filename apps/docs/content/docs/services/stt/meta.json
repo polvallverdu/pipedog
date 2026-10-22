@@ -2,6 +2,10 @@
   "title": "Speech-to-text",
   "pages": [
     "index",
+    "assemblyai",
+    "gladia",
+    "speechmatics",
+    "soniox",
     "deepgram",
     "openai",
     "google",
@@ -18,11 +22,7 @@
     "together",
     "xai",
     "---Coming soon---",
-    "assemblyai",
-    "gladia",
     "nvidia",
-    "sarvam",
-    "soniox",
-    "speechmatics"
+    "sarvam"
   ]
 }

@@ -28,6 +28,7 @@
       "dependencies": {
         "@opentelemetry/api": "1.9.1",
         "@pipedog/anthropic": "workspace:*",
+        "@pipedog/assemblyai": "workspace:*",
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/audio-silero": "workspace:*",
         "@pipedog/aws": "workspace:*",
@@ -46,6 +47,7 @@
         "@pipedog/fish": "workspace:*",
         "@pipedog/flows": "workspace:*",
         "@pipedog/funasr": "workspace:*",
+        "@pipedog/gladia": "workspace:*",
         "@pipedog/google": "workspace:*",
         "@pipedog/groq": "workspace:*",
         "@pipedog/heygen": "workspace:*",
@@ -77,6 +79,8 @@
         "@pipedog/serializer-telnyx": "workspace:*",
         "@pipedog/serializer-twilio": "workspace:*",
         "@pipedog/serializer-vonage": "workspace:*",
+        "@pipedog/soniox": "workspace:*",
+        "@pipedog/speechmatics": "workspace:*",
         "@pipedog/together": "workspace:*",
         "@pipedog/tracing": "workspace:*",
         "@pipedog/transport-heygen": "workspace:*",
@@ -219,6 +223,14 @@
       "version": "0.6.1",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.131.0",
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/assemblyai": {
+      "name": "@pipedog/assemblyai",
+      "version": "0.6.1",
+      "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
       },
@@ -491,6 +503,14 @@
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/onnx": "workspace:*",
+      },
+    },
+    "packages/gladia": {
+      "name": "@pipedog/gladia",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
       },
     },
     "packages/google": {
@@ -871,6 +891,22 @@
     },
     "packages/serializer-vonage": {
       "name": "@pipedog/serializer-vonage",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/soniox": {
+      "name": "@pipedog/soniox",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/speechmatics": {
+      "name": "@pipedog/speechmatics",
       "version": "0.6.1",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
@@ -1489,6 +1525,8 @@
 
     "@pipedog/anthropic": ["@pipedog/anthropic@workspace:packages/anthropic"],
 
+    "@pipedog/assemblyai": ["@pipedog/assemblyai@workspace:packages/assemblyai"],
+
     "@pipedog/asyncio": ["@pipedog/asyncio@workspace:packages/asyncio"],
 
     "@pipedog/audio-rnnoise-filter": ["@pipedog/audio-rnnoise-filter@workspace:packages/audio-rnnoise-filter"],
@@ -1548,6 +1586,8 @@
     "@pipedog/flows": ["@pipedog/flows@workspace:packages/flows"],
 
     "@pipedog/funasr": ["@pipedog/funasr@workspace:packages/funasr"],
+
+    "@pipedog/gladia": ["@pipedog/gladia@workspace:packages/gladia"],
 
     "@pipedog/google": ["@pipedog/google@workspace:packages/google"],
 
@@ -1620,6 +1660,10 @@
     "@pipedog/serializer-twilio": ["@pipedog/serializer-twilio@workspace:packages/serializer-twilio"],
 
     "@pipedog/serializer-vonage": ["@pipedog/serializer-vonage@workspace:packages/serializer-vonage"],
+
+    "@pipedog/soniox": ["@pipedog/soniox@workspace:packages/soniox"],
+
+    "@pipedog/speechmatics": ["@pipedog/speechmatics@workspace:packages/speechmatics"],
 
     "@pipedog/together": ["@pipedog/together@workspace:packages/together"],
 

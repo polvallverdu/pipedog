@@ -6759,9 +6759,9 @@
       "tests": [
         "test_assemblyai_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Pydantic models -> classes with modelValidate(wireJson) (snake_case wire JSON unchanged)."
     },
     {
       "module": "pipecat.services.assemblyai.stt",
@@ -6795,9 +6795,9 @@
         "test_assemblyai_stt.py",
         "test_assemblyai_sync_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Raw WebSocket (core websocketConnect) per AssemblyAI streaming docs https://www.assemblyai.com/docs/api-reference/streaming-api/streaming-api; sync service per sync-api docs (found via search; /v1/transcribe, /v1/warm from upstream). DIVERGENCE: deprecated AssemblyAIConnectionParams, language/connection_params args, min_end_of_turn_silence_when_confident not ported; aiohttp_session -> optional fetch; multipart built by hand; sync HTTP errors are Error with .status; _sendUpdateConfiguration takes a dict."
     },
     {
       "module": "pipecat.services.asyncai",
@@ -8563,9 +8563,9 @@
         "pydantic"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Pydantic -> option classes with modelDump() (snake_case, exclude_none). Deprecated GladiaInputParams dropped."
     },
     {
       "module": "pipecat.services.gladia.stt",
@@ -8598,9 +8598,9 @@
       "tests": [
         "test_gladia_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Wire format checked against https://docs.gladia.io/api-reference/v2/live/init and /chapters/live-stt/getting-started; ack/speech_start/speech_end/translation messages follow upstream only. DIVERGENCE: deprecated params/model args dropped; session init via injectable fetch; receive task identified by name _receive_task_handler in the connect-failure test."
     },
     {
       "module": "pipecat.services.google",
@@ -11771,9 +11771,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "classifyErrorCode treats any integral number as int."
     },
     {
       "module": "pipecat.services.soniox.stt",
@@ -11807,9 +11807,9 @@
         "test_soniox_stt.py",
         "test_stt_usage_metrics.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Wire format checked against soniox.com/docs/stt/api-reference/websocket-api, /stt/rt/manual-finalization, /stt/rt/connection-keepalive; <end> token from upstream. DIVERGENCE: deprecated SonioxInputParams, model/params args dropped; SonioxContextObject class with modelDump(); websocket null check dropped (websocketConnect throws)."
     },
     {
       "module": "pipecat.services.soniox.tts",
@@ -11837,9 +11837,9 @@
       "tests": [
         "test_soniox_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Checked against soniox.com/docs/api-reference/tts/websocket-api; keep_alive message from upstream (docs page 404). DIVERGENCE: tests build real instances instead of __new__."
     },
     {
       "module": "pipecat.services.speechify",
@@ -11935,9 +11935,9 @@
       "tests": [
         "test_speechmatics_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "SDKs speechmatics-agent-stt 0.3.0 and speechmatics-rt 1.2.1 (PyPI, MIT) read and replaced by src/agent_stt.ts (own client on websocketConnect); docs https://docs.speechmatics.com/api-ref/agent-stt-websocket.md. DIVERGENCE: deprecated InputParams/params/legacy kwargs/operating_point not ported; JWT auth, file transcribe, accumulator not ported; test seams _createClient/_sleep; invalid_language added as permanent error; on Bun/Node/Deno a refused handshake status is hidden, so 401/403 retries 3 times then fails permanent."
     },
     {
       "module": "pipecat.services.speechmatics.tts",
@@ -11965,9 +11965,9 @@
         "speechmatics"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "POST https://preview.tts.speechmatics.com/generate/<voice>?output_format=pcm_16000 per https://docs.speechmatics.com/text-to-speech/quickstart. aiohttp_session -> fetch option; deprecated voice_id/InputParams dropped."
     },
     {
       "module": "pipecat.services.stt_latency",
@@ -16710,8 +16710,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "111 pass, 1 skip (deprecated AssemblyAIConnectionParams)"
     },
     {
       "file": "tests/test_assemblyai_sync_stt.py",
@@ -16726,8 +16726,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "35 pass (Bun.serve fake)"
     },
     {
       "file": "tests/test_async_tool_messages.py",
@@ -18408,8 +18408,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "6 upstream + 3 wire-format tests pass"
     },
     {
       "file": "tests/test_google_finish_reason.py",
@@ -20563,8 +20563,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "36 pass"
     },
     {
       "file": "tests/test_soniox_tts.py",
@@ -20582,8 +20582,8 @@
         "pipecat.utils.string"
       ],
       "needsModules": 130,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "17 pass"
     },
     {
       "file": "tests/test_soundfile_mixer.py",
@@ -20679,8 +20679,8 @@
         "pipecat.turns.user_turn_strategies"
       ],
       "needsModules": 118,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "46 pass, 13 skip (deprecated behavior); plus agent_stt and tts tests"
     },
     {
       "file": "tests/test_ssrf.py",
@@ -20772,8 +20772,8 @@
         "pipecat.utils.tracing.service_decorators"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "8 pass"
     },
     {
       "file": "tests/test_sync_parallel_pipeline.py",
@@ -21669,7 +21669,7 @@
       ],
       "needsModules": 116,
       "status": "ported",
-      "notes": "5 pass, 0 fail, 0 skip, 8 todo"
+      "notes": "5 pass, 0 fail, 0 skip, 5 todo; assemblyai, gladia, soniox cases live in their packages"
     },
     {
       "file": "tests/test_websocket_stt_reconnect.py",

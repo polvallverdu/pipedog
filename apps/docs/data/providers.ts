@@ -663,6 +663,30 @@ export const ported: Record<Section, PortedPage[]> = {
   ],
   stt: [
     {
+      slug: "assemblyai",
+      name: "AssemblyAI",
+      pkg: "@pipedog/assemblyai",
+      classes: ["AssemblyAISTTService", "AssemblyAISyncSTTService"],
+    },
+    {
+      slug: "gladia",
+      name: "Gladia",
+      pkg: "@pipedog/gladia",
+      classes: ["GladiaSTTService"],
+    },
+    {
+      slug: "speechmatics",
+      name: "Speechmatics",
+      pkg: "@pipedog/speechmatics",
+      classes: ["SpeechmaticsSTTService"],
+    },
+    {
+      slug: "soniox",
+      name: "Soniox",
+      pkg: "@pipedog/soniox",
+      classes: ["SonioxSTTService"],
+    },
+    {
       slug: "deepgram",
       name: "Deepgram",
       pkg: "@pipedog/deepgram",
@@ -751,6 +775,18 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "Deepgram",
       pkg: "@pipedog/deepgram",
       classes: ["DeepgramTTSService", "DeepgramHttpTTSService", "DeepgramFluxTTSService"],
+    },
+    {
+      slug: "speechmatics",
+      name: "Speechmatics",
+      pkg: "@pipedog/speechmatics",
+      classes: ["SpeechmaticsTTSService"],
+    },
+    {
+      slug: "soniox",
+      name: "Soniox",
+      pkg: "@pipedog/soniox",
+      classes: ["SonioxTTSService"],
     },
     {
       slug: "cartesia",
@@ -1050,38 +1086,6 @@ export const upcoming: UpcomingPage[] = [
   // STT
   {
     section: "stt",
-    slug: "assemblyai",
-    name: "AssemblyAI",
-    about: "AssemblyAI's streaming speech recognition, with turn detection.",
-    classes: ["AssemblyAISTTService", "AssemblyAISyncSTTService"],
-    modules: ["services/assemblyai/stt.py"],
-  },
-  {
-    section: "stt",
-    slug: "gladia",
-    name: "Gladia",
-    about: "Gladia's realtime multilingual speech recognition.",
-    classes: ["GladiaSTTService"],
-    modules: ["services/gladia/stt.py"],
-  },
-  {
-    section: "stt",
-    slug: "speechmatics",
-    name: "Speechmatics",
-    about: "Speechmatics' realtime speech recognition, with diarization.",
-    classes: ["SpeechmaticsSTTService"],
-    modules: ["services/speechmatics/stt.py"],
-  },
-  {
-    section: "stt",
-    slug: "soniox",
-    name: "Soniox",
-    about: "Soniox's realtime multilingual speech recognition.",
-    classes: ["SonioxSTTService"],
-    modules: ["services/soniox/stt.py"],
-  },
-  {
-    section: "stt",
     slug: "nvidia",
     name: "NVIDIA Riva",
     about: "Speech recognition from NVIDIA Riva.",
@@ -1097,22 +1101,6 @@ export const upcoming: UpcomingPage[] = [
     modules: ["services/sarvam/stt.py"],
   },
   // TTS
-  {
-    section: "tts",
-    slug: "speechmatics",
-    name: "Speechmatics",
-    about: "Speech synthesis from Speechmatics.",
-    classes: ["SpeechmaticsTTSService"],
-    modules: ["services/speechmatics/tts.py"],
-  },
-  {
-    section: "tts",
-    slug: "soniox",
-    name: "Soniox",
-    about: "Speech synthesis from Soniox.",
-    classes: ["SonioxTTSService"],
-    modules: ["services/soniox/tts.py"],
-  },
   {
     section: "tts",
     slug: "nvidia",

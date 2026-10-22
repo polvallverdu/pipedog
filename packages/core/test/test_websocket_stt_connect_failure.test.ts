@@ -195,19 +195,16 @@ test("test_teardown_stops_a_reconnect_waiting_on_backoff", async () => {
 });
 
 const SERVICES: [string, string, Record<string, unknown>][] = [
-  ["assemblyai.stt", "AssemblyAISTTService", {}],
   ["aws.stt", "AWSTranscribeSTTService", { region: "us-east-1" }],
-  ["gladia.stt", "GladiaSTTService", {}],
   ["meta.stt", "MetaSTTService", {}],
   ["openai.stt", "OpenAIRealtimeSTTService", {}],
-  ["soniox.stt", "SonioxSTTService", {}],
   ["together.stt", "TogetherSTTService", {}],
   ["xai.stt", "XAISTTService", {}],
 ];
 
 // The receive loop is what retries, so it starts even without a websocket.
-// Each provider lives in its own package (`@pipedog/<provider>`), none of
-// which is ported yet.
+// Each provider lives in its own package (`@pipedog/<provider>`). assemblyai, gladia and soniox run
+// their case in their own package tests; the rest are not ported yet.
 for (const [module, name] of SERVICES) {
   const provider = module.split(".")[0];
   test.todo(

@@ -39,10 +39,12 @@ export const THIRD_PARTY_VERSIONS: Record<string, string> = {
 /** Where to get the API keys, shown in `.env.example`. */
 const ENV_DESCRIPTIONS: Record<string, string> = {
   ANTHROPIC_API_KEY: "https://console.anthropic.com/settings/keys",
+  ASSEMBLYAI_API_KEY: "https://www.assemblyai.com/dashboard/api-keys",
   DEEPGRAM_API_KEY: "https://console.deepgram.com/",
   CARTESIA_API_KEY: "https://play.cartesia.ai/keys",
   ELEVENLABS_API_KEY: "https://elevenlabs.io/app/settings/api-keys",
   ELEVENLABS_VOICE_ID: "a voice from your ElevenLabs voice library",
+  GLADIA_API_KEY: "https://app.gladia.io/",
   GOOGLE_API_KEY: "https://aistudio.google.com/apikey",
   GOOGLE_APPLICATION_CREDENTIALS: "path to a Google Cloud service account JSON file",
   GROQ_API_KEY: "https://console.groq.com/keys",
@@ -52,6 +54,8 @@ const ENV_DESCRIPTIONS: Record<string, string> = {
   MISTRAL_API_KEY: "https://console.mistral.ai/api-keys",
   MISTRAL_VOICE_ID: "a voice from your Mistral account",
   OPENAI_API_KEY: "https://platform.openai.com/api-keys",
+  SONIOX_API_KEY: "https://console.soniox.com/",
+  SPEECHMATICS_API_KEY: "https://portal.speechmatics.com/",
   TOGETHER_API_KEY: "https://api.together.ai/settings/api-keys",
   ULTRAVOX_API_KEY: "https://app.ultravox.ai/",
   XAI_API_KEY: "https://console.x.ai/",
