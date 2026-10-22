@@ -15,7 +15,7 @@
  *
  * DIVERGENCE: upstream lists every Pipecat service, whether or not it is installed. This list is
  * limited to what pipedog has ported, so a service that isn't ported can't be offered (Daily,
- * Deepgram's SageMaker variants, AssemblyAI, Sarvam, ...). Pipecat Cloud, Daily PSTN, Twilio +
+ * Deepgram's SageMaker variants, AssemblyAI, ...). Pipecat Cloud, Daily PSTN, Twilio +
  * Daily SIP and Krisp aren't offered either; they have no pipedog counterpart. Upstream's
  * `package` field (`pipecat-ai[deepgram]`, a PyPI extra) is an npm package here.
  *
@@ -162,6 +162,7 @@ export const NOT_OFFERED: Record<string, string> = {
   RimeV1TTSService:
     "needs a model that picks its endpoint and a protocol; RimeTTSService is offered",
   XAIHttpTTSService: "the HTTP variant of XAITTSService, which is offered",
+  SarvamHttpTTSService: "the HTTP variant of SarvamTTSService, which is offered",
   InworldHttpTTSService: "the HTTP variant of InworldTTSService, which is offered",
   AzureHttpTTSService: "the HTTP variant of AzureTTSService, which is offered",
   AssemblyAISyncSTTService: "the sync HTTP variant of AssemblyAISTTService, which is offered",
@@ -277,7 +278,9 @@ export class ServiceRegistry {
     svc("google_stt", "Google Speech-to-Text", "@pipedog/google", ["GoogleSTTService"], {
       note: "Uses Google's gRPC Node SDK: runs on Bun and Node, not on Workers.",
     }),
+    svc("gradium_stt", "Gradium", "@pipedog/gradium", ["GradiumSTTService"]),
     svc("groq_stt", "Groq (Whisper)", "@pipedog/groq", ["GroqSTTService"]),
+    svc("meta_stt", "Meta", "@pipedog/meta", ["MetaSTTService"]),
     svc("mistral_stt", "Mistral", "@pipedog/mistral", ["MistralSTTService"]),
     svc("moonshine_stt", "Moonshine", "@pipedog/moonshine", ["MoonshineSTTService"], {
       extraDependencies: { "onnxruntime-node": "^1.30.0" },
@@ -287,6 +290,11 @@ export class ServiceRegistry {
     svc("openai_realtime_stt", "OpenAI Realtime", "@pipedog/openai", ["OpenAIRealtimeSTTService"]),
     svc("soniox_stt", "Soniox", "@pipedog/soniox", ["SonioxSTTService"]),
     svc("speechmatics_stt", "Speechmatics", "@pipedog/speechmatics", ["SpeechmaticsSTTService"]),
+    svc("sarvam_stt", "Sarvam AI", "@pipedog/sarvam", ["SarvamSTTService"]),
+    svc("sarvam_realtime_stt", "Sarvam AI Realtime", "@pipedog/sarvam", [
+      "SarvamRealtimeSTTService",
+    ]),
+    svc("smallest_stt", "Smallest AI", "@pipedog/smallest", ["SmallestSTTService"]),
     svc("together_stt", "Together AI", "@pipedog/together", ["TogetherSTTService"]),
     svc("whisper_stt", "Whisper (Local)", "@pipedog/whisper", ["WhisperSTTService"], {
       extraDependencies: { "onnxruntime-node": "^1.30.0" },
@@ -328,6 +336,7 @@ export class ServiceRegistry {
     svc("google_tts", "Google TTS", "@pipedog/google", ["GoogleTTSService"], {
       note: "Uses Google's gRPC Node SDK: runs on Bun and Node, not on Workers.",
     }),
+    svc("gradium_tts", "Gradium", "@pipedog/gradium", ["GradiumTTSService"]),
     svc("groq_tts", "Groq TTS", "@pipedog/groq", ["GroqTTSService"]),
     svc("hume_tts", "Hume", "@pipedog/hume", ["HumeTTSService"]),
     svc("inworld_tts", "Inworld", "@pipedog/inworld", ["InworldTTSService"]),
@@ -354,6 +363,8 @@ export class ServiceRegistry {
     svc("rime_tts", "Rime", "@pipedog/rime", ["RimeTTSService"]),
     svc("soniox_tts", "Soniox", "@pipedog/soniox", ["SonioxTTSService"]),
     svc("speechmatics_tts", "Speechmatics", "@pipedog/speechmatics", ["SpeechmaticsTTSService"]),
+    svc("sarvam_tts", "Sarvam AI", "@pipedog/sarvam", ["SarvamTTSService"]),
+    svc("smallest_tts", "Smallest AI", "@pipedog/smallest", ["SmallestTTSService"]),
     svc("together_tts", "Together AI", "@pipedog/together", ["TogetherTTSService"]),
     svc("xai_tts", "xAI", "@pipedog/xai", ["XAITTSService"]),
   ];
