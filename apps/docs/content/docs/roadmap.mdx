@@ -16,13 +16,13 @@ Against the pinned upstream commit (counts from `porting/manifest.json`):
 
 | | Ported | Upstream | Share |
 |---|---|---|---|
-| Modules | 559 | 667 | 84% (75% of the lines) |
-| Test files | 272 | 340 | 80% |
+| Modules | 560 | 667 | 84% (75% of the lines) |
+| Test files | 273 | 340 | 80% |
 | Core modules (`@pipedog/core`) | 361 | 361 | 100% |
 | Core test files | 150 | 150 | 100% |
-| Target packages | 53 started, 52 not | 105 | |
+| Target packages | 54 started, 51 not | 105 | |
 
-pipedog publishes 58 packages: 52 of those 53 (the 53rd, `@pipedog/cli`, has one ported module, the
+pipedog publishes 59 packages: 53 of those 54 (the 54th, `@pipedog/cli`, has one ported module, the
 eval command, which lives in `@pipedog/evals`), plus six with no upstream counterpart (`@pipedog/asyncio`,
 `@pipedog/mcp`, `@pipedog/onnx`, `@pipedog/resampler-wasm`, `@pipedog/sentencex-wasm`,
 `@pipedog/tracing`).
@@ -80,7 +80,7 @@ eval command, which lives in `@pipedog/evals`), plus six with no upstream counte
 
 ## What's not ported yet
 
-108 upstream modules (25% of the lines) and 68 test files are still to do. Every upstream provider
+107 upstream modules (25% of the lines) and 67 test files are still to do. Every upstream provider
 that isn't ported has a "coming soon" page, or a row on
 [Other upstream providers](/docs/services/other-upstream). The main gaps, with their remaining
 upstream modules:
@@ -91,7 +91,6 @@ upstream modules:
 | CLI | 16 | The rest of the `pipecat` command line tool (`@pipedog/cli`): `pipecat init` project scaffolding, the service registry, hub status and the config validator. The eval command is ported, as the `pipedog-eval` bin in [`@pipedog/evals`](/docs/evals); the manifest still assigns `cli/commands/eval.py` to `@pipedog/cli`, so `porting/STATUS.md` shows that package as 1/17. |
 | Audio filters and analyzers | 7 | Noise filters (Krisp VIVA, Koala, AIC), and the Krisp and AIC VAD and turn models. Smart Turn v3, RNNoise, the soundfile mixer and HTTP Smart Turn are ported. |
 | Extensions | 5 | The IVR navigator and voicemail detector in `pipecat.extensions` (`@pipedog/extensions`). |
-| MCP client service | 1 | `pipecat.services.mcp_service`, which gives an LLM the tools of an MCP server (`@pipedog/mcp-client`). Not to be confused with [`@pipedog/mcp`](/docs/guides/llms#mcp-server), the docs server, which exists. |
 | Providers with a page | 25 | 11 providers: AssemblyAI, Gladia, NVIDIA (LLM, Riva STT and TTS), Sarvam AI, Soniox, Speechmatics, Fish Audio, Hume, Rime, and the Simli and Tavus video avatars. |
 | Long-tail providers | 24 | 22 smaller providers, from Async to XTTS, listed on [Other upstream providers](/docs/services/other-upstream). |
 | Variants of ported providers | 10 | Deepgram and NVIDIA on SageMaker, ElevenLabs Dialogue, local Whisper. |

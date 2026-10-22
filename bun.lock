@@ -48,6 +48,7 @@
         "@pipedog/heygen": "workspace:*",
         "@pipedog/inworld": "workspace:*",
         "@pipedog/langchain": "workspace:*",
+        "@pipedog/mcp-client": "workspace:*",
         "@pipedog/mistral": "workspace:*",
         "@pipedog/nebius": "workspace:*",
         "@pipedog/novita": "workspace:*",
@@ -503,6 +504,20 @@
       },
       "devDependencies": {
         "@types/node": "24.19.1",
+      },
+    },
+    "packages/mcp-client": {
+      "name": "@pipedog/mcp-client",
+      "version": "0.6.1",
+      "dependencies": {
+        "@modelcontextprotocol/sdk": "1.32.1",
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@pipedog/google": "workspace:*",
+        "@pipedog/openai": "workspace:*",
       },
     },
     "packages/mistral": {
@@ -1379,6 +1394,8 @@
     "@pipedog/langchain": ["@pipedog/langchain@workspace:packages/langchain"],
 
     "@pipedog/mcp": ["@pipedog/mcp@workspace:packages/mcp"],
+
+    "@pipedog/mcp-client": ["@pipedog/mcp-client@workspace:packages/mcp-client"],
 
     "@pipedog/mistral": ["@pipedog/mistral@workspace:packages/mistral"],
 

@@ -9848,9 +9848,9 @@
       "tests": [
         "test_mcp_service.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Ported to packages/mcp-client/src/mcp_service.ts (new package @pipedog/mcp-client, on the official @modelcontextprotocol/sdk 1.32.1, the version @pipedog/mcp pins). MCPClient keeps upstream's design: a persistent session owned by one internal task (_runSession), a lifecycle lock, start()/close()/tools(), tool schemas that carry a handler and a _pipecatCleanup that the LLM service awaits at teardown, a dead session dropped when a call finds the connection gone, toolsFilter, toolsOutputFilters, toolsArguments (hidden from the schema, injected on every call). Constructor takes an options object ({ serverParams, toolsFilter, toolsOutputFilters, toolsArguments }). Transports: streamable HTTP and SSE over fetch (all four runtimes), stdio through a lazily loaded module (@pipedog/mcp-client/stdio_transport, swapped for a refusing stub by the workerd export condition, so Workers bundles never include cross-spawn). Deprecated APIs not ported: register_tools, get_tools_schema, register_tools_schema. DIVERGENCE: (1) async with MCPClient becomes await using (Symbol.asyncDispose) or scoped(fn). (2) The server parameter classes are small classes with options constructors; SseServerParameters and StreamableHttpParameters take an extra fetch option. (3) httpx timeouts: timeout bounds the initialize handshake, sseReadTimeout bounds the wait for response headers; an idle SSE stream is not timed out. (4) listTools follows the server's cursor (upstream reads the first page). (5) anyio stream errors have no equivalent; a lost connection is an McpError with code ConnectionClosed or the SDK's 'Not connected' error, and AggregateError stands for ExceptionGroup; a failed fetch at the network level is reported to the model and keeps the session. (6) The SDK's 'MCP error <code>: ' prefix is dropped from the line the model reads. (7) On Workers the SDK's output-schema validation is replaced by a pass-through (Ajv needs code generation). (8) A tool with no description gets an empty one. (9) terminateOnClose sends the HTTP DELETE before closing the transport. Calls the SDK request timeout off (upstream has none)."
     },
     {
       "module": "pipecat.services.mem0",
@@ -19062,8 +19062,8 @@
         "pipecat.services.mcp_service"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "54 pass, 0 fail, 5 skip, 0 todo. The 5 skips exercise only deprecated APIs (register_tools, register_tools_schema, get_tools_schema), which are not ported. DIVERGENCE: the fake server is injected through the protected _enterTransport/_enterSession methods instead of patching module attributes; anyio stream errors are replaced by the SDK's connection errors (McpError ConnectionClosed, 'Not connected'), ExceptionGroup by AggregateError; TestRealSession and TestSDKConnectionErrors use the SDK's in-memory transport and a real McpServer. Extra: test/e2e_mcp_client.test.ts (stdio, streamable HTTP and SSE servers; function calls through a pipeline with a mock LLM)."
     },
     {
       "file": "tests/test_mem0.py",
