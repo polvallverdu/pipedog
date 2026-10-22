@@ -1,5 +1,24 @@
 # @pipedog/tracing
 
+## 0.7.0
+
+### Minor Changes
+
+- [#68](https://github.com/polvallverdu/pipedog/pull/68) [`20a84e7`](https://github.com/polvallverdu/pipedog/commit/20a84e741d546e66e0eb7ad9a163c3968a4c042f) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Traces say pipedog now. The library's tracers are called `pipedog` and `pipedog.turn` (they were
+  `pipecat` and `pipecat.turn`, as upstream), and `setupTracing()` defaults `service.name` to
+  `"pipedog"` (was `"pipecat"`). Span names and attribute keys are unchanged.
+  
+  If a dashboard, alert or query filters on the Pipecat tracer names, bring them back at startup,
+  before creating a pipeline, with `setTracerName("pipecat")` or `setupTracing({ tracerName:
+  "pipecat" })`. `getTracerName()` and `DEFAULT_TRACER_NAME` are exported too. Set your own
+  `serviceName` in production either way.
+
+### Patch Changes
+
+- [#66](https://github.com/polvallverdu/pipedog/pull/66) [`dabec71`](https://github.com/polvallverdu/pipedog/commit/dabec71b7d5796055f09830335d550448fffb00d) Thanks [@polvallverdu](https://github.com/polvallverdu)! - `forceFlushTracing()` now also waits for the span exports already in flight. The SDK's `BatchSpanProcessor.forceFlush()` returns at once when its timer has just started an export, so spans could still be on their way to the collector (or lost, when a Workers request ended) after the flush.
+- Updated dependencies [[`20a84e7`](https://github.com/polvallverdu/pipedog/commit/20a84e741d546e66e0eb7ad9a163c3968a4c042f)]:
+  - @pipedog/core@0.7.0
+
 ## 0.6.1
 
 ### Patch Changes

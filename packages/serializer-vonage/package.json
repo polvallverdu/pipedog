@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/serializer-vonage",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Vonage Audio Connector WebSocket frame serializer (VonageFrameSerializer) for pipedog.",
   "keywords": [
     "pipecat",

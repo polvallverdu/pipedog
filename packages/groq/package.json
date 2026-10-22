@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/groq",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Groq services (LLM, Whisper STT, TTS) for pipedog.",
   "keywords": [
     "pipecat",

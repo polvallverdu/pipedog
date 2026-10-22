@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/google",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Google services (Gemini, Cloud Speech-to-Text, Cloud Text-to-Speech) for pipedog.",
   "keywords": [
     "pipecat",

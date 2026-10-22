@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/whisper",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Whisper for pipedog: the base service for Whisper-compatible APIs (shared by the OpenAI and Groq STT services), probability helpers, and local Whisper models (WhisperSTTService) on ONNX Runtime with faster-whisper's decoding.",
   "keywords": [
     "pipecat",

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/speechmatics",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Speechmatics services (STT, TTS) for pipedog.",
   "keywords": [
     "pipecat",

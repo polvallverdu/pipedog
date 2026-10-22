@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/baseten",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Baseten LLM service (BasetenLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

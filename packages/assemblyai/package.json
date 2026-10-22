@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/assemblyai",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "AssemblyAI services (Universal-Streaming STT) for pipedog.",
   "keywords": [
     "pipecat",

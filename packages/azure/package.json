@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/azure",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Azure services (OpenAI LLM, Realtime, Voice Live, Speech STT and TTS, image) for pipedog.",
   "keywords": [
     "pipecat",

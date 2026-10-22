@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/flows",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Pipecat Flows for pipedog: structured conversations built from nodes, edge functions and actions.",
   "keywords": [
     "pipecat",

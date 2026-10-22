@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/extensions",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Pipecat's extensions (pipecat.extensions) for pipedog: IVRNavigator for LLM-driven phone menu navigation with DTMF, and VoicemailDetector with TTSGate for outbound calls.",
   "keywords": [
     "pipecat",

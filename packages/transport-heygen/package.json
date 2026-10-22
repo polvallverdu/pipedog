@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/transport-heygen",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "HeyGen transport for pipedog: the bot joins the HeyGen avatar's LiveKit room alongside the user (LiveAvatar or Interactive Avatar).",
   "keywords": [
     "pipecat",

@@ -1,5 +1,55 @@
 # @pipedog/runner
 
+## 0.7.0
+
+### Minor Changes
+
+- [#51](https://github.com/polvallverdu/pipedog/pull/51) [`fb25ede`](https://github.com/polvallverdu/pipedog/commit/fb25edef3cb316a0581579de92ee4b3a17495d46) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Add `@pipedog/evals`, the port of `pipecat.evals`, to test a bot end to end:
+  
+  - Scripted and simulated scenarios in YAML, with users simulated by an LLM persona.
+  - TTS for the user's audio, with a disk cache.
+  - A client transport that connects to the bot as an RTVI client.
+  - Expectation matchers and an LLM judge (any `BaseClassifier`, or a factory).
+  - Results, multi-bot suites from a manifest, and subprocess sessions.
+  - The `pipedog-eval` CLI, with `run`, `judge` and `suite`.
+  
+  `@pipedog/runner` now detects an eval harness's `eval-connect` message on `/ws` and builds the
+  eval transport. `@pipedog/evals` is an optional peer dependency of the runner.
+
+- [#48](https://github.com/polvallverdu/pipedog/pull/48) [`8c8e2b8`](https://github.com/polvallverdu/pipedog/commit/8c8e2b87529dde986404d202ef8738fc317ea513) Thanks [@polvallverdu](https://github.com/polvallverdu)! - LiveKit and HeyGen:
+  
+  - `@pipedog/transport-livekit`: `LiveKitTransport` joins a LiveKit room (a self-hosted server or
+    LiveKit Cloud) with audio in and out, video in (camera and screen share) and out, data messages
+    (RTVI), participant events and SIP DTMF, plus `LiveKitRESTHelper`. Media runs on LiveKit's
+    native Node SDK, `@livekit/rtc-node`, an optional peer dependency loaded when the transport is
+    set up (prebuilt for macOS, glibc Linux and Windows x64).
+  - `@pipedog/heygen`: `HeyGenVideoService` and `HeyGenClient` for LiveAvatar and the Interactive
+    Avatar API. `@pipedog/transport-heygen`: `HeyGenTransport`, which joins the avatar's room.
+  - `@pipedog/runner`: `-t livekit` (`POST /start` mints a bot and a user token and starts the bot
+    with `LiveKitRunnerArguments`), `createTransport()` for LiveKit, and `@pipedog/runner/livekit`
+    (`generateToken`, `generateSessionTokens`, `configure`).
+  
+  The new packages run on Bun, Node and Deno; not on Cloudflare Workers.
+
+### Patch Changes
+
+- [#50](https://github.com/polvallverdu/pipedog/pull/50) [`6b50380`](https://github.com/polvallverdu/pipedog/commit/6b503801e3c1fdb7de76b715246e5d6b87b4177c) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Ship the prebuilt client. The vendored `prebuilt/dist` was excluded by the repository's `dist/`
+  ignore, so published packages had no UI at `/client` and `/` didn't redirect to it.
+
+- [#54](https://github.com/polvallverdu/pipedog/pull/54) [`0b68014`](https://github.com/polvallverdu/pipedog/commit/0b68014db28074bd5ab05e3b6ee25f0b20fc8304) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Wire the WhatsApp transport into the runner: `--whatsapp` mounts `GET` and `POST /whatsapp` (Meta's webhook verification and call events) on `@pipedog/transport-whatsapp`, an optional peer. It reads `WHATSAPP_APP_SECRET`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TOKEN` and `WHATSAPP_WEBHOOK_VERIFICATION_TOKEN`, and starts the bot with `SmallWebRTCRunnerArguments` whose `body` is the call.
+- Updated dependencies [[`fb25ede`](https://github.com/polvallverdu/pipedog/commit/fb25edef3cb316a0581579de92ee4b3a17495d46), [`8c8e2b8`](https://github.com/polvallverdu/pipedog/commit/8c8e2b87529dde986404d202ef8738fc317ea513), [`41278ae`](https://github.com/polvallverdu/pipedog/commit/41278ae4842de3534561ca725d18621c3fb27e8a), [`84f2ad1`](https://github.com/polvallverdu/pipedog/commit/84f2ad14d46caf4214cd9a5ddd9d8d3038c39e9e), [`20a84e7`](https://github.com/polvallverdu/pipedog/commit/20a84e741d546e66e0eb7ad9a163c3968a4c042f)]:
+  - @pipedog/evals@0.7.0
+  - @pipedog/transport-livekit@0.7.0
+  - @pipedog/transport-whatsapp@0.7.0
+  - @pipedog/core@0.7.0
+  - @pipedog/serializer-exotel@0.7.0
+  - @pipedog/serializer-plivo@0.7.0
+  - @pipedog/serializer-telnyx@0.7.0
+  - @pipedog/serializer-twilio@0.7.0
+  - @pipedog/transport-smallwebrtc@0.7.0
+  - @pipedog/transport-websocket@0.7.0
+  - @pipedog/asyncio@0.7.0
+
 ## 0.6.1
 
 ### Patch Changes
