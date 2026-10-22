@@ -3566,9 +3566,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Index re-export of ivr_navigator and voicemail_detector."
     },
     {
       "module": "pipecat.extensions.ivr",
@@ -3582,9 +3582,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Index re-export."
     },
     {
       "module": "pipecat.extensions.ivr.ivr_navigator",
@@ -3611,9 +3611,9 @@
       "tests": [
         "test_ivr_navigation.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "IVRStatus is an as-const object (X.FOO.value -> X.FOO). An invalid DTMF digit is checked against the KeypadEntry values (upstream catches the ValueError of KeypadEntry(value)). IVRNavigator.addEventHandler forwards on_conversation_detected and on_ivr_status_changed to the IVRProcessor, as upstream. Prompts are the upstream strings, with {goal} substituted. Checked with the Twilio and Telnyx serializers' InputDTMFFrame, core's DTMFAggregator and core's DTMF audio (packages/extensions/test/dtmf_integration.test.ts)."
     },
     {
       "module": "pipecat.extensions.voicemail",
@@ -3627,9 +3627,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "Index re-export."
     },
     {
       "module": "pipecat.extensions.voicemail.voicemail_detector",
@@ -3657,9 +3657,9 @@
       "tests": [
         "test_voicemail_detector.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: the deprecated llm and custom_system_prompt parameters (deprecated 1.12.0, removed in 2.0.0) are not ported, so classifier is required. Their 2 tests are skipped."
     },
     {
       "module": "pipecat.flows",
@@ -6055,9 +6055,9 @@
         "sentry_sdk"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "tested",
+      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
+      "notes": "DIVERGENCE: takes the Sentry SDK namespace as the sentry option behind the minimal SentryClient interface (isInitialized, startInactiveSpan, flush) instead of importing sentry_sdk, so it runs with any Sentry JS SDK (Node, Bun, Deno, Cloudflare). sentry_sdk.start_transaction becomes startInactiveSpan with forceTransaction (JS v8+ has no startTransaction); flush takes milliseconds. Upstream has no test, so packages/sentry/test has own tests: a fake client and the real @sentry/core. Upstream quirk kept: reportOnlyInitialTtfb never starts a transaction (it checks the flag after the base class cleared it)."
     },
     {
       "module": "pipecat.processors.producer_processor",
@@ -18613,8 +18613,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 117,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "8 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_job_group.py",
@@ -21539,8 +21539,8 @@
         "pipecat.utils.text.base_text_aggregator"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "21 pass, 0 fail, 2 skip (deprecated llm parameter), 0 todo"
     },
     {
       "file": "tests/test_vonage_video_connector.py",

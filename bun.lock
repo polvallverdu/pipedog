@@ -41,6 +41,7 @@
         "@pipedog/deepseek": "workspace:*",
         "@pipedog/elevenlabs": "workspace:*",
         "@pipedog/evals": "workspace:*",
+        "@pipedog/extensions": "workspace:*",
         "@pipedog/fireworks": "workspace:*",
         "@pipedog/flows": "workspace:*",
         "@pipedog/google": "workspace:*",
@@ -59,6 +60,7 @@
         "@pipedog/qwen": "workspace:*",
         "@pipedog/runner": "workspace:*",
         "@pipedog/sambanova": "workspace:*",
+        "@pipedog/sentry": "workspace:*",
         "@pipedog/serializer-exotel": "workspace:*",
         "@pipedog/serializer-genesys": "workspace:*",
         "@pipedog/serializer-plivo": "workspace:*",
@@ -76,6 +78,7 @@
         "@pipedog/ultravox": "workspace:*",
         "@pipedog/whisper": "workspace:*",
         "@pipedog/xai": "workspace:*",
+        "@sentry/core": "11.5.0",
         "cn": "0.4.0",
         "fumadocs-core": "16.16.2",
         "fumadocs-mdx": "15.4.6",
@@ -407,6 +410,18 @@
         "@pipedog/ollama",
       ],
     },
+    "packages/extensions": {
+      "name": "@pipedog/extensions",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@pipedog/serializer-telnyx": "workspace:*",
+        "@pipedog/serializer-twilio": "workspace:*",
+      },
+    },
     "packages/fireworks": {
       "name": "@pipedog/fireworks",
       "version": "0.6.1",
@@ -681,6 +696,17 @@
       "version": "0.6.1",
       "devDependencies": {
         "sentencex": "1.0.32",
+      },
+    },
+    "packages/sentry": {
+      "name": "@pipedog/sentry",
+      "version": "0.6.1",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@sentry/core": "11.5.0",
       },
     },
     "packages/serializer-exotel": {
@@ -1398,6 +1424,8 @@
 
     "@pipedog/example-workers-durable-voice-agent": ["@pipedog/example-workers-durable-voice-agent@workspace:examples/workers-durable-voice-agent"],
 
+    "@pipedog/extensions": ["@pipedog/extensions@workspace:packages/extensions"],
+
     "@pipedog/fireworks": ["@pipedog/fireworks@workspace:packages/fireworks"],
 
     "@pipedog/flows": ["@pipedog/flows@workspace:packages/flows"],
@@ -1443,6 +1471,8 @@
     "@pipedog/sambanova": ["@pipedog/sambanova@workspace:packages/sambanova"],
 
     "@pipedog/sentencex-wasm": ["@pipedog/sentencex-wasm@workspace:packages/sentencex-wasm"],
+
+    "@pipedog/sentry": ["@pipedog/sentry@workspace:packages/sentry"],
 
     "@pipedog/serializer-exotel": ["@pipedog/serializer-exotel@workspace:packages/serializer-exotel"],
 
@@ -1628,7 +1658,9 @@
 
     "@sentry/browser": ["@sentry/browser@8.55.2", "", { "dependencies": { "@sentry-internal/browser-utils": "8.55.2", "@sentry-internal/feedback": "8.55.2", "@sentry-internal/replay": "8.55.2", "@sentry-internal/replay-canvas": "8.55.2", "@sentry/core": "8.55.2" } }, "sha512-xHuPIEKhx9zw5quWvv4YgZprnwoVMCfxIhmOIf6KJ9iizyUHeUDcKpLS59xERroqwX4RpvK+l/27AZu4zfZlzQ=="],
 
-    "@sentry/core": ["@sentry/core@8.55.2", "", {}, "sha512-YlEBwybUcOQ/KjMHDmof1vwweVnBtBxYlQp7DE3fOdtW4pqqdHWTnTntQs4VgYfxzjJYgtkd9LHlGtg8qy+JVQ=="],
+    "@sentry/conventions": ["@sentry/conventions@0.26.0", "", {}, "sha512-ttSRcoLf2kIENDIFzH12aJaVMdxnidMYLvVNwEX/JjXfXaQot8u5M47QmgAFOOhVJ4nQ2uU8wTCh+fwSPrrCfg=="],
+
+    "@sentry/core": ["@sentry/core@11.5.0", "", { "dependencies": { "@sentry/conventions": "^0.26.0" } }, "sha512-flEMRAfk8t3JW7w32shN6piuLJESkuryF90WzMn75ZGEiVoXkhStOvLT8qX8SQaLeFll4vLp7nDPdTsdJe1APw=="],
 
     "@shikijs/core": ["@shikijs/core@4.5.0", "", { "dependencies": { "@shikijs/primitive": "4.5.0", "@shikijs/types": "4.5.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.5", "hast-util-to-html": "^9.0.5" } }, "sha512-6CIgwq+bt2JZ3OSjb/nBkkwEf/CfpHcbam+Mg5Pllco7HAGRQ2/EFhZrrJtbyNTgKwknfVS+llsXGygiDGwJWw=="],
 
@@ -2993,6 +3025,16 @@
     "@protobuf-ts/plugin/@bufbuild/protobuf": ["@bufbuild/protobuf@2.16.0", "", {}, "sha512-FWa0sPlqYGJgpTs6OxBRcL/AW4JT0OIO+W1ajerluoTVh8CV0B7XM1qsNCRgnkSCkRCgOICKHRQlY17jrsm0+Q=="],
 
     "@protobuf-ts/plugin/typescript": ["typescript@3.9.10", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-w6fIxVE/H1PkLKcCPsFqKE7Kv7QUwhU8qQY2MueZXWx5cPZdwFupLgKK3vntcK98BtNHZtAF4LA/yl2a7k8R6Q=="],
+
+    "@sentry-internal/browser-utils/@sentry/core": ["@sentry/core@8.55.2", "", {}, "sha512-YlEBwybUcOQ/KjMHDmof1vwweVnBtBxYlQp7DE3fOdtW4pqqdHWTnTntQs4VgYfxzjJYgtkd9LHlGtg8qy+JVQ=="],
+
+    "@sentry-internal/feedback/@sentry/core": ["@sentry/core@8.55.2", "", {}, "sha512-YlEBwybUcOQ/KjMHDmof1vwweVnBtBxYlQp7DE3fOdtW4pqqdHWTnTntQs4VgYfxzjJYgtkd9LHlGtg8qy+JVQ=="],
+
+    "@sentry-internal/replay/@sentry/core": ["@sentry/core@8.55.2", "", {}, "sha512-YlEBwybUcOQ/KjMHDmof1vwweVnBtBxYlQp7DE3fOdtW4pqqdHWTnTntQs4VgYfxzjJYgtkd9LHlGtg8qy+JVQ=="],
+
+    "@sentry-internal/replay-canvas/@sentry/core": ["@sentry/core@8.55.2", "", {}, "sha512-YlEBwybUcOQ/KjMHDmof1vwweVnBtBxYlQp7DE3fOdtW4pqqdHWTnTntQs4VgYfxzjJYgtkd9LHlGtg8qy+JVQ=="],
+
+    "@sentry/browser/@sentry/core": ["@sentry/core@8.55.2", "", {}, "sha512-YlEBwybUcOQ/KjMHDmof1vwweVnBtBxYlQp7DE3fOdtW4pqqdHWTnTntQs4VgYfxzjJYgtkd9LHlGtg8qy+JVQ=="],
 
     "@tailwindcss/node/magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 

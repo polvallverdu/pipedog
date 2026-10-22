@@ -54,6 +54,8 @@ Processors that generate metrics use the helpers on `FrameProcessor`: `startTtfb
 metrics are enabled, and `canGenerateMetrics()` tells the worker which processors to include in
 the initial empty metrics.
 
+To send TTFB and processing time to Sentry as transactions, see [Sentry metrics](/docs/concepts/sentry-metrics).
+
 ## Tracing (OpenTelemetry)
 
 pipedog ports Pipecat's OpenTelemetry tracing: one trace per conversation, a span per turn, and

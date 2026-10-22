@@ -1,0 +1,58 @@
+{
+  "name": "@pipedog/extensions",
+  "version": "0.6.1",
+  "description": "Pipecat's extensions (pipecat.extensions) for pipedog: IVRNavigator for LLM-driven phone menu navigation with DTMF, and VoicemailDetector with TTSGate for outbound calls.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "telephony",
+    "ivr",
+    "dtmf",
+    "voicemail"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/extensions"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/extensions#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@pipedog/serializer-telnyx": "workspace:*",
+    "@pipedog/serializer-twilio": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/extensions"
+    ]
+  }
+}

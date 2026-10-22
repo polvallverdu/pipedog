@@ -1,0 +1,56 @@
+{
+  "name": "@pipedog/sentry",
+  "version": "0.6.1",
+  "description": "Sentry metrics for pipedog (pipecat.processors.metrics.sentry): SentryMetrics reports TTFB and processing time as Sentry transactions, with any Sentry JS SDK (Node, Bun, Deno, Cloudflare).",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "sentry",
+    "metrics",
+    "observability"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/sentry"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/sentry#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@sentry/core": "11.5.0"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/processors/metrics/sentry.py"
+    ]
+  }
+}

@@ -9,6 +9,7 @@
     "user-muting",
     "turn-events",
     "interruptions-and-cancellation",
-    "metrics-and-tracing"
+    "metrics-and-tracing",
+    "sentry-metrics"
   ]
 }

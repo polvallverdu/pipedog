@@ -1,0 +1,135 @@
+---
+title: Sentry metrics
+description: Report TTFB and processing time of any service to Sentry as transactions with SentryMetrics, using the Sentry SDK for Bun, Node, Deno or Cloudflare Workers.
+---
+
+## Overview
+
+`SentryMetrics` (`@pipedog/sentry`, a port of `pipecat.processors.metrics.sentry`) extends
+[`FrameProcessorMetrics`](/docs/concepts/metrics-and-tracing). Wherever a service measures
+**time to first byte** or **processing time**, `SentryMetrics` also starts a Sentry transaction and
+ends it when the measurement stops:
+
+| Measurement | Transaction `op` | Transaction name |
+|---|---|---|
+| TTFB | `ttfb` | `TTFB for <processor name>` |
+| Processing | `processing` | `Processing for <processor name>` |
+
+The usual `MetricsFrame`s are produced as before, so observers and RTVI clients see no difference.
+At cleanup it ends any pending transaction and flushes Sentry for up to 5 seconds.
+
+<Cards>
+  <Card title="Upstream" href="https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/processors/metrics/sentry.py">
+    Pipecat's `sentry.py`.
+  </Card>
+  <Card title="Sentry JavaScript docs" href="https://docs.sentry.io/platforms/javascript/">
+    Setup guides per runtime.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/sentry
+```
+
+`@pipedog/sentry` depends on no Sentry package. You install and initialise the Sentry SDK for your
+runtime, and pass its namespace in. See [Choosing the SDK](#choosing-the-sdk).
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/sentry" />
+
+The smoke test on every runtime drives `SentryMetrics` with `@sentry/core`'s tracing functions and a
+recording transport, and checks the transactions that come out.
+
+## Usage
+
+<include cwd>snippets/sentry.ts#usage</include>
+
+<include cwd>snippets/sentry.ts#worker</include>
+
+Metrics have to be on (`enableMetrics`) for a service to measure anything, and so for Sentry to see
+anything. Pass `SentryMetrics` as the `metrics` option of a service (or any `FrameProcessor`), one
+instance per processor.
+
+### Options
+
+<auto-type-table cwd path="../../packages/sentry/src/sentry.ts" name="SentryMetricsOptions" />
+
+If the SDK has not been initialised (`isInitialized()` is false when the `SentryMetrics` is
+constructed), a warning is logged and Sentry reporting is switched off. The ordinary metrics keep
+working.
+
+## Choosing the SDK
+
+Sentry's JavaScript SDKs are one per runtime, and all re-export the same tracing functions from
+`@sentry/core`. `SentryMetrics` calls only three of them, described by the `SentryClient`
+interface:
+
+```ts
+interface SentryClient {
+  isInitialized(): boolean;
+  startInactiveSpan(options: { op: string; name: string; forceTransaction: boolean }): {
+    end(): void;
+  };
+  flush(timeout?: number): PromiseLike<boolean>; // milliseconds
+}
+```
+
+So `import * as Sentry from "<sdk>"` satisfies it, and so does any object of your own with those
+three methods.
+
+| Runtime | SDK | Init |
+|---|---|---|
+| Node | `@sentry/node` | `Sentry.init({ dsn, tracesSampleRate: 1.0 })` at startup, before other imports. |
+| Bun | `@sentry/bun` | `Sentry.init({ dsn, tracesSampleRate: 1.0 })` at startup. |
+| Deno | `@sentry/deno` | `Sentry.init({ dsn, tracesSampleRate: 1.0 })` at startup. |
+| Cloudflare Workers | `@sentry/cloudflare` | Wrap the Worker so the SDK is initialised per request (see below). |
+
+### Cloudflare Workers
+
+`@sentry/cloudflare` initialises per request, so it needs the Worker wrapped: either the Vite plugin
+(`sentryCloudflareVitePlugin()` from `@sentry/cloudflare/vite`, with options in an
+`instrument.server.ts` that default-exports `defineCloudflareOptions((env) => ({ dsn, tracesSampleRate }))`)
+or `withSentry`. The Worker needs the `nodejs_compat` flag and a `compatibility_date` of
+`2024-09-23` or later. Then build the `SentryMetrics` inside the request handler (the WebSocket
+upgrade that starts the bot), so `isInitialized()` is true when it is created:
+
+```ts
+import * as Sentry from "@sentry/cloudflare";
+import { SentryMetrics } from "@pipedog/sentry";
+
+// inside the handler that starts the pipeline:
+const metrics = new SentryMetrics({ sentry: Sentry });
+```
+
+Two Workers caveats from Sentry's documentation: span durations show 0 ms where only
+`performance.now()` and `Date.now()` are available, because the Workers clock advances only after I/O,
+and the SDK needs the request's lifetime to send events (the cleanup flush happens in the bot's
+own request). Treat the durations in Sentry on Workers as indicative; the `MetricsFrame` values
+come from the same clock and have the same limit.
+
+## Differences from upstream
+
+- **The SDK is passed in** (`sentry` option) instead of importing `sentry_sdk`, so one package serves
+  every runtime. Upstream has one optional extra for the Python SDK.
+- **Transactions are root spans.** The JavaScript SDKs since v8 have no `startTransaction`; the
+  equivalent is `startInactiveSpan({ forceTransaction: true })`. Sentry's docs say
+  `forceTransaction` is not available in stream mode, which is the default trace lifecycle of
+  `@sentry/core` 11. Set `traceLifecycle: "static"` in `Sentry.init` to get transactions as upstream
+  sends them. With the default (stream) lifecycle the spans are sent as streamed segment spans, which
+  we have not verified with a real Sentry backend.
+- **Ending a span runs inline** in the background task. Upstream hands `tx.finish` to an executor
+  thread; ending a JavaScript span only records its end time.
+- **`flush` takes milliseconds** in Sentry's JS SDKs; `SentryMetrics` passes `5000`.
+
+One upstream behaviour is kept as is: with `reportOnlyInitialTtfb: true` the base class turns
+reporting off before `SentryMetrics` checks it, so that mode starts no TTFB transaction at all.
+
+## Testing
+
+Upstream has no test for this module. The package's own tests use a fake `SentryClient` (spans,
+flush, the not-initialised case, a span whose `end` throws) and the real `@sentry/core` with a
+transport that records envelopes. Nothing has been sent to Sentry itself, and `@sentry/cloudflare`,
+`@sentry/node`, `@sentry/bun` and `@sentry/deno` were not run; they share the functions tested here.
