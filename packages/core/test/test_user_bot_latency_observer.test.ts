@@ -1478,6 +1478,12 @@ describe("TestFrameContracts", () => {
     });
 
     await processor._pushTurnText(text);
+    // Stop the timeout an incomplete verdict armed. Left running, its real
+    // 5s timer outlives the test, and in the next file (test_classifiers_jev)
+    // every `await expect(promise).rejects` took 100ms or more instead of
+    // microseconds: the Jev retry test went from 2ms to 0.8-1.7s, and past its
+    // 5s limit on slow CI runners. Observed on Bun 1.4.2 on Linux.
+    await processor._cancelIncompleteTimeout();
     return pushed.filter((f): f is LLMMarkerFrame => f instanceof LLMMarkerFrame);
   }
 
