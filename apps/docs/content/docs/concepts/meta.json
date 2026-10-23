@@ -9,6 +9,7 @@
     "user-muting",
     "turn-events",
     "interruptions-and-cancellation",
+    "typed-tools",
     "metrics-and-tracing",
     "sentry-metrics"
   ]

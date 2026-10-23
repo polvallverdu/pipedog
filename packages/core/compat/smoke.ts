@@ -6,6 +6,7 @@
 // audio with the default (WASM) resampler engine, then checks that the
 // optional OpenTelemetry peer is detected exactly when it is installed.
 
+import { defineTool } from "@pipedog/core/adapters/schemas/standard_tool";
 import { createFileResampler, createStreamResampler } from "@pipedog/core/audio/utils";
 import { EndFrame, type Frame, TextFrame } from "@pipedog/core/frames/frames";
 import { TurnTrackingObserver } from "@pipedog/core/observers/turn_tracking_observer";
@@ -54,6 +55,7 @@ export default async function smoke(): Promise<void> {
 
   await resampling();
   await tracing();
+  await typedTools();
 }
 
 /**
@@ -148,4 +150,56 @@ async function resampling(): Promise<void> {
   } finally {
     logger.warning = original;
   }
+}
+
+/**
+ * `defineTool` with a hand-written Standard Schema (no schema library needed):
+ * the JSON schema, the validation failure path and the success path.
+ */
+async function typedTools(): Promise<void> {
+  const parameters = {
+    "~standard": {
+      version: 1 as const,
+      vendor: "compat",
+      validate: (value: unknown) => {
+        const v = value as { n?: unknown };
+        return typeof v.n === "number"
+          ? { value: { n: v.n } }
+          : { issues: [{ message: "expected number", path: ["n"] }] };
+      },
+      jsonSchema: {
+        input: () => ({ type: "object", properties: { n: { type: "number" } }, required: ["n"] }),
+        output: () => ({ type: "object", properties: { n: { type: "number" } }, required: ["n"] }),
+      },
+    },
+  };
+  const tool = defineTool({
+    name: "double",
+    description: "Double a number.",
+    parameters,
+    handler: ({ n }: { n: number }) => n * 2,
+  });
+  check(tool.required.join() === "n", "defineTool required");
+
+  const results: unknown[] = [];
+  const call = (args: Record<string, unknown>) =>
+    tool.handler({
+      arguments: args,
+      resultCallback: async (r: unknown) => {
+        results.push(r);
+      },
+    } as never);
+  const original = logger.warning.bind(logger);
+  logger.warning = () => {};
+  try {
+    await call({ n: 4 });
+    await call({ n: "x" });
+  } finally {
+    logger.warning = original;
+  }
+  check(results[0] === 8, "defineTool success result");
+  check(
+    (results[1] as { issues: { path: string }[] }).issues[0]?.path === "n",
+    "defineTool validation failure result",
+  );
 }

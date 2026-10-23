@@ -1,0 +1,75 @@
+---
+title: Typed tools
+description: Define LLM function calls with a Zod, Valibot or ArkType schema (Standard Schema) and get the JSON schema, inferred handler types and argument validation.
+---
+
+`defineTool` builds a function-calling tool from a [Standard Schema](https://standardschema.dev)
+object: Zod, Valibot, ArkType and any other library that implements the spec. One definition gives you:
+
+- the JSON schema the LLM needs, generated from the schema;
+- a handler whose `args` are typed from it;
+- validation of the arguments the LLM sends, before your handler runs.
+
+This is pipedog's own addition, not part of Pipecat. It sits next to the ported ways to define tools
+(`FunctionSchema`, direct functions, the `tool` decorator), which keep working unchanged. Unlike direct
+functions, it never reads parameter names from function source, so it survives minification.
+
+```ts
+import { defineTool, registerTools } from "@pipedog/core/adapters/schemas/standard_tool";
+```
+
+## Define a tool
+
+<include cwd>snippets/typed_tools.ts#define</include>
+
+`defineTool` returns a `FunctionSchema` that carries the handler, so it works with every provider
+adapter. The handler's return value is sent to the LLM as the function result. To report the result
+yourself, for example with `FunctionCallResultProperties`, call `params.resultCallback` (the second
+handler argument); the return value is then ignored.
+
+Pass the tool's call options (`cancelOnInterruption`, `timeoutSecs`, `cancellableByLlm`) to `defineTool`
+directly, as you would to `toolOptions`.
+
+## Register it
+
+Advertise the tool in a `ToolsSchema`. The LLM service registers its handler automatically:
+
+<include cwd>snippets/typed_tools.ts#use</include>
+
+Or register explicitly:
+
+<include cwd>snippets/typed_tools.ts#register</include>
+
+## Invalid arguments
+
+The arguments are checked with the schema's `~standard.validate`. If they don't pass, your handler
+is **not** called. A warning is logged, and the issues go back to the LLM as the function result so it can
+retry:
+
+```json
+{
+  "error": "Invalid arguments. Fix the issues and call the function again.",
+  "issues": [{ "message": "Invalid input: expected string, received undefined", "path": "location" }]
+}
+```
+
+Valid arguments reach the handler as the schema's output, so defaults and transforms are applied.
+
+## Where the JSON schema comes from
+
+`defineTool` asks the schema for it, using the companion spec
+[Standard JSON Schema](https://standardschema.dev/json-schema) (`~standard.jsonSchema.input`, target
+`draft-07`; change it with `target`). The LLM supplies the input side, so a field with a default is
+optional in the schema it sees. Zod 4.2+ and ArkType 2.1.28+ implement it on their schemas; Valibot
+does through `toStandardJsonSchema` from `@valibot/to-json-schema`.
+
+A schema that doesn't implement it needs a `jsonSchema` option: the JSON schema object, or a converter
+function.
+
+<include cwd>snippets/typed_tools.ts#converter</include>
+
+`defineTool` throws when there is no JSON schema, or when it isn't an object schema. `$ref`s into
+`$defs` are inlined; recursive schemas are rejected. A `FunctionSchema` carries only `properties` and
+`required`, so other top-level keywords such as `additionalProperties` are not sent to the LLM.
+
+<include cwd>snippets/typed_tools.ts#json</include>
