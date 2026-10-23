@@ -77,6 +77,8 @@ export interface PortedPage {
   pkg: string;
   /** The ported classes. */
   classes: string[];
+  /** The status column, when not "Ported" (e.g. a package with no upstream counterpart). */
+  status?: string;
 }
 
 export interface CompatibleLlmLink {
@@ -1146,6 +1148,13 @@ export const ported: Record<Section, PortedPage[]> = {
         "WebsocketClientTransport",
         "RTVIClientTransport",
       ],
+    },
+    {
+      slug: "cloudflare-realtime",
+      name: "Cloudflare Realtime",
+      pkg: "@pipedog/transport-cloudflare-realtime",
+      classes: ["CloudflareRealtimeTransport", "CloudflareRealtimeCall"],
+      status: "pipedog only",
     },
     {
       slug: "smallwebrtc",

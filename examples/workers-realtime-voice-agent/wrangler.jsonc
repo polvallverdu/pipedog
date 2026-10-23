@@ -1,0 +1,17 @@
+{
+  // A browser voice agent over WebRTC: Cloudflare Realtime carries the audio, and each call runs
+  // in its own Durable Object.
+  "name": "workers-realtime-voice-agent",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // The browser page.
+  "assets": { "directory": "public", "run_worker_first": ["/api/*"] },
+  "durable_objects": {
+    "bindings": [{ "name": "VOICE_CALL", "class_name": "VoiceCall" }]
+  },
+  "migrations": [{ "tag": "v1", "new_classes": ["VoiceCall"] }],
+  // Secrets, set with `wrangler secret put` (or in .dev.vars for local runs):
+  // CLOUDFLARE_REALTIME_APP_ID, CLOUDFLARE_REALTIME_APP_SECRET, OPENAI_API_KEY.
+  "vars": {}
+}

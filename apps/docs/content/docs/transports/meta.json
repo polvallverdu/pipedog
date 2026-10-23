@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "websocket",
+    "cloudflare-realtime",
     "smallwebrtc",
     "livekit",
     "whatsapp",

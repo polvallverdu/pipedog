@@ -245,7 +245,7 @@ from real runs by the compat harness (`bun run compat`), not by hand.
 | Bun | Yes | The development runtime. Runs the TypeScript directly. |
 | Node.js | Yes, 22 or later | |
 | Deno | Yes | |
-| Cloudflare Workers | Yes, with `nodejs_compat` | No WebRTC (no UDP): use the WebSocket transport. Models are loaded from R2, KV or `fetch`, not bundled. See [Workers](https://polvallverdu.github.io/pipedog/docs/workers/). |
+| Cloudflare Workers | Yes, with `nodejs_compat` | No WebRTC in the Worker itself (no UDP): use the WebSocket transport, or take WebRTC users through Cloudflare Realtime with `@pipedog/transport-cloudflare-realtime`. Models are loaded from R2, KV or `fetch`, not bundled. See [Workers](https://polvallverdu.github.io/pipedog/docs/workers/). |
 
 Every package below is verified on all four, except:
 
@@ -333,6 +333,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/heygen`](packages/heygen), [`@pipedog/transport-heygen`](packages/transport-heygen) | HeyGen avatars (LiveAvatar and Interactive Avatar): `HeyGenVideoService` and `HeyGenTransport`. |
 | [`@pipedog/transport-whatsapp`](packages/transport-whatsapp) | WhatsApp Business voice calls (`WhatsAppClient`): Meta calling webhooks, signature checks, accept/reject/terminate, on SmallWebRTC. |
 | [`@pipedog/transport-local`](packages/transport-local) | `LocalAudioTransport`: the machine's microphone and speakers through sox or ffmpeg, no native addon. |
+| [`@pipedog/transport-cloudflare-realtime`](packages/transport-cloudflare-realtime) | Cloudflare Realtime transport (pipedog only): WebRTC users through the Realtime SFU's WebSocket adapters, for bots in a Worker or Durable Object, plus a Realtime API helper. |
 | [`@pipedog/transport-websocket`](packages/transport-websocket) | WebSocket transports: client, server and bring-your-own-socket, with servers for Bun, Node and Deno, and fetch handlers for Workers. |
 | [`@pipedog/serializer-protobuf`](packages/serializer-protobuf) | `ProtobufFrameSerializer`, wire-compatible with Pipecat's `frames.proto`. |
 | [`@pipedog/serializer-rtvi-client`](packages/serializer-rtvi-client) | `RTVIClientSerializer`: a pipeline acting as an RTVI client of another bot. |
@@ -372,6 +373,7 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 | [`websocket-voice-bot`](examples/websocket-voice-bot) | The same voice assistant over a WebSocket with protobuf frames, the format `@pipecat-ai/websocket-transport` speaks. Tested end to end in headless Chromium. |
 | [`twilio-phone-bot`](examples/twilio-phone-bot) | A phone bot on Twilio Media Streams, the TwiML webhook and the media WebSocket as one fetch handler (Bun or Node with `serveFetch`, Deno, Workers). Tested with a scripted fake Twilio, in process and on Deno. |
 | [`workers-durable-voice-agent`](examples/workers-durable-voice-agent) | Parallel voice agents on Cloudflare Workers, one Durable Object per session, over WebSocket. Tested end to end against workerd with parallel sessions. |
+| [`workers-realtime-voice-agent`](examples/workers-realtime-voice-agent) | A browser voice agent over WebRTC on Cloudflare Workers: Cloudflare Realtime carries the audio, a Durable Object per call runs the bot. Tested end to end against workerd with a fake Realtime SFU. |
 | [`framework-snippets`](examples/framework-snippets) | The same voice endpoints mounted in Bun, Deno, Elysia, Express, Hono, Next.js, Nuxt, SvelteKit, TanStack Start and Vercel. |
 | [`test-mocks`](examples/test-mocks) | Mock OpenAI and Gemini APIs and a recorded question, used by the examples' tests. |
 

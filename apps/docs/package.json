@@ -89,6 +89,7 @@
     "@pipedog/speechmatics": "workspace:*",
     "@pipedog/together": "workspace:*",
     "@pipedog/tracing": "workspace:*",
+    "@pipedog/transport-cloudflare-realtime": "workspace:*",
     "@pipedog/transport-heygen": "workspace:*",
     "@pipedog/transport-livekit": "workspace:*",
     "@pipedog/transport-smallwebrtc": "workspace:*",

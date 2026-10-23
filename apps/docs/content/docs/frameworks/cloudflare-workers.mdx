@@ -4,7 +4,9 @@ description: Serve the pipedog WebSocket endpoint from a Worker, with one Durabl
 ---
 
 Workers upgrade a WebSocket from fetch, so `websocketFetchHandler` works there as it is. Workers
-have no UDP, so the WebRTC offer doesn't: audio goes over the WebSocket, as protobuf frames.
+have no UDP, so the WebRTC offer doesn't: audio goes over the WebSocket, as protobuf frames. For
+WebRTC users, [Cloudflare Realtime](/docs/transports/cloudflare-realtime) carries the media and
+hands the bot PCM over WebSockets.
 
 A voice session is a long-lived connection with state, so each one runs in its own Durable Object.
 The Worker routes each request to an object by session name. The full guide, with turn detection,

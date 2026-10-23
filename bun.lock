@@ -105,6 +105,7 @@
         "@pipedog/speechmatics": "workspace:*",
         "@pipedog/together": "workspace:*",
         "@pipedog/tracing": "workspace:*",
+        "@pipedog/transport-cloudflare-realtime": "workspace:*",
         "@pipedog/transport-heygen": "workspace:*",
         "@pipedog/transport-livekit": "workspace:*",
         "@pipedog/transport-smallwebrtc": "workspace:*",
@@ -269,6 +270,21 @@
         "@pipedog/serializer-protobuf": "workspace:*",
         "@pipedog/tracing": "workspace:*",
         "@pipedog/transport-websocket": "workspace:*",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "5.20261007.1",
+        "@pipedog/example-test-mocks": "workspace:*",
+        "wrangler": "4.148.0",
+      },
+    },
+    "examples/workers-realtime-voice-agent": {
+      "name": "@pipedog/example-workers-realtime-voice-agent",
+      "version": "0.0.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+        "@pipedog/transport-cloudflare-realtime": "workspace:*",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "5.20261007.1",
@@ -1138,6 +1154,15 @@
         "@opentelemetry/api": "^1.3.0",
       },
     },
+    "packages/transport-cloudflare-realtime": {
+      "name": "@pipedog/transport-cloudflare-realtime",
+      "version": "0.8.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/transport-websocket": "workspace:*",
+      },
+    },
     "packages/transport-heygen": {
       "name": "@pipedog/transport-heygen",
       "version": "0.8.0",
@@ -1804,6 +1829,8 @@
 
     "@pipedog/example-workers-durable-voice-agent": ["@pipedog/example-workers-durable-voice-agent@workspace:examples/workers-durable-voice-agent"],
 
+    "@pipedog/example-workers-realtime-voice-agent": ["@pipedog/example-workers-realtime-voice-agent@workspace:examples/workers-realtime-voice-agent"],
+
     "@pipedog/extensions": ["@pipedog/extensions@workspace:packages/extensions"],
 
     "@pipedog/fireworks": ["@pipedog/fireworks@workspace:packages/fireworks"],
@@ -1913,6 +1940,8 @@
     "@pipedog/together": ["@pipedog/together@workspace:packages/together"],
 
     "@pipedog/tracing": ["@pipedog/tracing@workspace:packages/tracing"],
+
+    "@pipedog/transport-cloudflare-realtime": ["@pipedog/transport-cloudflare-realtime@workspace:packages/transport-cloudflare-realtime"],
 
     "@pipedog/transport-heygen": ["@pipedog/transport-heygen@workspace:packages/transport-heygen"],
 
