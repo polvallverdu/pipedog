@@ -1,0 +1,275 @@
+---
+title: Calls in worker threads
+description: When one event loop is enough for many calls, when local models need more threads, and how to run calls in worker threads on Bun, Node and Deno, with measured numbers.
+---
+
+A pipedog server runs every call in one process by default: each call is its own pipeline and
+`PipelineWorker`, and they all share one event loop. This page is about when that stops being
+enough, and what to do then.
+
+## The model
+
+An event loop runs one thing at a time. A call that uses cloud services spends almost all its time
+waiting: for the next audio packet, for the STT's transcript, for the LLM's tokens, for the TTS's
+audio. While it waits, the loop serves the other calls. Moving a 20 ms audio frame through a
+pipeline costs tens of microseconds, so one loop serves hundreds of such calls.
+
+CPU work is different. While the loop runs a model, nothing else on it runs: not the other calls'
+audio, not their timers, not their WebSocket messages. Local models are the usual CPU work in a
+voice bot:
+
+- **Silero VAD** on every 32 ms of input: about 0.1–0.2 ms each, cheap but per frame.
+- **Smart Turn** at each end of speech: about 100 ms (Whisper features and the model). While it
+  runs, every other call on that loop waits about 100 ms.
+- Local STT or TTS models (Whisper, Kokoro, Piper), noise filters, heavy resampling.
+
+So the question is not how many calls a process holds, but how much CPU work lands on each event
+loop. The benchmark below measures where that line is.
+
+## Measured
+
+Each call in the benchmark behaves like a voice bot without the network. Its input is a speech
+recording (6.4 s, then 1.6 s of silence) in 20 ms frames at 16 kHz, queued on a timer as a transport
+queues them. A fake STT emits a transcription every 8 s, a fake LLM answers 350 ms later with a few
+tokens, and a fake TTS streams 2 s of audio in real time; pass-through processors stand where the
+context aggregators would be. That is the **cloud-service bot**: the CPU profile of a bot whose
+STT, LLM and TTS are network services. The **local-model bot** adds Silero VAD on every frame
+(`VADProcessor`) and Smart Turn v3 at each end of speech, on `onnxruntime-node`.
+
+Three ways to run the calls: all on **one thread**; spread round-robin over a **worker per core**
+(12 here); and, for the local-model bot, all on one thread with **Smart Turn on workers** (a
+`SmartTurnWorkerPool` of 11 threads, below).
+
+**Latency** is from the time each input frame was due to its arrival at the end of the pipeline, so
+time spent waiting for a busy loop counts. The **real-time budget is 20 ms at p99**: one frame. A
+frame that waits longer than the next one takes to arrive means audio queues up behind the loop:
+the VAD, turn detection and interruptions react late, and the bot's own audio leaves late. Smart Turn
+sits after the measuring point, so a call's wait for its own turn decision (the same at any
+concurrency) isn't counted; what is counted is how long it holds up the other calls.
+
+The same calls are written against Pipecat, in one asyncio process and in one process per core
+(multiprocessing: Python threads share the GIL, so processes are Python's equivalent of worker
+threads). Pipecat runs Silero and Smart Turn on a thread executor per analyzer, and onnxruntime
+releases the GIL while it runs, so its models don't block its event loop.
+
+{/* concurrency:start */}
+
+### Cloud-service bot (I/O-bound)
+
+**Max real-time calls**: the most calls (of the levels run) with p99 input latency within
+20 ms. Each cell: p99 input latency · CPU (100% = one core) · peak memory.
+
+| | Max real-time calls | 1 call | 10 calls | 25 calls | 50 calls | 100 calls | 200 calls | 400 calls | 800 calls |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Pipecat · CPython, one process | 50 | 7.3 ms · 4% · 70 MB | 6.5 ms · 46% · 73 MB | 2.6 ms · 60% · 78 MB | 0.7 ms · 53% · 87 MB | 37.6 ms ✗ · 80% · 104 MB | 474.2 ms ✗ · 100% · 140 MB |  |  |
+| Pipecat · CPython, process per core | ≥ 800 | 10.2 ms · 7% · 70 MB | 5.7 ms · 57% · 708 MB | 4.6 ms · 92% · 856 MB | 3.3 ms · 133% · 861 MB | 2.7 ms · 161% · 878 MB | 0.6 ms · 297% · 917 MB | 1.1 ms · 796% · 983 MB | 7.3 ms · 1,050% · 1,120 MB |
+| pipedog · Bun, one thread | 200 | 5.5 ms · 5% · 52 MB | 5.7 ms · 22% · 72 MB | 3.6 ms · 46% · 98 MB | 7.3 ms · 73% · 133 MB | 109.0 ms ✗ · 75% · 167 MB | 4.4 ms · 100% · 271 MB | 110.6 ms ✗ · 148% · 465 MB | 747.3 ms ✗ · 145% · 763 MB |
+| pipedog · Bun, worker per core | ≥ 800 | 3.0 ms · 4% · 63 MB | 4.7 ms · 41% · 256 MB | 1.7 ms · 72% · 364 MB | 1.7 ms · 95% · 403 MB | 1.5 ms · 107% · 483 MB | 0.7 ms · 121% · 540 MB | 0.3 ms · 186% · 919 MB | 0.8 ms · 341% · 1,305 MB |
+| pipedog · Node, one thread | 400 | 3.1 ms · 5% · 85 MB | 2.2 ms · 17% · 111 MB | 1.9 ms · 32% · 149 MB | 3.4 ms · 53% · 208 MB | 4.5 ms · 66% · 229 MB | 6.2 ms · 84% · 448 MB | 13.7 ms · 113% · 710 MB | 422.2 ms ✗ · 139% · 1,229 MB |
+| pipedog · Node, worker per core | ≥ 800 | 11.7 ms · 5% · 104 MB | 3.0 ms · 41% · 405 MB | 2.3 ms · 80% · 491 MB | 2.7 ms · 93% · 577 MB | 3.2 ms · 109% · 757 MB | 3.7 ms · 154% · 1,165 MB | 1.3 ms · 212% · 1,915 MB | 1.6 ms · 252% · 2,081 MB |
+| pipedog · Deno, one thread | 200 | 6.4 ms · 5% · 95 MB | 3.9 ms · 20% · 117 MB | 5.5 ms · 37% · 151 MB | 10.1 ms · 63% · 154 MB | 14.1 ms · 65% · 282 MB | 8.1 ms · 77% · 221 MB | 151.9 ms ✗ · 131% · 572 MB | 584.3 ms ✗ · 126% · 1,014 MB |
+| pipedog · Deno, worker per core | ≥ 800 | 4.5 ms · 5% · 109 MB | 3.6 ms · 41% · 356 MB | 3.6 ms · 69% · 426 MB | 2.7 ms · 74% · 496 MB | 2.4 ms · 94% · 677 MB | 9.6 ms · 124% · 1,055 MB | 4.2 ms · 169% · 1,194 MB | 3.0 ms · 282% · 1,974 MB |
+
+<details>
+<summary>Event-loop lag (p99 timer drift) and median input latency, cloud-service bot, in ms</summary>
+
+| | 1 call | 10 calls | 25 calls | 50 calls | 100 calls | 200 calls | 400 calls | 800 calls |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Pipecat · CPython, one process | lag 5.0 · p50 1.4 | lag 3.0 · p50 1.2 | lag 0.9 · p50 0.9 | lag 0.2 · p50 0.3 | lag 5.8 · p50 0.6 | lag 168.8 · p50 342.3 |  |  |
+| Pipecat · CPython, process per core | lag 4.5 · p50 1.9 | lag 2.5 · p50 1.6 | lag 1.6 · p50 1.0 | lag 1.0 · p50 0.8 | lag 0.6 · p50 0.5 | lag 0.2 · p50 0.4 | lag 0.3 · p50 0.7 | lag 1.8 · p50 2.5 |
+| pipedog · Bun, one thread | lag 3.5 · p50 0.6 | lag 3.5 · p50 0.2 | lag 1.7 · p50 0.4 | lag 2.4 · p50 0.4 | lag 9.9 · p50 0.4 | lag 1.6 · p50 0.3 | lag 24.7 · p50 88.6 | lag 148.4 · p50 652.6 |
+| pipedog · Bun, worker per core | lag 3.6 · p50 0.6 | lag 4.0 · p50 0.6 | lag 1.8 · p50 0.2 | lag 1.6 · p50 0.2 | lag 1.5 · p50 0.1 | lag 1.1 · p50 0.1 | lag 1.0 · p50 0.1 | lag 1.1 · p50 0.1 |
+| pipedog · Node, one thread | lag 2.1 · p50 0.7 | lag 1.3 · p50 0.3 | lag 1.1 · p50 0.4 | lag 1.6 · p50 0.6 | lag 2.7 · p50 0.7 | lag 3.0 · p50 0.7 | lag 4.3 · p50 0.9 | lag 115.7 · p50 314.5 |
+| pipedog · Node, worker per core | lag 9.9 · p50 0.7 | lag 2.6 · p50 0.6 | lag 2.4 · p50 0.4 | lag 2.4 · p50 0.2 | lag 2.4 · p50 0.1 | lag 2.2 · p50 0.2 | lag 1.1 · p50 0.2 | lag 1.2 · p50 0.2 |
+| pipedog · Deno, one thread | lag 3.5 · p50 1.4 | lag 3.0 · p50 1.0 | lag 3.2 · p50 1.5 | lag 4.3 · p50 1.8 | lag 3.8 · p50 1.7 | lag 3.2 · p50 1.8 | lag 51.3 · p50 104.4 | lag 150.1 · p50 452.3 |
+| pipedog · Deno, worker per core | lag 3.5 · p50 1.4 | lag 3.2 · p50 1.3 | lag 3.5 · p50 1.0 | lag 2.7 · p50 0.7 | lag 2.4 · p50 0.8 | lag 4.0 · p50 0.8 | lag 2.7 · p50 1.0 | lag 2.5 · p50 1.0 |
+
+</details>
+
+### Local-model bot (Silero VAD + Smart Turn)
+
+**Max real-time calls**: the most calls (of the levels run) with p99 input latency within
+20 ms. Each cell: p99 input latency · CPU (100% = one core) · peak memory.
+
+| | Max real-time calls | 1 call | 10 calls | 25 calls | 50 calls | 100 calls | 200 calls | 400 calls |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Pipecat · CPython, one process | 25 | 4.3 ms · 13% · 157 MB | 2.6 ms · 70% · 538 MB | 1.3 ms · 74% · 1,163 MB | 210.4 ms ✗ · 131% · 1,846 MB |  |  |  |
+| Pipecat · CPython, process per core | 100 | 3.5 ms · 14% · 159 MB | 2.9 ms · 79% · 1,601 MB | 1.8 ms · 101% · 2,492 MB | 1.6 ms · 173% · 3,196 MB | 1.4 ms · 408% · 3,524 MB | 43.8 ms ✗ · 904% · 4,377 MB | 3.0 s ✗ · 925% · 5,525 MB |
+| pipedog · Bun, one thread | 0 | 121.5 ms ✗ · 14% · 178 MB | 127.7 ms ✗ · 54% · 223 MB | 113.6 ms ✗ · 66% · 276 MB | 655.7 ms ✗ · 98% · 339 MB |  |  |  |
+| pipedog · Bun, worker per core | 0 | 121.5 ms ✗ · 14% · 190 MB | 73.0 ms ✗ · 80% · 905 MB | 81.7 ms ✗ · 116% · 1,240 MB | 86.8 ms ✗ · 187% · 1,347 MB | 93.5 ms ✗ · 305% · 1,474 MB | 106.2 ms ✗ · 547% · 1,699 MB | 664.0 ms ✗ · 1,016% · 2,559 MB |
+| pipedog · Bun, one thread, Smart Turn on workers | 50 | 3.0 ms · 16% · 304 MB | 4.6 ms · 57% · 356 MB | 1.5 ms · 71% · 453 MB | 10.9 ms · 128% · 596 MB | 28.1 ms ✗ · 234% · 866 MB | 2.9 s ✗ · 262% · 1,465 MB |  |
+| pipedog · Node, one thread | 0 | 96.8 ms ✗ · 12% · 188 MB | 151.2 ms ✗ · 49% · 246 MB | 158.4 ms ✗ · 73% · 400 MB | 741.9 ms ✗ · 104% · 502 MB |  |  |  |
+| pipedog · Node, worker per core | 0 | 97.7 ms ✗ · 12% · 207 MB | 69.8 ms ✗ · 71% · 1,009 MB | 85.7 ms ✗ · 95% · 1,381 MB | 97.7 ms ✗ · 170% · 1,496 MB | 120.4 ms ✗ · 359% · 1,773 MB | 179.7 ms ✗ · 660% · 2,406 MB | 1.7 s ✗ · 1,036% · 3,820 MB |
+| pipedog · Node, one thread, Smart Turn on workers | 100 | 2.4 ms · 11% · 450 MB | 2.6 ms · 62% · 516 MB | 1.0 ms · 86% · 620 MB | 1.1 ms · 140% · 847 MB | 1.3 ms · 233% · 1,039 MB | 2.1 s ✗ · 366% · 1,462 MB |  |
+| pipedog · Deno, one thread | 0 | 121.9 ms ✗ · 12% · 186 MB | 220.3 ms ✗ · 54% · 258 MB |  |  |  |  |  |
+| pipedog · Deno, worker per core | 0 | 112.1 ms ✗ · 12% · 208 MB | 76.1 ms ✗ · 72% · 1,006 MB | 89.0 ms ✗ · 91% · 1,400 MB | 100.7 ms ✗ · 158% · 1,465 MB | 185.1 ms ✗ · 300% · 1,780 MB | 274.7 ms ✗ · 621% · 2,354 MB |  |
+| pipedog · Deno, one thread, Smart Turn on workers | 50 | 4.4 ms · 12% · 385 MB | 5.2 ms · 55% · 458 MB | 3.5 ms · 67% · 590 MB | 4.3 ms · 131% · 769 MB | 29.8 ms ✗ · 249% · 966 MB | 1.9 s ✗ · 337% · 1,579 MB |  |
+
+<details>
+<summary>Event-loop lag (p99 timer drift) and median input latency, local-model bot, in ms</summary>
+
+| | 1 call | 10 calls | 25 calls | 50 calls | 100 calls | 200 calls | 400 calls |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Pipecat · CPython, one process | lag 1.2 · p50 2.1 | lag 0.7 · p50 0.9 | lag 0.3 · p50 0.7 | lag 10.7 · p50 0.8 |  |  |  |
+| Pipecat · CPython, process per core | lag 1.2 · p50 2.1 | lag 1.2 · p50 1.5 | lag 1.1 · p50 0.8 | lag 0.9 · p50 0.7 | lag 0.4 · p50 0.7 | lag 8.5 · p50 1.9 | lag 114.7 · p50 1,539.1 |
+| pipedog · Bun, one thread | lag 1.6 · p50 1.4 | lag 115.7 · p50 0.6 | lag 96.9 · p50 0.5 | lag 200.4 · p50 79.6 |  |  |  |
+| pipedog · Bun, worker per core | lag 1.6 · p50 1.4 | lag 1.5 · p50 0.7 | lag 1.4 · p50 0.4 | lag 1.4 · p50 0.3 | lag 87.8 · p50 0.3 | lag 93.0 · p50 0.3 | lag 279.9 · p50 139.0 |
+| pipedog · Bun, one thread, Smart Turn on workers | lag 1.4 · p50 1.5 | lag 2.6 · p50 0.3 | lag 1.1 · p50 0.3 | lag 2.5 · p50 0.3 | lag 3.7 · p50 0.7 | lag 495.8 · p50 1,983.3 |  |
+| pipedog · Node, one thread | lag 1.8 · p50 0.6 | lag 148.3 · p50 0.3 | lag 118.2 · p50 0.5 | lag 126.8 · p50 97.1 |  |  |  |
+| pipedog · Node, worker per core | lag 1.9 · p50 0.7 | lag 1.8 · p50 0.4 | lag 1.7 · p50 0.1 | lag 1.7 · p50 0.1 | lag 111.2 · p50 0.1 | lag 125.2 · p50 0.3 | lag 378.8 · p50 644.0 |
+| pipedog · Node, one thread, Smart Turn on workers | lag 1.8 · p50 0.6 | lag 2.8 · p50 0.2 | lag 1.1 · p50 0.1 | lag 1.0 · p50 0.2 | lag 1.1 · p50 0.3 | lag 198.6 · p50 1,586.4 |  |
+| pipedog · Deno, one thread | lag 2.7 · p50 1.9 | lag 146.2 · p50 2.0 |  |  |  |  |  |
+| pipedog · Deno, worker per core | lag 2.9 · p50 1.9 | lag 2.9 · p50 1.3 | lag 2.4 · p50 0.9 | lag 2.6 · p50 0.9 | lag 104.2 · p50 1.1 | lag 118.8 · p50 1.9 |  |
+| pipedog · Deno, one thread, Smart Turn on workers | lag 2.8 · p50 2.0 | lag 2.8 · p50 1.3 | lag 2.8 · p50 1.2 | lag 2.9 · p50 1.5 | lag 4.9 · p50 2.5 | lag 330.4 · p50 1,399.5 |  |
+
+</details>
+
+Measured 2026-10-23 on Apple M4 Pro (12 cores, 24 GB), darwin 25.6.0: pipedog 0.8.0, Pipecat 5558d26dca (pinned upstream) on CPython 3.13.13, Bun 1.4.2, Node 24.14.0, Deno 2.9.5. 2 s warm-up and 6 s measured per run; ✗ = over budget.
+
+{/* concurrency:end */}
+
+### What the numbers say
+
+- **Cloud-service bots: one event loop serves a few hundred calls.** On one thread, Node kept 400
+  calls within budget, Bun and Deno 200; Pipecat's asyncio loop kept 50. A worker per core kept
+  every runtime within budget at 800 calls, the most measured, using about 3 of the 12 cores. Each
+  call holds about 1–1.5 MB.
+- **Inline local models: no number of calls is real-time.** Smart Turn runs for about 100 ms on the
+  thread that calls it (Whisper features in JavaScript, then `onnxruntime-node`, whose `run()`
+  executes on the calling thread). Every call on that event loop stalls meanwhile, even with one
+  call per loop, so worker threads alone don't fix it: with a worker per core, p99 stays at
+  70–110 ms at every level. Silero VAD on every frame is cheap by comparison.
+- **Smart Turn on worker threads fixes it.** With every call on one thread and Smart Turn's
+  predictions on a pool of worker threads (`SmartTurnWorkerPool`, below), one Node thread kept
+  100 local-model calls within budget, and Bun and Deno 50. The limit is then the calls' own
+  thread (pipelines, Silero VAD, the transport), so many more calls need several of those threads
+  too, each with the pool.
+- **Pipecat** runs both models on thread executors, so its loop doesn't wait for them: 25
+  local-model calls in one process and 100 with a process per core. It loads a Silero and a Smart
+  Turn session per call (about 40 MB a call), where pipedog shares one session per thread.
+
+One run per level, 6 s each: a lone ✗ below a series' maximum (Bun, one thread, 100 cloud-service
+calls) is a one-off stall; that point measured 5 ms when run again.
+
+## Which setup
+
+| Bot | Setup |
+|---|---|
+| Cloud STT, LLM and TTS | Many calls per process, on one event loop. Scale out with more processes behind a load balancer before threads; past a few hundred calls per process, a worker per core. |
+| Local Silero VAD + Smart Turn | Calls on the main thread (or a few worker threads), Smart Turn on a `SmartTurnWorkerPool`. Or run turn detection as a service (`HttpSmartTurnAnalyzer`) and keep the bot I/O-bound. |
+| Local STT / TTS models (Whisper, Kokoro, Piper) | One call per worker thread, or a few: a model run blocks everything on its thread. |
+| Cloudflare Workers | One Durable Object per call. See [Cloudflare Workers](/docs/deployment/cloudflare-workers). |
+
+Several processes behind a load balancer (one per core, or one per container) are the simplest
+scale-out on any runtime: nothing is shared, a crash takes down only its own calls, and the same
+server code runs unchanged. Worker threads share one process's memory (one copy of the runtime and
+the code) and start faster, but one process failure ends all its calls.
+
+## Getting a connection to a worker
+
+A socket belongs to the thread that accepted it, and can't be moved to another. So either each
+worker accepts its own connections, or the main thread accepts them and forwards their messages.
+
+| Option | Runtimes | Trade-off |
+|---|---|---|
+| Each worker runs its own server on a shared port (`reusePort`) | Bun, Deno, on Linux | Simplest; the kernel balances new connections, not load. macOS and Windows don't balance them. |
+| Processes share a port (`node:cluster`) | Node | Processes, not threads: more memory, full isolation. |
+| One port per worker, a proxy in front | All | Works everywhere; the proxy (nginx, a load balancer) does the balancing. |
+| The main thread accepts, forwards messages to a worker | All, any OS | You choose the worker per call (least busy); every message crosses threads once each way (`postMessage`, with the audio transferred, not copied). |
+
+WebRTC is the same story: the peer connection, and its UDP sockets, live in the thread that
+created it, so post the offer to a worker and create the connection there. That path isn't covered
+by this page's examples.
+
+The examples are in
+[`examples/worker-threads`](https://github.com/polvallverdu/pipedog/tree/main/examples/worker-threads);
+each server runs the same bot (`src/bot.ts`: Silero, Smart Turn, OpenAI services, protobuf frames
+over WebSocket).
+
+### Bun: a worker per core, one port
+
+<include cwd meta='title="bun_reuse_port.ts"'>../../examples/worker-threads/src/bun_reuse_port.ts</include>
+
+`Deno.serve({ port, reusePort: true })` does the same in a Deno worker (`new Worker(url, { type:
+"module" })`), with the same Linux-only balancing.
+
+### Node: cluster
+
+<include cwd meta='title="node_cluster.ts"'>../../examples/worker-threads/src/node_cluster.ts</include>
+
+### Any runtime: the main thread forwards connections
+
+`forwardConnection()` and `acceptConnections()` (in
+[`src/socket_forwarding.ts`](https://github.com/polvallverdu/pipedog/blob/main/examples/worker-threads/src/socket_forwarding.ts))
+carry a `WebsocketConnection` across threads. In the worker, the bot gets a connection that
+behaves like the real one, so the WebSocket transports and the telephony serializers (Twilio,
+Telnyx, Plivo, ...) run there unchanged. One worker serves many connections.
+
+<include cwd meta='title="forwarding_server.ts"'>../../examples/worker-threads/src/forwarding_server.ts</include>
+
+<include cwd meta='title="bot_thread.ts"'>../../examples/worker-threads/src/bot_thread.ts</include>
+
+`spawnThread()` and `parentThread()` (in `src/threads.ts`) give Bun's and Deno's `Worker` and
+Node's `worker_threads` one small interface.
+
+## Smart Turn on worker threads
+
+`SmartTurnWorkerPool` keeps the Smart Turn model in a few worker threads and sends each prediction
+to the least busy one. `pool.analyzer()` is a `LocalSmartTurnAnalyzerV3` (the same buffering and
+parameters) whose predictions run there; one pool serves every call in the process:
+
+```ts
+import { SmartTurnWorkerPool } from "./smart_turn_pool.ts";
+import { spawnThread } from "./threads.ts";
+
+const smartTurn = new SmartTurnWorkerPool({
+  size: 4,
+  spawn: () => spawnThread(new URL("./smart_turn_thread.ts", import.meta.url)),
+});
+
+// In each call:
+new TurnAnalyzerUserTurnStopStrategy({ turnAnalyzer: smartTurn.analyzer() });
+```
+
+`runBot(connection, { smartTurn })` in the example does this. The audio of each prediction (up to
+8 s) is transferred to the worker, not copied.
+
+## Caveats by runtime
+
+- **onnxruntime-node works in worker threads** on Bun, Node and Deno (all three were measured
+  here), with one model session per thread: each worker thread added about 75 MB (its own heap
+  and model sessions).
+- **Stop the workers before the process exits.** Node and Deno sometimes abort with `libc++abi:
+  ... recursive_mutex lock failed` when the process exits while worker threads still hold
+  onnxruntime sessions; awaiting `terminate()` on each worker first avoids it.
+- **Bun**: `reusePort` balances only on Linux. Workers are web `Worker`s; `Bun.isMainThread` tells
+  the two sides apart.
+- **Node**: threads can't share a listening port; use `node:cluster` (processes) or forward from
+  the main thread. A worker started from a `.ts` file needs Node's type stripping (Node 22.18+ or
+  24), or point it at your built JavaScript.
+- **Deno**: workers get the process's permissions unless `new Worker()` narrows them; run with the
+  permissions the bot needs (`-A` in the benchmark). `Deno.serve` takes `reusePort` on Linux.
+- **Pipecat** (Python): threads share the GIL, so a CPU-bound pipeline doesn't speed up on threads;
+  processes do. Its model executors help because onnxruntime releases the GIL while it runs.
+
+Durable Objects aren't measured here: on Cloudflare each call is its own Durable Object, which
+Cloudflare places and isolates itself (see [Cloudflare Workers](/docs/deployment/cloudflare-workers)),
+and a local workerd run doesn't show how production spreads them.
+
+## Running it
+
+```sh
+bun install
+bun run bench:concurrency --write          # about 20 minutes
+bun run bench:concurrency --profile local --runtime bun,python --levels 1,25,100 --duration 4
+```
+
+The calls are in
+[`tools/bench/concurrency/pipedog.ts`](https://github.com/polvallverdu/pipedog/blob/main/tools/bench/concurrency/pipedog.ts)
+and
+[`pipecat_concurrency.py`](https://github.com/polvallverdu/pipedog/blob/main/tools/bench/concurrency/pipecat_concurrency.py).
+Each run is a fresh process; the levels go up until a series breaks, and the series take turns at
+each level. Pipecat runs from the pinned upstream checkout in the same Python environment as the
+[performance benchmark](/docs/performance#running-it). `--write` saves
+[`tools/bench/perf/concurrency.json`](https://github.com/polvallverdu/pipedog/blob/main/tools/bench/perf/concurrency.json)
+and the tables above.

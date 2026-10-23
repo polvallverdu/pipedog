@@ -21,22 +21,24 @@
 // --write saves tools/bench/perf/results.json and the tables in
 // apps/docs/content/docs/performance.mdx.
 
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { cpus, release, totalmem } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { ROOT } from "../compat/packages.ts";
+import { freePort, OUT_ROOT, workerdBin, workerdConfig } from "../compat/runners.ts";
 import {
-  bundle,
-  freePort,
-  moduleUrlPlugin,
-  nodeBuiltinsPlugin,
-  OUT_ROOT,
-  provideOptionalPeers,
-  wasmModulesPlugin,
-  workerdBin,
-  workerdConfig,
-} from "../compat/runners.ts";
+  type Build,
+  buildBundle,
+  ensureVenv,
+  type Measured,
+  machine,
+  median,
+  PYTHON,
+  quantile,
+  ROOT,
+  runProcess as runMarked,
+  versions,
+  writeReport,
+  writeSection,
+} from "./common.ts";
 import type { PerfArgs } from "./perf/pipedog.ts";
 
 const RUNTIMES = ["python", "bun", "node", "deno", "workerd"] as const;
@@ -75,7 +77,6 @@ const PLAN: Record<Scenario, { runs: number; args: PerfArgs }> = {
 const DIR = join(OUT_ROOT, "perf");
 const SCRIPT_TS = join(ROOT, "tools", "bench", "perf", "pipedog.ts");
 const SCRIPT_PY = join(ROOT, "tools", "bench", "perf", "pipecat_bench.py");
-const VENV = join(ROOT, "node_modules", ".cache", "pipedog-bench", "py");
 const RESULT_MARK = "__PERF_RESULT__";
 
 // ---------------------------------------------------------------------------
@@ -112,97 +113,20 @@ function workerEntry(empty: boolean): string {
   ].join("\n");
 }
 
-interface Build {
-  dir: string;
-  cmd: string[];
-  bytes: number;
-  wasm: string[];
-}
-
 async function build(rt: Exclude<Rt, "python">, empty: boolean): Promise<Build> {
   const dir = join(DIR, `${rt}${empty ? "-empty" : ""}`);
-  await Bun.$`rm -rf ${dir} && mkdir -p ${dir}`.quiet();
-  const entry = join(dir, "entry.mjs");
-  await Bun.write(entry, rt === "workerd" ? workerEntry(empty) : processEntry(empty));
-  const wasm: string[] = [];
-  const err = await bundle(
-    entry,
-    dir,
-    rt === "workerd"
-      ? {
-          target: "browser",
-          conditions: ["workerd", "worker", "browser"],
-          plugins: [wasmModulesPlugin(dir, wasm)],
-        }
-      : rt === "deno"
-        ? {
-            target: "browser",
-            conditions: ["deno"],
-            plugins: [moduleUrlPlugin(), nodeBuiltinsPlugin()],
-            banner:
-              'import { createRequire as __pdCreateRequire } from "node:module"; var require = __pdCreateRequire(import.meta.url);',
-          }
-        : { target: rt, plugins: [moduleUrlPlugin()] },
-  );
-  if (err) throw new Error(`${rt} bundle: ${err}`);
-  const out = join(dir, "bundle.mjs");
-  if (rt !== "workerd") provideOptionalPeers(dir, []);
-  const cmd =
-    rt === "bun"
-      ? [process.execPath, out]
-      : rt === "node"
-        ? ["node", out]
-        : rt === "deno"
-          ? ["deno", "run", "-A", "--no-lock", "--no-config", out]
-          : [];
-  return { dir, cmd, bytes: statSync(out).size, wasm };
+  return buildBundle(rt, dir, rt === "workerd" ? workerEntry(empty) : processEntry(empty));
 }
 
 function pythonCmd(): string[] {
-  return [join(VENV, "bin", "python"), SCRIPT_PY];
-}
-
-async function ensureVenv(): Promise<void> {
-  if (existsSync(join(VENV, "bin", "python"))) return;
-  process.stderr.write("creating the Pipecat venv (uv, Python 3.13)...\n");
-  await Bun.$`uv venv -q --python 3.13 ${VENV}`;
-  await Bun.$`uv pip install -q --python ${join(VENV, "bin", "python")} ${`${join(ROOT, ".upstream", "pipecat")}[google]`}`;
+  return [PYTHON, SCRIPT_PY];
 }
 
 // ---------------------------------------------------------------------------
 // Running
 
-interface Measured {
-  result: any;
-  /** Spawn to exit (processes) or spawn to the first response (workerd). */
-  wallMs: number;
-  /** Peak resident memory of the process, from /usr/bin/time. */
-  peakRss: number | null;
-}
-
-async function runProcess(cmd: string[], args: PerfArgs | null, cwd: string): Promise<Measured> {
-  const env = { ...process.env, PIPEDOG_BENCH_ARGS: JSON.stringify(args ?? {}) };
-  const t0 = performance.now();
-  const proc = Bun.spawn(["/usr/bin/time", "-l", ...cmd], {
-    cwd,
-    env,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  await proc.exited;
-  const wallMs = performance.now() - t0;
-  const line = stdout.split("\n").find((l) => l.startsWith(RESULT_MARK));
-  if (!line) throw new Error(`${cmd.join(" ")} failed:\n${stderr.slice(-3000)}`);
-  const rss = /(\d+)\s+maximum resident set size/.exec(stderr);
-  return {
-    result: JSON.parse(line.slice(RESULT_MARK.length)),
-    wallMs,
-    peakRss: rss ? Number(rss[1]) : null,
-  };
+function runProcess(cmd: string[], args: PerfArgs | null, cwd: string): Promise<Measured> {
+  return runMarked(cmd, args, cwd, RESULT_MARK);
 }
 
 /** A workerd process serving the bundle in `b.dir`. */
@@ -253,32 +177,7 @@ class Workerd {
 
 // ---------------------------------------------------------------------------
 
-const quantile = (xs: number[], q: number) => {
-  const s = xs.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
-  if (!s.length) return Number.NaN;
-  const i = (s.length - 1) * q;
-  const lo = Math.floor(i);
-  return s[lo]! + (s[Math.ceil(i)]! - s[lo]!) * (i - lo);
-};
-const median = (xs: number[]) => quantile(xs, 0.5);
-
-function versions(): Record<string, string> {
-  const run = (cmd: string[]) => Bun.spawnSync(cmd).stdout.toString().trim().split("\n")[0]!.trim();
-  const pipecatCommit = JSON.parse(readFileSync(join(ROOT, "upstream.json"), "utf8")).commit;
-  const pkg = JSON.parse(readFileSync(join(ROOT, "packages", "core", "package.json"), "utf8"));
-  return {
-    pipedog: pkg.version,
-    pipecat: `${pipecatCommit.slice(0, 10)} (pinned upstream)`,
-    python: existsSync(join(VENV, "bin", "python"))
-      ? run([join(VENV, "bin", "python"), "-c", "import platform;print(platform.python_version())"])
-      : "",
-    bun: Bun.version,
-    node: run(["node", "--version"]).replace(/^v/, ""),
-    deno: run(["deno", "--version"]).split(" ")[1] ?? "",
-    workerd: JSON.parse(readFileSync(join(ROOT, "node_modules", "workerd", "package.json"), "utf8"))
-      .version,
-  };
-}
+// ---------------------------------------------------------------------------
 
 async function main() {
   if (runtimes.includes("python")) await ensureVenv();
@@ -328,11 +227,7 @@ async function main() {
               const m = await runProcess(pythonCmd(), args, ROOT);
               samples.push({ runtime: rt, scenario, round, ...m });
               if (scenario === "startup") {
-                const e = await runProcess(
-                  [join(VENV, "bin", "python"), "-c", `print("${RESULT_MARK}{}")`],
-                  null,
-                  ROOT,
-                );
+                const e = await runProcess([PYTHON, "-c", `print("${RESULT_MARK}{}")`], null, ROOT);
                 samples.push({ runtime: rt, scenario: "empty", round, ...e });
               }
             } else {
@@ -358,12 +253,7 @@ async function main() {
   const summary = summarize(samples);
   const report = {
     date: new Date().toISOString().slice(0, 10),
-    machine: {
-      cpu: cpus()[0]?.model ?? "unknown",
-      cores: cpus().length,
-      memoryGb: Math.round(totalmem() / 2 ** 30),
-      os: `${process.platform} ${release()}`,
-    },
+    machine: machine(),
     versions: versions(),
     plan: PLAN,
     rounds: ROUNDS,
@@ -377,20 +267,9 @@ async function main() {
   for (const e of errors) console.error(`❌ ${e.slice(0, 300)}`);
 
   if (values.write) {
-    const out = join(ROOT, "tools", "bench", "perf", "results.json");
-    await Bun.write(out, `${JSON.stringify(report, null, 2)}\n`);
-    // In the layout the repo's formatter checks.
-    await Bun.$`bunx biome format --write ${out}`.cwd(ROOT).quiet();
-    console.log(`wrote ${out}`);
+    await writeReport(join(ROOT, "tools", "bench", "perf", "results.json"), report);
     const page = join(ROOT, "apps", "docs", "content", "docs", "performance.mdx");
-    const text = await Bun.file(page).text();
-    const START = "{/* perf:start */}";
-    const END = "{/* perf:end */}";
-    const a = text.indexOf(START);
-    const b = text.indexOf(END);
-    if (a < 0 || b < a) throw new Error(`${page}: no ${START} ... ${END} section`);
-    await Bun.write(page, `${text.slice(0, a + START.length)}\n\n${tables}\n\n${text.slice(b)}`);
-    console.log(`wrote ${page}`);
+    await writeSection(page, "perf", tables);
   }
 }
 

@@ -1,0 +1,5494 @@
+{
+  "date": "2026-10-23",
+  "machine": {
+    "cpu": "Apple M4 Pro",
+    "cores": 12,
+    "memoryGb": 24,
+    "os": "darwin 25.6.0"
+  },
+  "versions": {
+    "pipedog": "0.8.0",
+    "pipecat": "5558d26dca (pinned upstream)",
+    "python": "3.13.13",
+    "bun": "1.4.2",
+    "node": "24.14.0",
+    "deno": "2.9.5",
+    "workerd": "1.20261005.1"
+  },
+  "budgetMs": 20,
+  "warmupS": 2,
+  "durationS": 6,
+  "levels": [1, 10, 25, 50, 100, 200, 400, 800],
+  "runs": [
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "single",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "single",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 1.3892910480499268,
+          "p99": 7.287415981292725,
+          "p999": 12.011125087738037,
+          "max": 12.011125087738037
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 551,
+          "p50": 0.9548327922821045,
+          "p99": 4.995290994644165,
+          "p999": 7.41112494468689,
+          "max": 7.41112494468689
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 4.21771566029026,
+        "peakRssSum": 73416704,
+        "errors": []
+      },
+      "wallMs": 8602.610332999999,
+      "peakRss": 73515008
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 1.8675000667572021,
+          "p99": 10.228084087371826,
+          "p999": 14.908499956130981,
+          "max": 14.908499956130981
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 550,
+          "p50": 0.844292163848877,
+          "p99": 4.483666181564331,
+          "p999": 16.68154215812683,
+          "max": 16.68154215812683
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 6.672330536348511,
+        "peakRssSum": 73383936,
+        "errors": []
+      },
+      "wallMs": 13577.809957999998,
+      "peakRss": 73383936
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "single",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "single",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 0.6326250000001892,
+          "p99": 5.451790999999957,
+          "p999": 8.201665999999932,
+          "max": 8.201665999999932
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 555,
+          "p50": 0.9129999999995562,
+          "p99": 3.4859999999998763,
+          "p999": 5.329791999999998,
+          "max": 5.329791999999998
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 4.507370640125198,
+        "errors": []
+      },
+      "wallMs": 8250.005292000002,
+      "peakRss": 54083584
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 0.554957999999715,
+          "p99": 2.953332999999475,
+          "p999": 3.3530829999999696,
+          "max": 3.3530829999999696
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 553,
+          "p50": 0.8973329999998896,
+          "p99": 3.6306250000002365,
+          "p999": 16.30325000000039,
+          "max": 16.30325000000039
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 4.47189132063723,
+        "errors": []
+      },
+      "wallMs": 8294.707666000002,
+      "peakRss": 66453504
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "single",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "single",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 299,
+          "p50": 0.6885420000003251,
+          "p99": 3.0738750000000437,
+          "p999": 4.087458999999399,
+          "max": 4.087458999999399
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 555,
+          "p50": 0.8855830000002243,
+          "p99": 2.056916999999885,
+          "p999": 6.979000000000269,
+          "max": 6.979000000000269
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 299,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 4.780994630029582,
+        "errors": []
+      },
+      "wallMs": 8296.750082999999,
+      "peakRss": 88866816
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 0.6720000000000255,
+          "p99": 11.703291999999237,
+          "p999": 15.930750000000444,
+          "max": 15.930750000000444
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 542,
+          "p50": 1.0147080000001552,
+          "p99": 9.919208000000253,
+          "p999": 19.736708000000363,
+          "max": 19.736708000000363
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 4.602829561314508,
+        "errors": []
+      },
+      "wallMs": 8322.957457999997,
+      "peakRss": 108888064
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "single",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "single",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 1.4477499999993597,
+          "p99": 6.362959000000046,
+          "p999": 8.926249999999527,
+          "max": 8.926249999999527
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 511,
+          "p50": 1.8292499999997744,
+          "p99": 3.5014580000001843,
+          "p999": 5.8425829999996495,
+          "max": 5.8425829999996495
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 5.18618445608728,
+        "errors": []
+      },
+      "wallMs": 8506.975749999998,
+      "peakRss": 99106816
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 301,
+          "p50": 1.4236660000001393,
+          "p99": 4.518790999999965,
+          "p999": 7.9103329999998095,
+          "max": 7.9103329999998095
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 513,
+          "p50": 1.7880000000004657,
+          "p99": 3.530792000000474,
+          "p999": 6.976999999999862,
+          "max": 6.976999999999862
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 301,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 5.11624865534125,
+        "errors": []
+      },
+      "wallMs": 8364.802665999996,
+      "peakRss": 114524160
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "single",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "single",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 1.1637911796569824,
+          "p99": 6.501166105270386,
+          "p999": 14.56554126739502,
+          "max": 16.008000373840332
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 583,
+          "p50": 0.17083287239074707,
+          "p99": 2.975874900817871,
+          "p999": 4.000208139419556,
+          "max": 4.000208139419556
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 46.405633493735216,
+        "peakRssSum": 76857344,
+        "errors": []
+      },
+      "wallMs": 8704.562666999991,
+      "peakRss": 76972032
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 10,
+        "threads": 10,
+        "latency": {
+          "n": 3000,
+          "p50": 1.553999900817871,
+          "p99": 5.652832984924316,
+          "p999": 10.793458223342896,
+          "max": 13.17091703414917
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5652,
+          "p50": 0.5046670436859131,
+          "p99": 2.4786252975463867,
+          "p999": 4.738790988922119,
+          "max": 6.610749959945679
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 56.6176660075538,
+        "peakRssSum": 742211584,
+        "errors": []
+      },
+      "wallMs": 13648.257458000007,
+      "peakRss": 742211584
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "single",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "single",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 0.24841699999979028,
+          "p99": 5.6666660000000775,
+          "p999": 28.172875000000204,
+          "max": 31.970666000000165
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 579,
+          "p50": 0.14587500000016007,
+          "p99": 3.496624999999767,
+          "p999": 19.669541999999637,
+          "max": 19.669541999999637
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 21.911693789135654,
+        "errors": []
+      },
+      "wallMs": 8281.769040999992,
+      "peakRss": 75776000
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 10,
+        "threads": 10,
+        "latency": {
+          "n": 3000,
+          "p50": 0.5670000000000073,
+          "p99": 4.661375000000589,
+          "p999": 15.233124999999745,
+          "max": 19.543166999999812
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5565,
+          "p50": 0.6972089999999298,
+          "p99": 4.0088339999997515,
+          "p999": 9.726708000000144,
+          "max": 13.380583000000115
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 40.637915337676375,
+        "errors": []
+      },
+      "wallMs": 8299.002250000005,
+      "peakRss": 268320768
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "single",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "single",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 0.28549999999995634,
+          "p99": 2.2313330000006317,
+          "p999": 6.563000000000102,
+          "max": 9.687541000000238
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 588,
+          "p50": 0.24437500000021828,
+          "p99": 1.3234169999996084,
+          "p999": 3.932542000000467,
+          "max": 3.932542000000467
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 17.378798711271617,
+        "errors": []
+      },
+      "wallMs": 8331.534541999994,
+      "peakRss": 115965952
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 10,
+        "threads": 10,
+        "latency": {
+          "n": 2999,
+          "p50": 0.5602089999993041,
+          "p99": 2.9631250000002183,
+          "p999": 6.947625000000244,
+          "max": 7.281625000000076
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5596,
+          "p50": 0.7440000000001419,
+          "p99": 2.590582999999242,
+          "p999": 5.795041999999739,
+          "max": 8.091042000000016
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 2999,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 41.45725497174772,
+        "errors": []
+      },
+      "wallMs": 8357.6835,
+      "peakRss": 424984576
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "single",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "single",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 1.047750000000633,
+          "p99": 3.883624999999938,
+          "p999": 15.539583000000675,
+          "max": 17.507166999999754
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 531,
+          "p50": 1.2288750000006985,
+          "p99": 2.9889170000001286,
+          "p999": 3.983791999999994,
+          "max": 3.983791999999994
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 20.174041203816518,
+        "errors": []
+      },
+      "wallMs": 8503.255916999988,
+      "peakRss": 122699776
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 10,
+        "threads": 10,
+        "latency": {
+          "n": 2999,
+          "p50": 1.2673330000002352,
+          "p99": 3.627124999999978,
+          "p999": 9.26758300000074,
+          "max": 10.54804200000035
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5177,
+          "p50": 1.6479159999998956,
+          "p99": 3.1609580000003916,
+          "p999": 7.399500000000444,
+          "max": 11.286041999999725
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 2999,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 40.9674957948061,
+        "errors": []
+      },
+      "wallMs": 8370.103915999993,
+      "peakRss": 373309440
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "single",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "single",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7500,
+          "p50": 0.8832082748413086,
+          "p99": 2.632082939147949,
+          "p999": 6.968915939331055,
+          "max": 8.241750001907349
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 590,
+          "p50": 0.14020824432373047,
+          "p99": 0.8558750152587891,
+          "p999": 2.561915874481201,
+          "max": 2.561915874481201
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 59.672129508143065,
+        "peakRssSum": 82116608,
+        "errors": []
+      },
+      "wallMs": 8685.105917000008,
+      "peakRss": 82198528
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 25,
+        "threads": 12,
+        "latency": {
+          "n": 7500,
+          "p50": 1.0127918720245361,
+          "p99": 4.585666179656982,
+          "p999": 14.660542011260986,
+          "max": 19.597790956497192
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6876,
+          "p50": 0.3083341121673584,
+          "p99": 1.648082971572876,
+          "p999": 6.922499895095825,
+          "max": 8.295207977294922
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 92.47808971535639,
+        "peakRssSum": 898007040,
+        "errors": []
+      },
+      "wallMs": 13666.160915999993,
+      "peakRss": 898007040
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "single",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "single",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7500,
+          "p50": 0.35608400000000984,
+          "p99": 3.621874999999818,
+          "p999": 16.249791999999616,
+          "max": 17.5131250000004
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 583,
+          "p50": 0.12299999999959255,
+          "p99": 1.6599999999998545,
+          "p999": 3.5428750000000946,
+          "max": 3.5428750000000946
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 46.44563125818935,
+        "errors": []
+      },
+      "wallMs": 8302.36045800001,
+      "peakRss": 102989824
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 25,
+        "threads": 12,
+        "latency": {
+          "n": 7498,
+          "p50": 0.24624999999923602,
+          "p99": 1.7176669999998921,
+          "p999": 4.986500000000433,
+          "max": 9.86554200000046
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6814,
+          "p50": 0.4858329999997295,
+          "p99": 1.7612079999998969,
+          "p999": 4.786000000000058,
+          "max": 8.124874999999975
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7498,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 72.34021684848867,
+        "errors": []
+      },
+      "wallMs": 8310.135666999995,
+      "peakRss": 381861888
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "single",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "single",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7497,
+          "p50": 0.4077919999999722,
+          "p99": 1.852750000000924,
+          "p999": 4.287625000000844,
+          "max": 6.582374999999956
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 587,
+          "p50": 0.20304200000009587,
+          "p99": 1.1403339999997115,
+          "p999": 2.3085829999999987,
+          "max": 2.3085829999999987
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7497,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 31.977985615032612,
+        "errors": []
+      },
+      "wallMs": 8351.639041999995,
+      "peakRss": 155910144
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 25,
+        "threads": 12,
+        "latency": {
+          "n": 7500,
+          "p50": 0.4023749999996653,
+          "p99": 2.2591669999997066,
+          "p999": 9.574416000001293,
+          "max": 13.21362500000214
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6796,
+          "p50": 0.56970900000033,
+          "p99": 2.3946670000000267,
+          "p999": 9.640625,
+          "max": 12.776042000000416
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 80.1943556553436,
+        "errors": []
+      },
+      "wallMs": 8368.887874999986,
+      "peakRss": 515194880
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "single",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "single",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7500,
+          "p50": 1.5000830000003589,
+          "p99": 5.477832999999919,
+          "p999": 16.47616700000026,
+          "max": 18.324125000000095
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 531,
+          "p50": 1.1529169999994338,
+          "p99": 3.22400000000016,
+          "p999": 4.5187919999998485,
+          "max": 4.5187919999998485
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 37.024130908594884,
+        "errors": []
+      },
+      "wallMs": 8523.409000000014,
+      "peakRss": 157958144
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 25,
+        "threads": 12,
+        "latency": {
+          "n": 7500,
+          "p50": 1.0373330000011265,
+          "p99": 3.5739160000011907,
+          "p999": 8.895416000000296,
+          "max": 12.575582999999824
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6271,
+          "p50": 1.4801250000000437,
+          "p99": 3.506000000000313,
+          "p999": 8.709874999999556,
+          "max": 11.867417000000387
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 68.91775913560872,
+        "errors": []
+      },
+      "wallMs": 8380.873374999996,
+      "peakRss": 447021056
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "single",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "single",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 15000,
+          "p50": 0.3180420398712158,
+          "p99": 0.7489171028137207,
+          "p999": 2.3837921619415283,
+          "max": 5.6468751430511475
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 596,
+          "p50": 0.06058311462402344,
+          "p99": 0.18558263778686523,
+          "p999": 0.29508304595947266,
+          "max": 0.29508304595947266
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 53.00713299720311,
+        "peakRssSum": 91291648,
+        "errors": []
+      },
+      "wallMs": 8584.05929199999,
+      "peakRss": 91324416
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 50,
+        "threads": 12,
+        "latency": {
+          "n": 15000,
+          "p50": 0.7920830249786377,
+          "p99": 3.3468332290649414,
+          "p999": 7.367541074752808,
+          "max": 9.54391598701477
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7042,
+          "p50": 0.14800000190734863,
+          "p99": 1.0470001697540283,
+          "p999": 2.8079581260681152,
+          "max": 4.379584074020386
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 133.33000149946898,
+        "peakRssSum": 902873088,
+        "errors": []
+      },
+      "wallMs": 13602.381083000015,
+      "peakRss": 902873088
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "single",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "single",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 14998,
+          "p50": 0.35116699999980483,
+          "p99": 7.269708999999239,
+          "p999": 15.966709000000264,
+          "max": 19.019125000000713
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 578,
+          "p50": 0.16808399999990797,
+          "p99": 2.408292000000074,
+          "p999": 5.153374999999869,
+          "max": 5.153374999999869
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 14998,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 72.67765923830525,
+        "errors": []
+      },
+      "wallMs": 8330.291750000004,
+      "peakRss": 139132928
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 50,
+        "threads": 12,
+        "latency": {
+          "n": 14999,
+          "p50": 0.19733300000007148,
+          "p99": 1.6817500000011023,
+          "p999": 5.599167000000307,
+          "max": 9.254000000000815
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6979,
+          "p50": 0.20212500000070577,
+          "p99": 1.605916999999863,
+          "p999": 5.112124999999651,
+          "max": 7.4053329999997
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 14999,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 95.15365985160516,
+        "errors": []
+      },
+      "wallMs": 8317.011750000005,
+      "peakRss": 422281216
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "single",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "single",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 15000,
+          "p50": 0.5529159999996409,
+          "p99": 3.3891670000002705,
+          "p999": 8.861166000000594,
+          "max": 10.918958000002021
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 589,
+          "p50": 0.14804200000025958,
+          "p99": 1.6136249999999563,
+          "p999": 6.997041999999965,
+          "max": 6.997041999999965
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 53.12946195523294,
+        "errors": []
+      },
+      "wallMs": 8385.850166999997,
+      "peakRss": 218382336
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 50,
+        "threads": 12,
+        "latency": {
+          "n": 14998,
+          "p50": 0.24754200000006676,
+          "p99": 2.6950000000006185,
+          "p999": 15.616833000000042,
+          "max": 20.014083000000028
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6934,
+          "p50": 0.3717079999996713,
+          "p99": 2.4182499999997162,
+          "p999": 13.40933300000006,
+          "max": 16.819625000000087
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 14998,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 93.24332945670452,
+        "errors": []
+      },
+      "wallMs": 8387.76216600003,
+      "peakRss": 605487104
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "single",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "single",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 14998,
+          "p50": 1.8047910000032061,
+          "p99": 10.128750000001673,
+          "p999": 18.815333000002283,
+          "max": 22.468665999999757
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 533,
+          "p50": 1.0867920000000595,
+          "p99": 4.3367920000000595,
+          "p999": 10.957084000000577,
+          "max": 10.957084000000577
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 14998,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 62.53854068289333,
+        "errors": []
+      },
+      "wallMs": 8553.459791000001,
+      "peakRss": 161644544
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 50,
+        "threads": 12,
+        "latency": {
+          "n": 15000,
+          "p50": 0.7420830000000933,
+          "p99": 2.7226670000000013,
+          "p999": 5.666208000001006,
+          "max": 6.7285830000000715
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6466,
+          "p50": 1.2255420000001322,
+          "p99": 2.6938749999999345,
+          "p999": 5.935500000000047,
+          "max": 6.388958000000002
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 73.62685357663116,
+        "errors": []
+      },
+      "wallMs": 8400.241666999995,
+      "peakRss": 519700480
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "single",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "single",
+        "calls": 100,
+        "threads": 1,
+        "latency": {
+          "n": 30000,
+          "p50": 0.5669999122619629,
+          "p99": 37.6470410823822,
+          "p999": 57.752541065216064,
+          "max": 61.96720790863037
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 581,
+          "p50": 0.12108302116394043,
+          "p99": 5.788833141326904,
+          "p999": 20.782541751861572,
+          "max": 20.782541751861572
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 30000,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 79.59909259644597,
+        "peakRssSum": 108494848,
+        "errors": []
+      },
+      "wallMs": 8771.589042000007,
+      "peakRss": 109051904
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 100,
+        "threads": 12,
+        "latency": {
+          "n": 30000,
+          "p50": 0.504166841506958,
+          "p99": 2.7068750858306885,
+          "p999": 12.812292098999023,
+          "max": 15.152334213256836
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7109,
+          "p50": 0.0857081413269043,
+          "p99": 0.5536251068115234,
+          "p999": 4.88712477684021,
+          "max": 7.357500076293945
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 30000,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 161.3697192228711,
+        "peakRssSum": 920289280,
+        "errors": []
+      },
+      "wallMs": 13784.628000000026,
+      "peakRss": 920289280
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "single",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "single",
+        "calls": 100,
+        "threads": 1,
+        "latency": {
+          "n": 29997,
+          "p50": 0.3568329999998241,
+          "p99": 108.96679200000108,
+          "p999": 139.44366700000273,
+          "max": 142.72662499999933
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 556,
+          "p50": 0.21866599999975733,
+          "p99": 9.894583999999668,
+          "p999": 35.4838749999999,
+          "max": 35.4838749999999
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 29997,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 75.35890015419878,
+        "errors": []
+      },
+      "wallMs": 8374.28579200001,
+      "peakRss": 175030272
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 100,
+        "threads": 12,
+        "latency": {
+          "n": 29997,
+          "p50": 0.093166999999994,
+          "p99": 1.497457999999824,
+          "p999": 6.116874999999254,
+          "max": 11.531208000002607
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7034,
+          "p50": 0.13808400000016263,
+          "p99": 1.5192079999997077,
+          "p999": 6.077582999999777,
+          "max": 8.155166000000008
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 29997,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 106.53871133571138,
+        "errors": []
+      },
+      "wallMs": 8338.904458999983,
+      "peakRss": 506675200
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "single",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "single",
+        "calls": 100,
+        "threads": 1,
+        "latency": {
+          "n": 29998,
+          "p50": 0.6872920000005251,
+          "p99": 4.519917000002351,
+          "p999": 10.12470900000244,
+          "max": 12.55670900000041
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 588,
+          "p50": 0.15816600000016479,
+          "p99": 2.6662500000002183,
+          "p999": 4.030957999999828,
+          "max": 4.030957999999828
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 29998,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 65.89879540462265,
+        "errors": []
+      },
+      "wallMs": 8424.047791999998,
+      "peakRss": 240189440
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 100,
+        "threads": 12,
+        "latency": {
+          "n": 29994,
+          "p50": 0.14216699999997218,
+          "p99": 3.2291670000049635,
+          "p999": 18.452167000001737,
+          "max": 32.92945800000052
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6991,
+          "p50": 0.35600000000067666,
+          "p99": 2.4312920000002123,
+          "p999": 11.856584000000112,
+          "max": 26.50387499999988
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 29994,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 108.53402515813517,
+        "errors": []
+      },
+      "wallMs": 8451.09729200002,
+      "peakRss": 793804800
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "single",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "single",
+        "calls": 100,
+        "threads": 1,
+        "latency": {
+          "n": 30001,
+          "p50": 1.708582999999635,
+          "p99": 14.135750000000371,
+          "p999": 36.43479099999968,
+          "max": 41.985249999998814
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 528,
+          "p50": 1.1918749999999818,
+          "p99": 3.846875000000182,
+          "p999": 17.61016699999982,
+          "max": 17.61016699999982
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 30001,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 65.23294730267752,
+        "errors": []
+      },
+      "wallMs": 8625.918334000045,
+      "peakRss": 295829504
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 100,
+        "threads": 12,
+        "latency": {
+          "n": 30000,
+          "p50": 0.8088329999995949,
+          "p99": 2.4090410000053453,
+          "p999": 3.340041999999812,
+          "max": 5.527416000000812
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6465,
+          "p50": 1.0131659999997282,
+          "p99": 2.3787079999992784,
+          "p999": 2.9931249999999636,
+          "max": 3.875082999999904
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 30000,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 94.02773601140399,
+        "errors": []
+      },
+      "wallMs": 8405.233667000022,
+      "peakRss": 709787648
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "single",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "single",
+        "calls": 200,
+        "threads": 1,
+        "latency": {
+          "n": 60000,
+          "p50": 342.3002088069916,
+          "p99": 474.15641689300537,
+          "p999": 502.73908400535583,
+          "max": 507.25391697883606
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 64,
+          "p50": 89.6407082080841,
+          "p99": 168.78154182434082,
+          "p999": 168.78154182434082,
+          "max": 168.78154182434082
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60000,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 99.61674438556231,
+        "peakRssSum": 145883136,
+        "errors": []
+      },
+      "wallMs": 9031.587499999965,
+      "peakRss": 146669568
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 200,
+        "threads": 12,
+        "latency": {
+          "n": 60000,
+          "p50": 0.4352908134460449,
+          "p99": 0.6409173011779785,
+          "p999": 13.106082677841187,
+          "max": 18.813125133514404
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7138,
+          "p50": 0.06474995613098145,
+          "p99": 0.16904187202453613,
+          "p999": 2.53837513923645,
+          "max": 7.76545786857605
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60000,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 297.4763838076958,
+        "peakRssSum": 961675264,
+        "errors": []
+      },
+      "wallMs": 13859.36166699999,
+      "peakRss": 961675264
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "single",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "single",
+        "calls": 200,
+        "threads": 1,
+        "latency": {
+          "n": 59995,
+          "p50": 0.30379099999936443,
+          "p99": 4.436584000004586,
+          "p999": 10.143833999996787,
+          "max": 11.147584000000279
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 574,
+          "p50": 0.28116700000009587,
+          "p99": 1.6270409999997355,
+          "p999": 2.9705830000002607,
+          "max": 2.9705830000002607
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 59995,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 100.01383719846437,
+        "errors": []
+      },
+      "wallMs": 8439.059957999969,
+      "peakRss": 284540928
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 200,
+        "threads": 12,
+        "latency": {
+          "n": 59994,
+          "p50": 0.06441699999959383,
+          "p99": 0.7357499999998254,
+          "p999": 4.406082999998944,
+          "max": 14.63404200000241
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7068,
+          "p50": 0.08916599999975006,
+          "p99": 1.0736249999999927,
+          "p999": 2.5694579999999405,
+          "max": 4.400625000000218
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 59994,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 121.47363741987553,
+        "errors": []
+      },
+      "wallMs": 8388.405708000006,
+      "peakRss": 566001664
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "single",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "single",
+        "calls": 200,
+        "threads": 1,
+        "latency": {
+          "n": 60000,
+          "p50": 0.7102079999995112,
+          "p99": 6.199750000002496,
+          "p999": 34.91704200000822,
+          "max": 40.041792000001806
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 584,
+          "p50": 0.18983299999990777,
+          "p99": 3.0285829999997986,
+          "p999": 10.180875000000015,
+          "max": 10.180875000000015
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60000,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 83.80542146665525,
+        "errors": []
+      },
+      "wallMs": 8529.633208000043,
+      "peakRss": 470269952
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 200,
+        "threads": 12,
+        "latency": {
+          "n": 59994,
+          "p50": 0.1706659999999829,
+          "p99": 3.6941660000006777,
+          "p999": 28.372875000000022,
+          "max": 35.45245800000248
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7025,
+          "p50": 0.10366699999940465,
+          "p99": 2.234707999999955,
+          "p999": 15.04083300000002,
+          "max": 30.183834000000388
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 59994,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 154.41053841780595,
+        "errors": []
+      },
+      "wallMs": 8469.493832999957,
+      "peakRss": 1221296128
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "single",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "single",
+        "calls": 200,
+        "threads": 1,
+        "latency": {
+          "n": 59993,
+          "p50": 1.807834000001094,
+          "p99": 8.127417000003334,
+          "p999": 24.05920900000092,
+          "max": 25.86075000001074
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 536,
+          "p50": 1.0062080000002425,
+          "p99": 3.1584170000005543,
+          "p999": 4.806375000000116,
+          "max": 4.806375000000116
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 59993,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 77.46358200471663,
+        "errors": []
+      },
+      "wallMs": 8709.936166000029,
+      "peakRss": 232194048
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 200,
+        "threads": 12,
+        "latency": {
+          "n": 60000,
+          "p50": 0.8481670000019221,
+          "p99": 9.569250000005468,
+          "p999": 31.794791000010264,
+          "max": 42.52083300000049
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6296,
+          "p50": 1.21783300000061,
+          "p99": 3.998833999999988,
+          "p999": 12.817833000000064,
+          "max": 17.929209000000355
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60000,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 124.10634202190471,
+        "errors": []
+      },
+      "wallMs": 8456.715291999979,
+      "peakRss": 1106722816
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 400,
+        "threads": 12,
+        "latency": {
+          "n": 120000,
+          "p50": 0.6553750038146973,
+          "p99": 1.086125135421753,
+          "p999": 7.13604211807251,
+          "max": 9.898582935333252
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7104,
+          "p50": 0.1285419464111328,
+          "p99": 0.2939169406890869,
+          "p999": 1.4821670055389404,
+          "max": 2.2281248569488525
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 120000,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 796.0297639674229,
+        "peakRssSum": 1030946816,
+        "errors": []
+      },
+      "wallMs": 14359.256041000015,
+      "peakRss": 1030946816
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "single",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "single",
+        "calls": 400,
+        "threads": 1,
+        "latency": {
+          "n": 120000,
+          "p50": 88.64762499999915,
+          "p99": 110.56874999999945,
+          "p999": 117.5598750000072,
+          "max": 119.70924999999716
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 229,
+          "p50": 15.970209000000068,
+          "p99": 24.671708000000763,
+          "p999": 32.77633400000013,
+          "max": 32.77633400000013
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 120000,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 147.5401369748302,
+        "errors": []
+      },
+      "wallMs": 8582.999416000035,
+      "peakRss": 487227392
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 400,
+        "threads": 12,
+        "latency": {
+          "n": 119991,
+          "p50": 0.08029100000021572,
+          "p99": 0.31333299999914743,
+          "p999": 2.2019580000087444,
+          "max": 7.742833000004794
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7077,
+          "p50": 0.05429199999980483,
+          "p99": 1.046875,
+          "p999": 1.4637919999995574,
+          "max": 5.642791000000216
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 119991,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 186.2520892776226,
+        "errors": []
+      },
+      "wallMs": 8459.619666999963,
+      "peakRss": 963919872
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "single",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "single",
+        "calls": 400,
+        "threads": 1,
+        "latency": {
+          "n": 119987,
+          "p50": 0.9420829999999114,
+          "p99": 13.660416999999143,
+          "p999": 20.37983300002088,
+          "max": 23.216375000000426
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 579,
+          "p50": 0.1748339999999189,
+          "p99": 4.305833000000348,
+          "p999": 6.485375000000204,
+          "max": 6.485375000000204
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 119987,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 112.55148934865335,
+        "errors": []
+      },
+      "wallMs": 8730.995916999993,
+      "peakRss": 744407040
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 400,
+        "threads": 12,
+        "latency": {
+          "n": 119986,
+          "p50": 0.1819580000001224,
+          "p99": 1.277165999999852,
+          "p999": 3.9385000000020227,
+          "max": 7.138500000000931
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7091,
+          "p50": 0.19791600000007747,
+          "p99": 1.0956249999999272,
+          "p999": 3.5640830000002097,
+          "max": 6.001084000000446
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 119986,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 212.2427464363501,
+        "errors": []
+      },
+      "wallMs": 8538.112374999968,
+      "peakRss": 2008530944
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "single",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "single",
+        "calls": 400,
+        "threads": 1,
+        "latency": {
+          "n": 120000,
+          "p50": 104.37104100000033,
+          "p99": 151.87891600000876,
+          "p999": 170.91970800000036,
+          "max": 172.2431249999977
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 196,
+          "p50": 19.585707999999613,
+          "p99": 51.26354200000014,
+          "p999": 56.00312500000018,
+          "max": 56.00312500000018
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 120000,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 130.93449660015725,
+        "errors": []
+      },
+      "wallMs": 8947.543958000024,
+      "peakRss": 600276992
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 400,
+        "threads": 12,
+        "latency": {
+          "n": 119998,
+          "p50": 0.9661669999995866,
+          "p99": 4.17737500000203,
+          "p999": 26.84641600001396,
+          "max": 39.64720900001794
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6392,
+          "p50": 1.2312089999995806,
+          "p99": 2.655999999999949,
+          "p999": 13.195166999999856,
+          "max": 17.575916999999208
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 119998,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 168.88431183276705,
+        "errors": []
+      },
+      "wallMs": 8535.187207999988,
+      "peakRss": 1251868672
+    },
+    {
+      "runtime": "python",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 800,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 800,
+        "threads": 12,
+        "latency": {
+          "n": 240000,
+          "p50": 2.4550421237945557,
+          "p99": 7.322542190551758,
+          "p999": 11.417334079742432,
+          "max": 15.792666912078857
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6769,
+          "p50": 0.5502078533172607,
+          "p99": 1.773083209991455,
+          "p999": 2.830166816711426,
+          "max": 3.9797918796539307
+        },
+        "expectedInputFrames": 240000,
+        "inputFrames": 240000,
+        "ttsFrames": 0,
+        "transcriptions": 33,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 1049.6021538704135,
+        "peakRssSum": 1174126592,
+        "errors": []
+      },
+      "wallMs": 15211.06283400004,
+      "peakRss": 1174126592
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "single",
+      "calls": 800,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "single",
+        "calls": 800,
+        "threads": 1,
+        "latency": {
+          "n": 240000,
+          "p50": 652.649750000015,
+          "p99": 747.2685830000119,
+          "p999": 756.8664580000036,
+          "max": 763.4095000000439
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 43,
+          "p50": 130.59237500000017,
+          "p99": 148.44170799999984,
+          "p999": 148.44170799999984,
+          "max": 148.44170799999984
+        },
+        "expectedInputFrames": 240000,
+        "inputFrames": 240000,
+        "ttsFrames": 0,
+        "transcriptions": 33,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 145.16926767289846,
+        "errors": []
+      },
+      "wallMs": 9091.032999999938,
+      "peakRss": 799637504
+    },
+    {
+      "runtime": "bun",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 800,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 800,
+        "threads": 12,
+        "latency": {
+          "n": 239984,
+          "p50": 0.13083300000016607,
+          "p99": 0.8255830000007336,
+          "p999": 2.5491250000000036,
+          "max": 8.48141700000997
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7061,
+          "p50": 0.057542000000012195,
+          "p99": 1.0746249999997417,
+          "p999": 1.846458999999868,
+          "max": 3.6206249999995634
+        },
+        "expectedInputFrames": 240000,
+        "inputFrames": 239984,
+        "ttsFrames": 0,
+        "transcriptions": 33,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 340.8918393635698,
+        "errors": []
+      },
+      "wallMs": 8569.922833999968,
+      "peakRss": 1368440832
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "single",
+      "calls": 800,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "single",
+        "calls": 800,
+        "threads": 1,
+        "latency": {
+          "n": 240001,
+          "p50": 314.4834580000006,
+          "p99": 422.17212499999914,
+          "p999": 441.26604100001623,
+          "max": 451.378499999998
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 79,
+          "p50": 62.43737500000043,
+          "p99": 115.67616699999962,
+          "p999": 115.67616699999962,
+          "max": 115.67616699999962
+        },
+        "expectedInputFrames": 240000,
+        "inputFrames": 240001,
+        "ttsFrames": 0,
+        "transcriptions": 33,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 138.59813629100915,
+        "errors": []
+      },
+      "wallMs": 9185.848709000042,
+      "peakRss": 1288781824
+    },
+    {
+      "runtime": "node",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 800,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 800,
+        "threads": 12,
+        "latency": {
+          "n": 239983,
+          "p50": 0.2202500000003056,
+          "p99": 1.637959000002411,
+          "p999": 22.465875000003507,
+          "max": 46.6698750000387
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7079,
+          "p50": 0.01816699999926641,
+          "p99": 1.151332999999795,
+          "p999": 10.413499999999658,
+          "max": 17.0287500000004
+        },
+        "expectedInputFrames": 240000,
+        "inputFrames": 239983,
+        "ttsFrames": 0,
+        "transcriptions": 33,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 252.32993204665752,
+        "errors": []
+      },
+      "wallMs": 8647.316458999994,
+      "peakRss": 2182332416
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "single",
+      "calls": 800,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "single",
+        "calls": 800,
+        "threads": 1,
+        "latency": {
+          "n": 240000,
+          "p50": 452.2774170000039,
+          "p99": 584.3265419999998,
+          "p999": 596.2126250000392,
+          "max": 601.2055830000268
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 59,
+          "p50": 88.47170799999913,
+          "p99": 150.07350000000042,
+          "p999": 150.07350000000042,
+          "max": 150.07350000000042
+        },
+        "expectedInputFrames": 240000,
+        "inputFrames": 240000,
+        "ttsFrames": 0,
+        "transcriptions": 33,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 126.36919041541961,
+        "errors": []
+      },
+      "wallMs": 9495.241249999963,
+      "peakRss": 1062780928
+    },
+    {
+      "runtime": "deno",
+      "profile": "io",
+      "mode": "workers",
+      "calls": 800,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "io",
+        "mode": "workers",
+        "calls": 800,
+        "threads": 12,
+        "latency": {
+          "n": 240000,
+          "p50": 0.9956250000200271,
+          "p99": 2.9647910000157935,
+          "p999": 4.649666999999226,
+          "max": 10.793958000016573
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6379,
+          "p50": 1.0419160000001284,
+          "p99": 2.4598329999998896,
+          "p999": 2.985916000000543,
+          "max": 3.8983329999996386
+        },
+        "expectedInputFrames": 240000,
+        "inputFrames": 240000,
+        "ttsFrames": 0,
+        "transcriptions": 33,
+        "vadStops": 0,
+        "turnPredictions": 0,
+        "cpuPct": 282.431401206636,
+        "errors": []
+      },
+      "wallMs": 8605.410541999969,
+      "peakRss": 2070036480
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "single",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "single",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 2.0697078704833984,
+          "p99": 4.252582788467407,
+          "p999": 7.520124912261963,
+          "max": 7.520124912261963
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 559,
+          "p50": 0.8060832023620605,
+          "p99": 1.155249834060669,
+          "p999": 5.550540924072266,
+          "max": 5.550540924072266
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 12.896833625182577,
+        "peakRssSum": 164921344,
+        "errors": []
+      },
+      "wallMs": 8718.187417000066,
+      "peakRss": 164921344
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 2.123915910720825,
+          "p99": 3.4992079734802246,
+          "p999": 8.789999961853027,
+          "max": 8.789999961853027
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 559,
+          "p50": 0.8194582462310791,
+          "p99": 1.2438750267028809,
+          "p999": 1.8670001029968262,
+          "max": 1.8670001029968262
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 13.515588296614537,
+        "peakRssSum": 166248448,
+        "errors": []
+      },
+      "wallMs": 13795.959207999986,
+      "peakRss": 166248448
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "single",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "single",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 1.3601659999994808,
+          "p99": 121.4883749999999,
+          "p999": 161.45150000000012,
+          "max": 161.45150000000012
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 544,
+          "p50": 0.8575420000006488,
+          "p99": 1.5876250000001164,
+          "p999": 161.43229100000008,
+          "max": 161.43229100000008
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 13.937367629186326,
+        "errors": []
+      },
+      "wallMs": 8351.007499999949,
+      "peakRss": 186499072
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 1.403874999999971,
+          "p99": 121.46062499999971,
+          "p999": 161.26783299999988,
+          "max": 161.26783299999988
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 545,
+          "p50": 0.8229160000000775,
+          "p99": 1.6009579999999914,
+          "p999": 155.93775000000005,
+          "max": 155.93775000000005
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 14.451197010595942,
+        "errors": []
+      },
+      "wallMs": 8326.123750000028,
+      "peakRss": 199540736
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 299,
+          "p50": 1.4536250000001019,
+          "p99": 2.9601669999997284,
+          "p999": 6.19208400000025,
+          "max": 6.19208400000025
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 560,
+          "p50": 0.8202909999999974,
+          "p99": 1.3556250000001455,
+          "p999": 2.090499999999338,
+          "max": 2.090499999999338
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 299,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 15.97812090008071,
+        "errors": []
+      },
+      "wallMs": 8333.19741699996,
+      "peakRss": 318717952
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "single",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "single",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 0.6354169999999613,
+          "p99": 96.75874999999996,
+          "p999": 116.75612499999988,
+          "max": 116.75612499999988
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 542,
+          "p50": 0.8923750000003565,
+          "p99": 1.8416669999996884,
+          "p999": 125.5438750000003,
+          "max": 125.5438750000003
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 11.860988842756516,
+        "errors": []
+      },
+      "wallMs": 8349.000665999949,
+      "peakRss": 197165056
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 0.6516670000000886,
+          "p99": 97.6909169999999,
+          "p999": 117.43279200000052,
+          "max": 117.43279200000052
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 543,
+          "p50": 0.836917000000085,
+          "p99": 1.8563750000002983,
+          "p999": 128.82387500000004,
+          "max": 128.82387500000004
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 11.617315975522722,
+        "errors": []
+      },
+      "wallMs": 8374.336249999935,
+      "peakRss": 216711168
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 299,
+          "p50": 0.5830000000000837,
+          "p99": 2.392291000000114,
+          "p999": 4.657874999999876,
+          "max": 4.657874999999876
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 559,
+          "p50": 0.8040829999999914,
+          "p99": 1.799750000000131,
+          "p999": 3.419540999999299,
+          "max": 3.419540999999299
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 299,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 11.022850769855015,
+        "errors": []
+      },
+      "wallMs": 8375.193582999986,
+      "peakRss": 471400448
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "single",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "single",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 1.9344170000003942,
+          "p99": 121.86220800000046,
+          "p999": 161.82329200000004,
+          "max": 161.82329200000004
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 508,
+          "p50": 1.607665999999881,
+          "p99": 2.7440419999998085,
+          "p999": 157.27991699999984,
+          "max": 157.27991699999984
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 11.784567035177805,
+        "errors": []
+      },
+      "wallMs": 8352.63195900002,
+      "peakRss": 195526656
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 1.8827089999995223,
+          "p99": 112.09845799999948,
+          "p999": 152.0655829999996,
+          "max": 152.0655829999996
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 506,
+          "p50": 1.6626249999999345,
+          "p99": 2.8687500000005457,
+          "p999": 150.29162499999984,
+          "max": 150.29162499999984
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 11.59483393106004,
+        "errors": []
+      },
+      "wallMs": 8366.845291999984,
+      "peakRss": 217776128
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 1,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 1,
+        "threads": 1,
+        "latency": {
+          "n": 300,
+          "p50": 2.0471669999997175,
+          "p99": 4.4337500000001455,
+          "p999": 7.016083999999864,
+          "max": 7.016083999999864
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 518,
+          "p50": 1.6833329999999478,
+          "p99": 2.7587079999998423,
+          "p999": 3.499792000000525,
+          "max": 3.499792000000525
+        },
+        "expectedInputFrames": 300,
+        "inputFrames": 300,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 1,
+        "turnPredictions": 1,
+        "cpuPct": 12.138884922120381,
+        "errors": []
+      },
+      "wallMs": 8397.302125000046,
+      "peakRss": 403701760
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "single",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "single",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 0.9317917823791504,
+          "p99": 2.604874849319458,
+          "p999": 13.845041751861572,
+          "max": 16.242166996002197
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 590,
+          "p50": 0.1353747844696045,
+          "p99": 0.6513752937316895,
+          "p999": 2.7938339710235596,
+          "max": 2.7938339710235596
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 70.25209176417675,
+        "peakRssSum": 564068352,
+        "errors": []
+      },
+      "wallMs": 8932.798083000001,
+      "peakRss": 564068352
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 10,
+        "threads": 10,
+        "latency": {
+          "n": 3000,
+          "p50": 1.4695417881011963,
+          "p99": 2.941166877746582,
+          "p999": 6.48533296585083,
+          "max": 8.127833127975464
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5703,
+          "p50": 0.41187500953674316,
+          "p99": 1.1806249618530273,
+          "p999": 2.9852919578552246,
+          "max": 4.075250148773193
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 79.0838546019524,
+        "peakRssSum": 1678262272,
+        "errors": []
+      },
+      "wallMs": 13804.16270799993,
+      "peakRss": 1678262272
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "single",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "single",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3001,
+          "p50": 0.6451250000000073,
+          "p99": 127.65145900000061,
+          "p999": 140.3856249999999,
+          "max": 144.28904200000034
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 493,
+          "p50": 0.12849999999980355,
+          "p99": 115.70424999999977,
+          "p999": 134.53004099999998,
+          "max": 134.53004099999998
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3001,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 54.10700009093882,
+        "errors": []
+      },
+      "wallMs": 8324.637958999956,
+      "peakRss": 234258432
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 10,
+        "threads": 10,
+        "latency": {
+          "n": 2999,
+          "p50": 0.6751250000006621,
+          "p99": 72.98358300000018,
+          "p999": 144.1777090000005,
+          "max": 152.9357500000001
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5518,
+          "p50": 0.686500000000251,
+          "p99": 1.5382920000001832,
+          "p999": 139.48283300000003,
+          "max": 154.25416600000017
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 2999,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 80.00621046079775,
+        "errors": []
+      },
+      "wallMs": 8360.84283400001,
+      "peakRss": 949354496
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 0.3360000000002401,
+          "p99": 4.63504200000034,
+          "p999": 9.829499999999825,
+          "max": 11.06491700000015
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 585,
+          "p50": 0.12266700000054698,
+          "p99": 2.6152500000002874,
+          "p999": 5.822791999999936,
+          "max": 5.822791999999936
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 57.10003382044862,
+        "errors": []
+      },
+      "wallMs": 8333.033166000037,
+      "peakRss": 372834304
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "single",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "single",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 0.3497090000000753,
+          "p99": 151.18445900000006,
+          "p999": 171.72254200000043,
+          "max": 175.6217919999999
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 472,
+          "p50": 0.18591600000036124,
+          "p99": 148.31983300000047,
+          "p999": 169.7210409999998,
+          "max": 169.7210409999998
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 48.79544089181089,
+        "errors": []
+      },
+      "wallMs": 8360.855832999921,
+      "peakRss": 257572864
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 10,
+        "threads": 10,
+        "latency": {
+          "n": 2999,
+          "p50": 0.4461249999994834,
+          "p99": 69.7626250000003,
+          "p999": 122.72979200000009,
+          "max": 138.3199169999998
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5528,
+          "p50": 0.6831249999995634,
+          "p99": 1.8364579999997659,
+          "p999": 98.70912500000031,
+          "max": 115.39912499999991
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 2999,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 70.93105533434442,
+        "errors": []
+      },
+      "wallMs": 8427.193291999982,
+      "peakRss": 1058308096
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 0.1827079999993657,
+          "p99": 2.643959000000905,
+          "p999": 12.54950000000008,
+          "max": 14.564500000000407
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 584,
+          "p50": 0.17162499999994907,
+          "p99": 2.7609999999999673,
+          "p999": 13.960624999999709,
+          "max": 13.960624999999709
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 61.6404224747867,
+        "errors": []
+      },
+      "wallMs": 8396.277708999929,
+      "peakRss": 540737536
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "single",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "single",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 1.9651659999999538,
+          "p99": 220.31487500000003,
+          "p999": 248.03545899999972,
+          "max": 251.9337089999999
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 422,
+          "p50": 1.102375000000393,
+          "p99": 146.2495829999998,
+          "p999": 233.8314160000009,
+          "max": 233.8314160000009
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 53.563620055460646,
+        "errors": []
+      },
+      "wallMs": 8359.47329200001,
+      "peakRss": 270073856
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 10,
+        "threads": 10,
+        "latency": {
+          "n": 3000,
+          "p50": 1.310707999999977,
+          "p99": 76.1230000000005,
+          "p999": 142.8273339999996,
+          "max": 158.05208299999958
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5118,
+          "p50": 1.5614580000001297,
+          "p99": 2.8682079999998678,
+          "p999": 138.59191699999974,
+          "max": 154.95304100000067
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 72.45433189396978,
+        "errors": []
+      },
+      "wallMs": 8424.177625000011,
+      "peakRss": 1054605312
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 10,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 10,
+        "threads": 1,
+        "latency": {
+          "n": 3000,
+          "p50": 1.3263749999996435,
+          "p99": 5.162500000000364,
+          "p999": 11.840499999999793,
+          "max": 13.716042000000016
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 536,
+          "p50": 1.1503329999995913,
+          "p99": 2.7531249999992724,
+          "p999": 2.8531660000003285,
+          "max": 2.8531660000003285
+        },
+        "expectedInputFrames": 3000,
+        "inputFrames": 3000,
+        "ttsFrames": 0,
+        "transcriptions": 1,
+        "vadStops": 9,
+        "turnPredictions": 9,
+        "cpuPct": 55.28295062786164,
+        "errors": []
+      },
+      "wallMs": 8416.675959000015,
+      "peakRss": 480280576
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "single",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "single",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7500,
+          "p50": 0.6509580612182617,
+          "p99": 1.2985408306121826,
+          "p999": 2.3389997482299805,
+          "max": 3.339124917984009
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 594,
+          "p50": 0.09058284759521484,
+          "p99": 0.29941701889038086,
+          "p999": 0.43945908546447754,
+          "max": 0.43945908546447754
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 73.82984839844815,
+        "peakRssSum": 1219870720,
+        "errors": []
+      },
+      "wallMs": 9554.429584000027,
+      "peakRss": 1219870720
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 25,
+        "threads": 12,
+        "latency": {
+          "n": 7500,
+          "p50": 0.841583251953125,
+          "p99": 1.7679998874664307,
+          "p999": 4.128499984741211,
+          "max": 7.210999965667725
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6956,
+          "p50": 0.2068331241607666,
+          "p99": 1.0770418643951416,
+          "p999": 1.4089999198913574,
+          "max": 2.9018750190734863
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 100.61277988013015,
+        "peakRssSum": 2613510144,
+        "errors": []
+      },
+      "wallMs": 14145.479792000027,
+      "peakRss": 2613510144
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "single",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "single",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7500,
+          "p50": 0.515082999999322,
+          "p99": 113.59079100000054,
+          "p999": 129.91675000000077,
+          "max": 134.40191600000026
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 412,
+          "p50": 0.12412500000027649,
+          "p99": 96.85345799999959,
+          "p999": 106.58058299999993,
+          "max": 106.58058299999993
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 66.05008880373738,
+        "errors": []
+      },
+      "wallMs": 8387.232500000042,
+      "peakRss": 289636352
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 25,
+        "threads": 12,
+        "latency": {
+          "n": 7499,
+          "p50": 0.37533299999995506,
+          "p99": 81.67579100000057,
+          "p999": 127.19654200000059,
+          "max": 139.66954200000055
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6630,
+          "p50": 0.45845899999949324,
+          "p99": 1.4484169999996084,
+          "p999": 131.84512499999983,
+          "max": 137.03683299999966
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7499,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 115.81805203800974,
+        "errors": []
+      },
+      "wallMs": 8392.905333000002,
+      "peakRss": 1299759104
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7500,
+          "p50": 0.2911669999998594,
+          "p99": 1.4712500000000546,
+          "p999": 2.531083999999737,
+          "max": 4.370582999999897
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 590,
+          "p50": 0.08095800000046438,
+          "p99": 1.1065420000004451,
+          "p999": 1.4891250000000582,
+          "max": 1.4891250000000582
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 70.91837948964915,
+        "errors": []
+      },
+      "wallMs": 8325.49370900006,
+      "peakRss": 475283456
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "single",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "single",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7497,
+          "p50": 0.4705000000003565,
+          "p99": 158.40479199999936,
+          "p999": 189.48962500000016,
+          "max": 202.47662500000024
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 373,
+          "p50": 0.16629199999988487,
+          "p99": 118.20550000000003,
+          "p999": 149.7824999999998,
+          "max": 149.7824999999998
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7497,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 73.17848268867137,
+        "errors": []
+      },
+      "wallMs": 8365.535832999973,
+      "peakRss": 418906112
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 25,
+        "threads": 12,
+        "latency": {
+          "n": 7500,
+          "p50": 0.1428329999998823,
+          "p99": 85.69079099999999,
+          "p999": 114.2640420000007,
+          "max": 122.66766699999971
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6635,
+          "p50": 0.5343750000001819,
+          "p99": 1.6651659999997719,
+          "p999": 108.70608300000004,
+          "max": 124.66304200000013
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 95.49603577880117,
+        "errors": []
+      },
+      "wallMs": 8447.983874999918,
+      "peakRss": 1448263680
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7498,
+          "p50": 0.12208300000020245,
+          "p99": 1.018500000000131,
+          "p999": 1.263625000000502,
+          "max": 2.3900420000004488
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 591,
+          "p50": 0.12466700000004494,
+          "p99": 1.082915999999841,
+          "p999": 1.197624999999789,
+          "max": 1.197624999999789
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7498,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 86.30520952238518,
+        "errors": []
+      },
+      "wallMs": 8395.556625000085,
+      "peakRss": 649986048
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 25,
+        "threads": 12,
+        "latency": {
+          "n": 7501,
+          "p50": 0.9342500000002474,
+          "p99": 88.99183300000004,
+          "p999": 130.79133300000012,
+          "max": 141.46770799999967
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6159,
+          "p50": 1.4289170000001832,
+          "p99": 2.4494170000007216,
+          "p999": 128.3239590000003,
+          "max": 143.32483299999967
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7501,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 91.37803104878213,
+        "errors": []
+      },
+      "wallMs": 8630.059791999985,
+      "peakRss": 1467940864
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 25,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 25,
+        "threads": 1,
+        "latency": {
+          "n": 7500,
+          "p50": 1.219875000000684,
+          "p99": 3.498083000000406,
+          "p999": 4.624292000000423,
+          "max": 7.165957999999591
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 539,
+          "p50": 1.035541999999623,
+          "p99": 2.7621250000001965,
+          "p999": 2.9908749999995052,
+          "max": 2.9908749999995052
+        },
+        "expectedInputFrames": 7500,
+        "inputFrames": 7500,
+        "ttsFrames": 0,
+        "transcriptions": 2,
+        "vadStops": 21,
+        "turnPredictions": 21,
+        "cpuPct": 67.14139738139535,
+        "errors": []
+      },
+      "wallMs": 8442.782750000013,
+      "peakRss": 618692608
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "single",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "single",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 15000,
+          "p50": 0.8121669292449951,
+          "p99": 210.40295791625977,
+          "p999": 227.67687511444092,
+          "max": 255.33400011062622
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 537,
+          "p50": 0.1415419578552246,
+          "p99": 10.721999883651733,
+          "p999": 176.38091588020325,
+          "max": 176.38091588020325
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 130.770798374765,
+        "peakRssSum": 1935982592,
+        "errors": []
+      },
+      "wallMs": 10970.44658400002,
+      "peakRss": 1935982592
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 50,
+        "threads": 12,
+        "latency": {
+          "n": 15000,
+          "p50": 0.7194581031799316,
+          "p99": 1.558000087738037,
+          "p999": 1.7319159507751465,
+          "max": 1.9618330001831055
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7079,
+          "p50": 0.11037492752075195,
+          "p99": 0.853874921798706,
+          "p999": 1.0370421409606934,
+          "max": 1.0722920894622803
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 173.31605448747297,
+        "peakRssSum": 3350904832,
+        "errors": []
+      },
+      "wallMs": 14881.075708999997,
+      "peakRss": 3350904832
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "single",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "single",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 15000,
+          "p50": 79.56308400000034,
+          "p99": 655.6882090000008,
+          "p999": 737.7002089999996,
+          "max": 757.9560420000025
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 196,
+          "p50": 0.7010420000001432,
+          "p99": 200.41533299999992,
+          "p999": 249.5172080000002,
+          "max": 249.5172080000002
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 97.67241115675175,
+        "errors": []
+      },
+      "wallMs": 8553.178833999904,
+      "peakRss": 355106816
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 50,
+        "threads": 12,
+        "latency": {
+          "n": 14999,
+          "p50": 0.34012499999971624,
+          "p99": 86.83541700000023,
+          "p999": 137.70341700000063,
+          "max": 147.58837499999981
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6643,
+          "p50": 0.1803330000002461,
+          "p99": 1.3955000000000837,
+          "p999": 133.30054200000086,
+          "max": 184.9814160000003
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 14999,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 187.44814441291092,
+        "errors": []
+      },
+      "wallMs": 8445.008666999987,
+      "peakRss": 1412710400
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 15000,
+          "p50": 0.3367079999998168,
+          "p99": 10.93066699999963,
+          "p999": 21.66045900000063,
+          "max": 26.434125000000677
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 578,
+          "p50": 0.15941699999984849,
+          "p99": 2.4826670000002196,
+          "p999": 8.178166000000601,
+          "max": 8.178166000000601
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 128.124371247868,
+        "errors": []
+      },
+      "wallMs": 8389.903082999983,
+      "peakRss": 624869376
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "single",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "single",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 15000,
+          "p50": 97.09575000000041,
+          "p99": 741.9087090000012,
+          "p999": 769.4405420000021,
+          "max": 775.7290840000014
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 154,
+          "p50": 5.991708000000472,
+          "p99": 126.78008299999965,
+          "p999": 139.13924999999972,
+          "max": 139.13924999999972
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 104.02929424602524,
+        "errors": []
+      },
+      "wallMs": 8794.045000000042,
+      "peakRss": 526057472
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 50,
+        "threads": 12,
+        "latency": {
+          "n": 14998,
+          "p50": 0.11783400000012989,
+          "p99": 97.74716700000045,
+          "p999": 118.61404200000061,
+          "max": 133.35225000000082
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6571,
+          "p50": 0.3206669999999576,
+          "p99": 1.6575839999995878,
+          "p999": 115.17629199999965,
+          "max": 132.32741700000042
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 14998,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 169.99008056294466,
+        "errors": []
+      },
+      "wallMs": 8501.324957999983,
+      "peakRss": 1568260096
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 15000,
+          "p50": 0.16204199999992852,
+          "p99": 1.0829169999997248,
+          "p999": 1.374250000000302,
+          "max": 3.4888750000000073
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 592,
+          "p50": 0.14016699999956472,
+          "p99": 1.034375000000182,
+          "p999": 3.301709000000301,
+          "max": 3.301709000000301
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 140.22109253288178,
+        "errors": []
+      },
+      "wallMs": 8447.471499999985,
+      "peakRss": 888619008
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 50,
+        "threads": 12,
+        "latency": {
+          "n": 15000,
+          "p50": 0.8777919999997721,
+          "p99": 100.74187500000244,
+          "p999": 134.10883300000205,
+          "max": 146.43295800000033
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6067,
+          "p50": 1.125833000000057,
+          "p99": 2.5677089999999225,
+          "p999": 127.42883299999994,
+          "max": 138.8090000000002
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 15000,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 157.64754620486787,
+        "errors": []
+      },
+      "wallMs": 8699.776917000068,
+      "peakRss": 1535754240
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 50,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 50,
+        "threads": 1,
+        "latency": {
+          "n": 14999,
+          "p50": 1.4576250000000073,
+          "p99": 4.320541000000958,
+          "p999": 5.80029100000047,
+          "max": 8.249250000001211
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 538,
+          "p50": 1.0374170000004597,
+          "p99": 2.8580000000001746,
+          "p999": 3.149583999999777,
+          "max": 3.149583999999777
+        },
+        "expectedInputFrames": 15000,
+        "inputFrames": 14999,
+        "ttsFrames": 0,
+        "transcriptions": 3,
+        "vadStops": 42,
+        "turnPredictions": 42,
+        "cpuPct": 130.84641183221711,
+        "errors": []
+      },
+      "wallMs": 8527.067707999959,
+      "peakRss": 806436864
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 100,
+        "threads": 12,
+        "latency": {
+          "n": 30000,
+          "p50": 0.6994998455047607,
+          "p99": 1.4134578704833984,
+          "p999": 3.7786247730255127,
+          "max": 6.035791873931885
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 7116,
+          "p50": 0.09750008583068848,
+          "p99": 0.3657503128051758,
+          "p999": 0.7540829181671143,
+          "max": 2.8197081089019775
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 30000,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 86,
+        "turnPredictions": 86,
+        "cpuPct": 408.2494620734651,
+        "peakRssSum": 3695230976,
+        "errors": []
+      },
+      "wallMs": 16275.961416999926,
+      "peakRss": 3695230976
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 100,
+        "threads": 12,
+        "latency": {
+          "n": 29996,
+          "p50": 0.2804169999999431,
+          "p99": 93.5218330000016,
+          "p999": 130.89391700000124,
+          "max": 152.4998330000044
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6361,
+          "p50": 0.13475000000016735,
+          "p99": 87.808583,
+          "p999": 95.99704100000054,
+          "max": 143.66224999999986
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 29996,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 86,
+        "turnPredictions": 86,
+        "cpuPct": 305.1512699441167,
+        "errors": []
+      },
+      "wallMs": 8525.083583,
+      "peakRss": 1545256960
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 100,
+        "threads": 1,
+        "latency": {
+          "n": 30000,
+          "p50": 0.689082999999755,
+          "p99": 28.144207999999708,
+          "p999": 44.376916000001984,
+          "max": 49.69550000000072
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 563,
+          "p50": 0.42299999999977445,
+          "p99": 3.673624999999447,
+          "p999": 22.310624999999163,
+          "max": 22.310624999999163
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 30000,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 86,
+        "turnPredictions": 86,
+        "cpuPct": 233.57034279089888,
+        "errors": []
+      },
+      "wallMs": 8424.231042,
+      "peakRss": 907870208
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 100,
+        "threads": 12,
+        "latency": {
+          "n": 29999,
+          "p50": 0.11720900000091206,
+          "p99": 120.35524999999961,
+          "p999": 148.56204199999956,
+          "max": 156.61333399999967
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6117,
+          "p50": 0.16204199999992852,
+          "p99": 111.19545799999923,
+          "p999": 147.51579199999924,
+          "max": 152.80312499999945
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 29999,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 86,
+        "turnPredictions": 86,
+        "cpuPct": 358.6346650455214,
+        "errors": []
+      },
+      "wallMs": 8564.19833299995,
+      "peakRss": 1858846720
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 100,
+        "threads": 1,
+        "latency": {
+          "n": 29994,
+          "p50": 0.2855420000000777,
+          "p99": 1.3246250000001965,
+          "p999": 1.7391250000009677,
+          "max": 3.5756670000000668
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 590,
+          "p50": 0.1630419999996775,
+          "p99": 1.0664170000000013,
+          "p999": 1.4150420000005397,
+          "max": 1.4150420000005397
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 29994,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 86,
+        "turnPredictions": 86,
+        "cpuPct": 232.61759612334006,
+        "errors": []
+      },
+      "wallMs": 8499.483332999982,
+      "peakRss": 1089961984
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 100,
+        "threads": 12,
+        "latency": {
+          "n": 30000,
+          "p50": 1.0701250000010987,
+          "p99": 185.11854200000198,
+          "p999": 232.53862500000378,
+          "max": 248.68541700000424
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5563,
+          "p50": 1.1503750000001673,
+          "p99": 104.24620899999991,
+          "p999": 224.4705410000006,
+          "max": 234.53554199999962
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 30000,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 86,
+        "turnPredictions": 86,
+        "cpuPct": 300.1032613954987,
+        "errors": []
+      },
+      "wallMs": 8854.368583000032,
+      "peakRss": 1865973760
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 100,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 100,
+        "threads": 1,
+        "latency": {
+          "n": 30001,
+          "p50": 2.490917000000991,
+          "p99": 29.801292000001922,
+          "p999": 38.345375000001695,
+          "max": 43.52379199999996
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 540,
+          "p50": 0.9534169999997175,
+          "p99": 4.945416999999907,
+          "p999": 11.289166999999907,
+          "max": 11.289166999999907
+        },
+        "expectedInputFrames": 30000,
+        "inputFrames": 30001,
+        "ttsFrames": 0,
+        "transcriptions": 5,
+        "vadStops": 86,
+        "turnPredictions": 86,
+        "cpuPct": 249.32142719468104,
+        "errors": []
+      },
+      "wallMs": 8529.284666999942,
+      "peakRss": 1013350400
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 200,
+        "threads": 12,
+        "latency": {
+          "n": 60000,
+          "p50": 1.8552498817443848,
+          "p99": 43.781708002090454,
+          "p999": 77.71616697311401,
+          "max": 95.99654197692871
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 6641,
+          "p50": 0.3276669979095459,
+          "p99": 8.493583679199219,
+          "p999": 27.58899998664856,
+          "max": 56.24833273887634
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60000,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 173,
+        "turnPredictions": 173,
+        "cpuPct": 904.2075914206473,
+        "peakRssSum": 4589780992,
+        "errors": []
+      },
+      "wallMs": 18903.536207999918,
+      "peakRss": 4589780992
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 200,
+        "threads": 12,
+        "latency": {
+          "n": 59997,
+          "p50": 0.2990829999998823,
+          "p99": 106.21862499999952,
+          "p999": 111.94729100000586,
+          "max": 118.86879200000112
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5631,
+          "p50": 0.10962500000005093,
+          "p99": 93.01887499999975,
+          "p999": 100.3622089999999,
+          "max": 144.39008300000023
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 59997,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 173,
+        "turnPredictions": 173,
+        "cpuPct": 546.9903366309159,
+        "errors": []
+      },
+      "wallMs": 8552.630665999954,
+      "peakRss": 1781612544
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 200,
+        "threads": 1,
+        "latency": {
+          "n": 60000,
+          "p50": 1983.3217500000028,
+          "p99": 2871.616541999999,
+          "p999": 2934.3785420000004,
+          "max": 2957.010417000007
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 19,
+          "p50": 292.41508299999987,
+          "p99": 495.7800420000003,
+          "p999": 495.7800420000003,
+          "max": 495.7800420000003
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60000,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 173,
+        "turnPredictions": 173,
+        "cpuPct": 262.2504045190454,
+        "errors": []
+      },
+      "wallMs": 10104.840166999958,
+      "peakRss": 1535787008
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 200,
+        "threads": 12,
+        "latency": {
+          "n": 60000,
+          "p50": 0.3041670000002341,
+          "p99": 179.66216600000052,
+          "p999": 229.04929099999845,
+          "max": 273.3477920000005
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 5128,
+          "p50": 0.21970899999996618,
+          "p99": 125.23658399999977,
+          "p999": 152.79262500000004,
+          "max": 175.04500000000007
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60000,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 173,
+        "turnPredictions": 173,
+        "cpuPct": 660.12605557869,
+        "errors": []
+      },
+      "wallMs": 8603.677583000157,
+      "peakRss": 2522972160
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 200,
+        "threads": 1,
+        "latency": {
+          "n": 60001,
+          "p50": 1586.4242080000004,
+          "p99": 2134.6504170000026,
+          "p999": 2167.3865829999995,
+          "max": 2192.6732919999995
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 32,
+          "p50": 183.27145800000017,
+          "p99": 198.56041600000026,
+          "p999": 198.56041600000026,
+          "max": 198.56041600000026
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60001,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 173,
+        "turnPredictions": 173,
+        "cpuPct": 365.68755618865146,
+        "errors": []
+      },
+      "wallMs": 10364.631874999963,
+      "peakRss": 1533018112
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 200,
+        "threads": 12,
+        "latency": {
+          "n": 60000,
+          "p50": 1.8685420000047088,
+          "p99": 274.6611660000044,
+          "p999": 331.48020799999995,
+          "max": 352.34462500000154
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 4526,
+          "p50": 1.1755840000005264,
+          "p99": 118.83708300000035,
+          "p999": 278.5286249999999,
+          "max": 308.94004099999984
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60000,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 173,
+        "turnPredictions": 173,
+        "cpuPct": 621.4478602907609,
+        "errors": []
+      },
+      "wallMs": 8773.365332999965,
+      "peakRss": 2468806656
+    },
+    {
+      "runtime": "deno",
+      "profile": "local",
+      "mode": "pool",
+      "calls": 200,
+      "ok": true,
+      "result": {
+        "runtime": "deno 2.9.5",
+        "profile": "local",
+        "mode": "pool",
+        "calls": 200,
+        "threads": 1,
+        "latency": {
+          "n": 60000,
+          "p50": 1399.4776660000025,
+          "p99": 1877.393208000005,
+          "p999": 1915.8644580000037,
+          "max": 1944.1617500000011
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 25,
+          "p50": 212.69945800000005,
+          "p99": 330.4402090000003,
+          "p999": 330.4402090000003,
+          "max": 330.4402090000003
+        },
+        "expectedInputFrames": 60000,
+        "inputFrames": 60000,
+        "ttsFrames": 0,
+        "transcriptions": 9,
+        "vadStops": 173,
+        "turnPredictions": 173,
+        "cpuPct": 337.16645215778385,
+        "errors": []
+      },
+      "wallMs": 9957.312583000166,
+      "peakRss": 1655668736
+    },
+    {
+      "runtime": "python",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "python 3.13.13",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 400,
+        "threads": 12,
+        "latency": {
+          "n": 120000,
+          "p50": 1539.0720827579498,
+          "p99": 2989.0261249542236,
+          "p999": 3129.361541748047,
+          "max": 3248.045709133148
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 1873,
+          "p50": 21.81779193878174,
+          "p99": 114.65983319282532,
+          "p999": 156.81933307647705,
+          "max": 157.63020777702332
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 120000,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 347,
+        "turnPredictions": 347,
+        "cpuPct": 924.7520448993135,
+        "peakRssSum": 5793824768,
+        "errors": []
+      },
+      "wallMs": 26939.79908300005,
+      "peakRss": 5793824768
+    },
+    {
+      "runtime": "bun",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "bun 1.4.2",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 400,
+        "threads": 12,
+        "latency": {
+          "n": 120000,
+          "p50": 139.00054099999852,
+          "p99": 663.9917500000001,
+          "p999": 773.7039590000004,
+          "max": 936.7318750000004
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 2046,
+          "p50": 1.2369579999999587,
+          "p99": 279.946375,
+          "p999": 406.8910840000008,
+          "max": 466.18945800000074
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 120000,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 347,
+        "turnPredictions": 347,
+        "cpuPct": 1016.4357629908135,
+        "errors": []
+      },
+      "wallMs": 9075.224500000011,
+      "peakRss": 2683207680
+    },
+    {
+      "runtime": "node",
+      "profile": "local",
+      "mode": "workers",
+      "calls": 400,
+      "ok": true,
+      "result": {
+        "runtime": "node 24.14.0",
+        "profile": "local",
+        "mode": "workers",
+        "calls": 400,
+        "threads": 12,
+        "latency": {
+          "n": 120000,
+          "p50": 643.9995840000074,
+          "p99": 1743.0641670000005,
+          "p999": 1873.8552080000018,
+          "max": 1940.5630420000025
+        },
+        "ttsLate": {
+          "n": 0,
+          "p50": null,
+          "p99": null,
+          "p999": null,
+          "max": null
+        },
+        "lag": {
+          "n": 1323,
+          "p50": 7.616541999999754,
+          "p99": 378.8327079999999,
+          "p999": 539.2072500000004,
+          "max": 589.7014159999999
+        },
+        "expectedInputFrames": 120000,
+        "inputFrames": 120000,
+        "ttsFrames": 0,
+        "transcriptions": 17,
+        "vadStops": 347,
+        "turnPredictions": 347,
+        "cpuPct": 1036.4721925111246,
+        "errors": []
+      },
+      "wallMs": 10264.742625000188,
+      "peakRss": 4005773312
+    }
+  ]
+}
