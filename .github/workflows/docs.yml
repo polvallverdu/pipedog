@@ -25,6 +25,9 @@ jobs:
       - run: bun run docs:build
         env:
           DOCS_BASE_PATH: /pipedog
+          # The live demo on the landing page (examples/landing-demo, deployed to Cloudflare):
+          # set the DEMO_URL repository variable to its URL. Unset, the landing shows a placeholder.
+          NEXT_PUBLIC_DEMO_URL: ${{ vars.DEMO_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/docs/out

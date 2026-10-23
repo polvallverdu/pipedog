@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../packages/anthropic" },
+    { "path": "../../packages/asyncio" },
+    { "path": "../../packages/cloudflare" },
+    { "path": "../../packages/core" },
+    { "path": "../../packages/serializer-protobuf" },
+    { "path": "../../packages/transport-cloudflare-realtime" },
+    { "path": "../../packages/transport-websocket" }
+  ]
+}

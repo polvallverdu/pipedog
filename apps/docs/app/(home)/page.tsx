@@ -9,6 +9,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { AttributionNotice } from "@/components/attribution";
 import { CopyCommand } from "@/components/copy-command";
+import { LiveDemo } from "@/components/landing/live-demo";
 import { PipelineDiagram } from "@/components/landing/pipeline-diagram";
 import { Logo } from "@/components/logo";
 import { compatibleLlm, ported } from "@/data/providers";
@@ -143,6 +144,22 @@ export default function HomePage() {
           </div>
           <PipelineDiagram />
         </div>
+      </section>
+
+      {/* Live demo */}
+      <section
+        id="demo"
+        className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6 md:pb-20"
+      >
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <SectionHeading eyebrow="Live demo" title="Talk to a pipedog agent." />
+          <p className="max-w-md text-sm text-fd-muted-foreground">
+            Running entirely on Cloudflare: a Durable Object per call, Deepgram Flux and Aura on
+            Workers AI, Claude Haiku 5.5 with tools. Over a WebSocket with Pipecat's own client, or
+            WebRTC through Cloudflare Realtime.
+          </p>
+        </div>
+        <LiveDemo />
       </section>
 
       {/* Performance */}

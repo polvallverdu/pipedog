@@ -1,0 +1,55 @@
+{
+  // The talk-to-it demo on the docs landing page. One Durable Object per visitor session, and one
+  // singleton Durable Object holding the global budget. See README.md for the deploy guide.
+  "name": "pipedog-landing-demo",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // The page: the SvelteKit app in web/, prerendered to web/build (wrangler runs the build before
+  // dev and deploy), served by this Worker so it can set the framing headers.
+  "build": { "command": "bun run build:web", "watch_dir": "web/src" },
+  "assets": { "directory": "./web/build", "binding": "ASSETS", "run_worker_first": true },
+  // Workers AI: Deepgram Flux (speech-to-text and turns) and Aura (speech), through the binding.
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [
+      { "name": "DEMO_SESSION", "class_name": "DemoSession" },
+      { "name": "DEMO_BUDGET", "class_name": "DemoBudget" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DemoSession", "DemoBudget"] }],
+  // Per IP (hashed): session tickets per minute. The 10-minute per-IP cap is in the budget object.
+  "ratelimits": [
+    {
+      "name": "SESSION_RATE_LIMITER",
+      "namespace_id": "4201",
+      "simple": { "limit": 3, "period": 60 }
+    }
+  ],
+  "observability": { "enabled": true },
+  "vars": {
+    // The kill switch: anything but "true" refuses every session.
+    "DEMO_ENABLED": "true",
+    // Turnstile's site key (public; the widget's hostname must be this Worker's). Empty: no
+    // sessions, except in dev mode.
+    "TURNSTILE_SITE_KEY": "",
+    // The API answers the demo's own origin; these too (comma-separated): Vite's dev server.
+    "ALLOWED_ORIGINS": "http://localhost:5173",
+    // Who may embed the page in an iframe, besides itself (CSP frame-ancestors, comma-separated).
+    "FRAME_ANCESTORS": "https://polvallverdu.github.io,http://localhost:3000",
+    // The global budget, kept by the DemoBudget Durable Object (UTC days).
+    "MAX_CONCURRENT_SESSIONS": "4",
+    "MAX_SESSIONS_PER_DAY": "150",
+    "MAX_MINUTES_PER_DAY": "180",
+    "MAX_SESSIONS_PER_IP": "4",
+    // Each session: hard maximum length, silence before it ends, and user turns.
+    "SESSION_MAX_SECS": "120",
+    "SESSION_IDLE_SECS": "30",
+    "SESSION_MAX_TURNS": "12"
+    // Secrets, set with `wrangler secret put` (or in .dev.vars for local runs):
+    // ANTHROPIC_API_KEY, TURNSTILE_SECRET_KEY, SESSION_SIGNING_KEY, and for WebRTC
+    // CLOUDFLARE_REALTIME_APP_ID and CLOUDFLARE_REALTIME_APP_SECRET.
+    // DEMO_DEV_MODE=true skips Turnstile and lets the tests point the services at fakes. Never
+    // set it on a deployed Worker.
+  }
+}

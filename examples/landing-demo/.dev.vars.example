@@ -1,0 +1,11 @@
+# Copy to .dev.vars (gitignored) for `wrangler dev`. Never commit real values.
+ANTHROPIC_API_KEY=sk-ant-...
+SESSION_SIGNING_KEY=a-long-random-string
+# Turnstile: leave the secret out and set DEMO_DEV_MODE=true to skip it locally, or use
+# Cloudflare's test keys (site key 1x00000000000000000000AA, secret 1x0000000000000000000000000000000AA).
+# TURNSTILE_SECRET_KEY=
+DEMO_DEV_MODE=true
+# WebRTC (optional): a Cloudflare Realtime SFU app. The SFU must reach your Worker over the
+# internet, so WebRTC needs a deployed Worker or a tunnel.
+# CLOUDFLARE_REALTIME_APP_ID=
+# CLOUDFLARE_REALTIME_APP_SECRET=
