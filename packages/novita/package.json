@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/novita",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Novita AI LLM service (NovitaLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

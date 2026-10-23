@@ -1,5 +1,21 @@
 # @pipedog/cli
 
+## 0.9.0
+
+### Minor Changes
+
+- [#74](https://github.com/polvallverdu/pipedog/pull/74) [`b6a2619`](https://github.com/polvallverdu/pipedog/commit/b6a26198124201b5c53a10db6861373daa81b748) Thanks [@polvallverdu](https://github.com/polvallverdu)! - New package `@pipedog/ai-sdk`: `AISDKLLMService` runs any Vercel AI SDK language model (`ai` 7: `@ai-sdk/openai`, `@ai-sdk/google`, `@ai-sdk/anthropic`, Ollama and community providers, or AI Gateway model IDs) as the pipeline's LLM service.
+  
+  It behaves like pipedog's native LLM services: it streams `LLMTextFrame`s between `LLMFullResponseStartFrame` and `LLMFullResponseEndFrame`, sends the context's `ToolsSchema` as AI SDK tools without `execute` so pipedog's function calling runs them, aborts the request on interruptions, and reports TTFB, processing and token usage metrics. `AISDKLLMAdapter` converts the context (system instruction, images, files, audio, tool calls and results, reasoning) to AI SDK messages, and keeps provider metadata such as Gemini thought signatures across turns. `ai` is a peer dependency. Runs on Bun, Node, Deno and Cloudflare Workers.
+  
+  `pipedog init` offers it as the "Vercel AI SDK" LLM, with an AI Gateway model ID.
+
+### Patch Changes
+
+- [#78](https://github.com/polvallverdu/pipedog/pull/78) [`5b7f383`](https://github.com/polvallverdu/pipedog/commit/5b7f3838f90e677c7ea23dcbdd52605bd3084c19) Thanks [@polvallverdu](https://github.com/polvallverdu)! - New package `@pipedog/cloudflare`: Cloudflare Workers AI services, over the Worker's `AI` binding or the REST API. Deepgram Flux (`WorkersAIFluxSTTService`, with turn detection), Nova-3 (`WorkersAINova3STTService`) and Whisper (`WorkersAIWhisperSTTService`) speech-to-text; Aura (`WorkersAIAuraTTSService` over a WebSocket, `WorkersAIAuraHttpTTSService`) and MeloTTS (`WorkersAIMeloTTSService`) text-to-speech; `WorkersAILLMService` on the OpenAI-compatible endpoint; and `WorkersAISmartTurnAnalyzer` for Smart Turn v2. `pipedog init` offers the Flux, Whisper, Aura and LLM services.
+- Updated dependencies []:
+  - @pipedog/evals@0.9.0
+
 ## 0.8.0
 
 ### Patch Changes

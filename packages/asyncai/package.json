@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/asyncai",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Async text-to-speech for pipedog.",
   "keywords": [
     "pipecat",

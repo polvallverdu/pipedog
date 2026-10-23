@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/perplexity",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Perplexity LLM service (PerplexityLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

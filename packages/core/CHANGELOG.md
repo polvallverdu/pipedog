@@ -1,5 +1,24 @@
 # @pipedog/core
 
+## 0.9.0
+
+### Minor Changes
+
+- [#76](https://github.com/polvallverdu/pipedog/pull/76) [`72c00c8`](https://github.com/polvallverdu/pipedog/commit/72c00c876904bd26adb007678179f35e57822557) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Frames move through a pipeline about twice as fast (per-frame latency through 10 processors: 83 → 40 µs on Node, 370 → 180 µs on Cloudflare Workers), with the same behavior:
+  
+  - The pipeline worker no longer wakes an observer for events it doesn't handle: `onProcessFrame` events only go to observers that override `onProcessFrame` (the default observers only watch pushes).
+  - New `BaseObserver.acceptsPush(data)`: a synchronous filter the worker calls before queueing a push for an observer. `RTVIObserver` uses it to skip the repeated pushes it ignores, so it is no longer woken at every hop of every frame.
+  - `FrameProcessor` skips the per-frame `on_before/after_process_frame` and `on_before/after_push_frame` events when nothing listens to them, and builds its trace log line only when trace logging is on.
+
+- [#72](https://github.com/polvallverdu/pipedog/pull/72) [`f7dc044`](https://github.com/polvallverdu/pipedog/commit/f7dc044b41e91f3d7d504fb0ae43a7af7fc0ac7d) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Add `defineTool` (`@pipedog/core/adapters/schemas/standard_tool`): typed function-calling tools from any Standard Schema (Zod, Valibot, ArkType). The JSON schema comes from Standard JSON Schema (`~standard.jsonSchema`) or an explicit `jsonSchema`, the handler's `args` are inferred, and arguments are validated before the handler runs; invalid arguments are returned to the LLM as the result. It returns a regular `FunctionSchema`, so existing APIs are unchanged. Also adds `registerTools` and the copied Standard Schema interfaces in `@pipedog/core/utils/standard_schema`.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @pipedog/asyncio@0.9.0
+  - @pipedog/resampler-wasm@0.9.0
+  - @pipedog/sentencex-wasm@0.9.0
+
 ## 0.8.0
 
 ### Patch Changes
