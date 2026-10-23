@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/ollama",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Ollama LLM service (OLLamaLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

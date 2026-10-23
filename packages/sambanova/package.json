@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/sambanova",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "SambaNova LLM service (SambaNovaLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

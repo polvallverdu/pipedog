@@ -331,7 +331,7 @@
     },
     "packages/ai-sdk": {
       "name": "@pipedog/ai-sdk",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -346,7 +346,7 @@
     },
     "packages/anthropic": {
       "name": "@pipedog/anthropic",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.131.0",
         "@pipedog/asyncio": "workspace:*",
@@ -355,7 +355,7 @@
     },
     "packages/assemblyai": {
       "name": "@pipedog/assemblyai",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -363,7 +363,7 @@
     },
     "packages/asyncai": {
       "name": "@pipedog/asyncai",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -371,11 +371,11 @@
     },
     "packages/asyncio": {
       "name": "@pipedog/asyncio",
-      "version": "0.8.0",
+      "version": "0.9.0",
     },
     "packages/audio-rnnoise-filter": {
       "name": "@pipedog/audio-rnnoise-filter",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -386,7 +386,7 @@
     },
     "packages/audio-silero": {
       "name": "@pipedog/audio-silero",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -395,7 +395,7 @@
     },
     "packages/audio-smart-turn": {
       "name": "@pipedog/audio-smart-turn",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -404,7 +404,7 @@
     },
     "packages/audio-soundfile-mixer": {
       "name": "@pipedog/audio-soundfile-mixer",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -412,7 +412,7 @@
     },
     "packages/aws": {
       "name": "@pipedog/aws",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -432,7 +432,7 @@
     },
     "packages/azure": {
       "name": "@pipedog/azure",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -442,7 +442,7 @@
     },
     "packages/baseten": {
       "name": "@pipedog/baseten",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -451,7 +451,7 @@
     },
     "packages/bland": {
       "name": "@pipedog/bland",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -459,7 +459,7 @@
     },
     "packages/camb": {
       "name": "@pipedog/camb",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -467,7 +467,7 @@
     },
     "packages/cartesia": {
       "name": "@pipedog/cartesia",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -475,7 +475,7 @@
     },
     "packages/cerebras": {
       "name": "@pipedog/cerebras",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -484,7 +484,7 @@
     },
     "packages/cli": {
       "name": "@pipedog/cli",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "bin": {
         "pipedog": "./dist/__main__.js",
       },
@@ -503,7 +503,7 @@
     },
     "packages/cloudflare": {
       "name": "@pipedog/cloudflare",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -513,7 +513,7 @@
     },
     "packages/core": {
       "name": "@pipedog/core",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/resampler-wasm": "workspace:*",
@@ -538,7 +538,7 @@
     },
     "packages/crusoe": {
       "name": "@pipedog/crusoe",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -547,7 +547,7 @@
     },
     "packages/deepgram": {
       "name": "@pipedog/deepgram",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -555,7 +555,7 @@
     },
     "packages/deepseek": {
       "name": "@pipedog/deepseek",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -564,7 +564,7 @@
     },
     "packages/effect": {
       "name": "@pipedog/effect",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -578,7 +578,7 @@
     },
     "packages/elevenlabs": {
       "name": "@pipedog/elevenlabs",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -586,7 +586,7 @@
     },
     "packages/espeak-ng": {
       "name": "@pipedog/espeak-ng",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/core": "workspace:*",
       },
@@ -602,7 +602,7 @@
     },
     "packages/evals": {
       "name": "@pipedog/evals",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "bin": {
         "pipedog-eval": "./dist/__main__.js",
       },
@@ -632,7 +632,7 @@
     },
     "packages/extensions": {
       "name": "@pipedog/extensions",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -644,7 +644,7 @@
     },
     "packages/fireworks": {
       "name": "@pipedog/fireworks",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -653,7 +653,7 @@
     },
     "packages/fish": {
       "name": "@pipedog/fish",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@msgpack/msgpack": "3.1.3",
         "@pipedog/asyncio": "workspace:*",
@@ -662,7 +662,7 @@
     },
     "packages/flows": {
       "name": "@pipedog/flows",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -676,7 +676,7 @@
     },
     "packages/funasr": {
       "name": "@pipedog/funasr",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -685,7 +685,7 @@
     },
     "packages/gladia": {
       "name": "@pipedog/gladia",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -693,7 +693,7 @@
     },
     "packages/google": {
       "name": "@pipedog/google",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@google/genai": "^2.27.0",
         "@pipedog/asyncio": "workspace:*",
@@ -716,7 +716,7 @@
     },
     "packages/gradium": {
       "name": "@pipedog/gradium",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -724,14 +724,14 @@
     },
     "packages/grok": {
       "name": "@pipedog/grok",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/xai": "workspace:*",
       },
     },
     "packages/groq": {
       "name": "@pipedog/groq",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -741,7 +741,7 @@
     },
     "packages/heygen": {
       "name": "@pipedog/heygen",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -759,7 +759,7 @@
     },
     "packages/hume": {
       "name": "@pipedog/hume",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -767,7 +767,7 @@
     },
     "packages/inception": {
       "name": "@pipedog/inception",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -776,7 +776,7 @@
     },
     "packages/inworld": {
       "name": "@pipedog/inworld",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -784,7 +784,7 @@
     },
     "packages/kokoro": {
       "name": "@pipedog/kokoro",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -794,7 +794,7 @@
     },
     "packages/langchain": {
       "name": "@pipedog/langchain",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -809,7 +809,7 @@
     },
     "packages/mcp": {
       "name": "@pipedog/mcp",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "bin": {
         "pipedog-mcp": "./dist/bin.js",
       },
@@ -823,7 +823,7 @@
     },
     "packages/mcp-client": {
       "name": "@pipedog/mcp-client",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@modelcontextprotocol/sdk": "1.32.1",
         "@pipedog/asyncio": "workspace:*",
@@ -837,7 +837,7 @@
     },
     "packages/meta": {
       "name": "@pipedog/meta",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -845,7 +845,7 @@
     },
     "packages/minimax": {
       "name": "@pipedog/minimax",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -853,7 +853,7 @@
     },
     "packages/mistral": {
       "name": "@pipedog/mistral",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -862,7 +862,7 @@
     },
     "packages/moonshine": {
       "name": "@pipedog/moonshine",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/audio-silero": "workspace:*",
@@ -872,7 +872,7 @@
     },
     "packages/nebius": {
       "name": "@pipedog/nebius",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -881,7 +881,7 @@
     },
     "packages/neuphonic": {
       "name": "@pipedog/neuphonic",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -889,7 +889,7 @@
     },
     "packages/novita": {
       "name": "@pipedog/novita",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -898,7 +898,7 @@
     },
     "packages/ollama": {
       "name": "@pipedog/ollama",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -907,7 +907,7 @@
     },
     "packages/onnx": {
       "name": "@pipedog/onnx",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -927,7 +927,7 @@
     },
     "packages/openai": {
       "name": "@pipedog/openai",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -938,7 +938,7 @@
     },
     "packages/openrouter": {
       "name": "@pipedog/openrouter",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -947,7 +947,7 @@
     },
     "packages/perplexity": {
       "name": "@pipedog/perplexity",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -956,7 +956,7 @@
     },
     "packages/piper": {
       "name": "@pipedog/piper",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -966,7 +966,7 @@
     },
     "packages/pocket-tts": {
       "name": "@pipedog/pocket-tts",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -975,7 +975,7 @@
     },
     "packages/qwen": {
       "name": "@pipedog/qwen",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -984,11 +984,11 @@
     },
     "packages/resampler-wasm": {
       "name": "@pipedog/resampler-wasm",
-      "version": "0.8.0",
+      "version": "0.9.0",
     },
     "packages/resembleai": {
       "name": "@pipedog/resembleai",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -996,7 +996,7 @@
     },
     "packages/rime": {
       "name": "@pipedog/rime",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@bufbuild/protobuf": "2.16.0",
         "@pipedog/asyncio": "workspace:*",
@@ -1006,7 +1006,7 @@
     },
     "packages/runner": {
       "name": "@pipedog/runner",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1037,7 +1037,7 @@
     },
     "packages/sambanova": {
       "name": "@pipedog/sambanova",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1046,7 +1046,7 @@
     },
     "packages/sarvam": {
       "name": "@pipedog/sarvam",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1055,14 +1055,14 @@
     },
     "packages/sentencex-wasm": {
       "name": "@pipedog/sentencex-wasm",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "devDependencies": {
         "sentencex": "1.0.32",
       },
     },
     "packages/sentry": {
       "name": "@pipedog/sentry",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1073,7 +1073,7 @@
     },
     "packages/serializer-exotel": {
       "name": "@pipedog/serializer-exotel",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1081,7 +1081,7 @@
     },
     "packages/serializer-genesys": {
       "name": "@pipedog/serializer-genesys",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1089,7 +1089,7 @@
     },
     "packages/serializer-plivo": {
       "name": "@pipedog/serializer-plivo",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1097,7 +1097,7 @@
     },
     "packages/serializer-protobuf": {
       "name": "@pipedog/serializer-protobuf",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1105,14 +1105,14 @@
     },
     "packages/serializer-rtvi-client": {
       "name": "@pipedog/serializer-rtvi-client",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/core": "workspace:*",
       },
     },
     "packages/serializer-telnyx": {
       "name": "@pipedog/serializer-telnyx",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1120,7 +1120,7 @@
     },
     "packages/serializer-twilio": {
       "name": "@pipedog/serializer-twilio",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1128,7 +1128,7 @@
     },
     "packages/serializer-vonage": {
       "name": "@pipedog/serializer-vonage",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1136,7 +1136,7 @@
     },
     "packages/smallest": {
       "name": "@pipedog/smallest",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1144,7 +1144,7 @@
     },
     "packages/soniox": {
       "name": "@pipedog/soniox",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1152,7 +1152,7 @@
     },
     "packages/speechify": {
       "name": "@pipedog/speechify",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1160,7 +1160,7 @@
     },
     "packages/speechmatics": {
       "name": "@pipedog/speechmatics",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1168,7 +1168,7 @@
     },
     "packages/together": {
       "name": "@pipedog/together",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1177,7 +1177,7 @@
     },
     "packages/tracing": {
       "name": "@pipedog/tracing",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@opentelemetry/exporter-trace-otlp-http": "0.222.0",
         "@opentelemetry/resources": "2.11.0",
@@ -1193,7 +1193,7 @@
     },
     "packages/transport-cloudflare-realtime": {
       "name": "@pipedog/transport-cloudflare-realtime",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1202,7 +1202,7 @@
     },
     "packages/transport-heygen": {
       "name": "@pipedog/transport-heygen",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1220,7 +1220,7 @@
     },
     "packages/transport-livekit": {
       "name": "@pipedog/transport-livekit",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1238,7 +1238,7 @@
     },
     "packages/transport-local": {
       "name": "@pipedog/transport-local",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1246,7 +1246,7 @@
     },
     "packages/transport-smallwebrtc": {
       "name": "@pipedog/transport-smallwebrtc",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1262,7 +1262,7 @@
     },
     "packages/transport-websocket": {
       "name": "@pipedog/transport-websocket",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1285,7 +1285,7 @@
     },
     "packages/transport-whatsapp": {
       "name": "@pipedog/transport-whatsapp",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1294,7 +1294,7 @@
     },
     "packages/ultravox": {
       "name": "@pipedog/ultravox",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
@@ -1302,7 +1302,7 @@
     },
     "packages/whisper": {
       "name": "@pipedog/whisper",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@huggingface/tokenizers": "^0.2.0",
         "@pipedog/asyncio": "workspace:*",
@@ -1313,7 +1313,7 @@
     },
     "packages/xai": {
       "name": "@pipedog/xai",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/effect",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Effect adapter for pipedog: run a PipelineWorker as a scoped Effect (interruption cancels the pipeline, a cancelled pipeline interrupts the fiber), stream the frames that reach the end of a pipeline, feed frames from a Stream, and write frame processors as Effect functions.",
   "keywords": [
     "pipecat",

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/funasr",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "FunASR speech-to-text for pipedog: a port of Pipecat's FunASRSTTService, running SenseVoice locally through @pipedog/onnx.",
   "keywords": [
     "pipecat",
