@@ -169,6 +169,11 @@ describe("config", () => {
   test("limits default sensibly and ignore junk", () => {
     const config = readConfig({ SESSION_MAX_SECS: "abc", MAX_CONCURRENT_SESSIONS: "-2" } as Env);
     expect(config.session).toEqual({ maxSecs: 120, idleSecs: 30, maxTurns: 12 });
-    expect(config.budget.maxConcurrent).toBe(4);
+    // No global cap by default; one session at a time per IP.
+    expect(config.budget.maxConcurrent).toBe(0);
+    expect(config.budget.maxConcurrentPerIp).toBe(1);
+    // The cost ceiling: $500 a month; the daily caps are off.
+    expect(config.budget.maxSpendUsdPerMonth).toBe(500);
+    expect(config.budget.maxSessionsPerDay).toBe(0);
   });
 });

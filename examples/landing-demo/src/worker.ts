@@ -58,9 +58,11 @@ export const REFUSALS: Record<RefusalReason, string> = {
   turnstile: "We couldn't check that you're human. Reload the page and try again.",
   rate_limited: "You've started a few sessions in a row. Give it a few minutes.",
   ip_limit: "You've started a few sessions in a row. Give it a few minutes.",
+  ip_busy: "You already have a session running. End it first, or wait for it to finish.",
   busy: "The demo is busy with other visitors. Try again in a minute.",
   daily_sessions: "The demo has used up today's budget. Come back tomorrow!",
   daily_minutes: "The demo has used up today's budget. Come back tomorrow!",
+  monthly_budget: "The demo has used up this month's budget. Come back next month!",
   webrtc_unavailable: "WebRTC isn't set up on this demo. Use WebSocket instead.",
 };
 
