@@ -12,8 +12,10 @@
 //
 // Safe to re-run: existing packages and trust entries are skipped.
 //
-//   bun tools/release/setup-npm.ts            do it
-//   bun tools/release/setup-npm.ts --dry-run  show what it would do
+//   bun tools/release/setup-npm.ts                     do it
+//   bun tools/release/setup-npm.ts --dry-run           show what it would do
+//   bun tools/release/setup-npm.ts cloudflare effect   only these packages
+//                                                      (with or without "@pipedog/")
 //
 // New packages later: add them to packages/, run this again.
 //
@@ -43,6 +45,11 @@ const PLACEHOLDER = "0.0.0";
 // `npm trust` needs npm >= 12.
 const NPM_VERSION = "12.2.0";
 const dryRun = process.argv.includes("--dry-run");
+/** Package names given on the command line: only those are set up. */
+const only = process.argv
+  .slice(2)
+  .filter((a) => !a.startsWith("--"))
+  .map((a) => (a.startsWith("@pipedog/") ? a : `@pipedog/${a}`));
 
 /** Run a command attached to the terminal (npm may ask for an OTP). */
 function run(cmd: string[], cwd?: string): number {
@@ -106,7 +113,13 @@ if (!who.ok) {
 }
 console.log(`npm user: ${who.out.trim()}${dryRun ? " (dry run: nothing will change)" : ""}\n`);
 
-const pkgs = [...publishablePackages()];
+const all = [...publishablePackages()];
+const unknown = only.filter((name) => !all.some(([n]) => n === name));
+if (unknown.length > 0) {
+  console.error(`Not a publishable package: ${unknown.join(", ")}`);
+  process.exit(1);
+}
+const pkgs = only.length > 0 ? all.filter(([name]) => only.includes(name)) : all;
 const summary: string[] = [];
 let failures = 0;
 
