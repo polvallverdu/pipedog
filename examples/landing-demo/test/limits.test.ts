@@ -10,8 +10,11 @@ import { GOODBYE_LEAD_SECS, SessionLimits } from "../src/limits.ts";
 
 const LIMITS: BudgetLimits = {
   maxConcurrent: 2,
+  maxConcurrentPerIp: 5,
   maxSessionsPerDay: 5,
   maxMinutesPerDay: 10,
+  maxSpendUsdPerMonth: 0,
+  costPerMinuteUsd: 0.04,
   maxSessionsPerIp: 3,
   sessionMaxSecs: 120,
 };
@@ -30,6 +33,45 @@ describe("BudgetLedger", () => {
     expect(l.start("a", T0 + 1000)).toBe(true);
     l.finish("a", T0 + 31_000);
     expect(l.reserve("c", "ip3", T0 + 31_000)).toEqual({ ok: true });
+  });
+
+  test("caps the estimated spend per month, and resets it next month", () => {
+    // $1 at $0.05/min: 20 minutes, ten 2-minute sessions.
+    const l = ledger({
+      maxConcurrent: 0,
+      maxSessionsPerIp: 100,
+      maxSessionsPerDay: 0,
+      maxMinutesPerDay: 0,
+      maxSpendUsdPerMonth: 1,
+      costPerMinuteUsd: 0.05,
+    });
+    for (let i = 0; i < 10; i++) {
+      expect(l.reserve(`s${i}`, `ip${i}`, T0)).toEqual({ ok: true });
+      expect(l.start(`s${i}`, T0)).toBe(true);
+      l.finish(`s${i}`, T0 + 120_000);
+    }
+    expect(l.snapshot(T0 + 120_000).spendThisMonthUsd).toBe(1);
+    expect(l.reserve("over", "ipx", T0 + 120_000)).toEqual({ ok: false, reason: "monthly_budget" });
+    const nextMonth = Date.UTC(2026, 10, 1, 0, 1, 0);
+    expect(l.reserve("over", "ipx", nextMonth)).toEqual({ ok: true });
+    expect(l.snapshot(nextMonth).spendThisMonthUsd).toBe(0);
+  });
+
+  test("0 means no global cap", () => {
+    const l = ledger({ maxConcurrent: 0, maxSessionsPerDay: 100, maxMinutesPerDay: 1000 });
+    for (let i = 0; i < 20; i++) {
+      expect(l.reserve(`s${i}`, `ip${i}`, T0)).toEqual({ ok: true });
+    }
+  });
+
+  test("one IP gets one session at a time, and another once it ends", () => {
+    const l = ledger({ maxConcurrent: 0, maxConcurrentPerIp: 1 });
+    expect(l.reserve("a", "same-ip", T0)).toEqual({ ok: true });
+    expect(l.reserve("b", "same-ip", T0 + 1000)).toEqual({ ok: false, reason: "ip_busy" });
+    expect(l.reserve("c", "other-ip", T0 + 1000)).toEqual({ ok: true });
+    expect(l.start("a", T0 + 2000)).toBe(true);
+    l.finish("a", T0 + 30_000);
+    expect(l.reserve("b", "same-ip", T0 + 30_000)).toEqual({ ok: true });
   });
 
   test("an unclaimed reservation lapses after the ticket's lifetime", () => {

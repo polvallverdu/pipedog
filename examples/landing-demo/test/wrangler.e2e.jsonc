@@ -30,6 +30,9 @@
     "ALLOWED_ORIGINS": "http://localhost:3000",
     "FRAME_ANCESTORS": "http://localhost:3000",
     "MAX_CONCURRENT_SESSIONS": "4",
+    // The tests take tickets back to back from one IP, to reach the rate limiter: room for that.
+    // (One session at a time per IP is covered by the ledger's unit tests.)
+    "MAX_CONCURRENT_SESSIONS_PER_IP": "10",
     "MAX_SESSIONS_PER_DAY": "150",
     "MAX_MINUTES_PER_DAY": "180",
     "MAX_SESSIONS_PER_IP": "4",

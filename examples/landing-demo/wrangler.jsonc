@@ -38,9 +38,17 @@
     // Who may embed the page in an iframe, besides itself (CSP frame-ancestors, comma-separated).
     "FRAME_ANCESTORS": "https://polvallverdu.github.io,http://localhost:3000",
     // The global budget, kept by the DemoBudget Durable Object (UTC days).
-    "MAX_CONCURRENT_SESSIONS": "4",
-    "MAX_SESSIONS_PER_DAY": "150",
-    "MAX_MINUTES_PER_DAY": "180",
+    // Sessions at once from one IP, and across everyone (0: no global cap; the daily limits
+    // still bound the cost).
+    "MAX_CONCURRENT_SESSIONS_PER_IP": "1",
+    "MAX_CONCURRENT_SESSIONS": "0",
+    // The cost ceiling: estimated spend per UTC month (session minutes × COST_PER_MINUTE_USD).
+    // $0.04/min is above the ~$0.03 Flux + Aura-2 + Haiku 5.5 cost, so the cap trips early.
+    "MAX_SPEND_USD_PER_MONTH": "500",
+    "COST_PER_MINUTE_USD": "0.04",
+    // Optional daily caps (0: none).
+    "MAX_SESSIONS_PER_DAY": "0",
+    "MAX_MINUTES_PER_DAY": "0",
     "MAX_SESSIONS_PER_IP": "4",
     // Each session: hard maximum length, silence before it ends, and user turns.
     "SESSION_MAX_SECS": "120",

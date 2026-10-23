@@ -57,10 +57,15 @@ browser ──GET /─┤ the page: web/ (SvelteKit, static assets)    │
 - **Same origin.** The API answers the demo's own origin (plus `ALLOWED_ORIGINS`, for Vite's dev
   server); CORS is only sent to those. The page may be framed only by itself and
   `FRAME_ANCESTORS` (`Content-Security-Policy: frame-ancestors`).
-- **Rate limits.** The Rate Limiting binding allows 3 tickets per minute per IP (hashed); the
-  budget object allows `MAX_SESSIONS_PER_IP` per 10 minutes. The **global budget** caps sessions
-  at once (`MAX_CONCURRENT_SESSIONS`), sessions per UTC day (`MAX_SESSIONS_PER_DAY`) and minutes
-  per day (`MAX_MINUTES_PER_DAY`, counting running sessions at their full length). Refusals come
+- **Rate limits, per visitor.** The Rate Limiting binding allows 3 tickets per minute per IP
+  (hashed); the budget object allows `MAX_CONCURRENT_SESSIONS_PER_IP` sessions at once (1) and
+  `MAX_SESSIONS_PER_IP` per 10 minutes. The **global budget** is a cost ceiling:
+  `MAX_SPEND_USD_PER_MONTH` ($500 by default) of estimated spend per UTC month, at
+  `COST_PER_MINUTE_USD` per session minute ($0.04, above the ~$0.03 that Flux, Aura-2 and Haiku
+  5.5 cost), counting running sessions at their full length so it can't be overrun. Optional:
+  sessions and minutes per UTC day (`MAX_SESSIONS_PER_DAY`, `MAX_MINUTES_PER_DAY`) and sessions
+  at once across everyone (`MAX_CONCURRENT_SESSIONS`); all 0 (no cap) by default. The estimate
+  is not your bill: also set a spending alert in the Cloudflare and Anthropic dashboards. Refusals come
   back as a friendly message the page shows. **Kill switch:** `DEMO_ENABLED` anything but `true`
   refuses everything.
 - **Session caps** (`src/limits.ts`): `SESSION_MAX_SECS` (the bot says goodbye 6 s before, then

@@ -6,7 +6,13 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { type Env, readConfig } from "./config.ts";
-import { BudgetLedger, emptyLedger, type LedgerState, type Reservation } from "./ledger.ts";
+import {
+  BudgetLedger,
+  type BudgetSnapshot,
+  emptyLedger,
+  type LedgerState,
+  type Reservation,
+} from "./ledger.ts";
 
 const STATE_KEY = "ledger";
 
@@ -33,7 +39,7 @@ export class DemoBudget extends DurableObject<Env> {
     await this.#update((l) => l.finish(sessionId, Date.now()));
   }
 
-  async snapshot(): Promise<{ active: number; sessionsToday: number; minutesToday: number }> {
+  async snapshot(): Promise<BudgetSnapshot> {
     return await this.#update((l) => l.snapshot(Date.now()));
   }
 }
