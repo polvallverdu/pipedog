@@ -27,8 +27,11 @@ client, WebRTC signalling, telephony webhooks and WebSockets) as one fetch handl
 [Servers](/docs/deployment/servers#the-development-runner).
 
 Pipecat's own deployment guides (Fly.io, Cerebrium, Modal, Pipecat Cloud) assume a Python process
-per session. The same patterns apply to a pipedog server: one process (or one Durable Object) per
-session, and a cap on concurrent sessions.
+per session. A pipedog server can do that too, but it doesn't have to: one process serves many
+cloud-service calls on one event loop. Local models (Silero VAD, Smart Turn) are CPU work that
+blocks that loop, so for them spread calls over worker threads or processes. See
+[Calls in worker threads](/docs/deployment/threads) for the measured limits and the setups. On
+Cloudflare, each session is its own Durable Object.
 
 ## Before you deploy
 
@@ -47,6 +50,9 @@ session, and a cap on concurrent sessions.
 <Cards>
   <Card title="Servers" href="/docs/deployment/servers">
     Bun, Node or Deno, with SmallWebRTC and WebSocket.
+  </Card>
+  <Card title="Worker threads" href="/docs/deployment/threads">
+    How many calls one event loop serves, and running calls in worker threads.
   </Card>
   <Card title="Cloudflare Workers" href="/docs/deployment/cloudflare-workers">
     One Durable Object per session, over WebSocket.

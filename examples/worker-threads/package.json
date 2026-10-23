@@ -1,0 +1,25 @@
+{
+  "name": "@pipedog/example-worker-threads",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Running calls in worker threads: cross-runtime thread ports, WebSocket connections forwarded from the main thread to a bot in a worker, and Smart Turn predictions on a pool of worker threads.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "start": "bun src/forwarding_server.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/audio-silero": "workspace:*",
+    "@pipedog/audio-smart-turn": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/onnx": "workspace:*",
+    "@pipedog/openai": "workspace:*",
+    "@pipedog/serializer-protobuf": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*",
+    "onnxruntime-node": "1.30.0"
+  }
+}

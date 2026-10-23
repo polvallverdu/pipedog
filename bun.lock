@@ -9,11 +9,13 @@
         "@changesets/changelog-github": "1.0.1",
         "@changesets/cli": "3.0.3",
         "@google/genai": "2.27.0",
+        "@pipedog/asyncio": "workspace:*",
         "@pipedog/audio-rnnoise-filter": "workspace:*",
         "@pipedog/audio-silero": "workspace:*",
         "@pipedog/audio-smart-turn": "workspace:*",
         "@pipedog/audio-soundfile-mixer": "workspace:*",
         "@pipedog/core": "workspace:*",
+        "@pipedog/example-worker-threads": "workspace:*",
         "@pipedog/google": "workspace:*",
         "@pipedog/onnx": "workspace:*",
         "@pipedog/transport-local": "workspace:*",
@@ -258,6 +260,20 @@
         "@pipedog/example-test-mocks": "workspace:*",
         "@types/ws": "8.18.2",
         "playwright-core": "1.63.0",
+      },
+    },
+    "examples/worker-threads": {
+      "name": "@pipedog/example-worker-threads",
+      "version": "0.0.0",
+      "dependencies": {
+        "@pipedog/audio-silero": "workspace:*",
+        "@pipedog/audio-smart-turn": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/onnx": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+        "@pipedog/serializer-protobuf": "workspace:*",
+        "@pipedog/transport-websocket": "workspace:*",
+        "onnxruntime-node": "1.30.0",
       },
     },
     "examples/workers-durable-voice-agent": {
@@ -1826,6 +1842,8 @@
     "@pipedog/example-twilio-phone-bot": ["@pipedog/example-twilio-phone-bot@workspace:examples/twilio-phone-bot"],
 
     "@pipedog/example-websocket-voice-bot": ["@pipedog/example-websocket-voice-bot@workspace:examples/websocket-voice-bot"],
+
+    "@pipedog/example-worker-threads": ["@pipedog/example-worker-threads@workspace:examples/worker-threads"],
 
     "@pipedog/example-workers-durable-voice-agent": ["@pipedog/example-workers-durable-voice-agent@workspace:examples/workers-durable-voice-agent"],
 

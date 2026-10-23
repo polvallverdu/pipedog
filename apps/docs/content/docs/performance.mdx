@@ -114,6 +114,8 @@ The first run creates a Python 3.13 environment with [uv](https://docs.astral.sh
 Pipecat from the pinned upstream checkout (`bun run upstream` restores it). `--write` saves the raw
 samples to
 [`tools/bench/perf/results.json`](https://github.com/polvallverdu/pipedog/blob/main/tools/bench/perf/results.json)
-and the tables above. Model inference (Silero VAD, Smart Turn) has its own benchmark,
+and the tables above. How many calls one process serves at once, on one event loop or over worker
+threads, with cloud services or local models, is measured in
+[Calls in worker threads](/docs/deployment/threads). Model inference (Silero VAD, Smart Turn) has its own benchmark,
 `bun run bench`; its results are in the [`@pipedog/onnx`
 README](https://github.com/polvallverdu/pipedog/tree/main/packages/onnx#readme).
