@@ -66,6 +66,12 @@ body {
   background: transparent;
 }
 
+/* Embedded: no page header. The prerendered page has it until the app mounts, and the class is
+   set before the first paint, so hiding it here keeps it from flashing in the iframe. */
+:root.embed .intro {
+  display: none;
+}
+
 ::selection {
   background: oklch(0.76 0.16 55 / 0.3);
 }

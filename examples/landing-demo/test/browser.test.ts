@@ -127,7 +127,7 @@ test.skipIf(!chromiumPath)("embedded and dark, from the query string", async () 
     expect(classes).toContain("dark");
     expect(classes).toContain("embed");
     // Embedded: the card alone, without the page's own header.
-    expect(await page.locator("h1").count()).toBe(0);
+    expect(await page.locator("h1").isVisible()).toBe(false);
     // The landing page switches the theme with a message.
     await page.evaluate(() =>
       window.dispatchEvent(
