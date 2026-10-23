@@ -325,6 +325,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/pocket-tts`](packages/pocket-tts) | `PocketTTSService`: Kyutai's Pocket TTS, run locally on ONNX Runtime, faster than real time on a CPU. |
 | [`@pipedog/espeak-ng`](packages/espeak-ng) | eSpeak NG phonemization (WebAssembly, GPL-3.0 optional peer) for the local Kokoro and Piper voices. |
 | [`@pipedog/langchain`](packages/langchain) | LangChain integration (`LangchainProcessor`). |
+| [`@pipedog/ai-sdk`](packages/ai-sdk) | `AISDKLLMService`: any [Vercel AI SDK](https://ai-sdk.dev) language model (OpenAI, Google, Anthropic, Ollama, the AI Gateway, ...) as the pipeline's LLM, with pipedog's function calling. |
 | [`@pipedog/flows`](packages/flows) | Structured conversations from nodes, functions and actions (Pipecat Flows), as code or YAML/JSON configs. |
 | [`@pipedog/transport-smallwebrtc`](packages/transport-smallwebrtc) | Peer-to-peer WebRTC transport (werift, Opus via WASM) for the Pipecat browser SDK's `SmallWebRTCTransport`. |
 | [`@pipedog/transport-livekit`](packages/transport-livekit) | LiveKit transport: joins a LiveKit room (your server or LiveKit Cloud) with audio, video, data messages and SIP DTMF, on LiveKit's native Node SDK. |

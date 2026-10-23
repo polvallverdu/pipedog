@@ -309,6 +309,24 @@ export class ServiceRegistry {
   /** LLM services (cascade mode). */
   static readonly LLM_SERVICES: ServiceDefinition[] = [
     svc("anthropic_llm", "Anthropic Claude", "@pipedog/anthropic", ["AnthropicLLMService"]),
+    svc("ai_sdk_llm", "Vercel AI SDK", "@pipedog/ai-sdk", ["AISDKLLMService"], {
+      extraDependencies: { ai: "^7.0.133", zod: "^4.6.5" },
+      envVars: [
+        {
+          name: "AI_GATEWAY_API_KEY",
+          description:
+            "https://vercel.com/docs/ai-gateway (or swap the model ID for a provider package's model)",
+          required: true,
+        },
+        {
+          name: "AI_SDK_MODEL",
+          description: "an AI Gateway model ID",
+          required: false,
+          default: "google/gemini-3.5-flash-lite",
+        },
+      ],
+      note: "Model IDs go through the AI Gateway; any AI SDK provider's model (@ai-sdk/openai, @ai-sdk/google, Ollama, ...) works in their place.",
+    }),
     svc("aws_bedrock_llm", "AWS Bedrock", "@pipedog/aws", ["AWSBedrockLLMService"]),
     svc("azure_llm", "Azure OpenAI", "@pipedog/azure", ["AzureLLMService"]),
     svc("google_gemini_llm", "Google Gemini", "@pipedog/google", ["GoogleLLMService"]),

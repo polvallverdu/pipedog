@@ -1,0 +1,120 @@
+---
+title: Vercel AI SDK
+description: Run any Vercel AI SDK language model (OpenAI, Google, Anthropic, Ollama, the AI Gateway, ...) as the pipeline's LLM with AISDKLLMService.
+---
+
+## Overview
+
+`AISDKLLMService` runs a [Vercel AI SDK](https://ai-sdk.dev) language model as the pipeline's LLM
+service. The AI SDK gives one interface to many providers, so one service covers all of them:
+`@ai-sdk/openai`, `@ai-sdk/google`, `@ai-sdk/anthropic`, `@ai-sdk/mistral`, `@ai-sdk/amazon-bedrock`,
+Ollama and the other community providers, and model ID strings routed through the AI Gateway.
+
+- **`AISDKLLMService`**: an `LLMService` that streams the model's reply with the AI SDK's
+  `streamText()`. It behaves like pipedog's native LLM services: it consumes `LLMContextFrame`s,
+  pushes `LLMFullResponseStartFrame`, `LLMTextFrame`s and `LLMFullResponseEndFrame`, runs function
+  calls through pipedog's function calling, and reports TTFB, processing time and token usage.
+
+This is a pipedog addition: Pipecat (Python) has no AI SDK service.
+
+<Cards>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/ai-sdk/src">
+    `packages/ai-sdk/src/llm.ts` and the message adapter, `ai_sdk_adapter.ts`.
+  </Card>
+  <Card title="AI SDK providers" href="https://ai-sdk.dev/providers/ai-sdk-providers">
+    The official and community providers, and their model IDs and options.
+  </Card>
+</Cards>
+
+## Installation
+
+`ai` (version 7) is a peer dependency, so you pick its version. Add the provider package you use,
+and `zod`, which `ai` requires.
+
+```bash
+bun add @pipedog/ai-sdk ai zod @ai-sdk/google
+```
+
+```ts
+import { AISDKLLMService } from "@pipedog/ai-sdk";
+```
+
+## Prerequisites
+
+- Whatever the provider needs. `@ai-sdk/google` reads `GOOGLE_GENERATIVE_AI_API_KEY`, or takes
+  `createGoogleGenerativeAI({ apiKey })`. A model ID string uses the AI Gateway, which reads
+  `AI_GATEWAY_API_KEY`.
+
+## AISDKLLMService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/ai-sdk/src/llm.ts" name="AISDKLLMServiceOptions" />
+
+### Settings
+
+`AISDKLLMService.Settings` (`AISDKLLMSettings`) holds the runtime-updatable settings. The common
+fields map to the AI SDK's call settings: `temperature`, `maxTokens` (`maxOutputTokens`), `topP`,
+`topK`, `frequencyPenalty`, `presencePenalty` and `seed`. `null`, the default, leaves a field to the
+provider.
+
+<auto-type-table cwd path="../../packages/ai-sdk/src/llm.ts" name="AISDKLLMSettingsOptions" />
+
+`systemInstruction` is sent as the AI SDK's `instructions`. `extra` is merged into the
+`streamText()` call as is.
+
+### Usage
+
+<include cwd meta='title="llm.ts"'>snippets/services/llm-ai-sdk.ts#usage</include>
+
+### Function calling
+
+Tools come from the context's `ToolsSchema`, as with every LLM service. Each `FunctionSchema`
+becomes an AI SDK tool with a JSON schema and no `execute`, so the AI SDK hands the model's calls
+back to pipedog, which runs the registered handler (or the schema's own handler, or a direct
+function), adds the result to the context and asks the model again.
+
+<include cwd meta='title="tools.ts"'>snippets/services/llm-ai-sdk.ts#tools</include>
+
+Provider-defined tools, such as Google Search grounding or OpenAI web search, go in the `tools`
+option. They are sent on every request and run on the provider's side.
+
+### Switching models
+
+<include cwd meta='title="switch.ts"'>snippets/services/llm-ai-sdk.ts#switch</include>
+
+Without `provider`, a model ID in a settings update can't be turned into a model, so it is ignored
+with a warning (unless the model was given as an ID string in the first place).
+
+### Provider options
+
+Provider-specific options go in `providerOptions`, keyed by provider, as in the AI SDK:
+
+<include cwd meta='title="provider-options.ts"'>snippets/services/llm-ai-sdk.ts#provider-options</include>
+
+### Notes
+
+- Consumes `LLMContextFrame`. For each response it pushes `LLMFullResponseStartFrame`, one
+  `LLMTextFrame` per streamed text delta and `LLMFullResponseEndFrame`, even when the request fails.
+- Reasoning is pushed as `LLMThoughtStartFrame` / `LLMThoughtTextFrame` / `LLMThoughtEndFrame`
+  and kept in the context, so providers that need it back (Anthropic thinking blocks) get it.
+- Provider metadata that comes with a tool call or the reply text, such as Gemini's thought
+  signatures, is kept in the context and sent back with that output on later turns.
+- An initial `"system"` context message becomes the instructions when the service has no
+  `systemInstruction`. Later `"system"` and `"developer"` messages are sent as user messages.
+- Images (`image_url`), files (`file_url`, `file_base64`) and audio (`input_audio`) in user
+  messages become AI SDK image and file parts. File URLs are fetched by pipedog's file resolver
+  and sent inline.
+- A failed request is pushed upstream as an `ErrorFrame` (`Error during completion: ...`). The AI
+  SDK retries failed requests itself (`maxRetries`, 2 by default).
+- `runInference()` runs a one-shot `generateText()`. A `responseSchema` is passed as
+  `Output.object()`, so the provider enforces it where it can.
+
+## Runtime notes
+
+<RuntimeMatrix pkg="@pipedog/ai-sdk" />
+
+- An interruption cancels the response: the request's `abortSignal` is aborted and each stream
+  part is a cancellation point.
+- The service uses no runtime-specific APIs. Whether a provider package runs on a given runtime is
+  up to that package; the official ones use `fetch`.

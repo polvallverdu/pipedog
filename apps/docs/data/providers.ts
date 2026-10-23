@@ -747,6 +747,12 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/langchain",
       classes: ["LangchainProcessor"],
     },
+    {
+      slug: "ai-sdk",
+      name: "Vercel AI SDK",
+      pkg: "@pipedog/ai-sdk",
+      classes: ["AISDKLLMService"],
+    },
     ...[...compatibleLlm]
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((page) => ({

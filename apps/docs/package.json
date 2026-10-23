@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@opentelemetry/api": "1.9.1",
+    "@ai-sdk/google": "4.0.91",
+    "@pipedog/ai-sdk": "workspace:*",
     "@pipedog/anthropic": "workspace:*",
     "@pipedog/assemblyai": "workspace:*",
     "@pipedog/asyncai": "workspace:*",
@@ -94,6 +96,7 @@
     "@pipedog/whisper": "workspace:*",
     "@pipedog/xai": "workspace:*",
     "@sentry/core": "11.5.0",
+    "ai": "7.0.133",
     "cn": "0.4.0",
     "effect": "4.0.2",
     "fumadocs-core": "16.16.2",

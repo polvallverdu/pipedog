@@ -109,6 +109,7 @@ export const IMPORTS: Record<string, readonly string[]> = {
   anthropic_llm: ['import { AnthropicLLMService } from "@pipedog/anthropic/llm";'],
   aws_bedrock_llm: ['import { AWSBedrockLLMService } from "@pipedog/aws/llm";'],
   azure_llm: ['import { AzureLLMService } from "@pipedog/azure/llm";'],
+  ai_sdk_llm: ['import { AISDKLLMService } from "@pipedog/ai-sdk";'],
   google_gemini_llm: ['import { GoogleLLMService } from "@pipedog/google/llm";'],
   google_vertex_llm: ['import { GoogleVertexLLMService } from "@pipedog/google/vertex/llm";'],
   openai_llm: ['import { OpenAILLMService } from "@pipedog/openai/llm";'],
