@@ -1,22 +1,89 @@
-# pipedog
+<p align="center">
+  <img src=".github/assets/logo.svg" width="96" height="96" alt="pipedog logo: a dog in profile, speaking">
+</p>
 
-[![CI](https://github.com/polvallverdu/pipedog/actions/workflows/ci.yml/badge.svg)](https://github.com/polvallverdu/pipedog/actions/workflows/ci.yml)
-[![Docs](https://github.com/polvallverdu/pipedog/actions/workflows/docs.yml/badge.svg)](https://polvallverdu.github.io/pipedog/)
-[![npm](https://img.shields.io/npm/v/@pipedog/core?label=%40pipedog%2Fcore)](https://www.npmjs.com/package/@pipedog/core)
-[![License: BSD-2-Clause](https://img.shields.io/badge/license-BSD--2--Clause-blue.svg)](LICENSE)
+<h1 align="center">pipedog</h1>
 
-pipedog is a TypeScript port of [Pipecat](https://github.com/pipecat-ai/pipecat), the framework for
-real-time voice and multimodal conversational AI. You build a bot as a pipeline of frame processors
-(transport in, speech-to-text, LLM, text-to-speech, transport out) and it runs on Bun, Node, Deno
-and Cloudflare Workers. The API mirrors Pipecat's: the same classes, frames, events, module paths
-and wire protocols, with camelCase members. So Pipecat's client SDKs (`@pipecat-ai/client-js`,
-`@pipecat-ai/small-webrtc-transport`, voice-ui-kit) work against a pipedog bot unchanged.
+<p align="center">
+  <strong>Real-time voice and multimodal AI agents in TypeScript.</strong><br>
+  A port of <a href="https://github.com/pipecat-ai/pipecat">Pipecat</a> for Bun, Node, Deno and Cloudflare Workers.
+</p>
 
+<p align="center">
+  <a href="https://github.com/polvallverdu/pipedog/actions/workflows/ci.yml"><img src="https://github.com/polvallverdu/pipedog/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://polvallverdu.github.io/pipedog/"><img src="https://github.com/polvallverdu/pipedog/actions/workflows/docs.yml/badge.svg" alt="Docs"></a>
+  <a href="https://www.npmjs.com/package/@pipedog/core"><img src="https://img.shields.io/npm/v/@pipedog/core?label=%40pipedog%2Fcore" alt="npm"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--2--Clause-blue.svg" alt="License: BSD-2-Clause"></a>
+</p>
+
+<p align="center">
+  <a href="https://polvallverdu.github.io/pipedog/"><strong>Docs</strong></a> ·
+  <a href="https://polvallverdu.github.io/pipedog/docs/quickstart/">Quickstart</a> ·
+  <a href="https://polvallverdu.github.io/pipedog/docs/services/">Services</a> ·
+  <a href="https://polvallverdu.github.io/pipedog/docs/performance/">Performance</a> ·
+  <a href="https://polvallverdu.github.io/pipedog/docs/guides/coming-from-pipecat/">Coming from Pipecat</a>
+</p>
+
+> [!IMPORTANT]
 > **Unofficial.** pipedog is an independent project. It is not affiliated with or endorsed by Daily
 > or the Pipecat project. The name is a nod to Pipecat; the code is a port of it, under the same BSD
 > 2-Clause license.
 
-**Docs:** <https://polvallverdu.github.io/pipedog/>
+```sh
+bunx @pipedog/cli init       # or: npx @pipedog/cli init
+```
+
+You build a bot as a pipeline of frame processors, and frames flow through it:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/pipeline-dark.svg">
+  <img src=".github/assets/pipeline-light.svg" alt="A pipeline: transport in, speech-to-text, LLM, text-to-speech, transport out. InputAudioRawFrame, TranscriptionFrame, LLMTextFrame and TTSAudioRawFrame pass between them." width="100%">
+</picture>
+
+The API mirrors Pipecat's: the same classes, frames, events, module paths and wire protocols, with
+camelCase members. So Pipecat's client SDKs (`@pipecat-ai/client-js`,
+`@pipecat-ai/small-webrtc-transport`, voice-ui-kit) work against a pipedog bot unchanged.
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>Runs everywhere</h3>
+      Bun, Node, Deno and Cloudflare Workers, from one runtime-agnostic core. Bundles to a single
+      file of a few MB.
+    </td>
+    <td width="33%" valign="top">
+      <h3>Pipecat-compatible</h3>
+      Same frames, processors and protocols. Pipecat's client SDKs, docs and patterns carry over.
+    </td>
+    <td width="33%" valign="top">
+      <h3>Fast</h3>
+      About 5× the frame throughput of Pipecat on CPython, 10–14× lower per-frame latency, ~45 ms
+      cold starts.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>87 packages</h3>
+      53 of them for providers: OpenAI, Anthropic, Google, Azure, AWS, Deepgram, Cartesia,
+      ElevenLabs and many more, including local models on ONNX Runtime.
+    </td>
+    <td width="33%" valign="top">
+      <h3>Transports &amp; phones</h3>
+      WebSocket, SmallWebRTC, LiveKit, WhatsApp and local audio; Twilio, Telnyx, Plivo, Exotel,
+      Vonage and Genesys serializers.
+    </td>
+    <td width="33%" valign="top">
+      <h3>Batteries included</h3>
+      The <code>pipedog</code> CLI, the development runner, Pipecat Flows, evals, and an MCP server
+      with these docs for your coding agent.
+    </td>
+  </tr>
+</table>
+
+## Sponsors
+
+**Top sponsor: [Nexi Health](https://nexi-health.com).** A medical device AI startup that runs
+pipedog in production, handling 100+ calls every day.
 
 ## Why TypeScript?
 
@@ -180,18 +247,27 @@ from real runs by the compat harness (`bun run compat`), not by hand.
 | Deno | Yes | |
 | Cloudflare Workers | Yes, with `nodejs_compat` | No WebRTC (no UDP): use the WebSocket transport. Models are loaded from R2, KV or `fetch`, not bundled. See [Workers](https://polvallverdu.github.io/pipedog/docs/workers/). |
 
-Every package below is verified on all four, except `@pipedog/transport-smallwebrtc` (not Workers:
-no UDP), `@pipedog/transport-livekit`, `@pipedog/heygen` and `@pipedog/transport-heygen` (not
-Workers: LiveKit's media SDK is a native addon), `@pipedog/transport-local` (spawns sox or ffmpeg: Bun,
-Node and Deno), `@pipedog/transport-whatsapp` (on Workers only the webhook, signature and API parts
-work: answering a call needs WebRTC), `@pipedog/mcp` (a stdio tool for Bun and Node), `@pipedog/mcp-client` (on Workers it connects over HTTP or SSE only: a stdio server needs a process) and
-`@pipedog/cli` (a command line tool for Bun, Node and Deno), and the local speech models
-(`@pipedog/moonshine`, `@pipedog/funasr`, `@pipedog/kokoro`, `@pipedog/pocket-tts`,
-`@pipedog/espeak-ng`, `@pipedog/piper`'s `PiperTTSService` and `@pipedog/whisper`'s local services:
-Bun, Node and Deno, since their models exceed Workers' memory and bundle limits). A few entry points inside verified
-packages don't run on Workers: `@pipedog/aws`'s `SageMakerBidiClient` (HTTP/2), Google's gRPC
-Cloud Speech and Text-to-Speech services, and the servers that listen on a port (the runner's
-`main()` and `serve()`, `serveFetch`). Each package's README has its own runtime table.
+Every package below is verified on all four, except:
+
+- `@pipedog/transport-smallwebrtc`: not Workers (no UDP).
+- `@pipedog/transport-livekit`, `@pipedog/heygen` and `@pipedog/transport-heygen`: not Workers
+  (LiveKit's media SDK is a native addon).
+- `@pipedog/transport-local`: Bun, Node and Deno (spawns sox or ffmpeg).
+- `@pipedog/transport-whatsapp`: on Workers only the webhook, signature and API parts work
+  (answering a call needs WebRTC).
+- `@pipedog/mcp`: a stdio tool for Bun and Node.
+- `@pipedog/mcp-client`: on Workers it connects over HTTP or SSE only (a stdio server needs a
+  process).
+- `@pipedog/cli`: a command line tool for Bun, Node and Deno.
+- The local speech models (`@pipedog/moonshine`, `@pipedog/funasr`, `@pipedog/kokoro`,
+  `@pipedog/pocket-tts`, `@pipedog/espeak-ng`, `@pipedog/piper`'s `PiperTTSService` and
+  `@pipedog/whisper`'s local services): Bun, Node and Deno, since their models exceed Workers'
+  memory and bundle limits.
+
+A few entry points inside verified packages don't run on Workers: `@pipedog/aws`'s
+`SageMakerBidiClient` (HTTP/2), Google's gRPC Cloud Speech and Text-to-Speech services, and the
+servers that listen on a port (the runner's `main()` and `serve()`, `serveFetch`). Each package's
+README has its own runtime table.
 Details: [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/).
 
 ## Performance
