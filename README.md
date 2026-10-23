@@ -353,6 +353,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/extensions`](packages/extensions) | Pipecat's extensions: `IVRNavigator` (an LLM navigates phone menus with DTMF) and `VoicemailDetector` with `TTSGate` (person or voicemail on outbound calls). |
 | [`@pipedog/sentry`](packages/sentry) | `SentryMetrics`: TTFB and processing time as Sentry transactions, with the Sentry SDK of any runtime. |
 | [`@pipedog/tracing`](packages/tracing) | OpenTelemetry setup (`setupTracing()`) with OTLP/HTTP and console exporters. |
+| [`@pipedog/effect`](packages/effect) | Effect adapter: a `PipelineWorker` as a scoped Effect (interruption cancels the pipeline, a cancelled pipeline interrupts the fiber), frames in and out as `Stream`s, and frame processors written as Effect functions with services from Layers. |
 | [`@pipedog/mcp-client`](packages/mcp-client) | `MCPClient`: connects to an MCP server over stdio, SSE or streamable HTTP and gives its tools to an LLM service as function-call tools. |
 | [`@pipedog/mcp`](packages/mcp) | A local MCP server with these docs and the API of every package, for coding agents: `claude mcp add pipedog -- npx -y @pipedog/mcp`. |
 

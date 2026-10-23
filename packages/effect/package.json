@@ -1,0 +1,54 @@
+{
+  "name": "@pipedog/effect",
+  "version": "0.8.0",
+  "description": "Effect adapter for pipedog: run a PipelineWorker as a scoped Effect (interruption cancels the pipeline, a cancelled pipeline interrupts the fiber), stream the frames that reach the end of a pipeline, feed frames from a Stream, and write frame processors as Effect functions.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "effect",
+    "effect-ts"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/effect"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/effect#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.2"
+  },
+  "devDependencies": {
+    "effect": "4.0.2"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ]
+  }
+}
