@@ -1,0 +1,317 @@
+{
+  "date": "2026-10-23T21:40:00.432Z",
+  "results": [
+    {
+      "runtime": "python",
+      "load": 0,
+      "metrics": {
+        "messages": 87,
+        "audioSecs": 13.75,
+        "gapP50": 120.74395799999911,
+        "gapP99": 162.6130839999987,
+        "gapMax": 163.63608300000033,
+        "maxLeadMs": 4.808124999999563,
+        "underruns": {
+          "20": {
+            "count": 8,
+            "silenceMs": 29.08837399999993
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "bun",
+      "load": 0,
+      "metrics": {
+        "messages": 301,
+        "audioSecs": 13.949,
+        "gapP50": 40.05124999999953,
+        "gapP99": 43.925040999999965,
+        "gapMax": 46.90579100000002,
+        "maxLeadMs": 23.037791000000652,
+        "underruns": {
+          "20": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "node",
+      "load": 0,
+      "metrics": {
+        "messages": 301,
+        "audioSecs": 13.949,
+        "gapP50": 39.946750000000065,
+        "gapP99": 42.38349999999991,
+        "gapMax": 42.634792000000004,
+        "maxLeadMs": 23.170083000000886,
+        "underruns": {
+          "20": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "deno",
+      "load": 0,
+      "metrics": {
+        "messages": 301,
+        "audioSecs": 13.949,
+        "gapP50": 40.04829199999949,
+        "gapP99": 43.377459000000044,
+        "gapMax": 43.788167000000016,
+        "maxLeadMs": 22.456875000000025,
+        "underruns": {
+          "20": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "python",
+      "load": 0.4,
+      "metrics": {
+        "messages": 87,
+        "audioSecs": 13.75,
+        "gapP50": 123.21958300000006,
+        "gapP99": 162.08649999999943,
+        "gapMax": 164.04583300000013,
+        "maxLeadMs": 5.774459000000206,
+        "underruns": {
+          "20": {
+            "count": 7,
+            "silenceMs": 31.605167000000165
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "bun",
+      "load": 0.4,
+      "metrics": {
+        "messages": 301,
+        "audioSecs": 13.949,
+        "gapP50": 40.30970799999977,
+        "gapP99": 44.052082999999584,
+        "gapMax": 44.99454199999997,
+        "maxLeadMs": 22.571124999999995,
+        "underruns": {
+          "20": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "node",
+      "load": 0.4,
+      "metrics": {
+        "messages": 301,
+        "audioSecs": 13.949,
+        "gapP50": 40.2765000000004,
+        "gapP99": 44.58874999999989,
+        "gapMax": 46.003917,
+        "maxLeadMs": 23.806250000000034,
+        "underruns": {
+          "20": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "deno",
+      "load": 0.4,
+      "metrics": {
+        "messages": 301,
+        "audioSecs": 13.949,
+        "gapP50": 39.70616700000005,
+        "gapP99": 46.459375000000364,
+        "gapMax": 47.17808299999979,
+        "maxLeadMs": 22.81749999999988,
+        "underruns": {
+          "20": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "python",
+      "load": 0.7,
+      "metrics": {
+        "messages": 86,
+        "audioSecs": 13.6125,
+        "gapP50": 125.84983399999965,
+        "gapP99": 166.393916,
+        "gapMax": 166.71670799999998,
+        "maxLeadMs": 10.547167000000627,
+        "underruns": {
+          "20": {
+            "count": 6,
+            "silenceMs": 26.55725000000075
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "bun",
+      "load": 0.7,
+      "metrics": {
+        "messages": 301,
+        "audioSecs": 13.949,
+        "gapP50": 42.63612499999999,
+        "gapP99": 43.257791,
+        "gapMax": 46.289708000000246,
+        "maxLeadMs": 23.59916599999997,
+        "underruns": {
+          "20": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "node",
+      "load": 0.7,
+      "metrics": {
+        "messages": 301,
+        "audioSecs": 13.949,
+        "gapP50": 42.20999999999913,
+        "gapP99": 43.669167000000016,
+        "gapMax": 43.83841600000051,
+        "maxLeadMs": 24.298749999999927,
+        "underruns": {
+          "20": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "40": {
+            "count": 0,
+            "silenceMs": 0
+          },
+          "80": {
+            "count": 0,
+            "silenceMs": 0
+          }
+        }
+      }
+    },
+    {
+      "runtime": "deno",
+      "load": 0.7,
+      "metrics": {
+        "messages": 301,
+        "audioSecs": 13.932,
+        "gapP50": 36.60704100000021,
+        "gapP99": 47.790209000000004,
+        "gapMax": 411.2197080000001,
+        "maxLeadMs": 23.346041000000014,
+        "underruns": {
+          "20": {
+            "count": 1,
+            "silenceMs": 335.30475
+          },
+          "40": {
+            "count": 1,
+            "silenceMs": 315.30475
+          },
+          "80": {
+            "count": 1,
+            "silenceMs": 275.30475
+          }
+        }
+      }
+    }
+  ]
+}
