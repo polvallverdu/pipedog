@@ -1,0 +1,33 @@
+{
+  "name": "@pipedog/example-landing-demo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The talk-to-it demo on the docs landing page: a voice agent on Cloudflare Workers and Durable Objects (Workers AI Flux and Aura, Claude Haiku, typed tools, Turnstile, a session budget), over WebSocket or WebRTC, with a SvelteKit page served by the same Worker.",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:fakes": "bun test/dev_fakes.ts",
+    "dev:web": "bun run --cwd web dev",
+    "build:web": "bun run --cwd web build",
+    "check:web": "bun run --cwd web check",
+    "deploy": "wrangler deploy",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@pipedog/anthropic": "workspace:*",
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/cloudflare": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/serializer-protobuf": "workspace:*",
+    "@pipedog/transport-cloudflare-realtime": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261007.1",
+    "playwright-core": "1.63.0",
+    "wrangler": "4.148.0"
+  }
+}

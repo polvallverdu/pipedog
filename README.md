@@ -374,6 +374,7 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 | [`twilio-phone-bot`](examples/twilio-phone-bot) | A phone bot on Twilio Media Streams, the TwiML webhook and the media WebSocket as one fetch handler (Bun or Node with `serveFetch`, Deno, Workers). Tested with a scripted fake Twilio, in process and on Deno. |
 | [`workers-durable-voice-agent`](examples/workers-durable-voice-agent) | Parallel voice agents on Cloudflare Workers, one Durable Object per session, over WebSocket. Tested end to end against workerd with parallel sessions. |
 | [`workers-realtime-voice-agent`](examples/workers-realtime-voice-agent) | A browser voice agent over WebRTC on Cloudflare Workers: Cloudflare Realtime carries the audio, a Durable Object per call runs the bot. Tested end to end against workerd with a fake Realtime SFU. |
+| [`landing-demo`](examples/landing-demo) | The live demo on the docs landing page, all on Cloudflare: Flux and Aura on Workers AI, Claude Haiku 5.5 with typed tools, Turnstile, rate limits and a session budget, over WebSocket (Pipecat's own client) or WebRTC, with a SvelteKit page. Tested end to end against workerd with fakes, and in Chromium. |
 | [`framework-snippets`](examples/framework-snippets) | The same voice endpoints mounted in Bun, Deno, Elysia, Express, Hono, Next.js, Nuxt, SvelteKit, TanStack Start and Vercel. |
 | [`test-mocks`](examples/test-mocks) | Mock OpenAI and Gemini APIs and a recorded question, used by the examples' tests. |
 

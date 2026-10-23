@@ -5,6 +5,7 @@
   "workspaces": [
     "packages/*",
     "examples/*",
+    "examples/landing-demo/web",
     "apps/*"
   ],
   "scripts": {

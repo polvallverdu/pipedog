@@ -19,3 +19,11 @@ next-env.d.ts
 
 # Python bytecode (tools/bench/perf/pipecat_bench.py)
 __pycache__/
+
+# Wrangler secrets for local runs (examples/*/.dev.vars); the example file is committed.
+.dev.vars*
+!.dev.vars.example
+
+# SvelteKit (examples/landing-demo/web)
+.svelte-kit/
+examples/landing-demo/web/build/

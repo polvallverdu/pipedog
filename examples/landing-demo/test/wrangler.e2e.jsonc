@@ -1,0 +1,40 @@
+{
+  // The demo's Worker as the end-to-end test runs it under `wrangler dev`: the same Worker and
+  // Durable Objects, without the AI binding (always remote, and it needs a Cloudflare login). The
+  // test points the services at local fakes instead (DEMO_DEV_MODE with FAKE_AI_URL and friends,
+  // passed with --var).
+  "name": "pipedog-landing-demo-e2e",
+  "main": "../src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // The page: the SvelteKit app in web/, prerendered to web/build (wrangler runs the build before
+  // dev and deploy), served by this Worker so it can set the framing headers.
+  "build": { "command": "bun run build:web", "watch_dir": "../web/src" },
+  "assets": { "directory": "../web/build", "binding": "ASSETS", "run_worker_first": true },
+  "durable_objects": {
+    "bindings": [
+      { "name": "DEMO_SESSION", "class_name": "DemoSession" },
+      { "name": "DEMO_BUDGET", "class_name": "DemoBudget" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DemoSession", "DemoBudget"] }],
+  "ratelimits": [
+    {
+      "name": "SESSION_RATE_LIMITER",
+      "namespace_id": "4201",
+      "simple": { "limit": 3, "period": 60 }
+    }
+  ],
+  "vars": {
+    "DEMO_ENABLED": "true",
+    "ALLOWED_ORIGINS": "http://localhost:3000",
+    "FRAME_ANCESTORS": "http://localhost:3000",
+    "MAX_CONCURRENT_SESSIONS": "4",
+    "MAX_SESSIONS_PER_DAY": "150",
+    "MAX_MINUTES_PER_DAY": "180",
+    "MAX_SESSIONS_PER_IP": "4",
+    "SESSION_MAX_SECS": "120",
+    "SESSION_IDLE_SECS": "30",
+    "SESSION_MAX_TURNS": "12"
+  }
+}
