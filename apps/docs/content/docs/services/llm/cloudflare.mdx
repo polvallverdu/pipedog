@@ -1,0 +1,87 @@
+---
+title: "Cloudflare Workers AI"
+description: "WorkersAILLMService: Workers AI chat models through Cloudflare's OpenAI-compatible endpoint."
+---
+
+## Overview
+
+**`WorkersAILLMService`** runs Workers AI's chat models (Llama, GLM, Kimi, Qwen, gpt-oss and others)
+through Workers AI's OpenAI-compatible endpoint. It is an `OpenAILLMService` subclass, like the other
+[OpenAI-compatible providers](/docs/services/llm/openai): streaming, function calling and usage
+metrics work the same way.
+
+This package is pipedog's own: Pipecat has no Workers AI services.
+
+<Cards>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/cloudflare/src/llm.ts">
+    `packages/cloudflare/src/llm.ts`.
+  </Card>
+  <Card title="OpenAI compatibility" href="https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/">
+    Workers AI's `/v1/chat/completions` endpoint.
+  </Card>
+  <Card title="Models" href="https://developers.cloudflare.com/workers-ai/models/">
+    The text generation models, and which take function calls.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/cloudflare
+```
+
+```ts
+import { WorkersAILLMService } from "@pipedog/cloudflare/llm";
+```
+
+## Prerequisites
+
+- A Cloudflare account ID and an [API token](https://dash.cloudflare.com/profile/api-tokens) with the
+  Workers AI permission. The examples read them from `CLOUDFLARE_ACCOUNT_ID` and
+  `CLOUDFLARE_API_TOKEN`.
+- The service needs them inside a Worker too: the `AI` binding answers chat requests in Workers AI's
+  own format, not OpenAI's, so the service calls the REST endpoint with `fetch`, which works from a
+  Worker like from any other runtime.
+
+## Configuration
+
+<auto-type-table cwd path="../../packages/cloudflare/src/llm.ts" name="WorkersAILLMServiceOptions" />
+
+The base URL is `https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`. A REST
+`WorkersAIClient` can be passed as `client` instead of `accountId` and `apiToken`.
+
+## Settings
+
+The [OpenAI settings](/docs/services/llm/openai#settings) (`model`, `systemInstruction`,
+`temperature`, `maxTokens`, ...), passed as `settings: new WorkersAILLMService.Settings({...})`.
+`model` defaults to `"@cf/meta/llama-3.3-70b-instruct-fp8-fast"`. Others to try:
+`"@cf/zai-org/glm-4.7-flash"`, `"@cf/meta/llama-4-scout-17b-16e-instruct"`, `"@cf/openai/gpt-oss-20b"`.
+
+## Usage
+
+<include cwd meta='title="llm.ts"'>snippets/services/llm-cloudflare.ts#usage</include>
+
+Through an [AI Gateway](https://developers.cloudflare.com/ai-gateway/), for caching, logs and rate
+limits, set `baseUrl` to the gateway's Workers AI URL:
+
+<include cwd>snippets/services/llm-cloudflare.ts#gateway</include>
+
+Change settings mid-call with an `LLMUpdateSettingsFrame`:
+
+<include cwd>snippets/services/llm-cloudflare.ts#update</include>
+
+## Notes
+
+- Not every Workers AI model takes function calls; check the model page before giving it tools.
+- The same package has Workers AI [speech-to-text](/docs/services/stt/cloudflare),
+  [text-to-speech](/docs/services/tts/cloudflare) and Smart Turn v2
+  ([turn detection](/docs/concepts/turn-detection#smart-turn-on-workers-ai)). For a whole agent on
+  Cloudflare, see [Voice agent fully on Cloudflare](/docs/deployment/cloudflare-workers-ai).
+
+## Runtime notes
+
+<RuntimeMatrix pkg="@pipedog/cloudflare" />
+
+- The client is the official `openai` JS SDK (through `@pipedog/openai`), which talks through
+  `fetch`. It works on Bun, Node, Deno and Cloudflare Workers.
+- Tested against a local OpenAI-compatible mock server, not against Workers AI itself.

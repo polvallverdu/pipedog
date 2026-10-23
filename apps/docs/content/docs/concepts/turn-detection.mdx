@@ -63,6 +63,22 @@ session; pass your own as the `fetch` option.
 Pipecat's older `LocalSmartTurnAnalyzerV2` and the Core ML variant need PyTorch or Core ML and are
 not ported: Smart Turn v3, the default above, replaces them.
 
+## Smart Turn on Workers AI
+
+Workers AI hosts Smart Turn v2 (`@cf/pipecat-ai/smart-turn-v2`). `WorkersAISmartTurnAnalyzer`, from
+`@pipedog/cloudflare`, works like `HttpSmartTurnAnalyzer` with the model on Cloudflare: through the
+Worker's `AI` binding, or anywhere with an account ID and API token. It sends the candidate turn as
+base64 float32 samples and reads Workers AI's `is_complete` and `probability`. A failed request
+counts as "not done"; one that takes longer than `stopSecs` ends the turn.
+
+<include cwd>snippets/turn_strategies.ts#workers-ai-smart-turn</include>
+
+Smart Turn v2 was trained on 16 kHz audio, so run the pipeline input at 16 kHz. The local Smart Turn
+v3.2 above is newer and also runs on Workers (pass the model's bytes there), at the cost of the
+bundle size and memory described in [Voice agents on Workers](/docs/deployment/cloudflare-workers#turn-detection).
+On Workers AI, Deepgram Flux ([`WorkersAIFluxSTTService`](/docs/services/stt/cloudflare)) detects
+turns itself and needs neither.
+
 ## Provider
 
 Some speech-to-text services detect turns themselves. Use one of them and pass no VAD analyzer: the

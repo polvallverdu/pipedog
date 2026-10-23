@@ -7,7 +7,7 @@ description: "Every pipedog service by category: ported, and coming soon from Pi
 
 Services are frame processors that call an AI provider. pipedog ports them from Pipecat with the same
 class names and options (in camelCase), one package per provider: `@pipedog/openai`,
-`@pipedog/deepgram` and so on. 95 service pages are ported so far. The "coming soon"
+`@pipedog/deepgram` and so on. 98 service pages are ported so far. The "coming soon"
 pages link to Pipecat's docs and to a port request.
 
 Each service page follows the same layout as Pipecat's: overview, installation, configuration
@@ -29,6 +29,7 @@ Chat models that turn the conversation context into a response. [All llm service
 | [AWS AgentCore](/docs/services/llm/aws-agentcore) | `AWSAgentCoreProcessor` | `@pipedog/aws` | Ported |
 | [LangChain](/docs/services/llm/langchain) | `LangchainProcessor` | `@pipedog/langchain` | Ported |
 | [Vercel AI SDK](/docs/services/llm/ai-sdk) | `AISDKLLMService` | `@pipedog/ai-sdk` | Ported |
+| [Cloudflare Workers AI](/docs/services/llm/cloudflare) | `WorkersAILLMService` | `@pipedog/cloudflare` | Ported |
 | [Baseten](/docs/services/llm/baseten) | `BasetenLLMService` | `@pipedog/baseten` | Ported |
 | [Cerebras](/docs/services/llm/cerebras) | `CerebrasLLMService` | `@pipedog/cerebras` | Ported |
 | [Crusoe](/docs/services/llm/crusoe) | `CrusoeLLMService` | `@pipedog/crusoe` | Ported |
@@ -60,6 +61,7 @@ Transcribe the user's speech into TranscriptionFrames. [All speech-to-text servi
 | [Speechmatics](/docs/services/stt/speechmatics) | `SpeechmaticsSTTService` | `@pipedog/speechmatics` | Ported |
 | [Soniox](/docs/services/stt/soniox) | `SonioxSTTService` | `@pipedog/soniox` | Ported |
 | [Deepgram](/docs/services/stt/deepgram) | `DeepgramSTTService`, `DeepgramFluxSTTService` | `@pipedog/deepgram` | Ported |
+| [Cloudflare Workers AI](/docs/services/stt/cloudflare) | `WorkersAIFluxSTTService`, `WorkersAINova3STTService`, `WorkersAIWhisperSTTService` | `@pipedog/cloudflare` | Ported |
 | [OpenAI](/docs/services/stt/openai) | `OpenAISTTService`, `OpenAIRealtimeSTTService` | `@pipedog/openai` | Ported |
 | [Google](/docs/services/stt/google) | `GoogleSTTService`, `GeminiSTTService` | `@pipedog/google` | Ported |
 | [Cartesia](/docs/services/stt/cartesia) | `CartesiaSTTService`, `CartesiaTurnsSTTService` | `@pipedog/cartesia` | Ported |
@@ -89,6 +91,7 @@ Turn the bot's text into audio frames. [All text-to-speech services](/docs/servi
 | [OpenAI](/docs/services/tts/openai) | `OpenAITTSService` | `@pipedog/openai` | Ported |
 | [Google](/docs/services/tts/google) | `GoogleTTSService`, `GoogleHttpTTSService`, `GeminiTTSService` | `@pipedog/google` | Ported |
 | [Deepgram](/docs/services/tts/deepgram) | `DeepgramTTSService`, `DeepgramHttpTTSService`, `DeepgramFluxTTSService` | `@pipedog/deepgram` | Ported |
+| [Cloudflare Workers AI](/docs/services/tts/cloudflare) | `WorkersAIAuraTTSService`, `WorkersAIAuraHttpTTSService`, `WorkersAIMeloTTSService` | `@pipedog/cloudflare` | Ported |
 | [Speechmatics](/docs/services/tts/speechmatics) | `SpeechmaticsTTSService` | `@pipedog/speechmatics` | Ported |
 | [Soniox](/docs/services/tts/soniox) | `SonioxTTSService` | `@pipedog/soniox` | Ported |
 | [Cartesia](/docs/services/tts/cartesia) | `CartesiaTTSService`, `CartesiaHttpTTSService` | `@pipedog/cartesia` | Ported |

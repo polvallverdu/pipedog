@@ -207,6 +207,10 @@ function keyed(cls: string, env: string, settings?: string): string {
 
 const AWS_CREDENTIALS = `  // Left out, the AWS_* environment variables are read.`;
 
+// Workers AI over the REST API. Inside a Cloudflare Worker, pass \`ai: env.AI\` instead.
+const CLOUDFLARE_CREDENTIALS = `  accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? "",
+  apiToken: process.env.CLOUDFLARE_API_TOKEN ?? "",`;
+
 /** The expression that builds each service, by service value. */
 export const SERVICE_CONFIGS: Record<string, string> = {
   // STT services
@@ -222,6 +226,12 @@ ${AWS_CREDENTIALS}
 })`,
   cartesia_stt: keyed("CartesiaSTTService", "CARTESIA_API_KEY"),
   cartesia_turns_stt: keyed("CartesiaTurnsSTTService", "CARTESIA_API_KEY"),
+  cloudflare_flux_stt: `new WorkersAIFluxSTTService({
+${CLOUDFLARE_CREDENTIALS}
+})`,
+  cloudflare_whisper_stt: `new WorkersAIWhisperSTTService({
+${CLOUDFLARE_CREDENTIALS}
+})`,
   assemblyai_stt: keyed("AssemblyAISTTService", "ASSEMBLYAI_API_KEY"),
   deepgram_stt: keyed("DeepgramSTTService", "DEEPGRAM_API_KEY"),
   deepgram_flux_stt: keyed("DeepgramFluxSTTService", "DEEPGRAM_API_KEY"),
@@ -295,6 +305,13 @@ ${AWS_CREDENTIALS}
   settings: new AzureLLMService.Settings({
     // On Azure the model is the deployment name.
     model: process.env.AZURE_OPENAI_MODEL ?? "",
+    systemInstruction: SYSTEM_INSTRUCTION,
+  }),
+})`,
+  cloudflare_llm: `new WorkersAILLMService({
+${CLOUDFLARE_CREDENTIALS}
+  settings: new WorkersAILLMService.Settings({
+    model: process.env.CLOUDFLARE_MODEL ?? "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     systemInstruction: SYSTEM_INSTRUCTION,
   }),
 })`,
@@ -451,6 +468,12 @@ ${AWS_CREDENTIALS}
     "TOGETHER_API_KEY",
     `    voice: process.env.TOGETHER_VOICE_ID ?? "af_heart",`,
   ),
+  cloudflare_aura_tts: `new WorkersAIAuraTTSService({
+${CLOUDFLARE_CREDENTIALS}
+  settings: new WorkersAIAuraTTSService.Settings({
+    voice: process.env.CLOUDFLARE_AURA_SPEAKER ?? "luna",
+  }),
+})`,
   sarvam_tts: keyed("SarvamTTSService", "SARVAM_API_KEY"),
   smallest_tts: keyed("SmallestTTSService", "SMALLEST_API_KEY"),
   xai_tts: keyed("XAITTSService", "XAI_API_KEY", `    voice: process.env.XAI_VOICE_ID ?? "eve",`),
