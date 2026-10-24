@@ -14,6 +14,9 @@
 // VAD, other calls, LLM streaming).
 //
 //   bun run bench:pacing [--runtime bun,node,deno,python] [--load 0,0.4] [--write]
+//
+// --write saves tools/bench/pacing/results.json and the table in
+// apps/docs/content/docs/performance.mdx.
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -27,6 +30,7 @@ import {
   OUT_ROOT,
   provideOptionalPeers,
 } from "../compat/runners.ts";
+import { writeDocsSection } from "./docs.ts";
 
 const RUNTIMES = ["python", "bun", "node", "deno"] as const;
 type Rt = (typeof RUNTIMES)[number];
@@ -238,10 +242,26 @@ const lines = [
 ];
 console.log(`\n${lines.join("\n")}\n`);
 
+/** The docs' table: per runtime and load, the gaps and the dropouts a caller would hear. */
+function docsTable(): string {
+  return [
+    `| | Event loop busy | Gap between messages, median / worst | ${BUFFERS_MS.map((b) => `Dropouts, ${b} ms buffer`).join(" | ")} |`,
+    `|---|---:|---:|${BUFFERS_MS.map(() => "---:").join("|")}|`,
+    ...results.map(({ runtime, load, metrics: m }) => {
+      const u = BUFFERS_MS.map((b) => {
+        const x = m.underruns[b]!;
+        return x.count === 0 ? "none" : `${x.count} (${f(x.silenceMs, 0)} ms of silence)`;
+      }).join(" | ");
+      return `| ${LABEL[runtime]} | ${Math.round(load * 100)}% | ${f(m.gapP50, 0)} / ${f(m.gapMax, 0)} ms | ${u} |`;
+    }),
+  ].join("\n");
+}
+
 if (values.write) {
   const out = join(ROOT, "tools", "bench", "pacing", "results.json");
   await Bun.write(out, `${JSON.stringify({ date: new Date().toISOString(), results }, null, 2)}\n`);
   await Bun.$`bunx biome format --write ${out}`.cwd(ROOT).quiet();
-  console.log(`wrote ${out}`);
+  await writeDocsSection("pacing", docsTable());
+  console.log(`wrote ${out} and the performance page`);
 }
 process.exit(0);
