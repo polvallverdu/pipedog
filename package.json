@@ -27,13 +27,16 @@
     "release": "bun run build && bun run mcp:snapshot --build && bun tools/release/prepare.ts && changeset publish",
     "release:setup-npm": "bun tools/release/setup-npm.ts",
     "bench": "bun tools/bench.ts",
-    "bench:perf": "bun tools/bench/perf.ts"
+    "bench:perf": "bun tools/bench/perf.ts",
+    "bench:pacing": "bun tools/bench/pacing.ts",
+    "bench:audio": "bun tools/bench/audio.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@changesets/changelog-github": "1.0.1",
     "@changesets/cli": "3.0.3",
     "@google/genai": "2.27.0",
+    "@pipedog/asyncio": "workspace:*",
     "@pipedog/audio-rnnoise-filter": "workspace:*",
     "@pipedog/audio-silero": "workspace:*",
     "@pipedog/audio-smart-turn": "workspace:*",
@@ -41,8 +44,10 @@
     "@pipedog/core": "workspace:*",
     "@pipedog/google": "workspace:*",
     "@pipedog/onnx": "workspace:*",
+    "@pipedog/serializer-telnyx": "workspace:*",
     "@pipedog/transport-local": "workspace:*",
     "@pipedog/transport-smallwebrtc": "workspace:*",
+    "@pipedog/transport-websocket": "workspace:*",
     "@pipedog/transport-whatsapp": "workspace:*",
     "@types/bun": "1.4.3",
     "typescript": "7.0.2",
