@@ -28,7 +28,8 @@
     "release:setup-npm": "bun tools/release/setup-npm.ts",
     "bench": "bun tools/bench.ts",
     "bench:perf": "bun tools/bench/perf.ts",
-    "bench:pacing": "bun tools/bench/pacing.ts"
+    "bench:pacing": "bun tools/bench/pacing.ts",
+    "bench:audio": "bun tools/bench/audio.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

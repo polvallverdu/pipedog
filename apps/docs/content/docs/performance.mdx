@@ -102,12 +102,76 @@ difference is the framework's share, and is mostly within the noise for both fra
 services send audio downstream in chunks of a fixed size (as Pipecat does), so the first audio
 frame waits for the first full chunk, while the SDK column stops the clock at the first byte.
 
+## Telephony audio
+
+On a phone call, the bot's speech goes through the same steps on every call: the text-to-speech
+audio (usually 24 kHz) is resampled to the provider's rate (8 kHz for Twilio, Telnyx and others),
+μ-law encoded, and sent over a WebSocket in small messages paced in real time. These steps decide
+what the caller hears, so they are measured directly against Pipecat's.
+
+### Resampling and μ-law
+
+Pipecat resamples with libsoxr at its highest quality (VHQ). pipedog can't load native code on
+every runtime, so it uses a windowed-sinc resampler compiled to WebAssembly
+(`@pipedog/resampler-wasm`), with a pure-TypeScript fallback. Both get the same test signal: three
+tones they must keep (300 Hz, 1 kHz, 2.5 kHz) and three above 4 kHz that a resampler going down to
+8 kHz must remove. μ-law is checked bit for bit against Pipecat's (Python's `audioop`).
+
+{/* audio:start */}
+
+| Resampling | Pipecat (libsoxr, VHQ) | pipedog (WebAssembly) | pipedog (TypeScript fallback) | 20 ms chunks vs one go: Pipecat / pipedog |
+|---|---:|---:|---:|---:|
+| 24 kHz → 8 kHz | -83 / -104 dB | -88 / -98 dB | -88 / -95 dB | -80 dB / identical |
+| 24 kHz → 16 kHz | -83 / -105 dB | -87 / -100 dB | -88 / -100 dB | -81 dB / identical |
+| 16 kHz → 8 kHz | -83 / -102 dB | -87 / -100 dB | -87 / -97 dB | -80 dB / identical |
+| 8 kHz → 16 kHz | -82 / -97 dB | -86 / -98 dB | -86 / -96 dB | -80 dB / identical |
+| 24 kHz → 48 kHz | -82 / -100 dB | -85 / -99 dB | -86 / -101 dB | -81 dB / identical |
+| 48 kHz → 16 kHz | -83 / -107 dB | -87 / -100 dB | -88 / -100 dB | -81 dB / identical |
+
+Each cell: everything besides the tones (noise, aliasing, distortion) / the largest single artefact, relative to the tones. Lower is cleaner; both are far below what can be heard.
+
+**μ-law:** all 65,536 16-bit values encoded: identical to Pipecat's; all 256 codes decoded: identical.
+
+{/* audio:end */}
+
+### Pacing
+
+A bot plays two 6-second utterances through the WebSocket server transport and the Telnyx
+serializer, and a separate process standing in for Telnyx records when each audio message arrives.
+The *dropouts* are what a playback buffer of that size would run out of: silences a caller would
+hear. Each case runs with the bot's event loop idle and kept busy by other work, standing in for
+VAD, other calls and LLM streaming. Both frameworks use the same pacing code; the message sizes
+differ because libsoxr's stream resampler returns audio in blocks, while pipedog's returns it
+sample by sample, so pipedog sends a small message about every 40 ms and Pipecat a larger one
+every 120–160 ms. Telephony providers buffer more than 40 ms, so neither drops audio in practice.
+
+{/* pacing:start */}
+
+| | Event loop busy | Gap between messages, median / worst | Dropouts, 20 ms buffer | Dropouts, 40 ms buffer | Dropouts, 80 ms buffer |
+|---|---:|---:|---:|---:|---:|
+| Pipecat · CPython | 0% | 121 / 163 ms | 8 (27 ms of silence) | none | none |
+| pipedog · Bun | 0% | 40 / 48 ms | none | none | none |
+| pipedog · Node | 0% | 40 / 44 ms | none | none | none |
+| pipedog · Deno | 0% | 40 / 47 ms | none | none | none |
+| Pipecat · CPython | 40% | 122 / 163 ms | 8 (28 ms of silence) | none | none |
+| pipedog · Bun | 40% | 40 / 60 ms | none | none | none |
+| pipedog · Node | 40% | 41 / 53 ms | none | none | none |
+| pipedog · Deno | 40% | 39 / 50 ms | none | none | none |
+| Pipecat · CPython | 70% | 125 / 167 ms | 7 (36 ms of silence) | none | none |
+| pipedog · Bun | 70% | 41 / 43 ms | none | none | none |
+| pipedog · Node | 70% | 41 / 43 ms | none | none | none |
+| pipedog · Deno | 70% | 38 / 47 ms | none | none | none |
+
+{/* pacing:end */}
+
 ## Running it
 
 ```sh
 bun install
 GOOGLE_API_KEY=... bun run bench:perf --write   # without a key, the Gemini scenarios are skipped
 bun run bench:perf --runtime bun,python --scenario hop --rounds 1
+bun run bench:audio --write    # resampling and μ-law against Pipecat's
+bun run bench:pacing --write   # telephony pacing (--runtime, --load to narrow it down)
 ```
 
 The first run creates a Python 3.13 environment with [uv](https://docs.astral.sh/uv/) and installs
