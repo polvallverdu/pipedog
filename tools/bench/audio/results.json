@@ -1,0 +1,125 @@
+{
+  "date": "2026-10-24T10:29:12.682Z",
+  "cases": [
+    {
+      "inRate": 24000,
+      "outRate": 8000,
+      "pipecat": {
+        "residualDb": -82.84714740222705,
+        "worstDb": -104.25115007227348,
+        "streamVsFileDb": -80.24065096066279
+      },
+      "pipedog": {
+        "residualDb": -87.55757941187767,
+        "worstDb": -98.39153052824054,
+        "streamVsFileDb": -300
+      },
+      "pipedogts": {
+        "residualDb": -87.91742592753396,
+        "worstDb": -94.9347027297953,
+        "streamVsFileDb": -300
+      }
+    },
+    {
+      "inRate": 24000,
+      "outRate": 16000,
+      "pipecat": {
+        "residualDb": -82.6946502169585,
+        "worstDb": -104.81497146271627,
+        "streamVsFileDb": -81.35016750790231
+      },
+      "pipedog": {
+        "residualDb": -86.60609110978308,
+        "worstDb": -100.11705746994552,
+        "streamVsFileDb": -300
+      },
+      "pipedogts": {
+        "residualDb": -87.9586238528025,
+        "worstDb": -100.34615428750938,
+        "streamVsFileDb": -300
+      }
+    },
+    {
+      "inRate": 16000,
+      "outRate": 8000,
+      "pipecat": {
+        "residualDb": -82.63031259696015,
+        "worstDb": -102.13614665650063,
+        "streamVsFileDb": -80.17581317809058
+      },
+      "pipedog": {
+        "residualDb": -86.60381639168024,
+        "worstDb": -99.75233763832543,
+        "streamVsFileDb": -300
+      },
+      "pipedogts": {
+        "residualDb": -86.65380627255162,
+        "worstDb": -96.523652028589,
+        "streamVsFileDb": -300
+      }
+    },
+    {
+      "inRate": 8000,
+      "outRate": 16000,
+      "pipecat": {
+        "residualDb": -82.00951055896883,
+        "worstDb": -97.43266935775213,
+        "streamVsFileDb": -80.19680087650758
+      },
+      "pipedog": {
+        "residualDb": -85.63856815316728,
+        "worstDb": -97.96679600030572,
+        "streamVsFileDb": -300
+      },
+      "pipedogts": {
+        "residualDb": -86.36820254754633,
+        "worstDb": -95.57360257899121,
+        "streamVsFileDb": -300
+      }
+    },
+    {
+      "inRate": 24000,
+      "outRate": 48000,
+      "pipecat": {
+        "residualDb": -82.00080466584971,
+        "worstDb": -100.19902184975324,
+        "streamVsFileDb": -81.32323310599145
+      },
+      "pipedog": {
+        "residualDb": -85.06703601398704,
+        "worstDb": -98.524442493766,
+        "streamVsFileDb": -300
+      },
+      "pipedogts": {
+        "residualDb": -86.49579035263402,
+        "worstDb": -100.7777820879913,
+        "streamVsFileDb": -300
+      }
+    },
+    {
+      "inRate": 48000,
+      "outRate": 16000,
+      "pipecat": {
+        "residualDb": -82.76557628531192,
+        "worstDb": -107.11187935536779,
+        "streamVsFileDb": -81.38125549705562
+      },
+      "pipedog": {
+        "residualDb": -87.22898193363582,
+        "worstDb": -100.47874300833372,
+        "streamVsFileDb": -300
+      },
+      "pipedogts": {
+        "residualDb": -87.66221787599328,
+        "worstDb": -99.7672090185611,
+        "streamVsFileDb": -300
+      }
+    }
+  ],
+  "ulaw": {
+    "encodeValues": 65536,
+    "encodeDiffer": 0,
+    "decodeCodes": 256,
+    "decodeDiffer": 0
+  }
+}
