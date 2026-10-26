@@ -350,6 +350,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/audio-smart-turn`](packages/audio-smart-turn) | Smart Turn end-of-turn detection: local v3 with the upstream model included, and `HttpSmartTurnAnalyzer` for a remote endpoint (`fetch` only). |
 | [`@pipedog/audio-rnnoise-filter`](packages/audio-rnnoise-filter) | `RNNoiseFilter`: RNNoise noise suppression compiled to WebAssembly, on every runtime. |
 | [`@pipedog/audio-soundfile-mixer`](packages/audio-soundfile-mixer) | `SoundfileMixer`: background sound from WAV files (bytes, URL or path) mixed into the bot's audio, in pure TypeScript. |
+| [`@pipedog/audio-ducking`](packages/audio-ducking) | `AudioDuckingFilter`: lowers the bot's voice while the user talks over it, applied as audio leaves the output transport, with any transport. pipedog only. |
 | [`@pipedog/onnx`](packages/onnx) | Small ONNX inference backend: `onnxruntime-node` when installed, else `onnxruntime-web`, with a Workers variant. |
 | [`@pipedog/resampler-wasm`](packages/resampler-wasm) | High-quality PCM resampling (rubato sinc, compiled to WebAssembly), one-shot and streaming. |
 | [`@pipedog/sentencex-wasm`](packages/sentencex-wasm) | Wikimedia sentencex sentence segmentation, compiled to WebAssembly. |
