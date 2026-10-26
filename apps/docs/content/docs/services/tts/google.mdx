@@ -131,6 +131,7 @@ Change settings mid-call with a `TTSUpdateSettingsFrame`:
 | `prompt` | `string \| null` | `null` | Style instructions. See the backend notes below. |
 | `multiSpeaker` | `boolean` | `false` | Multi-speaker output (Cloud backend only). |
 | `speakerConfigs` | `GeminiSpeakerConfig[] \| null` | `null` | `{ speaker_alias, speaker_id? }` entries for multi-speaker mode. |
+| `speakingRate` | `number \| null` | `null` | Speaking rate, 0.25 to 2.0, sent in the streaming audio config (Cloud backend only, pipedog only). Out-of-range updates are ignored with a warning. |
 
 ### Usage
 
@@ -168,6 +169,29 @@ Multi-speaker (Cloud backend only):
 - A voice that is neither in `AVAILABLE_VOICES` nor a `voice_...` ID logs a warning and is used
   anyway.
 
+## Sharing a client and streaming options
+
+These options are pipedog additions:
+
+- `client` (`GoogleTTSService` and the Cloud backend of `GeminiTTSService`): a
+  `GoogleCloudTTSClient` to use instead of building one per service. Building a client costs a
+  credential lookup, a TLS handshake and a token fetch on the first sentence, so share one
+  across calls:
+
+  ```ts
+  const client = createGoogleCloudTTSClient({ apiEndpoint: "eu-texttospeech.googleapis.com" });
+  const tts = new GeminiTTSService({ client, settings: new GeminiTTSSettings({ voice: "Kore" }) });
+  ```
+
+  With `client`, the credentials, `location` and `clientOptions` are not used.
+- `bufferOnlyStartup` (`GoogleTTSService`, `GeminiTTSService`): upstream re-cuts the audio into
+  `chunkSize` pieces (0.5 s) for the whole utterance, which holds back up to one piece throughout.
+  With `bufferOnlyStartup: true`, only the start is buffered; after the first `chunkSize` bytes,
+  audio goes on as it arrives (whole samples).
+
+Both streaming services treat a gRPC CANCELLED error, which is what an interrupted stream
+reports, as a quiet end of synthesis instead of an error.
+
 ## Event handlers
 
 All three services inherit the `TTSService` events, for example `on_tts_request`
@@ -180,8 +204,8 @@ All three services inherit the `TTSService` events, for example `on_tts_request`
 Cloud Text-to-Speech streaming is gRPC only, so `GoogleTTSService`, `GoogleHttpTTSService` and
 the Cloud backend of `GeminiTTSService` use the Node SDK `@google-cloud/text-to-speech`. It is
 imported on the first request, so importing the module is safe everywhere, but these classes
-need Node or Bun. The SDK sits behind the `GoogleCloudTTSClient` interface; override
-`_createClient()` to supply another client. `clientOptions` (pipedog only) is merged into the
+need Node or Bun. The SDK sits behind the `GoogleCloudTTSClient` interface; pass `client` (or
+override `_createClient()`) to supply another client. `clientOptions` (pipedog only) is merged into the
 SDK's `TextToSpeechClient` options.
 
 The Gemini API backend of `GeminiTTSService` uses `@google/genai` over `fetch` and runs on

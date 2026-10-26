@@ -28,8 +28,13 @@
  *   camelCase; they are converted to the SDK's camelCase field names when
  *   the request is built.
  * - Deprecated upstream APIs are not ported: `GoogleSTTService.InputParams`
- *   and the `params` option, `GoogleSTTSettings.languageCodes`,
- *   `setLanguages()` and `updateOptions()`.
+ *   and the `params` option, `setLanguages()` and `updateOptions()`.
+ * - DIVERGENCE: `GoogleSTTSettings.languageCodes` is kept (upstream
+ *   deprecated it) because `Language` cannot express Google-only codes such
+ *   as `"auto"`, Chirp's automatic language detection.
+ * - DIVERGENCE: pipedog-only `finalizeOnVadStop` option (see
+ *   `GoogleSTTServiceOptions`), and a gRPC CANCELLED error (code 1) on the
+ *   response stream is a quiet end of that stream, not an error.
  */
 
 import { abortable, Queue, rethrowIfCancelled, sleep, type Task, time } from "@pipedog/asyncio";
@@ -39,8 +44,9 @@ import {
   type Frame,
   InterimTranscriptionFrame,
   TranscriptionFrame,
+  VADUserStoppedSpeakingFrame,
 } from "@pipedog/core/frames/frames";
-import type { FrameProcessorSetup } from "@pipedog/core/processors/frame_processor";
+import type { FrameDirection, FrameProcessorSetup } from "@pipedog/core/processors/frame_processor";
 import { STTSettings, type STTSettingsOptions } from "@pipedog/core/services/settings";
 import { GOOGLE_TTFS_P99 } from "@pipedog/core/services/stt_latency";
 import { STTService, type STTServiceOptions } from "@pipedog/core/services/stt_service";
@@ -432,6 +438,15 @@ function isAbortedError(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { code?: unknown }).code === 10;
 }
 
+/** gRPC CANCELLED (code 1): the call was cancelled on our side. */
+function isCancelledGrpcError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: unknown }).code === 1;
+}
+
+// Queued after the last audio of an utterance (`finalizeOnVadStop`): ends
+// that request stream. Compared by identity.
+const HALF_CLOSE = new Uint8Array(0);
+
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
@@ -578,6 +593,14 @@ function validateInlinePhraseSet(inlinePhraseSet: unknown): void {
 export interface GoogleSTTSettingsOptions extends STTSettingsOptions {
   /** List of Language values for recognition (e.g. `[Language.EN_US]`). */
   languages?: Language[] | NotGiven;
+  /**
+   * Google language codes sent as-is, instead of `languages` (e.g. `["auto"]`
+   * for Chirp's language detection). `null` uses `languages`.
+   *
+   * DIVERGENCE: deprecated upstream, kept in pipedog for codes `Language`
+   * cannot express.
+   */
+  languageCodes?: string[] | null | NotGiven;
   /** Process each audio channel separately. */
   useSeparateRecognitionPerChannel?: boolean | NotGiven;
   /** Add punctuation to transcripts. */
@@ -607,6 +630,8 @@ export interface GoogleSTTSettingsOptions extends STTSettingsOptions {
  *
  * - `languages`: list of Language values for recognition (e.g.
  *   `[Language.EN_US]`).
+ * - `languageCodes`: Google language codes sent as-is, taking precedence over
+ *   `languages` (e.g. `["auto"]`). pipedog-only (deprecated upstream).
  * - `useSeparateRecognitionPerChannel`: process each audio channel separately.
  * - `enableAutomaticPunctuation`: add punctuation to transcripts.
  * - `enableSpokenPunctuation`: include spoken punctuation in transcript.
@@ -639,6 +664,7 @@ export interface GoogleSTTSettingsOptions extends STTSettingsOptions {
  */
 export class GoogleSTTSettings extends STTSettings {
   languages: Language[] | NotGiven = NOT_GIVEN;
+  languageCodes: string[] | null | NotGiven = NOT_GIVEN;
   useSeparateRecognitionPerChannel: boolean | NotGiven = NOT_GIVEN;
   enableAutomaticPunctuation: boolean | NotGiven = NOT_GIVEN;
   enableSpokenPunctuation: boolean | NotGiven = NOT_GIVEN;
@@ -689,6 +715,20 @@ export interface GoogleSTTServiceOptions extends STTServiceOptions {
    * DIVERGENCE: pipedog-only.
    */
   speechModule?: GoogleSpeechModule | null;
+  /**
+   * Finalize an utterance as soon as VAD reports the user stopped speaking.
+   *
+   * Google only sends a final result once its own endpointing decides the
+   * utterance is over (about 1.5 s after speech ends). With this option the
+   * service half-closes the request stream on `VADUserStoppedSpeakingFrame`,
+   * so Google returns the final for the audio it has right away (about
+   * 0.6 s), and opens a new stream for the next audio, which waits in the
+   * queue meanwhile. The finals of the closing stream are pushed as one
+   * finalized `TranscriptionFrame`. Requires a VAD upstream. Default false.
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  finalizeOnVadStop?: boolean;
 }
 
 /** The part of `@google-cloud/speech` the service uses: its v2 `SpeechClient`. */
@@ -753,6 +793,10 @@ export class GoogleSTTService extends STTService {
   #credentialsPath: string | null = null;
   #clientOptions: Record<string, unknown> | null = null;
   #speechModule: GoogleSpeechModule | null = null;
+  #finalizeOnVadStop: boolean;
+  // finalizeOnVadStop: a half-close is pending, and the finals it produced.
+  #halfClosing = false;
+  #heldFinals: TranscriptionFrame[] = [];
 
   /**
    * Initialize the Google STT service.
@@ -779,6 +823,7 @@ export class GoogleSTTService extends STTService {
       client,
       clientOptions,
       speechModule,
+      finalizeOnVadStop,
       settings,
       ...rest
     } = options;
@@ -787,6 +832,7 @@ export class GoogleSTTService extends STTService {
     const defaultSettings = new GoogleSTTSettings({
       language: null,
       languages: [Language.EN_US],
+      languageCodes: null,
       model: "latest_long",
       useSeparateRecognitionPerChannel: false,
       enableAutomaticPunctuation: true,
@@ -824,6 +870,7 @@ export class GoogleSTTService extends STTService {
     this._client = client ?? null;
     this.#clientOptions = clientOptions ?? null;
     this.#speechModule = speechModule ?? null;
+    this.#finalizeOnVadStop = finalizeOnVadStop ?? false;
 
     // Extract project ID. With a credentials file or default credentials the
     // client (and the project ID) are resolved on first connect.
@@ -865,11 +912,16 @@ export class GoogleSTTService extends STTService {
   /**
    * Resolve the current language settings to Google STT language code strings.
    *
-   * Uses `languages` (Language values). Falls back to `["en-US"]`.
+   * Uses `languageCodes` if set, else `languages` (Language values). Falls
+   * back to `["en-US"]`.
    *
    * @returns Google STT language code strings.
    */
   protected _getLanguageCodes(): string[] {
+    const codes = assertGiven(this._settings.languageCodes);
+    if (codes && codes.length > 0) {
+      return [...codes];
+    }
     const languages = assertGiven(this._settings.languages);
     if (languages && languages.length > 0) {
       return languages.map((lang) => this.languageToServiceLanguage(lang));
@@ -921,6 +973,8 @@ export class GoogleSTTService extends STTService {
     // If base set_language sent a Language value, convert to languages list
     if (isGiven(delta.language)) {
       googleDelta.languages = [delta.language as Language];
+      // A language set this way replaces explicit codes.
+      googleDelta.languageCodes = null;
       // Clear language so the base class doesn't try to store it
       delta.language = NOT_GIVEN;
     }
@@ -1111,6 +1165,8 @@ export class GoogleSTTService extends STTService {
     };
 
     this._requestQueue = new Queue();
+    this.#halfClosing = false;
+    this.#heldFinals = [];
     this._streamingTask = this.createTask(() => this._streamAudio(), "_stream_audio");
 
     await this._callEventHandler("on_connected");
@@ -1143,6 +1199,12 @@ export class GoogleSTTService extends STTService {
         const audioData = await this._requestQueue.get();
 
         this._requestQueue.taskDone();
+
+        if (audioData === HALF_CLOSE) {
+          // finalizeOnVadStop: end this request stream; Google answers with
+          // the final for the audio it has.
+          break;
+        }
 
         // Check streaming limit
         if (Math.trunc(time() * 1000) - this._streamStartTime > this.#streamingLimit) {
@@ -1194,6 +1256,11 @@ export class GoogleSTTService extends STTService {
             continue;
           }
 
+          if (this.#finalizeOnVadStop) {
+            // Each stream gets its own time budget.
+            this._streamStartTime = Math.trunc(time() * 1000);
+          }
+
           // Start bi-directional streaming
           const client = await this._ensureClient();
           const streamingRecognize = client.streamingRecognize();
@@ -1212,7 +1279,13 @@ export class GoogleSTTService extends STTService {
             streamingRecognize.cancel();
           }
 
+          await this.#releaseHeldFinals();
+
           // If we're here, check if we need to reconnect
+          if (this.#finalizeOnVadStop) {
+            // A half-closed stream ended: the next audio opens a new one.
+            continue;
+          }
           if (Math.trunc(time() * 1000) - this._streamStartTime > this.#streamingLimit) {
             logger.debug("Reconnecting stream after timeout");
             // Reset stream start time
@@ -1223,7 +1296,11 @@ export class GoogleSTTService extends STTService {
           }
         } catch (e) {
           rethrowIfCancelled(e);
-          await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
+          await this.#releaseHeldFinals();
+          // A cancelled call is not a failure (see _processResponses).
+          if (!isCancelledGrpcError(e)) {
+            await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
+          }
 
           await sleep(1); // Brief delay before reconnecting
           this._streamStartTime = Math.trunc(time() * 1000);
@@ -1233,6 +1310,55 @@ export class GoogleSTTService extends STTService {
       rethrowIfCancelled(e);
       await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
     }
+  }
+
+  /**
+   * Process a frame; with `finalizeOnVadStop`, a `VADUserStoppedSpeakingFrame`
+   * half-closes the current request stream.
+   *
+   * DIVERGENCE: pipedog-only override (upstream does not override it).
+   */
+  override async processFrame(frame: Frame, direction: FrameDirection): Promise<void> {
+    await super.processFrame(frame, direction);
+    if (
+      this.#finalizeOnVadStop &&
+      frame instanceof VADUserStoppedSpeakingFrame &&
+      this._streamingTask &&
+      !this.#halfClosing
+    ) {
+      this.#halfClosing = true;
+      await this._requestQueue.put(HALF_CLOSE);
+    }
+  }
+
+  /**
+   * Push the finals held from a half-closed stream as one finalized
+   * transcription (`finalizeOnVadStop`).
+   */
+  async #releaseHeldFinals(): Promise<void> {
+    if (!this.#halfClosing) return;
+    const held = this.#heldFinals;
+    this.#heldFinals = [];
+    this.#halfClosing = false;
+    const last = held.at(-1);
+    // Nothing recognized: the turn falls back to the STT timeout.
+    if (!last) return;
+    const text = held
+      .map((frame) => frame.text.trim())
+      .filter(Boolean)
+      .join(" ");
+    await this.emitSttUsageMetrics();
+    await this.pushFrame(
+      new TranscriptionFrame({
+        text,
+        userId: last.userId,
+        timestamp: last.timestamp,
+        language: last.language,
+        result: last.result,
+        finalized: true,
+      }),
+    );
+    await this._handleTranscription(text, true, last.language);
   }
 
   /**
@@ -1293,9 +1419,26 @@ export class GoogleSTTService extends STTService {
           }
 
           // Google's language codes are the values Language is built from.
-          const primaryLanguage = this._getLanguageCodes()[0] as Language;
+          // With "auto" (language detection), the code Google detected.
+          const configured = this._getLanguageCodes()[0];
+          const primaryLanguage = (
+            configured === "auto" && result.languageCode ? result.languageCode : configured
+          ) as Language;
 
-          if (result.isFinal) {
+          if (result.isFinal && this.#halfClosing) {
+            // finalizeOnVadStop: released as one frame when this stream ends.
+            this._lastTranscriptWasFinal = true;
+            this.#heldFinals.push(
+              new TranscriptionFrame({
+                text: transcript,
+                userId: this._userId,
+                timestamp: timeNowIso8601(),
+                language: primaryLanguage,
+                result,
+                finalized: true,
+              }),
+            );
+          } else if (result.isFinal) {
             this._lastTranscriptWasFinal = true;
             // Report usage before the transcription frame so
             // tracing can attach it to the STT span the frame
@@ -1338,6 +1481,12 @@ export class GoogleSTTService extends STTService {
         logger.debug(
           `${this} Stream aborted due to inactivity (no audio input). Reconnecting automatically...`,
         );
+        throw e;
+      }
+      if (isCancelledGrpcError(e)) {
+        // The call was cancelled on our side (e.g. a failed request stream,
+        // already reported): not a recognition error.
+        logger.debug(`${this} Stream cancelled`);
         throw e;
       }
       await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
