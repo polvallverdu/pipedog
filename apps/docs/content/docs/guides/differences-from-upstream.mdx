@@ -48,6 +48,13 @@ These differences apply everywhere, not to one module. They come from the portin
   Python-Markdown's rules for common constructs. Exotic Markdown (reference links, nested lists)
   may convert differently. `packages/core/src/utils/text/markdown_text_filter.ts`
 
+### TTS
+
+- **Audio cache (pipedog only).** `TTSService` takes an optional `audioCache`, and
+  `warmAudioCache()` synthesizes fixed lines ahead of time, so they play without a request to the
+  provider. Off by default. See [TTS audio cache](/docs/concepts/tts-audio-cache).
+  `packages/core/src/services/tts_audio_cache.ts`
+
 ### Logging
 
 - **Secrets are masked in warnings and errors.** Upstream masks credentials only in `ErrorFrame`.
