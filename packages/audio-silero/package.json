@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/audio-silero",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Silero VAD (SileroVADAnalyzer) for pipedog, with the upstream silero_vad.onnx model included. Runs on onnxruntime-node or onnxruntime-web via @pipedog/onnx.",
   "keywords": [
     "pipecat",

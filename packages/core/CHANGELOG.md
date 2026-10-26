@@ -1,5 +1,24 @@
 # @pipedog/core
 
+## 0.10.0
+
+### Minor Changes
+
+- [#85](https://github.com/polvallverdu/pipedog/pull/85) [`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e) Thanks [@polvallverdu](https://github.com/polvallverdu)! - TTS audio cache (pipedog only): `TTSService` takes an optional `audioCache` (`TTSAudioCache`, an in-memory LRU bounded by size, or any `get`/`set` store), and `warmAudioCache(text)` synthesizes fixed lines ahead of time so they play without a request to the provider. Only warmed lines are stored unless `cacheSynthesizedAudio` allows live synthesis. Works with services that yield audio from `runTts` (HTTP and streaming-RPC).
+
+- [#85](https://github.com/polvallverdu/pipedog/pull/85) [`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e) Thanks [@polvallverdu](https://github.com/polvallverdu)! - `MinWordsUserTurnStartStrategy` takes two opt-in options: `startOnVadWhenBotQuiet` starts the turn
+  on VAD while the bot is silent instead of waiting for a transcript, and `keepBotSpeakingOnTurnStart`
+  keeps the bot-speaking state across turn starts. New user mute strategies:
+  `OpeningUserMuteStrategy` (mute until the bot's first speech ends or has played for `maxSeconds`)
+  and `EndingUserMuteStrategy` (mute for good once the conversation is ending).
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @pipedog/asyncio@0.10.0
+  - @pipedog/resampler-wasm@0.10.0
+  - @pipedog/sentencex-wasm@0.10.0
+
 ## 0.9.0
 
 ### Minor Changes

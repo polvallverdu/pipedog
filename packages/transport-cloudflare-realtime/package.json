@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/transport-cloudflare-realtime",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Cloudflare Realtime transport for pipedog: browser and phone users talk over WebRTC through the Realtime SFU, while the bot runs where WebRTC isn't available, such as a Worker or a Durable Object.",
   "keywords": [
     "pipecat",

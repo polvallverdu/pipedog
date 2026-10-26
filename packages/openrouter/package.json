@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/openrouter",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "OpenRouter LLM service (OpenRouterLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/heygen",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "HeyGen avatar services for pipedog: HeyGenVideoService with LiveAvatar and Interactive Avatar sessions. Control runs over HTTP and WebSocket; avatar media runs on LiveKit's native Node SDK (@livekit/rtc-node).",
   "keywords": [
     "pipecat",

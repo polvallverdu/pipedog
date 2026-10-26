@@ -1,5 +1,22 @@
 # @pipedog/runner
 
+## 0.10.0
+
+### Patch Changes
+
+- Updated dependencies [[`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e), [`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e), [`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e)]:
+  - @pipedog/serializer-telnyx@0.10.0
+  - @pipedog/core@0.10.0
+  - @pipedog/evals@0.10.0
+  - @pipedog/serializer-exotel@0.10.0
+  - @pipedog/serializer-plivo@0.10.0
+  - @pipedog/serializer-twilio@0.10.0
+  - @pipedog/transport-livekit@0.10.0
+  - @pipedog/transport-smallwebrtc@0.10.0
+  - @pipedog/transport-websocket@0.10.0
+  - @pipedog/transport-whatsapp@0.10.0
+  - @pipedog/asyncio@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

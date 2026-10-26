@@ -1,5 +1,17 @@
 # @pipedog/google
 
+## 0.10.0
+
+### Minor Changes
+
+- [#85](https://github.com/polvallverdu/pipedog/pull/85) [`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Google speech services: `GoogleSTTService` gets `finalizeOnVadStop` (half-close the request stream on `VADUserStoppedSpeakingFrame`, so the final transcript arrives in about 0.6 s instead of Google's ~1.5 s endpointing, merged into one finalized `TranscriptionFrame`) and accepts `GoogleSTTSettings.languageCodes` again (e.g. `["auto"]` for Chirp's language detection; transcripts carry the detected language). `GoogleTTSService` and `GeminiTTSService` accept an injected `client` (share one Cloud TTS client across calls) and `bufferOnlyStartup` (buffer only the start of each utterance), and `GeminiTTSSettings` gets `speakingRate`. A gRPC CANCELLED error (an interrupted or cancelled call) now ends a Google Cloud stream quietly instead of being reported as an error.
+
+### Patch Changes
+
+- Updated dependencies [[`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e), [`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e)]:
+  - @pipedog/core@0.10.0
+  - @pipedog/asyncio@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

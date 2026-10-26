@@ -1,5 +1,17 @@
 # @pipedog/serializer-telnyx
 
+## 0.10.0
+
+### Minor Changes
+
+- [#85](https://github.com/polvallverdu/pipedog/pull/85) [`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e) Thanks [@polvallverdu](https://github.com/polvallverdu)! - `@pipedog/serializer-telnyx/texml` (pipedog only): the HTTP side of a Telnyx bot, on Bun, Node, Deno and Workers (`fetch` and WebCrypto only). `verifyTelnyxSignature()` checks a webhook's Ed25519 signature with a 5-minute replay window; `answerTexml()` connects an answered call to the bot's WebSocket; `parseStatusCallback()` and `parseCallCost()` read TeXML status callbacks and the `call.cost` webhook; `TelnyxTexmlClient` places outbound calls (`dial`, with status callbacks) and looks them up (`getCall`), throwing `TelnyxCallRejectedError` with `invalidDestination` when Telnyx refuses a call.
+
+### Patch Changes
+
+- Updated dependencies [[`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e), [`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e)]:
+  - @pipedog/core@0.10.0
+  - @pipedog/asyncio@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

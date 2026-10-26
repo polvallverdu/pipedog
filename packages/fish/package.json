@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/fish",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Fish Audio TTS service for pipedog.",
   "keywords": [
     "pipecat",

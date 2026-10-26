@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/cloudflare",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Cloudflare Workers AI services for pipedog: Deepgram Flux, Nova-3 and Whisper STT, Aura and MeloTTS TTS, Workers AI LLMs and Smart Turn v2, over the AI binding or the REST API.",
   "keywords": [
     "pipecat",

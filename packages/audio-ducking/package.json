@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/audio-ducking",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Ducking for pipedog: lowers the bot's voice while the user talks over it, applied as audio leaves the output transport, with any transport or serializer. Pure TypeScript on Bun, Node, Deno and Cloudflare Workers.",
   "keywords": [
     "pipecat",
