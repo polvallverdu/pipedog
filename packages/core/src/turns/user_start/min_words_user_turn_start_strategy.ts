@@ -12,6 +12,7 @@ import {
   type Frame,
   InterimTranscriptionFrame,
   TranscriptionFrame,
+  VADUserStartedSpeakingFrame,
 } from "../../frames/frames.ts";
 import { logger } from "../../utils/logger.ts";
 import { ProcessFrameResult } from "../types.ts";
@@ -25,6 +26,32 @@ export interface MinWordsUserTurnStartStrategyOptions extends BaseUserTurnStartS
   minWords: number;
   /** Whether to consider interim transcription frames for earlier detection. */
   useInterim?: boolean;
+  /**
+   * Whether to start the turn as soon as VAD detects speech while the bot is
+   * not speaking, instead of waiting for the first transcript. Defaults to
+   * false (upstream behavior).
+   *
+   * The word count exists to keep short noises from interrupting the bot, so
+   * it only matters while the bot speaks. Waiting for a transcript when the
+   * bot is quiet starts the turn late: by then an end-of-turn analyzer may
+   * already have decided, the late start resets it, and the reply falls back
+   * to the STT timeout; a pause mid-answer can also split it in two. With
+   * this option the turn starts with the speech, as with
+   * `VADUserTurnStartStrategy`, and the minimum applies only over the bot.
+   */
+  startOnVadWhenBotQuiet?: boolean;
+  /**
+   * Whether to keep the bot-speaking state when a user turn starts. Defaults
+   * to false (upstream behavior: the state is cleared, so the next turn
+   * counts from one word).
+   *
+   * Clearing it assumes the bot stopped because it was interrupted. When it
+   * goes on speaking (interruptions disabled, or the turn started some other
+   * way), the strategy would then treat a single word over the bot as a new
+   * turn. With this option the state only follows `BotStartedSpeakingFrame`
+   * and `BotStoppedSpeakingFrame`.
+   */
+  keepBotSpeakingOnTurnStart?: boolean;
 }
 
 /**
@@ -37,22 +64,29 @@ export interface MinWordsUserTurnStartStrategyOptions extends BaseUserTurnStartS
 export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
   protected _minWords: number;
   protected _useInterim: boolean;
+  protected _startOnVadWhenBotQuiet: boolean;
+  protected _keepBotSpeakingOnTurnStart: boolean;
   protected _botSpeaking = false;
 
   constructor(options: MinWordsUserTurnStartStrategyOptions) {
     super(options);
     this._minWords = options.minWords;
     this._useInterim = options.useInterim ?? true;
+    this._startOnVadWhenBotQuiet = options.startOnVadWhenBotQuiet ?? false;
+    this._keepBotSpeakingOnTurnStart = options.keepBotSpeakingOnTurnStart ?? false;
   }
 
   /**
    * Ready the strategy for a new user turn.
    *
    * Clears the bot-speaking flag so the next turn's word counting starts
-   * from the single-word interruption threshold.
+   * from the single-word interruption threshold (unless
+   * `keepBotSpeakingOnTurnStart` is set).
    */
   override async handleUserTurnStarted(): Promise<void> {
-    this._botSpeaking = false;
+    if (!this._keepBotSpeakingOnTurnStart) {
+      this._botSpeaking = false;
+    }
   }
 
   /**
@@ -69,6 +103,13 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
       await this._handleBotStartedSpeaking(frame);
     } else if (frame instanceof BotStoppedSpeakingFrame) {
       await this._handleBotStoppedSpeaking(frame);
+    } else if (
+      frame instanceof VADUserStartedSpeakingFrame &&
+      this._startOnVadWhenBotQuiet &&
+      !this._botSpeaking
+    ) {
+      await this.triggerUserTurnStarted();
+      return ProcessFrameResult.STOP;
     } else if (frame instanceof TranscriptionFrame) {
       return await this._handleTranscription(frame);
     } else if (frame instanceof InterimTranscriptionFrame && this._useInterim) {

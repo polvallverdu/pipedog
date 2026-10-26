@@ -12,9 +12,11 @@ not muted by default.
 import {
   AlwaysUserMuteStrategy,
   BaseUserMuteStrategy,
+  EndingUserMuteStrategy,
   FirstSpeechUserMuteStrategy,
   FunctionCallUserMuteStrategy,
   MuteUntilFirstBotCompleteUserMuteStrategy,
+  OpeningUserMuteStrategy,
 } from "@pipedog/core/turns/user_mute/index";
 ```
 
@@ -33,11 +35,14 @@ whenever a function call runs.
 | Strategy | Mutes | Use it to |
 | --- | --- | --- |
 | `MuteUntilFirstBotCompleteUserMuteStrategy` | from the start until the bot first finishes speaking | protect the greeting, including the silence before it |
+| `OpeningUserMuteStrategy` | from the start until the bot first finishes speaking, or has spoken for `maxSeconds` | protect the start of a long greeting without muting all of it |
 | `FirstSpeechUserMuteStrategy` | during the bot's first speech only | protect the greeting, but let the user speak before it starts |
 | `FunctionCallUserMuteStrategy` | while function calls run | keep the user from talking over a tool call |
 | `AlwaysUserMuteStrategy` | whenever the bot speaks | turn off barge-in completely |
+| `EndingUserMuteStrategy` | for good, once the conversation is ending | let the bot finish its goodbye |
 
-None takes options.
+`OpeningUserMuteStrategy` and `EndingUserMuteStrategy` are pipedog additions; the others are
+upstream's and take no options.
 
 ### MuteUntilFirstBotCompleteUserMuteStrategy
 
@@ -45,6 +50,18 @@ Mutes from the first frame, before the bot has said anything, and unmutes for go
 `BotStoppedSpeakingFrame`. If the bot's first turn fails before it speaks (an `ErrorFrame` arrives
 before any `BotStartedSpeakingFrame`), it unmutes and logs a warning, so a failed greeting doesn't
 leave the user unable to talk.
+
+### OpeningUserMuteStrategy
+
+Like `MuteUntilFirstBotCompleteUserMuteStrategy`, but the first speech is only protected for
+`maxSeconds` from its `BotStartedSpeakingFrame`. On a phone call, that keeps the "hello?" of picking
+up from cutting the greeting or reaching the LLM as an answer, while the user can still talk over
+the rest of a long greeting. The window is checked as frames arrive (input audio keeps them coming).
+Pass `clock` to control time in tests.
+
+```ts
+new OpeningUserMuteStrategy({ maxSeconds: 3 });
+```
 
 ### FirstSpeechUserMuteStrategy
 
@@ -55,6 +72,21 @@ for good when it ends. Later speech can be interrupted as usual.
 
 Mutes on `FunctionCallsStartedFrame` and tracks each call by its tool call ID; it unmutes once every
 call has a `FunctionCallResultFrame` or a `FunctionCallCancelFrame`.
+
+### EndingUserMuteStrategy
+
+Mutes, and stays muted, once it sees an `EndWorkerFrame` or `StopWorkerFrame`, once its `isEnding()`
+option returns true, or after `end()` is called. Strategies never see `EndFrame`, and an `EndFrame`
+queued after a goodbye arrives once the goodbye has been queued, so when the end is decided
+elsewhere (a tool that queues a goodbye and an `EndFrame`, say) tell the strategy with `isEnding` or
+`end()`:
+
+```ts
+const ending = new EndingUserMuteStrategy();
+// In the tool that ends the call:
+ending.end();
+await worker.queueFrames([new TTSSpeakFrame({ text: "Goodbye!" }), new EndFrame()]);
+```
 
 ### AlwaysUserMuteStrategy
 

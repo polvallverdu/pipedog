@@ -6,6 +6,8 @@
 
 export { AlwaysUserMuteStrategy } from "./always_user_mute_strategy.ts";
 export { BaseUserMuteStrategy } from "./base_user_mute_strategy.ts";
+export { EndingUserMuteStrategy } from "./ending_user_mute_strategy.ts";
 export { FirstSpeechUserMuteStrategy } from "./first_speech_user_mute_strategy.ts";
 export { FunctionCallUserMuteStrategy } from "./function_call_user_mute_strategy.ts";
 export { MuteUntilFirstBotCompleteUserMuteStrategy } from "./mute_until_first_bot_complete_user_mute_strategy.ts";
+export { OpeningUserMuteStrategy } from "./opening_user_mute_strategy.ts";
