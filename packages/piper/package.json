@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/piper",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Piper text-to-speech for pipedog: a port of Pipecat's PiperTTSService (Piper ONNX voices run locally through @pipedog/onnx, espeak-ng phonemization) and PiperHttpTTSService (a Piper HTTP server, over fetch).",
   "keywords": [
     "pipecat",

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/langchain",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "LangChain integration (LangchainProcessor) for pipedog.",
   "keywords": [
     "pipecat",

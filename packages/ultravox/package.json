@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/ultravox",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Ultravox realtime speech-to-speech service for pipedog.",
   "keywords": [
     "pipecat",

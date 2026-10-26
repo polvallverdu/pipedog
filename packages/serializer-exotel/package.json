@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/serializer-exotel",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Exotel media streams WebSocket frame serializer (ExotelFrameSerializer) for pipedog.",
   "keywords": [
     "pipecat",

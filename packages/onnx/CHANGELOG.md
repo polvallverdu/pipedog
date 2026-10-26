@@ -1,5 +1,13 @@
 # @pipedog/onnx
 
+## 0.10.0
+
+### Patch Changes
+
+- Updated dependencies [[`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e), [`1840a07`](https://github.com/polvallverdu/pipedog/commit/1840a07cff7db6baaab583286f94c1368eba2c3e)]:
+  - @pipedog/core@0.10.0
+  - @pipedog/asyncio@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/audio-rnnoise-filter",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "RNNoise noise suppression for pipedog: a port of Pipecat's RNNoiseFilter, with RNNoise compiled to WebAssembly, so it runs on Bun, Node, Deno and Cloudflare Workers.",
   "keywords": [
     "pipecat",
