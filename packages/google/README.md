@@ -137,5 +137,11 @@ final transcript arrives right away. The model performs best with 16 kHz mono PC
   gRPC clients send proto3 `false` defaults explicitly. The Gemini API client sends the API key as
   the `key` query parameter on Live, and uses camelCase JSON. On Live, `x-goog-api-client` is
   `pipecat/<version>` alone, where Python appends it to the SDK's own value.
-- Deprecated upstream APIs (`InputParams`, `params`, `languageCodes`, `setLanguages()`,
-  `updateOptions()`, …) are not ported.
+- Deprecated upstream APIs (`InputParams`, `params`, `setLanguages()`, `updateOptions()`, …)
+  are not ported. `GoogleSTTSettings.languageCodes` is kept, for codes such as `"auto"` (Chirp's
+  language detection) that `Language` cannot express.
+- pipedog additions: `finalizeOnVadStop` on `GoogleSTTService` (half-close the stream on
+  `VADUserStoppedSpeakingFrame` for a final in about 0.6 s instead of 1.5 s), `client` and
+  `bufferOnlyStartup` on `GoogleTTSService` and `GeminiTTSService`, and
+  `GeminiTTSSettings.speakingRate`. A gRPC CANCELLED error (an interrupted or cancelled call)
+  ends the stream quietly in the Cloud services instead of being reported.

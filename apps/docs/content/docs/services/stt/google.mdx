@@ -114,7 +114,8 @@ Runtime-updatable settings, passed as `settings: new GoogleSTTService.Settings({
 |---|---|---|---|
 | `model` | `string` | `"latest_long"` | Speech V2 model. |
 | `languages` | `Language[]` | `[Language.EN_US]` | Recognition languages. |
-| `language` | `Language \| null` | `null` | Setting it replaces `languages` with that one language. |
+| `languageCodes` | `string[] \| null` | `null` | Google language codes sent as-is, instead of `languages`, e.g. `["auto"]` for Chirp's language detection (pipedog only). |
+| `language` | `Language \| null` | `null` | Setting it replaces `languages` (and `languageCodes`) with that one language. |
 | `useSeparateRecognitionPerChannel` | `boolean` | `false` | Recognize each channel separately. |
 | `enableAutomaticPunctuation` | `boolean` | `true` | Add punctuation. |
 | `enableSpokenPunctuation` | `boolean` | `false` | Transcribe spoken punctuation. |
@@ -159,6 +160,27 @@ Change settings mid-call with an `STTUpdateSettingsFrame`:
 - The `telephony` model rejects adaptation; the service logs a warning and transcribes without
   it.
 - With inline `credentials`, a missing `project_id` throws in the constructor.
+- With `languageCodes: ["auto"]`, transcripts carry the language Google detected.
+- A gRPC CANCELLED error (the call was cancelled on our side) ends that stream quietly instead
+  of being reported as an error.
+
+### Finalizing on VAD stop
+
+Google sends a final result only once its own endpointing decides the utterance is over, about
+1.5 s after speech ends. With `finalizeOnVadStop: true` (pipedog only), the service half-closes
+the request stream when a `VADUserStoppedSpeakingFrame` arrives, so Google returns the final for
+the audio it has right away (about 0.6 s), and opens a new stream for the next audio, which waits
+in the queue meanwhile. The finals of the closed stream are pushed as one finalized
+`TranscriptionFrame`, so the turn can end without waiting for the STT timeout. Put a VAD before
+the service.
+
+```ts
+const stt = new GoogleSTTService({
+  location: "eu",
+  finalizeOnVadStop: true,
+  settings: new GoogleSTTService.Settings({ model: "chirp_3", languageCodes: ["auto"] }),
+});
+```
 
 ## Runtime notes
 
@@ -180,5 +202,6 @@ credentials provided." and "Project ID not found in credentials" are raised ther
 `credentials` are still checked in the constructor.
 </Callout>
 
-The deprecated upstream `InputParams` class, the `params` option,
-`GoogleSTTSettings.languageCodes`, `setLanguages()` and `updateOptions()` are not ported.
+The deprecated upstream `InputParams` class, the `params` option, `setLanguages()` and
+`updateOptions()` are not ported. `GoogleSTTSettings.languageCodes`, deprecated upstream, is kept
+for codes `Language` cannot express, such as `"auto"`.

@@ -1194,6 +1194,13 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/audio-soundfile-mixer",
       classes: ["SoundfileMixer"],
     },
+    {
+      slug: "ducking",
+      name: "Ducking",
+      pkg: "@pipedog/audio-ducking",
+      classes: ["AudioDuckingFilter", "AudioDuckingObserver"],
+      status: "pipedog only",
+    },
   ],
   serializers: [
     {

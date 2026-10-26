@@ -146,6 +146,34 @@ The metrics described above are recorded on these spans (`metrics.ttfb`, token u
 counts), not as separate OpenTelemetry metrics: like Pipecat, pipedog has no OpenTelemetry metrics
 exporter. Read `MetricsFrame`s with an observer if you need them as time series.
 
+### Keeping content out of traces
+
+Like Pipecat's, the spans carry what people said and what the model answered: `transcript`,
+`text`, `input`, `output`, `gen_ai.system_instructions`, tool definitions. With sensitive data (health,
+payments, anything personal) pass `redactContent` and the spans keep timings, ids and metadata only:
+
+```ts
+import { setupTracing } from "@pipedog/tracing";
+
+setupTracing({ serviceName: "my-voice-bot", exporter, redactContent: true });
+```
+
+- String attributes are dropped unless their key is allowed. The default list
+  (`DEFAULT_REDACTION_ALLOWED_ATTRIBUTES`) holds the non-content keys pipedog writes: the model,
+  provider and operation (`gen_ai.*`), `voice_id`, `language`, `settings.model` / `voice` /
+  `language`, `conversation.id`, `conversation.type`, `turn.type`, tool names. Numbers and booleans
+  (`metrics.*`, token counts, `turn.*` durations) are kept on any key.
+- Events keep their name and only `exception.type`; a recorded exception keeps its type but not
+  its message or stack; a status keeps its code but not its message.
+- `redactContent: { extraAllowedAttributes: ["app.tenant"] }` adds your own keys (for example from
+  `additionalSpanAttributes`), `allowedAttributes` replaces the list, and `isAllowed(key, value)`
+  decides on its own.
+
+Redaction happens as each attribute is written, on the SDK's own span, so nothing reaches a span
+processor or exporter. If you set up OpenTelemetry yourself, call `registerWithCore({ redactContent: true })`
+instead; `redactTracer`, `redactTracerProvider` and `redactSpan` apply it to your own spans. Not in
+upstream.
+
 ### Cloudflare Workers
 
 `@pipedog/core` and `@pipedog/tracing` run on Workers (see the

@@ -17,7 +17,7 @@
  * ported.
  */
 
-import { rethrowIfCancelled, sleep, type Task, TimeoutError } from "@pipedog/asyncio";
+import { gather, rethrowIfCancelled, sleep, type Task, TimeoutError } from "@pipedog/asyncio";
 import type { BaseAudioResampler } from "../audio/resamplers/base_audio_resampler.ts";
 import { createStreamResampler } from "../audio/utils.ts";
 import {
@@ -67,6 +67,7 @@ import { mergePunctTokens } from "../utils/text/word_timestamp_utils.ts";
 import { isGiven } from "../utils/types.ts";
 import { AIService, type AIServiceOptions } from "./ai_service.ts";
 import { TTSSettings } from "./settings.ts";
+import type { TTSAudioCacheStore } from "./tts_audio_cache.ts";
 import { State, WebsocketService, type WebsocketServiceOptions } from "./websocket_service.ts";
 
 /**
@@ -206,6 +207,43 @@ export interface TTSServiceOptions extends AIServiceOptions {
   settings?: TTSSettings | null;
   /** Whether the service should reuse context IDs within the same turn. */
   reuseContextIdWithinTurn?: boolean;
+  /**
+   * Where to keep synthesized audio for reuse (e.g. a shared `TTSAudioCache`).
+   * Text whose audio is in the cache is served from it, with no request to
+   * the provider. Lines get there through `warmAudioCache()`, and also from
+   * live synthesis when `cacheSynthesizedAudio` allows it. Only services that
+   * yield their audio from `runTts` (HTTP and streaming-RPC services, see
+   * `supportsAudioCache`) use it, and only in sentence aggregation mode.
+   * Defaults to null (no cache). pipedog only.
+   */
+  audioCache?: TTSAudioCacheStore | null;
+  /**
+   * Whether audio synthesized live is stored in `audioCache`, or a function
+   * that decides per text. Defaults to false: only warmed lines are stored,
+   * since a generated reply can repeat what the user said. pipedog only.
+   */
+  cacheSynthesizedAudio?: boolean | ((text: string) => boolean);
+  /**
+   * Extra part of the cache key, for constructor options that change the
+   * audio but are not in `settings`. pipedog only.
+   */
+  audioCacheNamespace?: string;
+}
+
+/** Options for `TTSService.warmAudioCache()`. */
+export interface WarmAudioCacheOptions {
+  /**
+   * Split the text into the sentences the service will be asked for, as LLM
+   * text is (default). Pass false for text spoken whole, as a `TTSSpeakFrame`
+   * is.
+   */
+  split?: boolean;
+  /**
+   * Sample rate to synthesize at when the service has none yet (before the
+   * pipeline starts, without a `sampleRate` option). Must match the rate the
+   * service will run at, or the warmed audio won't be found.
+   */
+  sampleRate?: number;
 }
 
 /**
@@ -271,6 +309,11 @@ export abstract class TTSService extends AIService {
   protected _audioContextManager: AudioContextManager;
   protected _audioContextTask: Task<unknown> | null = null;
   protected _isYieldingFramesSynchronously = false;
+  protected _audioCache: TTSAudioCacheStore | null;
+  protected _cacheSynthesizedAudio: boolean | ((text: string) => boolean);
+  protected _audioCacheNamespace: string;
+  // Error frames pushed so far, so a synthesis that reported one isn't cached.
+  protected _errorFramesPushed = 0;
 
   /**
    * Initialize the TTS service.
@@ -352,6 +395,9 @@ export abstract class TTSService extends AIService {
     // TTSStoppedFrame and LLMFullResponseEndFrame the PTS of the last word.
     this._wordTimestampTracker = new WordTimestampTracker();
     this._reuseContextIdWithinTurn = options.reuseContextIdWithinTurn ?? true;
+    this._audioCache = options.audioCache ?? null;
+    this._cacheSynthesizedAudio = options.cacheSynthesizedAudio ?? false;
+    this._audioCacheNamespace = options.audioCacheNamespace ?? "";
 
     // _turnContextId is shared by the sentences of the current turn, so they
     // form one audio context. A TTSSpeakFrame swaps in its own while it is
@@ -411,6 +457,17 @@ export abstract class TTSService extends AIService {
    */
   get supportsProcessingMetrics(): boolean {
     return true;
+  }
+
+  /**
+   * Whether this service can serve and store audio through `audioCache`.
+   *
+   * Only services that yield their audio from `runTts` can: a service that
+   * receives audio on its own connection (see `supportsProcessingMetrics`)
+   * can't tell which sentence the audio belongs to.
+   */
+  get supportsAudioCache(): boolean {
+    return this.supportsProcessingMetrics;
   }
 
   /**
@@ -1050,6 +1107,9 @@ export abstract class TTSService extends AIService {
     direction: FrameDirection = FrameDirection.DOWNSTREAM,
   ): Promise<void> {
     this._applyContextInterruptible(frame);
+    if (frame instanceof ErrorFrame) {
+      this._errorFramesPushed += 1;
+    }
     if (frame instanceof TTSStoppedFrame) {
       await this._finishTtsContext(frame);
       await this._pushStopSilence(frame);
@@ -1740,12 +1800,194 @@ export abstract class TTSService extends AIService {
     // The surrounding bookkeeping still runs, so the turn completes with no
     // audio rather than stalling.
     if (this.isUsable) {
-      await this.ttsProcessGenerator(contextId, this.runTts(text, contextId));
+      await this.ttsProcessGenerator(contextId, await this._audioFor(text, contextId));
     } else {
       // Name the text that goes unspoken: silence from the bot is otherwise
       // hard to trace back to the service that caused it.
       logger.warning(`${this}: service is no longer usable, not speaking [${text}]`);
     }
+  }
+
+  //
+  // Audio cache (pipedog only)
+  //
+
+  /** Whether `audioCache` is used for this service's synthesis. */
+  protected get _audioCacheActive(): boolean {
+    return this._audioCache !== null && this.supportsAudioCache && !this._isStreamingTokens;
+  }
+
+  /**
+   * The cache key for text: the text plus everything its audio depends on
+   * (service, settings, sample rate, `audioCacheNamespace`). Override to add
+   * what a service's audio depends on outside its settings.
+   */
+  protected _audioCacheKey(text: string): string {
+    const settings = this._settings.givenFields();
+    const sorted = Object.keys(settings)
+      .sort()
+      .map((key) => [key, settings[key]]);
+    // An internal key, never sent anywhere.
+    return JSON.stringify([
+      this.constructor.name,
+      this._audioCacheNamespace,
+      this.sampleRate,
+      sorted,
+      text,
+    ]);
+  }
+
+  /** The frames for text: from the cache when it has them, else from `runTts`. */
+  protected async _audioFor(
+    text: string,
+    contextId: string,
+  ): Promise<AsyncIterable<Frame | null | undefined>> {
+    const cache = this._audioCache;
+    if (!cache || !this._audioCacheActive) return this.runTts(text, contextId);
+    const key = this._audioCacheKey(text);
+    const cached = await cache.get(key);
+    if (cached) {
+      logger.debug(`${this}: serving TTS from the audio cache [${text}]`);
+      return this._cachedAudioFrames(cached, contextId);
+    }
+    const store = this._cacheSynthesizedAudio;
+    if (store === true || (typeof store === "function" && store(text))) {
+      return this._storeAudio(key, this.runTts(text, contextId));
+    }
+    return this.runTts(text, contextId);
+  }
+
+  /** Yield cached audio as the service's own synthesis would. */
+  protected async *_cachedAudioFrames(
+    audio: Uint8Array,
+    contextId: string,
+  ): AsyncGenerator<Frame, void> {
+    // A service that opens its own context in runTts finds none open yet.
+    if (!this.audioContextAvailable(contextId)) {
+      await this.createAudioContext(contextId);
+      await this.startTtfbMetrics();
+      yield new TTSStartedFrame({ contextId });
+    }
+    await this.stopTtfbMetrics();
+    const chunkSize = Math.max(2, this.chunkSize);
+    for (let offset = 0; offset < audio.byteLength; offset += chunkSize) {
+      yield new TTSAudioRawFrame({
+        audio: audio.slice(offset, offset + chunkSize),
+        sampleRate: this.sampleRate,
+        numChannels: 1,
+        contextId,
+      });
+    }
+  }
+
+  /**
+   * Pass frames through, and store their audio under key once the synthesis
+   * completes without an error (an interruption never gets that far).
+   */
+  protected async *_storeAudio(
+    key: string,
+    frames: AsyncIterable<Frame | null | undefined>,
+  ): AsyncGenerator<Frame | null | undefined, void> {
+    const errorsBefore = this._errorFramesPushed;
+    const audio = new _AudioCollector(this.sampleRate);
+    for await (const frame of frames) {
+      audio.add(frame);
+      yield frame;
+    }
+    const collected = audio.result();
+    if (collected && this._errorFramesPushed === errorsBefore) {
+      await this._audioCache?.set(key, collected);
+    }
+  }
+
+  /**
+   * Synthesize fixed lines ahead of time (a greeting, while the phone rings)
+   * and keep their audio in `audioCache`, so they play at once when spoken.
+   * Lines already cached are skipped. Text goes through the service's text
+   * filters and transforms, as when it is spoken. Only warm fixed text, never
+   * text that holds what a user said.
+   *
+   * Runs `runTts` outside the pipeline, so it works before the pipeline
+   * starts for services whose client exists once constructed; pass
+   * `sampleRate` then, unless the service was given one.
+   *
+   * @param text The text to warm.
+   * @param options See `WarmAudioCacheOptions`.
+   * @returns How many lines were synthesized and stored.
+   */
+  async warmAudioCache(text: string, options: WarmAudioCacheOptions = {}): Promise<number> {
+    const cache = this._audioCache;
+    if (!cache) {
+      throw new Error(`${this}: warmAudioCache() needs the audioCache option`);
+    }
+    if (!this.supportsAudioCache || this._isStreamingTokens) {
+      logger.warning(`${this}: this service can't use an audio cache, nothing warmed`);
+      return 0;
+    }
+    const restoreSampleRate = this._sampleRate === 0;
+    if (restoreSampleRate) {
+      const sampleRate = options.sampleRate ?? this._initSampleRate;
+      if (!sampleRate) {
+        throw new Error(
+          `${this}: warmAudioCache() before the pipeline starts needs a sample rate ` +
+            "(the sampleRate option of the call or of the service)",
+        );
+      }
+      this._sampleRate = sampleRate;
+    }
+    const sampleRate = this._sampleRate;
+    try {
+      const lines = options.split === false ? [text] : await this.spokenSentences(text);
+      const results = await gather(...lines.map((line) => async () => this._warmLine(cache, line)));
+      return results.filter(Boolean).length;
+    } finally {
+      if (restoreSampleRate && this._sampleRate === sampleRate) this._sampleRate = 0;
+    }
+  }
+
+  /**
+   * The sentences LLM text is cut into before synthesis, by the same
+   * aggregation as the service's (sentence mode, its language).
+   */
+  async spokenSentences(text: string): Promise<string[]> {
+    const aggregator = new SimpleTextAggregator({
+      aggregationType: TextAggregationMode.SENTENCE,
+      language: this.textAggregationLanguage,
+    });
+    const sentences: string[] = [];
+    // The same trimming as _trimText in sentence mode.
+    const add = (sentence: string) => {
+      const line = sentence.replace(/^\n+/, "");
+      if (line.trim()) sentences.push(line);
+    };
+    for await (const aggregation of aggregator.aggregate(text)) {
+      add(aggregation.text);
+    }
+    const rest = await aggregator.flush();
+    if (rest) add(rest.text);
+    return sentences;
+  }
+
+  /** Synthesize one line into the cache. Returns whether it was stored. */
+  protected async _warmLine(cache: TTSAudioCacheStore, line: string): Promise<boolean> {
+    const trimmed = this._trimText(line);
+    if (trimmed === null) return false;
+    const filtered = await this._filterText(trimmed);
+    if (filtered === null) return false;
+    const prepared = await this._transformText(filtered, TextType.SENTENCE);
+    if (prepared === null) return false;
+    const key = this._audioCacheKey(prepared);
+    if (await cache.get(key)) return false;
+    const errorsBefore = this._errorFramesPushed;
+    const audio = new _AudioCollector(this.sampleRate);
+    for await (const frame of this.runTts(prepared, crypto.randomUUID())) {
+      if (frame instanceof ErrorFrame) return false;
+      audio.add(frame);
+    }
+    const collected = audio.result();
+    if (!collected || this._errorFramesPushed !== errorsBefore) return false;
+    await cache.set(key, collected);
+    return true;
   }
 
   /** Queue the spoken text behind its audio, for services without word timestamps. */
@@ -2148,6 +2390,44 @@ export abstract class TTSService extends AIService {
       // usability.
       await this.pushError(`TTS context ${contextId} completed with no audio`);
     }
+  }
+}
+
+/** Joins the 16-bit mono audio of a synthesis at one sample rate, for the audio cache. */
+class _AudioCollector {
+  #parts: Uint8Array[] = [];
+  #length = 0;
+  #usable = true;
+  readonly sampleRate: number;
+
+  constructor(sampleRate: number) {
+    this.sampleRate = sampleRate;
+  }
+
+  add(frame: Frame | null | undefined): void {
+    if (frame instanceof ErrorFrame) {
+      this.#usable = false;
+    } else if (frame instanceof TTSAudioRawFrame) {
+      if (frame.sampleRate !== this.sampleRate || frame.numChannels !== 1) {
+        this.#usable = false;
+      } else {
+        this.#parts.push(frame.audio);
+        this.#length += frame.audio.byteLength;
+      }
+    }
+  }
+
+  /** The joined audio (whole samples only), or null if there is none to keep. */
+  result(): Uint8Array | null {
+    const length = this.#length & ~1;
+    if (!this.#usable || length === 0) return null;
+    const out = new Uint8Array(this.#length);
+    let offset = 0;
+    for (const part of this.#parts) {
+      out.set(part, offset);
+      offset += part.byteLength;
+    }
+    return out.subarray(0, length);
   }
 }
 

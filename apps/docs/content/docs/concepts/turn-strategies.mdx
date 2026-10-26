@@ -116,6 +116,17 @@ Use it **instead of** the VAD start strategy, which would open the turn on the f
 
 <auto-type-table cwd path="../../packages/core/src/turns/user_start/min_words_user_turn_start_strategy.ts" name="MinWordsUserTurnStartStrategyOptions" />
 
+Two options change upstream behavior, and both are off by default:
+
+- `startOnVadWhenBotQuiet` starts the turn on `VADUserStartedSpeakingFrame` while the bot is silent,
+  instead of waiting for the first transcript. A turn that starts with the transcript starts late:
+  the end-of-turn analyzer may already have decided, gets reset, and the reply waits for the STT
+  timeout. With this option the minimum only applies over the bot, and you don't need a VAD start
+  strategy next to it.
+- `keepBotSpeakingOnTurnStart` keeps the bot-speaking state when a turn starts. By default it is
+  cleared, which assumes the turn interrupted the bot; if the bot goes on speaking (interruptions
+  disabled, say), one word would then start the next turn.
+
 ### WakePhraseUserTurnStartStrategy
 
 Ignores the user until they say a wake phrase, then lets the conversation run until `timeout`

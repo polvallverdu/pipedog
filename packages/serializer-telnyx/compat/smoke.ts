@@ -23,6 +23,7 @@ import type { BaseTaskManager } from "@pipedog/core/utils/asyncio/task_manager";
 import { logger } from "@pipedog/core/utils/logger";
 
 import { TelnyxFrameSerializer } from "../src/telnyx.ts";
+import { answerTexml, parseCallCost, verifyTelnyxSignature } from "../src/texml.ts";
 import golden from "../test/fixtures/golden.json" with { type: "json" };
 
 type Any = any;
@@ -167,9 +168,38 @@ async function hangUp(): Promise<void> {
   }
 }
 
+/** TeXML helpers: an Ed25519 webhook signature through WebCrypto, the answer TeXML, a webhook. */
+async function texml(): Promise<void> {
+  const pair = (await crypto.subtle.generateKey({ name: "Ed25519" }, true, [
+    "sign",
+    "verify",
+  ])) as CryptoKeyPair;
+  const raw = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
+  const publicKey = btoa(String.fromCharCode(...raw));
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const body =
+    '{"data":{"event_type":"call.cost","payload":{"call_control_id":"c","status":"success"}}}';
+  const signed = new Uint8Array(
+    await crypto.subtle.sign(
+      "Ed25519",
+      pair.privateKey,
+      new TextEncoder().encode(`${timestamp}|${body}`),
+    ),
+  );
+  const signature = btoa(String.fromCharCode(...signed));
+  check(await verifyTelnyxSignature({ body, signature, timestamp, publicKey }), "valid signature");
+  check(
+    !(await verifyTelnyxSignature({ body: `${body} `, signature, timestamp, publicKey })),
+    "tampered body",
+  );
+  check(answerTexml("wss://h/ws?a&b").includes('url="wss://h/ws?a&amp;b"'), "answer TeXML");
+  check(parseCallCost(body)?.callControlId === "c", "call.cost");
+}
+
 export default async function smoke(): Promise<void> {
   logger.setLevel("CRITICAL");
   await audio();
   await events();
   await hangUp();
+  await texml();
 }

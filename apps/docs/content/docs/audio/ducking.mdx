@@ -1,0 +1,85 @@
+---
+title: Ducking
+description: Lower the bot's voice while the user talks over it, with AudioDuckingFilter, on any transport and every runtime.
+---
+
+## Overview
+
+When the user starts talking while the bot speaks, the bot normally talks on at full volume until
+the overlap counts as an interruption (or never, for a short "uh-huh"). `AudioDuckingFilter` lowers
+the bot's voice while the user's voice activity lasts, so it sounds like the bot heard them, and
+brings it back when they stop. This is pipedog only: upstream Pipecat has no ducking.
+
+The output transport queues the bot's audio well before it plays, so the volume can't be changed
+where the audio is produced. The filter is an **output audio filter** (`audioOutFilter`): the
+transport runs it on each chunk as the chunk leaves, so the change is heard at once, whatever the
+transport or serializer (WebRTC, WebSocket, Twilio, Telnyx...).
+
+<Cards>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/audio-ducking/src">
+    `ducking_filter.ts`.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/audio-ducking
+```
+
+```ts
+import { AudioDuckingFilter } from "@pipedog/audio-ducking";
+```
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/audio-ducking" />
+
+## Usage
+
+Set the filter as the transport's `audioOutFilter`, and add its `observer` to the pipeline worker:
+
+```ts
+import { AudioDuckingFilter } from "@pipedog/audio-ducking";
+import { PipelineWorker } from "@pipedog/core/pipeline/worker";
+import { TransportParams } from "@pipedog/core/transports/base_transport";
+
+const ducking = new AudioDuckingFilter({ duckedGain: 0.35 });
+
+const params = new TransportParams({ audioOutEnabled: true, audioOutFilter: ducking });
+// ... the transport and pipeline ...
+const worker = new PipelineWorker(pipeline, { observers: [ducking.observer] });
+```
+
+The observer watches the pipeline's frames, so no processor goes in the pipeline:
+
+| Frame | Effect |
+|---|---|
+| `VADUserStartedSpeakingFrame` | Duck. |
+| `VADUserStoppedSpeakingFrame` | Restore: the user stopped without interrupting. |
+| `InterruptionFrame` | Restore: the bot's queued speech was flushed, its next words play at full volume. |
+| `BotStoppedSpeakingFrame` | Restore. |
+
+The gain moves over the first chunk after a change (a linear ramp from the previous gain), so
+there is no click. You can also call `ducking.duck()` and `ducking.restore()` yourself.
+
+At runtime, change the gain or turn ducking off with filter frames:
+
+```ts
+import { FilterEnableFrame, FilterUpdateSettingsFrame } from "@pipedog/core/frames/frames";
+
+await worker.queueFrame(new FilterUpdateSettingsFrame({ settings: { duckedGain: 0.2 } }));
+await worker.queueFrame(new FilterEnableFrame({ enable: false }));
+```
+
+## Configuration
+
+`new AudioDuckingFilter(options)`:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `duckedGain` | `number` | `0.35` | Gain while ducked, 0.0 to 1.0. |
+| `enabled` | `boolean` | `true` | Whether ducking starts enabled. |
+
+The transport has one `audioOutFilter`. To combine ducking with another output filter, call one
+filter's `filter()` from the other's.

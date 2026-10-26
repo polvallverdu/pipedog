@@ -48,6 +48,13 @@ These differences apply everywhere, not to one module. They come from the portin
   Python-Markdown's rules for common constructs. Exotic Markdown (reference links, nested lists)
   may convert differently. `packages/core/src/utils/text/markdown_text_filter.ts`
 
+### TTS
+
+- **Audio cache (pipedog only).** `TTSService` takes an optional `audioCache`, and
+  `warmAudioCache()` synthesizes fixed lines ahead of time, so they play without a request to the
+  provider. Off by default. See [TTS audio cache](/docs/concepts/tts-audio-cache).
+  `packages/core/src/services/tts_audio_cache.ts`
+
 ### Logging
 
 - **Secrets are masked in warnings and errors.** Upstream masks credentials only in `ErrorFrame`.
@@ -306,6 +313,8 @@ main ones, in short:
   [Sentry metrics](/docs/concepts/sentry-metrics#differences-from-upstream),
   [RNNoise](/docs/audio/rnnoise-filter#differences-from-upstream) and
   [soundfile mixer](/docs/audio/soundfile-mixer#differences-from-upstream).
+- **Ducking** (`@pipedog/audio-ducking`) is pipedog only: an output audio filter that lowers the
+  bot's voice while the user talks over it. See [Ducking](/docs/audio/ducking).
 - **Local speech models** (Whisper, Moonshine, FunASR, Kokoro, Piper, Pocket TTS) run on ONNX
   Runtime instead of the Python libraries. Each page has a Differences section, for example
   [Kokoro](/docs/services/tts/kokoro#differences-from-upstream).

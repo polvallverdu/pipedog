@@ -1,0 +1,54 @@
+{
+  "name": "@pipedog/audio-ducking",
+  "version": "0.9.0",
+  "description": "Ducking for pipedog: lowers the bot's voice while the user talks over it, applied as audio leaves the output transport, with any transport or serializer. Pure TypeScript on Bun, Node, Deno and Cloudflare Workers.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "audio-filter",
+    "ducking",
+    "barge-in"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/audio-ducking"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/audio-ducking#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/core": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "deno",
+      "workerd"
+    ],
+    "compat": {
+      "needs": {
+        "all": "Nothing to install."
+      }
+    }
+  }
+}

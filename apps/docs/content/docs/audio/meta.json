@@ -4,6 +4,7 @@
     "index",
     "rnnoise-filter",
     "soundfile-mixer",
+    "ducking",
     "---Coming soon---",
     "aic-filter",
     "koala-filter",

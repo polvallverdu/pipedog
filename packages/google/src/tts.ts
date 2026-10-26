@@ -41,6 +41,11 @@
  *   `GoogleStreamTTSSettings` alias.
  * - Upstream sets `GRPC_ENABLE_FORK_SUPPORT=false` at import; there is no
  *   fork in JS, so it is not ported.
+ * - DIVERGENCE: pipedog-only additions: a `client` option on the Cloud TTS
+ *   services (one client shared by many services), `bufferOnlyStartup` on
+ *   the streaming services, `GeminiTTSSettings.speakingRate`, and a gRPC
+ *   CANCELLED error (code 1, the call was cancelled on our side, e.g. by an
+ *   interruption) ends synthesis quietly instead of being reported.
  */
 
 import { GoogleGenAI, type HttpOptions } from "@google/genai";
@@ -73,6 +78,11 @@ const GENAI_SUPPORTS_SPEECH_METADATA = true;
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/** gRPC CANCELLED (code 1): the call was cancelled on our side. */
+function isCancelledGrpcError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: unknown }).code === 1;
 }
 
 /** `xml.sax.saxutils.escape`: escape `&`, `<` and `>`. */
@@ -812,6 +822,11 @@ export interface GeminiTTSSettingsOptions extends TTSSettingsOptions {
   multiSpeaker?: boolean | NotGiven;
   /** List of speaker configurations for multi-speaker mode. */
   speakerConfigs?: GeminiSpeakerConfig[] | null | NotGiven;
+  /**
+   * Speaking rate in [0.25, 2.0] (GCP backend only); `null` leaves it to
+   * Google. DIVERGENCE: pipedog-only.
+   */
+  speakingRate?: number | null | NotGiven;
 }
 
 /**
@@ -825,11 +840,14 @@ export interface GeminiTTSSettingsOptions extends TTSSettingsOptions {
  *   only).
  * - `speakerConfigs`: list of speaker configurations for multi-speaker mode
  *   (`{ speaker_alias, speaker_id? }`).
+ * - `speakingRate`: speaking rate in [0.25, 2.0], sent in the streaming audio
+ *   config (GCP backend only). pipedog-only.
  */
 export class GeminiTTSSettings extends TTSSettings {
   prompt: string | null | NotGiven = NOT_GIVEN;
   multiSpeaker: boolean | NotGiven = NOT_GIVEN;
   speakerConfigs: GeminiSpeakerConfig[] | null | NotGiven = NOT_GIVEN;
+  speakingRate: number | null | NotGiven = NOT_GIVEN;
 
   constructor(options: GeminiTTSSettingsOptions = {}) {
     super(options);
@@ -1153,6 +1171,10 @@ export class GoogleHttpTTSService extends TTSService {
       }
     } catch (e) {
       rethrowIfCancelled(e);
+      if (isCancelledGrpcError(e)) {
+        logger.debug(`${this}: TTS request cancelled`);
+        return;
+      }
       const errorMessageText = `TTS generation error: ${errorMessage(e)}`;
       yield new ErrorFrame({ error: errorMessageText });
     }
@@ -1173,6 +1195,8 @@ export abstract class GoogleBaseTTSService extends TTSService {
   protected _location: string | null = null;
   protected _clientOptions: Record<string, unknown> | null = null;
   protected _textToSpeechModule: GoogleTextToSpeechModule | null = null;
+  /** See `GoogleTTSServiceOptions.bufferOnlyStartup`. pipedog-only. */
+  protected _bufferOnlyStartup = false;
 
   // Subclasses build the client in their constructor. Gemini can run against
   // the GenAI API instead of GCP, so each backend's code path casts to the
@@ -1254,6 +1278,7 @@ export abstract class GoogleBaseTTSService extends TTSService {
 
     let audioBuffer: Uint8Array = new Uint8Array(0);
     let firstChunkForTtfb = false;
+    let playbackStarted = false;
 
     const CHUNK_SIZE = this.chunkSize;
 
@@ -1269,6 +1294,23 @@ export abstract class GoogleBaseTTSService extends TTSService {
       }
 
       audioBuffer = concatBytes(audioBuffer, chunk);
+      if (this._bufferOnlyStartup && (playbackStarted || audioBuffer.length >= CHUNK_SIZE)) {
+        // pipedog-only: past the first CHUNK_SIZE bytes, hand on whatever
+        // arrived (whole 16-bit samples; an odd byte waits for the next one).
+        const aligned = audioBuffer.length & ~1;
+        if (aligned > 0) {
+          playbackStarted = true;
+          const piece = audioBuffer.slice(0, aligned);
+          audioBuffer = audioBuffer.slice(aligned);
+          yield new TTSAudioRawFrame({
+            audio: piece,
+            sampleRate: this.sampleRate,
+            numChannels: 1,
+            contextId,
+          });
+        }
+        continue;
+      }
       while (audioBuffer.length >= CHUNK_SIZE) {
         const piece = audioBuffer.slice(0, CHUNK_SIZE);
         audioBuffer = audioBuffer.slice(CHUNK_SIZE);
@@ -1318,6 +1360,25 @@ export interface GoogleTTSServiceOptions extends TTSServiceOptions {
   textToSpeechModule?: GoogleTextToSpeechModule | null;
   /** Runtime-updatable settings. */
   settings?: GoogleTTSSettings | null;
+  /**
+   * A Cloud Text-to-Speech client to use instead of building one from the
+   * credentials, `location` and `clientOptions` (which are then ignored).
+   * Share one client (e.g. `createGoogleCloudTTSClient(...)`) across services
+   * to skip the per-service credential lookup, TLS handshake and token fetch
+   * on the first sentence.
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  client?: GoogleCloudTTSClient | null;
+  /**
+   * Buffer only the start of each utterance: once `chunkSize` bytes have
+   * arrived, audio is passed on as it is received instead of being re-cut
+   * into `chunkSize` pieces (which holds back up to one chunk throughout).
+   * Default false (upstream's behavior).
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  bufferOnlyStartup?: boolean;
 }
 
 /**
@@ -1392,7 +1453,10 @@ export class GoogleTTSService extends GoogleBaseTTSService {
     this._clientOptions = options.clientOptions ?? null;
     this._textToSpeechModule = options.textToSpeechModule ?? null;
     this._voiceCloningKey = options.voiceCloningKey ?? null;
-    this._client = this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
+    this._bufferOnlyStartup = options.bufferOnlyStartup ?? false;
+    this._client =
+      options.client ??
+      this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
   }
 
   /**
@@ -1454,6 +1518,10 @@ export class GoogleTTSService extends GoogleBaseTTSService {
       yield* this._streamTts(streamingConfig, text, contextId);
     } catch (e) {
       rethrowIfCancelled(e);
+      if (isCancelledGrpcError(e)) {
+        logger.debug(`${this}: TTS stream cancelled`);
+        return;
+      }
       await this.pushError(`TTS generation error: ${errorMessage(e)}`, { exception: e });
     }
   }
@@ -1489,6 +1557,16 @@ export interface GeminiTTSServiceOptions extends TTSServiceOptions {
   useGenai?: boolean | null;
   /** HTTP client options for the google-genai client. */
   httpOptions?: HttpOptions | null;
+  /**
+   * A Cloud Text-to-Speech client for the GCP backend, instead of building
+   * one from the credentials, `location` and `clientOptions`. See
+   * `GoogleTTSServiceOptions.client`. Ignored by the GenAI backend.
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  client?: GoogleCloudTTSClient | null;
+  /** See `GoogleTTSServiceOptions.bufferOnlyStartup`. DIVERGENCE: pipedog-only. */
+  bufferOnlyStartup?: boolean;
 }
 
 /**
@@ -1629,6 +1707,7 @@ export class GeminiTTSService extends GoogleBaseTTSService {
       prompt: null,
       multiSpeaker: false,
       speakerConfigs: null,
+      speakingRate: null,
     });
 
     const voice = assertGiven(defaultSettings.voice);
@@ -1660,7 +1739,13 @@ export class GeminiTTSService extends GoogleBaseTTSService {
     this._location = options.location ?? null;
     this._clientOptions = options.clientOptions ?? null;
     this._textToSpeechModule = options.textToSpeechModule ?? null;
-    this._client = this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
+    this._bufferOnlyStartup = options.bufferOnlyStartup ?? false;
+    if (options.client && useGenai) {
+      logger.warning("GeminiTTSService: `client` is ignored by the GenAI backend.");
+    }
+    this._client =
+      (!useGenai ? options.client : null) ??
+      this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
 
     // Warn once now about settings the GenAI backend ignores, rather than on
     // every utterance in runTts.
@@ -1834,6 +1919,18 @@ export class GeminiTTSService extends GoogleBaseTTSService {
       logger.warning(`Voice '${delta.voice}' not in known voices list. Using anyway.`);
     }
 
+    if (
+      delta instanceof GeminiTTSSettings &&
+      isGiven(delta.speakingRate) &&
+      delta.speakingRate !== null // null == "up to Google"; no check needed
+    ) {
+      const rateValue = Number(delta.speakingRate);
+      if (!(rateValue >= 0.25 && rateValue <= 2.0)) {
+        logger.warning(`Invalid speaking_rate value: ${rateValue}. Must be between 0.25 and 2.0`);
+        delta.speakingRate = NOT_GIVEN;
+      }
+    }
+
     if (delta instanceof GeminiTTSSettings) {
       const model = isGiven(delta.model) ? delta.model : this._settings.model;
       this._warnUnsupportedGenaiSettings({
@@ -1913,11 +2010,13 @@ export class GeminiTTSService extends GoogleBaseTTSService {
       }
 
       // Create streaming config
+      const speakingRate = this._settings.speakingRate;
       const streamingConfig: GoogleStreamingSynthesizeConfig = {
         voice,
         streamingAudioConfig: {
           audioEncoding: "PCM",
           sampleRateHertz: this.sampleRate,
+          ...(isGiven(speakingRate) && speakingRate !== null ? { speakingRate } : {}),
         },
       };
 
@@ -1925,6 +2024,10 @@ export class GeminiTTSService extends GoogleBaseTTSService {
       yield* this._streamTts(streamingConfig, text, contextId, assertGiven(this._settings.prompt));
     } catch (e) {
       rethrowIfCancelled(e);
+      if (isCancelledGrpcError(e)) {
+        logger.debug(`${this}: Gemini GCP TTS stream cancelled`);
+        return;
+      }
       yield new ErrorFrame({ error: `Gemini GCP TTS generation error: ${errorMessage(e)}` });
     }
   }

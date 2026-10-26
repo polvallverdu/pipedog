@@ -16,6 +16,7 @@ bun add @pipedog/serializer-telnyx @pipedog/transport-websocket
 | class | Bun | Node | Deno | Cloudflare Workers |
 |---|:-:|:-:|:-:|:-:|
 | `TelnyxFrameSerializer` | ✅ | ✅ | ✅ | ✅ |
+| TeXML helpers (`/texml`) | ✅ | ✅ | ✅ | ✅ |
 
 It is pure: codecs come from core, resampling from core's WASM resampler (a module import on
 Workers), and the hang-up call uses `fetch`. `compat/smoke.ts` runs the golden vectors below on
@@ -88,6 +89,36 @@ The pipeline can run at any rate: set `params.sampleRate` or the pipeline's
 `audioInSampleRate`, and the serializer resamples between it and Telnyx's 8 kHz (`telnyxSampleRate`).
 Pass `params: new TelnyxFrameSerializer.InputParams({ autoHangUp: false })` to leave the call up
 when the pipeline ends. With `autoHangUp` (the default), `callControlId` and `apiKey` are required.
+
+## TeXML helpers
+
+`@pipedog/serializer-telnyx/texml` (pipedog only, `fetch` and WebCrypto) covers the HTTP side:
+
+- `verifyTelnyxSignature({ body, signature, timestamp, publicKey })`: Ed25519 webhook signature
+  over `${timestamp}|${body}`, refusing timestamps more than 5 minutes off.
+- `answerTexml(streamUrl, { parameters, codec, track })`: the TeXML that connects an answered call
+  to the bot's WebSocket (`<Connect><Stream bidirectionalMode="rtp">`), XML-escaped.
+- `parseStatusCallback(body)` and `parseCallCost(body)`: TeXML status callbacks and the `call.cost`
+  webhook; `isInvalidDestination(data)` tells an unusable number from busy or no answer.
+- `TelnyxTexmlClient`: `dial({ to, url, statusCallback })` and `getCall(callSid)` through the TeXML
+  REST API, with an injectable `fetch`. A refused call throws `TelnyxCallRejectedError`.
+
+```ts
+import { answerTexml, verifyTelnyxSignature } from "@pipedog/serializer-telnyx/texml";
+
+const body = await request.text();
+if (
+  !(await verifyTelnyxSignature({
+    body,
+    signature: request.headers.get("telnyx-signature-ed25519"),
+    timestamp: request.headers.get("telnyx-timestamp"),
+    publicKey: env.TELNYX_PUBLIC_KEY,
+  }))
+) {
+  return new Response("bad signature", { status: 401 });
+}
+return new Response(answerTexml("wss://your.host/telnyx"), { headers: { "content-type": "text/xml" } });
+```
 
 ## Wire compatibility
 

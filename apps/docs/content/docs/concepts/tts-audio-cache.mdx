@@ -1,0 +1,61 @@
+---
+title: TTS audio cache
+description: Keep the audio of fixed lines (a greeting, a disclaimer) and play it without asking the TTS provider again, with TTSAudioCache and warmAudioCache().
+---
+
+Fixed lines, such as a greeting, a recording notice or a hold message, are synthesized again on
+every call that says them. That costs a request and its time to first byte each time. With an
+**audio cache**, a TTS service that already has the audio for a line plays it at once, without a
+request to the provider. This is pipedog only: upstream Pipecat has no TTS cache.
+
+```ts
+import { TTSAudioCache } from "@pipedog/core/services/tts_audio_cache";
+import { OpenAITTSService } from "@pipedog/openai/tts";
+
+// One cache for the process, shared by every service and session.
+const audioCache = new TTSAudioCache({ maxBytes: 32 * 1024 * 1024 });
+
+const tts = new OpenAITTSService({ apiKey, audioCache });
+
+// Ahead of time (for example while an outbound call rings):
+await tts.warmAudioCache("Hi! This is the clinic calling about your appointment.", {
+  sampleRate: 8000, // the rate the pipeline will run at
+});
+```
+
+When the bot later says that text, each of its sentences is served from the cache: the service
+pushes `TTSStartedFrame`, the audio as `TTSAudioRawFrame`s of `chunkSize` bytes (half a second)
+with the context ID of the request, and `TTSStoppedFrame`, as for live synthesis. TTFB is reported
+(it is near zero) and no TTS usage metrics are, since the provider wasn't asked.
+
+## What is cached
+
+- **Only warmed lines, by default.** A generated reply can repeat what the user said, so live
+  synthesis is not stored unless you set `cacheSynthesizedAudio`: `true` stores every line, and a
+  function `(text) => boolean` decides per line.
+- **Lines, as the service asks for them.** LLM text is cut into sentences before synthesis, so
+  `warmAudioCache(text)` cuts the text the same way (`tts.spokenSentences(text)` shows the
+  result) and runs it through the service's text filters and transforms. A `TTSSpeakFrame` is
+  spoken whole: warm its text with `{ split: false }`.
+- **The key** is the text plus the service class, its settings (voice, model, language and the
+  rest of `settings`), the sample rate and `audioCacheNamespace`. Change the voice and the cached
+  audio no longer matches. Pass `audioCacheNamespace` when a constructor option outside `settings`
+  changes the audio, or override `_audioCacheKey(text)` in a subclass.
+- **Whole syntheses only.** A synthesis that is interrupted, reports an error, or yields audio at
+  another sample rate is not stored.
+
+`TTSAudioCache` keeps up to `maxBytes` of audio in memory and drops the least recently used first.
+To keep audio elsewhere (KV, Redis), pass any object with `get(key)` and `set(key, audio)`
+(`TTSAudioCacheStore`); both may return promises.
+
+## Which services
+
+The cache works with services that yield their audio from `runTts`: HTTP services and streaming-RPC
+services such as Google's. Services that receive audio on their own WebSocket
+(`supportsAudioCache` is false) can't tell which sentence a piece of audio belongs to, so they
+ignore the cache, and so does any service in token aggregation mode.
+
+`warmAudioCache()` calls `runTts` outside the pipeline. Before the pipeline starts, pass
+`sampleRate` (or give the service a `sampleRate` option), and it must equal the rate the pipeline
+runs at. A service that only creates its client when the pipeline starts can only warm once it has
+started.
