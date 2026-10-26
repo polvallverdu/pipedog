@@ -89,6 +89,63 @@ Without auto hang-up, the call control ID and API key are not needed:
 - Set `addWavHeader: false` on the transport params: Telnyx takes raw encoded audio.
 - A DTMF event whose digit is not a keypad key is ignored.
 
+## TeXML helpers
+
+`@pipedog/serializer-telnyx/texml` holds the HTTP side of a Telnyx bot: answering the call,
+checking webhooks, and placing outbound calls. Not in upstream (Pipecat leaves it to the app); it
+only uses `fetch` and WebCrypto, so it runs on Bun, Node, Deno and Workers.
+
+```ts
+import {
+  answerTexml,
+  parseCallCost,
+  parseStatusCallback,
+  TelnyxTexmlClient,
+  verifyTelnyxSignature,
+} from "@pipedog/serializer-telnyx/texml";
+
+// The TeXML application's voice URL: connect the call to the bot's WebSocket.
+async function answer(request: Request): Promise<Response> {
+  const body = await request.text();
+  const ok = await verifyTelnyxSignature({
+    body,
+    signature: request.headers.get("telnyx-signature-ed25519"),
+    timestamp: request.headers.get("telnyx-timestamp"),
+    publicKey: env.TELNYX_PUBLIC_KEY, // Mission Control → Keys & Credentials
+  });
+  if (!ok) return new Response("bad signature", { status: 401 });
+  return new Response(answerTexml("wss://bot.example.com/telnyx", { parameters: { lang: "en" } }), {
+    headers: { "content-type": "text/xml" },
+  });
+}
+
+// Outbound calls through the TeXML REST API.
+const telnyx = new TelnyxTexmlClient({
+  apiKey: env.TELNYX_API_KEY,
+  accountSid: env.TELNYX_ACCOUNT_SID,
+  applicationSid: env.TELNYX_APPLICATION_SID,
+  from: "+15550000000",
+});
+const { callSid } = await telnyx.dial({
+  to: "+15551234567",
+  url: "https://bot.example.com/answer",
+  statusCallback: "https://bot.example.com/status",
+});
+```
+
+- `verifyTelnyxSignature()` checks the Ed25519 signature over `` `${timestamp}|${body}` `` and
+  refuses timestamps more than 5 minutes off (`tolerance`). Pass the raw body, before parsing it.
+- `answerTexml(url, { parameters, codec, track })` returns `<Connect><Stream bidirectionalMode="rtp">`,
+  with the URL and parameters XML-escaped. Parameters reach the bot in the `start` message's
+  `custom_parameters`.
+- `parseStatusCallback(body)` reads a form-encoded status callback (`callSid`, `status`, all
+  `fields`), and `parseCallCost(body)` Telnyx's `call.cost` webhook (total, currency, billed
+  seconds and cost by part). Both return `null` for anything else.
+- `TelnyxTexmlClient.dial()` throws `TelnyxCallRejectedError` when Telnyx refuses the call (a 4xx,
+  or a destination that is not E.164); its `invalidDestination` says whether the number itself is
+  unusable, so a retry won't help. A 5xx throws a plain `Error`, since the call may have been
+  placed anyway. `getCall(callSid)` looks a call up. Pass `fetch` to the client for tests or a proxy.
+
 ## Runtime notes
 
 <RuntimeMatrix pkg="@pipedog/serializer-telnyx" />
