@@ -31,6 +31,21 @@ setupTracing({
 `forceFlushTracing()` and `shutdownTracing()` flush and stop the exporter, for example before a
 short-lived process exits.
 
+### Keeping content out of traces
+
+Spans carry what people said (`transcript`, `text`, `input`, `output`, ...). `redactContent` keeps
+timings, ids, numbers and booleans, and drops string attributes unless their key is allowed (model,
+provider, voice, language, conversation and turn ids by default), plus event, exception and status
+details:
+
+```ts
+setupTracing({ serviceName: "my-voice-bot", exporter, redactContent: true });
+// or { redactContent: { extraAllowedAttributes: ["app.tenant"] } }
+// with your own OpenTelemetry setup: registerWithCore({ redactContent: true })
+```
+
+`redactTracer`, `redactTracerProvider` and `redactSpan` apply the same rules to your own spans.
+
 ### Names
 
 Span names and attribute keys are Pipecat's. The library's tracers are called `pipedog` and

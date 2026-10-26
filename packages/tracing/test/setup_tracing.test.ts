@@ -27,6 +27,7 @@ import {
   getTracerName,
   InMemorySpanExporter,
   OTLPTraceExporter,
+  registerWithCore,
   SimpleSpanProcessor,
   setTracerName,
   setupTracing,
@@ -138,6 +139,21 @@ describe("setupTracing", () => {
     expect(typeof turn!.attributes["turn.duration_seconds"]).toBe("number");
     expect(turn!.parentSpanContext?.spanId).toBe(conversation!.spanContext().spanId);
     expect(turn!.spanContext().traceId).toBe(conversation!.spanContext().traceId);
+  });
+
+  test("registerWithCore({ redactContent }) redacts pipedog's spans on the global provider", async () => {
+    exporter.reset();
+    registerWithCore({ redactContent: { extraAllowedAttributes: ["app.region"] } });
+    try {
+      await runConversation("conv-redacted", { "app.tenant": "acme", "app.region": "eu" });
+      const conversation = exporter.getFinishedSpans().find((s) => s.name === "conversation");
+      expect(conversation!.attributes["conversation.id"]).toBe("conv-redacted");
+      expect(conversation!.attributes["app.region"]).toBe("eu");
+      expect(conversation!.attributes["app.tenant"]).toBeUndefined();
+    } finally {
+      registerWithCore();
+      exporter.reset();
+    }
   });
 });
 

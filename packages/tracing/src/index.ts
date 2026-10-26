@@ -31,6 +31,7 @@ import {
   setupTracing as coreSetupTracing,
   registerOpenTelemetry,
 } from "@pipedog/core/utils/tracing/setup";
+import { type RedactContentOptions, redactedApi } from "./redact.ts";
 
 export { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 export {
@@ -46,6 +47,15 @@ export {
   getTracerName,
   setTracerName,
 } from "@pipedog/core/utils/tracing/setup";
+export {
+  DEFAULT_REDACTION_ALLOWED_ATTRIBUTES,
+  type RedactContentOptions,
+  redactedApi,
+  redactionPredicate,
+  redactSpan,
+  redactTracer,
+  redactTracerProvider,
+} from "./redact.ts";
 
 export interface SetupTracingOptions {
   /**
@@ -68,11 +78,28 @@ export interface SetupTracingOptions {
   exporter?: sdk.SpanExporter | null;
   /** Whether to also export traces to the console (useful for debugging). */
   consoleExport?: boolean;
+  /**
+   * Keep what people said out of the spans: string attributes are dropped unless their key is
+   * allowed (model, provider, voice, language, conversation and turn ids by default), event and
+   * exception details keep only `exception.type`, and statuses keep only their code. Timings,
+   * numbers and booleans stay. Pass options to change which keys are allowed. Not in upstream.
+   */
+  redactContent?: boolean | RedactContentOptions;
 }
 
-/** Hand the OpenTelemetry modules this package depends on to `@pipedog/core`. */
-export function registerWithCore(): void {
-  registerOpenTelemetry({ api, sdk, resources });
+/**
+ * Hand the OpenTelemetry modules this package depends on to `@pipedog/core`.
+ *
+ * With `redactContent`, pipedog's tracers redact their spans (see `SetupTracingOptions`), on
+ * whatever tracer provider is registered: use it on its own when the app sets up OpenTelemetry
+ * itself.
+ */
+export function registerWithCore(
+  options: { redactContent?: boolean | RedactContentOptions } = {},
+): void {
+  const { redactContent } = options;
+  const otel = redactContent ? redactedApi(api, redactContent === true ? {} : redactContent) : api;
+  registerOpenTelemetry({ api: otel, sdk, resources });
 }
 
 /**
@@ -88,9 +115,12 @@ export function registerWithCore(): void {
  * @returns True if setup was successful, False otherwise.
  */
 export function setupTracing(options: SetupTracingOptions = {}): boolean {
-  registerWithCore();
+  const { redactContent, ...coreOptions } = options;
+  registerWithCore({ redactContent });
   return coreSetupTracing(
-    options.exporter ? { ...options, exporter: trackExports(options.exporter) } : options,
+    coreOptions.exporter
+      ? { ...coreOptions, exporter: trackExports(coreOptions.exporter) }
+      : coreOptions,
   );
 }
 
