@@ -11,10 +11,16 @@ name: Release
 #
 # No checks run here: the Version Packages PR must pass CI (the required `test`
 # check) before it can be merged, so main is already verified when this runs.
+#
+# A release that stopped halfway (e.g. a new package without its trusted
+# publisher yet) is finished by re-running this workflow, or with "Run
+# workflow" on main: `changeset publish` skips what is already on npm, and the
+# tag and GitHub release are only created once.
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: release
@@ -71,9 +77,20 @@ jobs:
         run: |
           version="$(jq -r .version packages/core/package.json)"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
-          if npm view "@pipedog/core@${version}" version >/dev/null 2>&1; then
+          # Every package, not only core: a release that failed partway leaves
+          # some of them unpublished, and a re-run must publish the rest.
+          missing=0
+          for p in packages/*/package.json; do
+            name="$(jq -r 'select(.private != true) | .name' "$p")"
+            [ -z "$name" ] && continue
+            if ! npm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "${name}@${version} is not on npm yet."
+              missing=$((missing + 1))
+            fi
+          done
+          if [ "$missing" -eq 0 ]; then
             echo "published=true" >> "$GITHUB_OUTPUT"
-            echo "@pipedog/core@${version} is already on npm; nothing to release."
+            echo "Every package is already on npm at ${version}; nothing to publish."
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
@@ -85,11 +102,14 @@ jobs:
         run: bun run release
 
       - name: Tag and GitHub release v${{ steps.v.outputs.version }}
-        if: steps.v.outputs.published == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.v.outputs.version }}
         run: |
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "Release v${VERSION} already exists."
+            exit 0
+          fi
           awk -v v="## ${VERSION}" '$0==v{f=1;next} /^## /{f=0} f' packages/core/CHANGELOG.md > notes.md
           {
             echo
