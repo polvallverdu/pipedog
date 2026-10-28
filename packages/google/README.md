@@ -21,7 +21,8 @@ bun add @google-cloud/text-to-speech
 | `GoogleTTSService` | `@pipedog/google/tts` | Cloud TTS `StreamingSynthesize`, gRPC | `@google-cloud/text-to-speech` |
 | `GeminiTTSService` (GCP credentials) | `@pipedog/google/tts` | Cloud TTS `StreamingSynthesize`, gRPC | `@google-cloud/text-to-speech` |
 | `GeminiTTSService` (`apiKey`) | `@pipedog/google/tts` | Gemini API, `fetch` | nothing extra (`@google/genai` is a dependency) |
-| `GeminiSTTService` | `@pipedog/google/gemini_live/stt` | Gemini Live, `WebSocket` | nothing extra |
+| `GeminiSTTService` (`apiKey`) | `@pipedog/google/gemini_live/stt` | Gemini Live, `WebSocket` | nothing extra |
+| `GeminiSTTService` (`vertexai`) | `@pipedog/google/gemini_live/stt` | Vertex AI Live, `WebSocket` | nothing extra (Google Cloud credentials or ADC) |
 
 Google offers Cloud Speech streaming and Cloud TTS streaming over gRPC only, so those classes use
 Google's Node SDKs, which are **optional peer dependencies**. They are loaded with `import()` the
@@ -39,7 +40,8 @@ gRPC client, so this port does too.)
 | `GoogleTTSService` | ✅ | ✅ | ✅ | ❌ (gRPC over http2) |
 | `GeminiTTSService` (GCP) | ✅ | ✅ | ✅ | ❌ (gRPC over http2) |
 | `GeminiTTSService` (Gemini API) | ✅ | ✅ | ✅ | ✅ |
-| `GeminiSTTService` | ✅ | ✅ | ✅ | ✅ |
+| `GeminiSTTService` (Gemini API) | ✅ | ✅ | ✅ | ✅ |
+| `GeminiSTTService` (Vertex AI) | ✅ | ✅ | ✅ | ❌ (google-auth-library) |
 
 `compat/smoke.ts` checks each class on each runtime marked ✅. It runs real requests through the
 real SDKs against in-process fakes (a gRPC server built from the SDK's own protobuf types, a fake
@@ -145,3 +147,9 @@ final transcript arrives right away. The model performs best with 16 kHz mono PC
   `bufferOnlyStartup` on `GoogleTTSService` and `GeminiTTSService`, and
   `GeminiTTSSettings.speakingRate`. A gRPC CANCELLED error (an interrupted or cancelled call)
   ends the stream quietly in the Cloud services instead of being reported.
+- More pipedog additions: `sharedClient` and `prewarm()` on the Cloud classes (one gRPC client
+  per endpoint and credentials in the process, connected at start-up),
+  `GoogleSTTService.setLanguageCodes()` (reconnects when the bot starts speaking), and
+  `retryOnBlocked` on `GeminiTTSService` (retries a sentence blocked for Google's usage
+  guidelines). The Google TTS services work with the TTS audio cache (`audioCache`,
+  `warmAudioCache()`), keyed also by `voiceCloningKey` and the Gemini backend.

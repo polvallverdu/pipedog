@@ -46,6 +46,17 @@
  *   the streaming services, `GeminiTTSSettings.speakingRate`, and a gRPC
  *   CANCELLED error (code 1, the call was cancelled on our side, e.g. by an
  *   interruption) ends synthesis quietly instead of being reported.
+ * - DIVERGENCE: pipedog-only: the `sharedClient` option and
+ *   `getSharedGoogleCloudTTSClient()` (one Cloud TTS client per endpoint,
+ *   credentials and client options in the process), and `prewarm()` on the
+ *   Cloud TTS services, which connects the gRPC channel and fetches a token
+ *   ahead of the first sentence.
+ * - DIVERGENCE: pipedog-only: `GeminiTTSService`'s `retryOnBlocked` option
+ *   retries a sentence that Google blocked for its usage guidelines (see
+ *   `GeminiTTSRetryOnBlockedOptions`).
+ * - The audio cache key (`TTSService.audioCache`, pipedog-only) also covers
+ *   what changes the audio outside `settings`: `voiceCloningKey`
+ *   (`GoogleTTSService`) and the backend (`GeminiTTSService`).
  */
 
 import { GoogleGenAI, type HttpOptions } from "@google/genai";
@@ -85,6 +96,16 @@ function isCancelledGrpcError(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { code?: unknown }).code === 1;
 }
 
+/** 32-bit FNV-1a of a string, in hex: tells values apart in a key without holding them. */
+function fnv1a(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16);
+}
+
 /** `xml.sax.saxutils.escape`: escape `&`, `<` and `>`. */
 function escapeXml(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll(">", "&gt;").replaceAll("<", "&lt;");
@@ -122,7 +143,49 @@ async function* abortableIter<T>(iterable: AsyncIterable<T>): AsyncGenerator<T, 
 interface GenaiResponseChunk {
   candidates?: {
     content?: { parts?: { inlineData?: { data?: string | Uint8Array } }[] };
+    finishReason?: string;
   }[];
+  promptFeedback?: { blockReason?: string; blockReasonMessage?: string };
+}
+
+/** GenAI finish reasons that mean the request was blocked by a content filter. */
+const GENAI_BLOCK_FINISH_REASONS = new Set(["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII"]);
+
+/**
+ * The Gemini API (GenAI backend) answered with no audio because the request
+ * was blocked (`promptFeedback.blockReason`, or a content-filter finish
+ * reason). Only raised with `GeminiTTSServiceOptions.retryOnBlocked`.
+ *
+ * DIVERGENCE: pipedog-only.
+ */
+export class GeminiTTSBlockedError extends Error {
+  /** The block reason or finish reason Google gave. */
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(`Gemini TTS request blocked: ${reason}`);
+    this.name = "GeminiTTSBlockedError";
+    this.reason = reason;
+  }
+}
+
+/**
+ * Whether `error` is Google refusing to synthesize the text for its usage
+ * guidelines. Gemini TTS on Cloud Text-to-Speech (Vertex AI) fails the call
+ * with gRPC INVALID_ARGUMENT whose details say so; the Gemini API fails the
+ * request with a 400 carrying the same wording, or answers with no audio
+ * (`GeminiTTSBlockedError`). Only that wording matches, so other invalid
+ * requests are not retried.
+ *
+ * DIVERGENCE: pipedog-only.
+ */
+export function isGeminiTTSBlockedError(error: unknown): boolean {
+  if (error instanceof GeminiTTSBlockedError) return true;
+  if (typeof error !== "object" || error === null) return false;
+  const { message, details } = error as { message?: unknown; details?: unknown };
+  return [message, details].some(
+    (text) => typeof text === "string" && /\busage (?:guidelines|polic(?:y|ies))\b/i.test(text),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -183,6 +246,11 @@ export interface GoogleCloudTTSClient {
   streamingSynthesize(
     requests: AsyncIterable<GoogleStreamingSynthesizeRequest>,
   ): Promise<AsyncIterable<GoogleAudioResponse>>;
+  /**
+   * Connect ahead of the first request: load the SDK, open the gRPC channel
+   * and fetch an access token. Rejects if any of that fails. pipedog-only.
+   */
+  prewarm?(options?: { timeout?: number }): Promise<void>;
 }
 
 /** Options for `createGoogleCloudTTSClient`. */
@@ -226,9 +294,58 @@ interface NodeTextToSpeechStream extends AsyncIterable<GoogleAudioResponse> {
   once?(event: "close", listener: () => void): unknown;
 }
 
-interface NodeTextToSpeechClient {
+interface NodeTextToSpeechClient extends GaxClientLike {
   synthesizeSpeech(request: unknown): Promise<[GoogleAudioResponse, ...unknown[]]>;
   streamingSynthesize(): NodeTextToSpeechStream;
+}
+
+/** The parts of a google-gax client that `prewarm()` uses. */
+interface GaxClientLike {
+  /** Builds the gRPC stub (and its channel). */
+  initialize?(): Promise<{
+    waitForReady?(deadline: number, callback: (error?: Error | null) => void): void;
+  }>;
+  auth?: { getAccessToken?(): Promise<unknown> };
+}
+
+/**
+ * Connect a google-gax client: build its stub, wait for the gRPC channel to
+ * be ready, and fetch an access token (cached by the client for later calls).
+ */
+async function warmGaxClient(client: GaxClientLike, timeout: number): Promise<void> {
+  const stub = await abortable(client.initialize?.() ?? Promise.resolve(undefined));
+  if (stub?.waitForReady) {
+    const deadline = Date.now() + timeout * 1000;
+    // A callback API: wrapped here, and awaited through abortable().
+    const ready = new Promise<void>((resolve, reject) =>
+      stub.waitForReady?.(deadline, (error) => (error ? reject(error) : resolve())),
+    );
+    await abortable(ready);
+  }
+  await abortable(client.auth?.getAccessToken?.() ?? Promise.resolve(undefined));
+}
+
+// The key of a shared client: plain values by content, anything else (a
+// module, gRPC channel credentials) by identity.
+const sharedKeyIds = new WeakMap<object, number>();
+let nextSharedKeyId = 0;
+
+function sharedClientKey(options: object): string {
+  return JSON.stringify(options, (_key, value: unknown) => {
+    const isObject = typeof value === "object" && value !== null;
+    if (
+      typeof value === "function" ||
+      (isObject && !Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype)
+    ) {
+      let id = sharedKeyIds.get(value as object);
+      if (id === undefined) {
+        id = ++nextSharedKeyId;
+        sharedKeyIds.set(value as object, id);
+      }
+      return `#${id}`;
+    }
+    return value;
+  });
 }
 
 interface NodeTextToSpeechModule {
@@ -310,7 +427,58 @@ export function createGoogleCloudTTSClient(
       });
       return stream;
     },
+    async prewarm(prewarmOptions = {}) {
+      const c = await abortable(getClient());
+      await warmGaxClient(c, prewarmOptions.timeout ?? 10);
+    },
   };
+}
+
+const sharedTTSClients = new Map<string, GoogleCloudTTSClient>();
+
+/**
+ * The process-wide Cloud Text-to-Speech client for these options: the first
+ * call creates it (`createGoogleCloudTTSClient`), later calls with the same
+ * endpoint, credentials, client options and module return it. Services with
+ * `sharedClient: true` use it. Shared clients are never closed by a service.
+ *
+ * DIVERGENCE: pipedog-only.
+ */
+export function getSharedGoogleCloudTTSClient(
+  options: GoogleCloudTTSClientOptions = {},
+): GoogleCloudTTSClient {
+  const key = sharedClientKey({
+    credentials: options.credentials ?? null,
+    keyFilename: options.keyFilename ?? null,
+    apiEndpoint: options.apiEndpoint ?? null,
+    clientOptions: options.clientOptions ?? null,
+    module: options.module ?? null,
+  });
+  let client = sharedTTSClients.get(key);
+  if (!client) {
+    client = createGoogleCloudTTSClient(options);
+    sharedTTSClients.set(key, client);
+  }
+  return client;
+}
+
+/** `prewarm()` of the Cloud TTS services: warm `client` if it can be, failing soft. */
+async function prewarmTTSClient(
+  service: TTSService,
+  client: GoogleCloudTTSClient | GoogleGenAI,
+  timeout: number,
+): Promise<boolean> {
+  const prewarm = (client as GoogleCloudTTSClient).prewarm;
+  // The GenAI client talks HTTP with an API key: nothing to connect ahead.
+  if (typeof prewarm !== "function") return true;
+  try {
+    await prewarm.call(client, { timeout });
+    return true;
+  } catch (e) {
+    rethrowIfCancelled(e);
+    logger.warning(`${service}: prewarm failed, the first request connects: ${errorMessage(e)}`);
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -911,6 +1079,8 @@ export interface GoogleHttpTTSServiceOptions extends TTSServiceOptions {
   textToSpeechModule?: GoogleTextToSpeechModule | null;
   /** Runtime-updatable settings. */
   settings?: GoogleHttpTTSSettings | null;
+  /** See `GoogleTTSServiceOptions.sharedClient`. DIVERGENCE: pipedog-only. */
+  sharedClient?: boolean;
 }
 
 /**
@@ -937,6 +1107,8 @@ export class GoogleHttpTTSService extends TTSService {
   protected _location: string | null;
   protected _clientOptions: Record<string, unknown> | null = null;
   protected _textToSpeechModule: GoogleTextToSpeechModule | null = null;
+  /** See `GoogleTTSServiceOptions.sharedClient`. pipedog-only. */
+  protected _sharedClient = false;
   protected _client: GoogleCloudTTSClient;
 
   /**
@@ -983,7 +1155,22 @@ export class GoogleHttpTTSService extends TTSService {
     this._location = options.location ?? null;
     this._clientOptions = options.clientOptions ?? null;
     this._textToSpeechModule = options.textToSpeechModule ?? null;
+    this._sharedClient = options.sharedClient ?? false;
     this._client = this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
+  }
+
+  /**
+   * Connect the client ahead of the first sentence (load the SDK, open the
+   * gRPC channel, fetch a token), e.g. at server start-up with
+   * `sharedClient`. Fails soft: on failure the first request connects.
+   *
+   * DIVERGENCE: pipedog-only.
+   *
+   * @param options.timeout Seconds to wait for the channel. Default 10.
+   * @returns Whether the client is connected.
+   */
+  async prewarm(options: { timeout?: number } = {}): Promise<boolean> {
+    return await prewarmTTSClient(this, this._client, options.timeout ?? 10);
   }
 
   /**
@@ -997,15 +1184,16 @@ export class GoogleHttpTTSService extends TTSService {
     credentials: string | null,
     credentialsPath: string | null,
   ): GoogleCloudTTSClient {
-    return createGoogleCloudTTSClient(
-      cloudTTSClientOptions(
-        credentials,
-        credentialsPath,
-        this._location,
-        this._clientOptions,
-        this._textToSpeechModule,
-      ),
+    const options = cloudTTSClientOptions(
+      credentials,
+      credentialsPath,
+      this._location,
+      this._clientOptions,
+      this._textToSpeechModule,
     );
+    return this._sharedClient
+      ? getSharedGoogleCloudTTSClient(options)
+      : createGoogleCloudTTSClient(options);
   }
 
   /**
@@ -1197,6 +1385,8 @@ export abstract class GoogleBaseTTSService extends TTSService {
   protected _textToSpeechModule: GoogleTextToSpeechModule | null = null;
   /** See `GoogleTTSServiceOptions.bufferOnlyStartup`. pipedog-only. */
   protected _bufferOnlyStartup = false;
+  /** See `GoogleTTSServiceOptions.sharedClient`. pipedog-only. */
+  protected _sharedClient = false;
 
   // Subclasses build the client in their constructor. Gemini can run against
   // the GenAI API instead of GCP, so each backend's code path casts to the
@@ -1214,15 +1404,31 @@ export abstract class GoogleBaseTTSService extends TTSService {
     credentials: string | null,
     credentialsPath: string | null,
   ): GoogleCloudTTSClient | GoogleGenAI {
-    return createGoogleCloudTTSClient(
-      cloudTTSClientOptions(
-        credentials,
-        credentialsPath,
-        this._location,
-        this._clientOptions,
-        this._textToSpeechModule,
-      ),
+    const options = cloudTTSClientOptions(
+      credentials,
+      credentialsPath,
+      this._location,
+      this._clientOptions,
+      this._textToSpeechModule,
     );
+    return this._sharedClient
+      ? getSharedGoogleCloudTTSClient(options)
+      : createGoogleCloudTTSClient(options);
+  }
+
+  /**
+   * Connect the client ahead of the first sentence (load the SDK, open the
+   * gRPC channel, fetch a token), e.g. at server start-up with
+   * `sharedClient`. Fails soft: on failure the first request connects. The
+   * Gemini API (GenAI) backend has nothing to connect.
+   *
+   * DIVERGENCE: pipedog-only.
+   *
+   * @param options.timeout Seconds to wait for the channel. Default 10.
+   * @returns Whether the client is connected.
+   */
+  async prewarm(options: { timeout?: number } = {}): Promise<boolean> {
+    return await prewarmTTSClient(this, this._client, options.timeout ?? 10);
   }
 
   /**
@@ -1371,6 +1577,18 @@ export interface GoogleTTSServiceOptions extends TTSServiceOptions {
    */
   client?: GoogleCloudTTSClient | null;
   /**
+   * Use the process-wide client for this endpoint, credentials and
+   * `clientOptions` (`getSharedGoogleCloudTTSClient`) instead of building one
+   * per service, so a server running one pipeline per call opens one gRPC
+   * channel and fetches tokens once. Pair it with `prewarm()` at start-up.
+   * Default false: each service has its own client (upstream's behavior),
+   * since one channel carries every concurrent stream of the process. Ignored
+   * when `client` is given.
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  sharedClient?: boolean;
+  /**
    * Buffer only the start of each utterance: once `chunkSize` bytes have
    * arrived, audio is passed on as it is received instead of being re-cut
    * into `chunkSize` pieces (which holds back up to one chunk throughout).
@@ -1454,9 +1672,17 @@ export class GoogleTTSService extends GoogleBaseTTSService {
     this._textToSpeechModule = options.textToSpeechModule ?? null;
     this._voiceCloningKey = options.voiceCloningKey ?? null;
     this._bufferOnlyStartup = options.bufferOnlyStartup ?? false;
+    this._sharedClient = options.sharedClient ?? false;
     this._client =
       options.client ??
       this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
+  }
+
+  /** The audio cache key also covers the custom voice (pipedog-only). */
+  protected override _audioCacheKey(text: string): string {
+    const key = super._audioCacheKey(text);
+    // Hashed: a custom store may keep its keys somewhere less private.
+    return this._voiceCloningKey ? `${key}#voiceClone=${fnv1a(this._voiceCloningKey)}` : key;
   }
 
   /**
@@ -1531,6 +1757,35 @@ export class GoogleTTSService extends GoogleBaseTTSService {
 // GeminiTTSService
 // ---------------------------------------------------------------------------
 
+/**
+ * How `GeminiTTSService` handles a sentence that Google blocks for its usage
+ * guidelines (`isGeminiTTSBlockedError`). Such blocks hit harmless sentences
+ * now and then, sometimes after part of the audio has played, and the same
+ * request usually goes through on the next attempt.
+ *
+ * DIVERGENCE: pipedog-only.
+ */
+export interface GeminiTTSRetryOnBlockedOptions {
+  /** How many more times a blocked sentence is requested. Default 1. */
+  retries?: number;
+  /**
+   * The text to request when a sentence starts over after part of its audio
+   * already played, so the listener hears why it restarts, e.g.
+   * `` (text) => `Sorry, ${text}` ``. Default: the sentence as it was. Not
+   * used when nothing had played yet.
+   */
+  restartText?: ((text: string) => string) | null;
+  /**
+   * One last attempt once the retries were blocked too: a settings delta for
+   * that attempt only (e.g. `new GeminiTTSSettings({ prompt: null })`, or on
+   * the GCP backend a Chirp 3 HD voice: `new GeminiTTSSettings({ model: null,
+   * prompt: null, voice: "en-US-Chirp3-HD-Kore" })`), or a function that yields the frames for the
+   * text instead (e.g. another TTS service's `runTts`, at the same sample
+   * rate). Default: none, and the sentence fails with an `ErrorFrame`.
+   */
+  fallback?: GeminiTTSSettings | ((text: string, contextId: string) => AsyncIterable<Frame>) | null;
+}
+
 export interface GeminiTTSServiceOptions extends TTSServiceOptions {
   /** Google AI API key for authentication when using GenAI. */
   apiKey?: string | null;
@@ -1565,8 +1820,22 @@ export interface GeminiTTSServiceOptions extends TTSServiceOptions {
    * DIVERGENCE: pipedog-only.
    */
   client?: GoogleCloudTTSClient | null;
+  /**
+   * See `GoogleTTSServiceOptions.sharedClient` (GCP backend; the GenAI
+   * backend talks HTTP and ignores it). DIVERGENCE: pipedog-only.
+   */
+  sharedClient?: boolean;
   /** See `GoogleTTSServiceOptions.bufferOnlyStartup`. DIVERGENCE: pipedog-only. */
   bufferOnlyStartup?: boolean;
+  /**
+   * Retry a sentence that Google blocks for its usage guidelines instead of
+   * failing it: `true` for one retry, or `GeminiTTSRetryOnBlockedOptions`.
+   * Default off: a blocked sentence yields an `ErrorFrame` (upstream's
+   * behavior).
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  retryOnBlocked?: boolean | GeminiTTSRetryOnBlockedOptions | null;
 }
 
 /**
@@ -1655,6 +1924,8 @@ export class GeminiTTSService extends GoogleBaseTTSService {
   protected _useGenai: boolean;
   protected _apiKey: string | null;
   protected _httpOptions: GeminiTTSServiceOptions["httpOptions"] | null;
+  /** See `GeminiTTSServiceOptions.retryOnBlocked`; null when off. pipedog-only. */
+  protected _retryOnBlocked: GeminiTTSRetryOnBlockedOptions | null;
 
   /**
    * Initializes the Gemini TTS service.
@@ -1740,12 +2011,17 @@ export class GeminiTTSService extends GoogleBaseTTSService {
     this._clientOptions = options.clientOptions ?? null;
     this._textToSpeechModule = options.textToSpeechModule ?? null;
     this._bufferOnlyStartup = options.bufferOnlyStartup ?? false;
+    this._sharedClient = options.sharedClient ?? false;
     if (options.client && useGenai) {
       logger.warning("GeminiTTSService: `client` is ignored by the GenAI backend.");
     }
     this._client =
       (!useGenai ? options.client : null) ??
       this._createClient(options.credentials ?? null, options.credentialsPath ?? null);
+
+    const retryOnBlocked = options.retryOnBlocked ?? null;
+    this._retryOnBlocked =
+      retryOnBlocked === true ? {} : retryOnBlocked === false ? null : retryOnBlocked;
 
     // Warn once now about settings the GenAI backend ignores, rather than on
     // every utterance in runTts.
@@ -1754,6 +2030,14 @@ export class GeminiTTSService extends GoogleBaseTTSService {
       prompt: assertGiven(defaultSettings.prompt),
       model: assertGiven(defaultSettings.model),
     });
+  }
+
+  /**
+   * The audio cache key also covers the backend, which is chosen outside the
+   * settings (pipedog-only).
+   */
+  protected override _audioCacheKey(text: string): string {
+    return `${super._audioCacheKey(text)}#${this._useGenai ? "genai" : "gcp"}`;
   }
 
   protected override _createClient(
@@ -1964,7 +2248,9 @@ export class GeminiTTSService extends GoogleBaseTTSService {
    *   generated.
    */
   override async *runTts(text: string, contextId: string): AsyncGenerator<Frame, void> {
-    if (this._useGenai) {
+    if (this._retryOnBlocked) {
+      yield* this._runTtsRetryingBlocked(text, contextId, this._retryOnBlocked);
+    } else if (this._useGenai) {
       yield* this._runGenaiTts(text, contextId);
     } else {
       yield* this._runGcpTts(text, contextId);
@@ -1972,56 +2258,8 @@ export class GeminiTTSService extends GoogleBaseTTSService {
   }
 
   protected async *_runGcpTts(text: string, contextId: string): AsyncGenerator<Frame, void> {
-    logger.debug(`${this}: Generating GCP TTS [${text}]`);
-
     try {
-      // Build voice selection params
-      let voice: GoogleVoiceSelectionParams;
-      const speakerConfigs = this._settings.speakerConfigs;
-      if (this._settings.multiSpeaker && isGiven(speakerConfigs) && speakerConfigs?.length) {
-        // Multi-speaker mode
-        const speakerVoiceConfigs: { speakerAlias: string; speakerId: string | null }[] = [];
-        for (const speakerConfig of speakerConfigs) {
-          if (!("speaker_alias" in speakerConfig)) {
-            // Upstream's `speaker_config["speaker_alias"]` raises KeyError, whose str() is quoted.
-            throw new Error("'speaker_alias'");
-          }
-          speakerVoiceConfigs.push({
-            speakerAlias: speakerConfig.speaker_alias as string,
-            speakerId:
-              "speaker_id" in speakerConfig
-                ? (speakerConfig.speaker_id as string | null)
-                : (this._settings.voice as string | null),
-          });
-        }
-
-        voice = {
-          languageCode: this._settings.language as string | null,
-          modelName: this._settings.model as string | null,
-          multiSpeakerVoiceConfig: { speakerVoiceConfigs },
-        };
-      } else {
-        // Single speaker mode
-        voice = {
-          languageCode: this._settings.language as string | null,
-          name: this._settings.voice as string | null,
-          modelName: this._settings.model as string | null,
-        };
-      }
-
-      // Create streaming config
-      const speakingRate = this._settings.speakingRate;
-      const streamingConfig: GoogleStreamingSynthesizeConfig = {
-        voice,
-        streamingAudioConfig: {
-          audioEncoding: "PCM",
-          sampleRateHertz: this.sampleRate,
-          ...(isGiven(speakingRate) && speakingRate !== null ? { speakingRate } : {}),
-        },
-      };
-
-      // Use base class streaming logic with prompt support
-      yield* this._streamTts(streamingConfig, text, contextId, assertGiven(this._settings.prompt));
+      yield* this._gcpTtsFrames(text, contextId, this._settings);
     } catch (e) {
       rethrowIfCancelled(e);
       if (isCancelledGrpcError(e)) {
@@ -2033,94 +2271,255 @@ export class GeminiTTSService extends GoogleBaseTTSService {
   }
 
   protected async *_runGenaiTts(text: string, contextId: string): AsyncGenerator<Frame, void> {
-    logger.debug(`${this}: Generating GenAI TTS [${text}]`);
-
     try {
-      const model = assertGiven(this._settings.model);
-      if (model === null) {
-        throw new Error("GeminiTTSService requires a model");
-      }
-      const isGemini38 = GeminiTTSService._isGemini38Tts(model);
-
-      const config: Record<string, unknown> = {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          languageCode: assertGiven(this._settings.language),
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: assertGiven(this._settings.voice),
-            },
-          },
-        },
-        abortSignal: currentSignal(),
-      };
-
-      let contents: unknown = text;
-      if (isGemini38) {
-        // Gemini 3.8 TTS treats the input strictly as a verbatim
-        // transcript: sustained style goes in speechMetadata. The response
-        // defaults to WAV (the SDK offers no way to request raw PCM via
-        // GenerateContentConfig), so the audio streaming below strips a RIFF
-        // header when one arrives.
-        const part: Record<string, unknown> = { text };
-        const prompt = this._settings.prompt;
-        if (isGiven(prompt) && prompt) {
-          part.speechMetadata = { style: prompt };
-        }
-        contents = [{ role: "user", parts: [part] }];
-      }
-
-      await this.startTtsUsageMetrics(text);
-
-      const client = this._client as GoogleGenAI;
-
-      const response = (await abortable(
-        client.models.generateContentStream({
-          model,
-          contents: contents as never,
-          config,
-        }),
-      )) as AsyncIterable<GenaiResponseChunk>;
-
-      const audioChunks = async function* (
-        this: GeminiTTSService,
-      ): AsyncGenerator<Uint8Array, void> {
-        let firstChunkForTtfb = false;
-        let buffer: Uint8Array = new Uint8Array(0);
-        const chunkSize = this.chunkSize;
-        for await (const chunk of abortableIter(response)) {
-          const parts = chunk.candidates?.[0]?.content?.parts;
-          if (!parts || parts.length === 0) {
-            continue;
-          }
-          for (const part of parts) {
-            // Python's truthiness: empty bytes (or an empty base64 string) is skipped.
-            const data = part.inlineData?.data ? toBytes(part.inlineData.data) : null;
-            if (data && data.length > 0) {
-              if (!firstChunkForTtfb) {
-                await this.stopTtfbMetrics();
-                firstChunkForTtfb = true;
-              }
-              buffer = concatBytes(buffer, data);
-              while (buffer.length >= chunkSize) {
-                yield buffer.slice(0, chunkSize);
-                buffer = buffer.slice(chunkSize);
-              }
-            }
-          }
-        }
-        if (buffer.length > 0) {
-          yield buffer;
-        }
-      }.call(this);
-
-      yield* this._streamAudioFramesFromIterator(audioChunks, {
-        stripWavHeader: isGemini38,
-        contextId,
-      });
+      yield* this._genaiTtsFrames(text, contextId, this._settings);
     } catch (e) {
       rethrowIfCancelled(e);
       yield new ErrorFrame({ error: `Gemini GenAI TTS generation error: ${errorMessage(e)}` });
     }
+  }
+
+  /** The GCP backend's frames for text with these settings; errors propagate. */
+  protected async *_gcpTtsFrames(
+    text: string,
+    contextId: string,
+    settings: GeminiTTSSettings,
+  ): AsyncGenerator<Frame, void> {
+    logger.debug(`${this}: Generating GCP TTS [${text}]`);
+
+    // Build voice selection params
+    let voice: GoogleVoiceSelectionParams;
+    const speakerConfigs = settings.speakerConfigs;
+    if (settings.multiSpeaker && isGiven(speakerConfigs) && speakerConfigs?.length) {
+      // Multi-speaker mode
+      const speakerVoiceConfigs: { speakerAlias: string; speakerId: string | null }[] = [];
+      for (const speakerConfig of speakerConfigs) {
+        if (!("speaker_alias" in speakerConfig)) {
+          // Upstream's `speaker_config["speaker_alias"]` raises KeyError, whose str() is quoted.
+          throw new Error("'speaker_alias'");
+        }
+        speakerVoiceConfigs.push({
+          speakerAlias: speakerConfig.speaker_alias as string,
+          speakerId:
+            "speaker_id" in speakerConfig
+              ? (speakerConfig.speaker_id as string | null)
+              : (settings.voice as string | null),
+        });
+      }
+
+      voice = {
+        languageCode: settings.language as string | null,
+        modelName: settings.model as string | null,
+        multiSpeakerVoiceConfig: { speakerVoiceConfigs },
+      };
+    } else {
+      // Single speaker mode
+      voice = {
+        languageCode: settings.language as string | null,
+        name: settings.voice as string | null,
+        modelName: settings.model as string | null,
+      };
+    }
+
+    // Create streaming config
+    const speakingRate = settings.speakingRate;
+    const streamingConfig: GoogleStreamingSynthesizeConfig = {
+      voice,
+      streamingAudioConfig: {
+        audioEncoding: "PCM",
+        sampleRateHertz: this.sampleRate,
+        ...(isGiven(speakingRate) && speakingRate !== null ? { speakingRate } : {}),
+      },
+    };
+
+    // Use base class streaming logic with prompt support
+    yield* this._streamTts(streamingConfig, text, contextId, assertGiven(settings.prompt));
+  }
+
+  /**
+   * The GenAI backend's frames for text with these settings; errors
+   * propagate. When given, `blocked.reason` is set if the response says the
+   * request was blocked.
+   */
+  protected async *_genaiTtsFrames(
+    text: string,
+    contextId: string,
+    settings: GeminiTTSSettings,
+    blocked: { reason: string | null } | null = null,
+  ): AsyncGenerator<Frame, void> {
+    logger.debug(`${this}: Generating GenAI TTS [${text}]`);
+
+    const model = assertGiven(settings.model);
+    if (model === null) {
+      throw new Error("GeminiTTSService requires a model");
+    }
+    const isGemini38 = GeminiTTSService._isGemini38Tts(model);
+
+    const config: Record<string, unknown> = {
+      responseModalities: ["AUDIO"],
+      speechConfig: {
+        languageCode: assertGiven(settings.language),
+        voiceConfig: {
+          prebuiltVoiceConfig: {
+            voiceName: assertGiven(settings.voice),
+          },
+        },
+      },
+      abortSignal: currentSignal(),
+    };
+
+    let contents: unknown = text;
+    if (isGemini38) {
+      // Gemini 3.8 TTS treats the input strictly as a verbatim
+      // transcript: sustained style goes in speechMetadata. The response
+      // defaults to WAV (the SDK offers no way to request raw PCM via
+      // GenerateContentConfig), so the audio streaming below strips a RIFF
+      // header when one arrives.
+      const part: Record<string, unknown> = { text };
+      const prompt = settings.prompt;
+      if (isGiven(prompt) && prompt) {
+        part.speechMetadata = { style: prompt };
+      }
+      contents = [{ role: "user", parts: [part] }];
+    }
+
+    await this.startTtsUsageMetrics(text);
+
+    const client = this._client as GoogleGenAI;
+
+    const response = (await abortable(
+      client.models.generateContentStream({
+        model,
+        contents: contents as never,
+        config,
+      }),
+    )) as AsyncIterable<GenaiResponseChunk>;
+
+    const audioChunks = async function* (this: GeminiTTSService): AsyncGenerator<Uint8Array, void> {
+      let firstChunkForTtfb = false;
+      let buffer: Uint8Array = new Uint8Array(0);
+      const chunkSize = this.chunkSize;
+      for await (const chunk of abortableIter(response)) {
+        if (blocked) {
+          // pipedog-only (retryOnBlocked): a request the Gemini API blocked
+          // ends with no audio and a block or content-filter finish reason.
+          const finishReason = chunk.candidates?.[0]?.finishReason;
+          const reason =
+            chunk.promptFeedback?.blockReason ??
+            (finishReason && GENAI_BLOCK_FINISH_REASONS.has(finishReason) ? finishReason : null);
+          if (reason) blocked.reason = reason;
+        }
+        const parts = chunk.candidates?.[0]?.content?.parts;
+        if (!parts || parts.length === 0) {
+          continue;
+        }
+        for (const part of parts) {
+          // Python's truthiness: empty bytes (or an empty base64 string) is skipped.
+          const data = part.inlineData?.data ? toBytes(part.inlineData.data) : null;
+          if (data && data.length > 0) {
+            if (!firstChunkForTtfb) {
+              await this.stopTtfbMetrics();
+              firstChunkForTtfb = true;
+            }
+            buffer = concatBytes(buffer, data);
+            while (buffer.length >= chunkSize) {
+              yield buffer.slice(0, chunkSize);
+              buffer = buffer.slice(chunkSize);
+            }
+          }
+        }
+      }
+      if (buffer.length > 0) {
+        yield buffer;
+      }
+    }.call(this);
+
+    yield* this._streamAudioFramesFromIterator(audioChunks, {
+      stripWavHeader: isGemini38,
+      contextId,
+    });
+  }
+
+  /** Whether an error is a usage-guidelines block that `retryOnBlocked` retries. */
+  protected _isBlockedError(error: unknown): boolean {
+    return isGeminiTTSBlockedError(error);
+  }
+
+  /**
+   * `runTts` with `retryOnBlocked` (pipedog-only): a sentence Google blocks
+   * for its usage guidelines is requested again, then with the fallback if
+   * any, before it fails with an `ErrorFrame`.
+   *
+   * Audio that already played can't be taken back, so a sentence blocked
+   * midway starts over (as `restartText`, if given) rather than resuming
+   * where it stopped. Restarted or fallback audio is kept out of the audio
+   * cache.
+   */
+  protected async *_runTtsRetryingBlocked(
+    text: string,
+    contextId: string,
+    options: GeminiTTSRetryOnBlockedOptions,
+  ): AsyncGenerator<Frame, void> {
+    const retries = Math.max(0, Math.trunc(options.retries ?? 1));
+    const fallback = options.fallback ?? null;
+    const attempts = 1 + retries + (fallback ? 1 : 0);
+    const errorPrefix = `Gemini ${this._useGenai ? "GenAI" : "GCP"} TTS generation error`;
+    let audioSent = false;
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      const isFallback = fallback !== null && attempt === attempts;
+      if (attempt > 1) {
+        const next = isFallback ? "trying the fallback" : `retry ${attempt - 1} of ${retries}`;
+        logger.warning(
+          `${this}: Gemini TTS blocked [${text}]: ${errorMessage(lastError)}; ${next}` +
+            (audioSent ? ", restarting the sentence" : ""),
+        );
+        if (audioSent || isFallback) {
+          // This sentence's audio is no longer one clean synthesis: count it
+          // as an error so the base class keeps it out of the audio cache.
+          this._errorFramesPushed += 1;
+        }
+      }
+      const attemptText = audioSent && options.restartText ? options.restartText(text) : text;
+      const blocked: { reason: string | null } = { reason: null };
+      let attemptAudio = false;
+      try {
+        let frames: AsyncIterable<Frame>;
+        if (isFallback && typeof fallback === "function") {
+          frames = fallback(attemptText, contextId);
+        } else {
+          let settings = this._settings;
+          if (isFallback) {
+            settings = this._settings.copy();
+            settings.applyUpdate(fallback as GeminiTTSSettings);
+          }
+          frames = this._useGenai
+            ? this._genaiTtsFrames(attemptText, contextId, settings, blocked)
+            : this._gcpTtsFrames(attemptText, contextId, settings);
+        }
+        for await (const frame of frames) {
+          if (frame instanceof TTSAudioRawFrame) {
+            attemptAudio = true;
+            audioSent = true;
+          }
+          yield frame;
+        }
+        if (blocked.reason === null || attemptAudio) return;
+        lastError = new GeminiTTSBlockedError(blocked.reason);
+      } catch (e) {
+        rethrowIfCancelled(e);
+        if (!this._useGenai && isCancelledGrpcError(e)) {
+          logger.debug(`${this}: Gemini GCP TTS stream cancelled`);
+          return;
+        }
+        if (!this._isBlockedError(e)) {
+          yield new ErrorFrame({ error: `${errorPrefix}: ${errorMessage(e)}` });
+          return;
+        }
+        lastError = e;
+      }
+    }
+    yield new ErrorFrame({ error: `${errorPrefix}: ${errorMessage(lastError)}` });
   }
 }

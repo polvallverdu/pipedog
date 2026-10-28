@@ -10,8 +10,8 @@ different credentials:
 
 - **`GeminiSTTService`**: streams audio to a Gemini Live transcription model
   (`gemini-3.5-transcribe-live` by default) over the Gemini Live API. Authenticates with a
-  Gemini API key. Supports automatic language detection, language hints, adaptation phrases and
-  verbatim or smart transcription.
+  Gemini API key, or with Google Cloud credentials on Vertex AI. Supports automatic language
+  detection, language hints, adaptation phrases and verbatim or smart transcription.
 - **`GoogleSTTService`**: Google Cloud Speech-to-Text V2 streaming recognition. Authenticates
   with a Google Cloud service account or Application Default Credentials (ADC). Supports
   multiple languages, phrase-set adaptation, denoising and automatic stream renewal.
@@ -48,7 +48,9 @@ import { GoogleSTTService } from "@pipedog/google/stt";
 ## Prerequisites
 
 - **`GeminiSTTService`**: a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey),
-  passed as `apiKey`. The examples read it from `GOOGLE_API_KEY`.
+  passed as `apiKey`. The examples read it from `GOOGLE_API_KEY`. On Vertex AI
+  (`vertexai: true`), a Google Cloud project with the Vertex AI API enabled, and a service
+  account key or ADC instead.
 - **`GoogleSTTService`**: a Google Cloud project with the Speech-to-Text API enabled, and a
   service account key (as a file or a JSON string) or ADC. The examples read
   `GOOGLE_APPLICATION_CREDENTIALS` (a key file path) or `GOOGLE_CREDENTIALS_JSON` (the key
@@ -81,13 +83,47 @@ With language hints, adaptation phrases and smart transcription:
 
 <include cwd>snippets/services/stt-google-gemini.ts#hints</include>
 
+### Vertex AI
+
+`vertexai: true` (pipedog only) connects through Vertex AI instead of the Gemini Developer API.
+It takes `location` (required, e.g. `"eu"` for data residency), `projectId` (defaults to
+`GOOGLE_CLOUD_PROJECT`), and `credentials` (a service account JSON string) or `credentialsPath`,
+falling back to Application Default Credentials, as the Vertex LLM services do. `apiKey` is
+rejected in this mode.
+
+<include cwd>snippets/services/stt-google-gemini.ts#vertex</include>
+
+Vertex's Live API rejects the `languageAuto` and `languageHints` fields, so in this mode the
+language codes are sent as `inputAudioTranscription.languageCodes`, and no codes means automatic
+detection. `languageAuto: false` has no Vertex equivalent and is ignored.
+
+### Reported language
+
+Each transcription frame carries the language the model reports. That value can be wrong,
+especially on short utterances. With `reportDetectedLanguage: false` (pipedog only), frames carry
+the configured language when exactly one is configured, and `null` otherwise.
+
+### Changing languages during a session
+
+`setLanguageCodes(codes)` (pipedog only) sets the language codes to transcribe, for example when
+the bot switches language. The codes are sent as-is and take precedence over the `language` and
+`languages` settings until one of those is updated. An empty list means automatic detection. Pass
+a function (`() => string[]`) to have the codes read each time they are needed.
+
+<include cwd>snippets/services/stt-google-gemini.ts#switch-language</include>
+
+The session does not reconnect at once. When the codes differ from the ones it was opened with,
+the service reconnects on the next `BotStartedSpeakingFrame`. If the user is mid-turn then, it
+waits until the turn ends, so no utterance is cut off. Audio that arrives while it reconnects is
+buffered and sent to the new session. `GoogleSTTService` has the same method.
+
 ### Event handlers
 
 | Event | Description |
 |---|---|
 | `on_connected` | Connected to the Gemini Live API. |
 | `on_disconnected` | Disconnected from the Gemini Live API. |
-| `on_connection_error` | Three connection attempts failed in a row; the service stops retrying. |
+| `on_connection_error` | The first connection failed, or three connection attempts failed in a row; the service stops retrying. |
 
 ### Notes
 
@@ -98,6 +134,10 @@ With language hints, adaptation phrases and smart transcription:
   schedule.
 - Language hints and automatic detection are mutually exclusive. If both are set, hints win.
 - Any settings change reconnects the session.
+- The Live session is opened in the background when the `StartFrame` arrives, so the
+  `StartFrame` (and the bot's first words) don't wait for it. Audio is buffered until the session
+  is live. Upstream holds the `StartFrame` until the session is open; `awaitConnectionOnStart:
+  true` (pipedog only) does the same.
 - Audio is sent at the pipeline's input sample rate. The model works best with 16 kHz mono PCM.
 
 ## GoogleSTTService
@@ -182,12 +222,50 @@ const stt = new GoogleSTTService({
 });
 ```
 
+### Switching languages mid-call
+
+`setLanguageCodes(codes)` (pipedog only, the same API as `GeminiSTTService`) changes the
+`languageCodes` without cutting off the user: when the codes differ from the current ones, the
+stream reconnects on the next `BotStartedSpeakingFrame`, or once the user's turn ends if they are
+speaking over the bot. Pass a function to have the codes read again each time the bot starts
+speaking; it stays in effect until the `language`, `languages` or `languageCodes` setting is
+updated.
+
+```ts
+await stt.setLanguageCodes(["es-ES", "en-US"]);
+// or follow the bot's language:
+await stt.setLanguageCodes(() => [currentLanguageCode()]);
+```
+
+### Sharing a client and prewarming
+
+With `sharedClient: true` (pipedog only), services with the same `location`, credentials,
+`clientOptions` and `speechModule` use one Speech client per process instead of one each, so a
+server running one pipeline per call opens one gRPC channel and fetches tokens once.
+`prewarm()` connects it ahead of time (it loads the SDK, resolves the project ID, opens the
+channel and fetches a token) and returns `false` with a warning instead of throwing if that
+fails; the first stream then connects as usual.
+
+```ts
+const sttOptions = { location: "eu", sharedClient: true };
+await new GoogleSTTService(sttOptions).prewarm(); // at server start-up
+// per call:
+const stt = new GoogleSTTService({ ...sttOptions, settings: new GoogleSTTService.Settings({ model: "chirp_3" }) });
+```
+
+It is off by default, as upstream builds a client per service, because a shared client puts
+every concurrent stream of the process on one gRPC channel. Services never close their client,
+so one call ending doesn't affect the others.
+
 ## Runtime notes
 
 <RuntimeMatrix pkg="@pipedog/google" />
 
 `GeminiSTTService` uses `GoogleGenAI` from `@google/genai`, which opens the Live API over the
-global `WebSocket` and runs on Bun, Node, Deno and Cloudflare Workers.
+global `WebSocket` and runs on Bun, Node, Deno and Cloudflare Workers. In Vertex AI mode it
+authenticates through google-auth-library, which only the SDK's Node build supports, so that mode
+runs on Bun, Node and Deno, not on Workers. The client is created on first connect, so a subclass
+that overrides `_createClient()` can read its own fields there.
 
 Cloud Speech-to-Text V2 streaming is gRPC only, so `GoogleSTTService` loads the Node SDK
 `@google-cloud/speech` lazily on first connect. That needs a Node-compatible runtime, not

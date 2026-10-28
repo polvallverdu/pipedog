@@ -169,21 +169,75 @@ Multi-speaker (Cloud backend only):
 - A voice that is neither in `AVAILABLE_VOICES` nor a `voice_...` ID logs a warning and is used
   anyway.
 
+### Retrying blocked sentences
+
+Gemini TTS sometimes refuses a harmless sentence as a possible violation of Google's usage
+guidelines, at times after part of its audio has played, and the same request usually goes
+through on the next try. By default (as upstream) the sentence is lost and an `ErrorFrame` goes
+upstream. With `retryOnBlocked` (pipedog only), the service asks for the sentence again:
+
+```ts
+const tts = new GeminiTTSService({
+  credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  settings: new GeminiTTSSettings({ voice: "Kore", prompt: "Warm and calm." }),
+  retryOnBlocked: {
+    retries: 1, // the default; `retryOnBlocked: true` is this alone
+    // Only when part of the sentence already played: it starts over with this text.
+    restartText: (text) => `Sorry, ${text}`,
+    // Still blocked after the retries: one last attempt with these settings.
+    fallback: new GeminiTTSSettings({ prompt: null }),
+  },
+});
+```
+
+- Only the usage-guidelines block is retried (`isGeminiTTSBlockedError()`): Cloud
+  Text-to-Speech's INVALID_ARGUMENT that says so, the Gemini API's 400 that says so, or a Gemini
+  API response blocked with no audio. Other errors fail the sentence as before.
+- Audio that already played can't be taken back, so a sentence blocked midway starts over from
+  the beginning, as `restartText(text)` if given, instead of continuing from the middle.
+- `fallback` is either a `GeminiTTSSettings` delta used for that last attempt only (without the
+  style prompt, or on the Cloud backend a Chirp 3 HD voice:
+  `new GeminiTTSSettings({ model: null, prompt: null, voice: "en-US-Chirp3-HD-Kore" })`), or a
+  function `(text, contextId) => AsyncIterable<Frame>`, such as another TTS service's `runTts`
+  at the same sample rate.
+- If every attempt is blocked, the sentence fails with one `ErrorFrame`, as without the option.
+  Restarted and fallback audio is never stored in the audio cache.
+
 ## Sharing a client and streaming options
 
 These options are pipedog additions:
 
+- `sharedClient` (the three Cloud TTS services, and the Cloud backend of `GeminiTTSService`):
+  use one client per process for the same endpoint (`location`), credentials and
+  `clientOptions`, instead of one per service. Building a client costs a credential lookup, a
+  TLS handshake and a token fetch on the first sentence; a server running one pipeline per call
+  pays that once. Call `prewarm()` at start-up to pay it before the first call: it loads the
+  SDK, opens the gRPC channel and fetches a token, and returns `false` (with a warning) instead
+  of throwing if that fails, in which case the first sentence connects as usual.
+
+  ```ts
+  const ttsOptions = { location: "eu", sharedClient: true };
+  // At server start-up: a throwaway service warms the shared client.
+  await new GeminiTTSService(ttsOptions).prewarm();
+
+  // Per call: every service uses that client.
+  const tts = new GeminiTTSService({ ...ttsOptions, settings: new GeminiTTSSettings({ voice: "Kore" }) });
+  ```
+
+  It is off by default (each service builds its own client, as upstream) because a shared
+  client puts every concurrent stream of the process on one gRPC channel. Services never close
+  a client, so one call ending doesn't affect the others. `getSharedGoogleCloudTTSClient(options)`
+  returns the same shared client. The Gemini API backend talks HTTP with an API key, so it has
+  nothing to share or prewarm.
 - `client` (`GoogleTTSService` and the Cloud backend of `GeminiTTSService`): a
-  `GoogleCloudTTSClient` to use instead of building one per service. Building a client costs a
-  credential lookup, a TLS handshake and a token fetch on the first sentence, so share one
-  across calls:
+  `GoogleCloudTTSClient` to use instead of building one, for full control over sharing:
 
   ```ts
   const client = createGoogleCloudTTSClient({ apiEndpoint: "eu-texttospeech.googleapis.com" });
   const tts = new GeminiTTSService({ client, settings: new GeminiTTSSettings({ voice: "Kore" }) });
   ```
 
-  With `client`, the credentials, `location` and `clientOptions` are not used.
+  With `client`, the credentials, `location`, `clientOptions` and `sharedClient` are not used.
 - `bufferOnlyStartup` (`GoogleTTSService`, `GeminiTTSService`): upstream re-cuts the audio into
   `chunkSize` pieces (0.5 s) for the whole utterance, which holds back up to one piece throughout.
   With `bufferOnlyStartup: true`, only the start is buffered; after the first `chunkSize` bytes,
@@ -191,6 +245,30 @@ These options are pipedog additions:
 
 Both streaming services treat a gRPC CANCELLED error, which is what an interrupted stream
 reports, as a quiet end of synthesis instead of an error.
+
+## Pre-synthesized lines
+
+All three services (and both backends of `GeminiTTSService`) work with the
+[TTS audio cache](/docs/concepts/tts-audio-cache): give them an `audioCache` and call
+`warmAudioCache()` for fixed lines such as a greeting or a filler, and those sentences play from
+memory with no request to Google.
+
+```ts
+const audioCache = new TTSAudioCache(); // one per process
+const tts = new GeminiTTSService({ location: "eu", audioCache });
+
+// While an outbound call rings, before the pipeline starts:
+await tts.warmAudioCache("Hi! This is the clinic calling about your appointment.", {
+  sampleRate: 24000, // the rate the service will run at
+});
+```
+
+The cache key covers the text, the settings (model, voice, language, `prompt`, `speakingRate`
+and the rest), the sample rate, and what changes the audio outside the settings: the backend of
+`GeminiTTSService` and the `voiceCloningKey` of `GoogleTTSService` (hashed). A settings change
+therefore misses the cache instead of playing the old voice. Warming works before the pipeline
+starts, since the client is created with the service; pass `sampleRate` unless the service has
+one.
 
 ## Event handlers
 
