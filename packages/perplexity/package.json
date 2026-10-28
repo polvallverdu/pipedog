@@ -49,7 +49,7 @@
       "workerd"
     ],
     "upstream": [
-      "src/pipecat/adapters/services/perplexity_adapter.py",
+      "src/pipecat/adapters/llm/services/perplexity_adapter.py",
       "src/pipecat/services/perplexity"
     ]
   }

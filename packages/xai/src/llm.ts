@@ -14,7 +14,7 @@
  * `settings`).
  */
 
-import type { OpenAILLMInvocationParams } from "@pipedog/core/adapters/services/open_ai_adapter";
+import type { OpenAILLMInvocationParams } from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import type { LLMTokenUsage } from "@pipedog/core/metrics/metrics";
 import { logger } from "@pipedog/core/utils/logger";
 import { isGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";

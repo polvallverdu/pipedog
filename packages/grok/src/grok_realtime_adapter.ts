@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/grok_realtime_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/grok_realtime_adapter.py
 
 /**
  * Grok Realtime LLM adapter for Pipecat.

@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/schemas/function_schema.py
+// Ported from pipecat: src/pipecat/adapters/llm/schemas/function_schema.py
 
 /**
  * Function schema utilities for AI tool definitions.
@@ -12,7 +12,7 @@
  * different AI service providers.
  */
 
-import type { FunctionCallHandler } from "../../services/llm_service.ts";
+import type { FunctionCallHandler } from "../../../services/llm_service.ts";
 
 export interface FunctionSchemaOptions {
   /** Name of the function to be called. */

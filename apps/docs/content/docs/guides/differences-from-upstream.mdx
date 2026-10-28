@@ -25,7 +25,7 @@ These differences apply everywhere, not to one module. They come from the portin
 | Bytes | `bytes`. | `Uint8Array`, never `Buffer`. | `Buffer` is a Node API. Core imports no `node:*` modules except `node:async_hooks`. |
 | Filesystem | `aiofiles`, `pathlib`. | An injected reader or `fs` object (`node:fs/promises` satisfies it). | Core never imports `node:fs`. |
 | WebSocket handshake | The `websockets` package exposes the handshake response. | A standard `WebSocket` does not, so response headers and the HTTP status of a refused handshake are not available. | The standard API has no access to them. Affected services are listed below. |
-| Deprecated APIs | Kept until removal, with warnings. | Not ported: deprecated classes, aliases, parameters and fields are left out. | pipedog starts without the deprecated surface. Each module's dropped items are in its `notes` in `porting/manifest.json`. |
+| Deprecated APIs | Kept until removal, with warnings. | Not ported: deprecated classes, aliases, parameters and fields are left out. | pipedog starts without the deprecated surface. Each module's dropped items are in its `notes` in `porting/manifest.json`. Moved modules exist only at their new path: the LLM adapters are under `adapters/llm` (pipecat 1.14 keeps the old `pipecat.adapters.*` paths as deprecated shims). |
 | Pillow | Decodes and encodes images. | Built-in or injectable decoders and encoders (for example `utils/jpeg_encoder.ts`, an `imageDecoder` option). | No native dependencies. |
 | `GRPC_ENABLE_FORK_SUPPORT` | Set to false at import by the Google services. | Not set. | There is no fork in JS. |
 
@@ -112,7 +112,7 @@ These differences apply everywhere, not to one module. They come from the portin
   description and parameter types come from optional `DirectFunctionMetadata` attached to the
   function. Parameters without metadata get an any-type schema. Minified functions lose their
   parameter names, so direct functions must ship unminified.
-  `packages/core/src/adapters/schemas/direct_function.ts`
+  `packages/core/src/adapters/llm/schemas/direct_function.ts`
 - **Collected tools are unbound.** `_collectTools` returns the methods found on the prototype
   chain, not bound methods, because a bound function does not expose the source its schema is
   read from. `LLMWorker` binds each one when it registers it.

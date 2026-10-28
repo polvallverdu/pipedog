@@ -7,8 +7,8 @@
 
 import { expect, test } from "bun:test";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { LLMRunFrame, MetricsFrame } from "@pipedog/core/frames/frames";
 import { LLMUsageMetricsData } from "@pipedog/core/metrics/metrics";
 import { Pipeline } from "@pipedog/core/pipeline/pipeline";

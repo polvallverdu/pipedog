@@ -51,9 +51,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Dropped as deprecated: the __init_subclass__ warning for a sync get_llm_invocation_params. Kept: _warnContextSystemMessage, which still handles deprecated context system messages, now as a logger.warning instead of warn_deprecated. builtinTools is a Record<string, FunctionSchema>, not a Map, to match how services/llm_service.ts uses it. warnings.warn(UserWarning) became logger.warning. urlsplit().scheme became a urlScheme() helper. The broad catch in prepareFileContent calls rethrowIfCancelled. getLlmInvocationParams takes (context, options?: object). | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.llm",
@@ -67,9 +67,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.* (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.base_llm_adapter",
@@ -102,9 +102,9 @@
         "test_nvidia_omni_llm.py",
         "test_openai_llm_timeout.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.* (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.schemas",
@@ -118,9 +118,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.* (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.schemas.direct_function",
@@ -147,9 +147,9 @@
         "test_realtime_service_tool_sync.py",
         "test_ui_worker.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.* (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.schemas.function_schema",
@@ -178,9 +178,9 @@
         "test_perplexity_agent_llm.py",
         "test_realtime_service_tool_sync.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.* (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.schemas.tools_schema",
@@ -211,9 +211,9 @@
         "test_perplexity_agent_llm.py",
         "test_realtime_service_tool_sync.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.* (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services",
@@ -227,9 +227,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.* (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.anthropic_adapter",
@@ -256,9 +256,9 @@
         "test_get_llm_invocation_params.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.aws_nova_sonic_adapter",
@@ -281,9 +281,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.azure_voice_live_adapter",
@@ -309,9 +309,9 @@
         "test_azure_voice_live_adapter.py",
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.bedrock_adapter",
@@ -339,7 +339,7 @@
       ],
       "status": "todo",
       "portedAt": null,
-      "notes": ""
+      "notes": "moved from pipecat.adapters.services (#6331); re-port the diff since 5558d26dca: Bedrock thinking round-trip (#6229)"
     },
     {
       "module": "pipecat.adapters.llm.services.deepseek_adapter",
@@ -360,9 +360,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.gemini_adapter",
@@ -388,9 +388,9 @@
         "test_get_llm_invocation_params.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.gemini_live_adapter",
@@ -410,9 +410,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.grok_realtime_adapter",
@@ -437,9 +437,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.inworld_realtime_adapter",
@@ -465,9 +465,9 @@
         "test_function_calling_adapters.py",
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.mistral_adapter",
@@ -486,9 +486,9 @@
         "openai"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.nvidia_omni_adapter",
@@ -540,9 +540,9 @@
         "test_run_inference.py",
         "test_sarvam_llm.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.* (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.open_ai_live_adapter",
@@ -566,9 +566,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.open_ai_realtime_adapter",
@@ -595,9 +595,9 @@
         "test_function_calling_adapters.py",
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.open_ai_responses_adapter",
@@ -623,9 +623,9 @@
         "test_get_llm_invocation_params.py",
         "test_openai_responses_logging.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.llm.services.perplexity_adapter",
@@ -646,9 +646,9 @@
       "tests": [
         "test_get_llm_invocation_params.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "moved from pipecat.adapters.services (#6331)"
     },
     {
       "module": "pipecat.adapters.schemas",
@@ -662,9 +662,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "ported",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "Empty upstream __init__.py; index.ts is `export {}`. | UNRESOLVED: Minor, left as is: Python's json.dumps escapes non-ASCII and JSON.stringify does not, so the wire bytes differ but parse to the same values. JSONMessageSerializer serializes a dataclass from Object.entries, not dataclasses.fields, and passes every decoded field to the constructor instead of splitting init and non-init fields. str()/repr() of None, floats and bools in classifier error messages and in OpenAI Decisions probability keys does not match Python exactly (for example 'None' vs '', 1.0 vs 1)."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.schemas.direct_function",
@@ -681,9 +681,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. DIVERGENCE: JS has no runtime type hints or docstrings. Parameter names and required-ness (no default value) are parsed from the function source. The description and per-parameter types come from optional metadata on the function (DirectFunctionMetadata: description, and parameters as JSON schemas, JS constructors, null, or unions given as arrays). Parameters with no metadata get {}. Minified functions lose their parameter names. invoke(args, params) passes args by matching names to the parsed parameters. The async check uses constructor.name === 'AsyncFunction'. tool_options became toolOptions(fn, opts?) or toolOptions(opts)(fn), which sets _pipecatCancelOnInterruption, _pipecatTimeoutSecs and _pipecatCancellableByLlm. llm_service.ts reads these same names. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.schemas.function_schema",
@@ -700,9 +700,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. The constructor takes an options object: new FunctionSchema({name, description, properties, required, handler}). | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.schemas.tools_schema",
@@ -719,9 +719,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. The constructor takes an options object: new ToolsSchema({standardTools, customTools}). customTools is a Partial<Record<AdapterType, object[]>> keyed by the enum string values. AdapterType is an as-const enum. | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services",
@@ -735,9 +735,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "ported",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "Empty upstream __init__.py; index.ts is `export {}`. | UNRESOLVED: Minor, left as is: Python's json.dumps escapes non-ASCII and JSON.stringify does not, so the wire bytes differ but parse to the same values. JSONMessageSerializer serializes a dataclass from Object.entries, not dataclasses.fields, and passes every decoded field to the constructor instead of splitting init and non-init fields. str()/repr() of None, floats and bools in classifier error messages and in OpenAI Decisions probability keys does not match Python exactly (for example 'None' vs '', 1.0 vs 1)."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.anthropic_adapter",
@@ -754,9 +754,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Port is at packages/anthropic/src/anthropic_adapter.ts. Nothing upstream is deprecated, so nothing was dropped. tsc shows no errors in this file and biome is clean. No @anthropic-ai/sdk types are imported: MessageParam, TextBlockParam, ToolUnionParam and CacheControlEphemeralParam are declared structurally, as open_ai_adapter.ts does. ANTHROPIC_NOT_GIVEN is undefined and anthropicIsGiven is a type guard. getLlmInvocationParams(context, options) takes enablePromptCaching (required), systemInstruction, ensureLastMessageIsUser and systemPromptCacheTtl in one options object. The nested dataclass ConvertedMessages is exported at top level and also exposed as the static AnthropicLLMAdapter.ConvertedMessages. Python copy.deepcopy becomes structuredClone and json.loads becomes pyJsonLoads. Python's `tools or []` is handled with an isGiven-aware helper, because the TS NOT_GIVEN is a truthy object. Conversion errors are wrapped in LLMContextConversionError after rethrowIfCancelled. I created packages/anthropic (package.json, tsconfig.json). Another agent has since added the @anthropic-ai/sdk dependency to package.json, and I left it in place. pipecat.runtimes is [] until compat is run."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.aws_nova_sonic_adapter",
@@ -773,9 +773,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Ported 1:1; tool schemas serialized with pyJsonDumps."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.azure_voice_live_adapter",
@@ -792,9 +792,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/azure/src/azure_voice_live_adapter.ts. Packed-history text uses JSON.stringify(..., null, 2), as the OpenAI realtime adapter port (pyJsonDumps has no indent)."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.bedrock_adapter",
@@ -811,9 +811,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Inline bytes kept as Uint8Array; the service base64-encodes them on the wire as boto3 does."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.deepseek_adapter",
@@ -830,9 +830,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/deepseek/src/deepseek_adapter.ts. Tested by packages/deepseek/test/test_deepseek_adapter.test.ts (TestDeepSeekGetLLMInvocationParams of tests/test_get_llm_invocation_params.py)."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.gemini_adapter",
@@ -849,9 +849,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Ported in full to /Users/pol/vscode/pipedog/packages/google/src/gemini_adapter.ts. Nothing upstream is deprecated, so nothing was dropped. Differences from upstream: (1) Messages are @google/genai Content/Part plain objects, so part fields use camelCase (inlineData, functionCall, thoughtSignature). The getMessagesForLogging copy has camelCase keys too, not the Python SDK's snake_case to_json_dict(). (2) The JS SDK carries bytes as base64 strings, so inline data and thought signatures are base64-encoded. prefersRawFileBytes stays true, so the resolver still caches raw bytes. The placeholder signature is the base64 of 'skip_thought_signature_validator'. A bookmark signature given as a Uint8Array is base64-encoded before it is applied. (3) Inline-data bookmark matching compares decoded byte lengths and accepts either base64 text or a Uint8Array. (4) Part.from_uri without a MIME type uses a local extension table in place of Python's mimetypes.guess_type, and throws 'Failed to determine mime type for file: ...' like upstream when the type is unknown. (5) The nested dataclasses (ConvertedMessages, MessageConversionResult, MessageConversionParams) are classes at module level and are also static members of GeminiLLMAdapter. (6) The (note, tool) warned-pairs set is keyed by a JSON string. tsc and biome pass for this file. | UNRESOLVED: gemini_adapter.ts _thoughtSignatureBookmarkMatchesPart logs the unknown bookmark with JSON.stringify where upstream uses a Python dict repr. Only the format of a warning log line differs, and core has no pyRepr helper, so I left it. | UNRESOLVED: gemini_adapter.ts _addPlaceholderThoughtSignatures and _applyThoughtSignaturesToMessages: upstream filters with isinstance(message, Content). The JS SDK's Content is a plain object with no class, so the port cannot tell a raw dict from Content and treats any object as Content. This cannot be fixed without a class to check against."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.gemini_live_adapter",
@@ -868,9 +868,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Ported in full to /Users/pol/vscode/pipedog/packages/google/src/gemini_live_adapter.ts. getLlmInvocationParams takes { systemInstruction, serviceTools } and uses _realtimeSessionTools(...) ?? NOT_GIVEN. _convertToolCallsToText is a protected static. One small difference: in the '[Function X returned ...]' text, non-string tool content is stringified by JS template rules, not Python's repr. tsc and biome pass for this file. | UNRESOLVED: gemini_adapter.ts _thoughtSignatureBookmarkMatchesPart logs the unknown bookmark with JSON.stringify where upstream uses a Python dict repr. Only the format of a warning log line differs, and core has no pyRepr helper, so I left it. | UNRESOLVED: gemini_adapter.ts _addPlaceholderThoughtSignatures and _applyThoughtSignaturesToMessages: upstream filters with isinstance(message, Content). The JS SDK's Content is a plain object with no class, so the port cannot tell a raw dict from Content and treats any object as Content. This cannot be fixed without a class to check against."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.grok_realtime_adapter",
@@ -887,9 +887,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. DIVERGENCE: implemented in packages/xai/src/grok_realtime_adapter.ts (next to the service that uses it; @pipedog/grok depends on @pipedog/xai, not the reverse); packages/grok/src/grok_realtime_adapter.ts re-exports it."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.inworld_realtime_adapter",
@@ -906,9 +906,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/inworld/src/inworld_realtime_adapter.ts. Packed history uses JSON.stringify(indent 2), like the OpenAI Realtime adapter port (integral floats print as ints)."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.mistral_adapter",
@@ -925,9 +925,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/mistral/src/mistral_adapter.ts (copy.deepcopy -> structuredClone). No upstream test; covered through test/mistral_llm_client.test.ts."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.nvidia_omni_adapter",
@@ -944,9 +944,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.open_ai_adapter",
@@ -963,9 +963,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Core does not depend on the openai SDK, so the ChatCompletion* types are declared structurally. OPENAI_NOT_GIVEN is undefined, which is how the JS SDK omits a field, and openaiIsGiven checks for !== undefined. getLlmInvocationParams(context, {systemInstruction?, convertDeveloperToUser}). | UNRESOLVED: audio/krisp_instance.ts: the krisp_audio SDK is a stub until setKrispAudioSdk() is called. LocalSmartTurnAnalyzerV3 needs an injected createSession (an ONNX runtime), and the PIPECAT_SMART_TURN_LOG_DATA WAV dump is a stub that only logs a warning because core has no filesystem. | UNRESOLVED: adapters/schemas/direct_function.ts: upstream sets each parameter's 'description' from the docstring. The TS metadata (DirectFunctionMetadata) has no per-parameter description field, so descriptions only appear if they are put inside the JSON-schema hint. Also, DirectFunctionWrapper.invoke silently drops extra argument names, where Python's function(params=..., **args) raises TypeError. Fixing either would mean inventing API, so I left both. | UNRESOLVED: audio/turn/smart_turn/base_smart_turn.ts: an edge case remains. If sampleRate is 0, maxSamples is 0; Python's segment_audio[-0:] keeps the whole array, while the TS slice gives an empty one. It only happens if setSampleRate was never called, so I left it. | UNRESOLVED: audio/utils.ts: the reimplemented ITU-R BS.1770 integratedLoudness (replacing the Python 'loudness' package) and the float32 accumulation in the whisper-feature normalization could not be checked numerically against upstream here. No tests exist for these modules."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.open_ai_live_adapter",
@@ -982,9 +982,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/openai/src/open_ai_live_adapter.ts. Imports ./live/events.ts (InputItem, InputTextContent, OutputTextContent, MAX_INPUT_ITEMS; pydantic models assumed as classes with camelCase options constructors), which another agent has not written yet: that is the only remaining tsc error. Python's `from_standard_tools(...) or []` is mapped explicitly, because NOT_GIVEN is truthy in JS. A local pyRepr formats role=... in the debug log the way Python does. | UNRESOLVED: packages/openai/src/open_ai_realtime_adapter.ts: upstream builds the packed history text with json.dumps(indent=2, ensure_ascii=False), but the port uses JSON.stringify because core's pyJsonDumps has no indent option. Output differs only for numbers that Python and JS write differently. Adding indent to core/utils/py_json.ts is outside this task's files. | UNRESOLVED: Log and error messages that format a dict with Python's {msg} (open_ai_realtime_adapter's logger.error and its ValueError) use JSON.stringify in the port, so they show JSON rather than Python dict repr. Core has no shared Python repr helper. | UNRESOLVED: Typecheck reports two missing modules, ./live/events.ts and ./realtime/events.ts. These are expected: other agents are porting them concurrently. No other type or lint errors in the three files."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.open_ai_realtime_adapter",
@@ -1001,9 +1001,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/openai/src/open_ai_realtime_adapter.ts. Imports ./realtime/events.ts (ConversationItem, ItemContent with camelCase options such as callId), not written yet: that is the only remaining tsc error. The nested ConvertedMessages dataclass is now an exported class and also a static member of the adapter. DIVERGENCE: json.dumps(messages, indent=2, ensure_ascii=False) uses JSON.stringify(…, null, 2) because pyJsonDumps has no indent option. Output is the same except integral floats (1.0 becomes 1). ValueError is thrown as a plain Error. | UNRESOLVED: packages/openai/src/open_ai_realtime_adapter.ts: upstream builds the packed history text with json.dumps(indent=2, ensure_ascii=False), but the port uses JSON.stringify because core's pyJsonDumps has no indent option. Output differs only for numbers that Python and JS write differently. Adding indent to core/utils/py_json.ts is outside this task's files. | UNRESOLVED: Log and error messages that format a dict with Python's {msg} (open_ai_realtime_adapter's logger.error and its ValueError) use JSON.stringify in the port, so they show JSON rather than Python dict repr. Core has no shared Python repr helper. | UNRESOLVED: Typecheck reports two missing modules, ./live/events.ts and ./realtime/events.ts. These are expected: other agents are porting them concurrently. No other type or lint errors in the three files."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.open_ai_responses_adapter",
@@ -1020,9 +1020,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/openai/src/open_ai_responses_adapter.ts. No dependency on the openai SDK: ResponseInputItemParam, ToolParam and FunctionToolParam are declared structurally, and NOT_GIVEN is undefined via core's openaiFromLlmContextTools, as in core open_ai_adapter.ts. DIVERGENCE: for tool messages whose content is not a string, Python's str(content) (a Python repr) is replaced by pyJsonDumps for objects. The except ValueError around inlinedFileContent is a broad catch with rethrowIfCancelled that wraps the error in LLMContextConversionError. Type-checks cleanly. Also created packages/openai/package.json (deps @pipedog/core and @pipedog/asyncio workspace:*, pipecat block with empty runtimes) and tsconfig.json modelled on google. Symlinked packages/openai/node_modules/@pipedog/{core,asyncio} so tsc resolves the imports; run bun install to make the links properly. | UNRESOLVED: packages/openai/src/open_ai_realtime_adapter.ts: upstream builds the packed history text with json.dumps(indent=2, ensure_ascii=False), but the port uses JSON.stringify because core's pyJsonDumps has no indent option. Output differs only for numbers that Python and JS write differently. Adding indent to core/utils/py_json.ts is outside this task's files. | UNRESOLVED: Log and error messages that format a dict with Python's {msg} (open_ai_realtime_adapter's logger.error and its ValueError) use JSON.stringify in the port, so they show JSON rather than Python dict repr. Core has no shared Python repr helper. | UNRESOLVED: Typecheck reports two missing modules, ./live/events.ts and ./realtime/events.ts. These are expected: other agents are porting them concurrently. No other type or lint errors in the three files."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.services.perplexity_adapter",
@@ -1039,9 +1039,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/perplexity/src/perplexity_adapter.ts (copy.deepcopy -> structuredClone). Tested by packages/perplexity/test/test_perplexity_adapter.test.ts (TestPerplexityGetLLMInvocationParams of tests/test_get_llm_invocation_params.py)."
+      "status": "skipped",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "deprecated upstream (1.14.0): re-export shim of pipecat.adapters.llm.* (#6331); not ported"
     },
     {
       "module": "pipecat.adapters.tts",
@@ -18117,8 +18117,8 @@
       "ts": "packages/core/test/test_adapters_llm_shims.test.ts",
       "imports": [],
       "needsModules": 0,
-      "status": "todo",
-      "notes": ""
+      "status": "skipped",
+      "notes": "tests the deprecated pipecat.adapters.* re-export shims, which are not ported"
     },
     {
       "file": "tests/test_aggregated_frame_sequencer.py",

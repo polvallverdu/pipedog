@@ -5,8 +5,8 @@
 // tools and tool choice.
 
 import { describe, expect, test } from "bun:test";
-import { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { LLMContext, LLMSpecificMessage } from "@pipedog/core/processors/aggregators/llm_context";
 import { AI_SDK_LLM_ID, AISDKLLMAdapter } from "../src/ai_sdk_adapter.ts";
 

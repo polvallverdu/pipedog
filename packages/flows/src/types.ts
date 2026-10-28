@@ -46,8 +46,8 @@ import {
   type DirectFunctionMetadata,
   type ToolOptionsMetadata,
   toolOptions,
-} from "@pipedog/core/adapters/schemas/direct_function";
-import { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
+} from "@pipedog/core/adapters/llm/schemas/direct_function";
+import { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
 import type { LLMStandardMessage } from "@pipedog/core/processors/aggregators/llm_context";
 import { InvalidFunctionError } from "./exceptions.ts";
 import type { FlowManager } from "./manager.ts";

@@ -6,8 +6,8 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { FunctionSchema } from "../src/adapters/schemas/function_schema.ts";
-import { AdapterType, ToolsSchema } from "../src/adapters/schemas/tools_schema.ts";
+import { FunctionSchema } from "../src/adapters/llm/schemas/function_schema.ts";
+import { AdapterType, ToolsSchema } from "../src/adapters/llm/schemas/tools_schema.ts";
 import {
   AggregatedTextFrame,
   BotStartedSpeakingFrame,

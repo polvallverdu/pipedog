@@ -37,11 +37,11 @@ import {
   TimeoutError,
   waitFor,
 } from "@pipedog/asyncio";
-import type { BaseLLMAdapter } from "@pipedog/core/adapters/base_llm_adapter";
+import type { BaseLLMAdapter } from "@pipedog/core/adapters/llm/base_llm_adapter";
 import {
   OPENAI_NOT_GIVEN,
   type OpenAINotGiven,
-} from "@pipedog/core/adapters/services/open_ai_adapter";
+} from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import {
   type Frame,
   FunctionCallFromLLM,

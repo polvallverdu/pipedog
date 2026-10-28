@@ -55,7 +55,7 @@
       "src/pipecat/services/xai/stt.py",
       "src/pipecat/services/xai/tts.py",
       "src/pipecat/services/xai/realtime",
-      "src/pipecat/adapters/services/grok_realtime_adapter.py"
+      "src/pipecat/adapters/llm/services/grok_realtime_adapter.py"
     ]
   }
 }

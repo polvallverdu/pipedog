@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/base_llm_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/base_llm_adapter.py
 
 /**
  * Base adapter for LLM provider integration.
@@ -17,13 +17,13 @@ import {
   type LLMContextMessage,
   LLMSpecificMessage,
   type NotGiven,
-} from "../processors/aggregators/llm_context.ts";
-import { base64ToBytes } from "../utils/base64.ts";
-import { warnDeprecated } from "../utils/deprecation.ts";
-import type { FileResolver } from "../utils/file_resolver.ts";
-import { logger } from "../utils/logger.ts";
-import { UrlReachability } from "../utils/security/ssrf.ts";
-import { isGiven } from "../utils/types.ts";
+} from "../../processors/aggregators/llm_context.ts";
+import { base64ToBytes } from "../../utils/base64.ts";
+import { warnDeprecated } from "../../utils/deprecation.ts";
+import type { FileResolver } from "../../utils/file_resolver.ts";
+import { logger } from "../../utils/logger.ts";
+import { UrlReachability } from "../../utils/security/ssrf.ts";
+import { isGiven } from "../../utils/types.ts";
 import type { FunctionSchema } from "./schemas/function_schema.ts";
 import { ToolsSchema } from "./schemas/tools_schema.ts";
 

@@ -48,7 +48,7 @@
     "upstream": [
       "src/pipecat/services/grok/llm.py",
       "src/pipecat/services/grok/realtime",
-      "src/pipecat/adapters/services/grok_realtime_adapter.py"
+      "src/pipecat/adapters/llm/services/grok_realtime_adapter.py"
     ]
   }
 }

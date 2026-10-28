@@ -54,7 +54,7 @@
     ],
     "upstream": [
       "src/pipecat/services/azure",
-      "src/pipecat/adapters/services/azure_voice_live_adapter.py"
+      "src/pipecat/adapters/llm/services/azure_voice_live_adapter.py"
     ]
   }
 }

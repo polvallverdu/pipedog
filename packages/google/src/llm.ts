@@ -59,7 +59,7 @@ import {
 import {
   type BaseLLMAdapter,
   LLMContextConversionError,
-} from "@pipedog/core/adapters/base_llm_adapter";
+} from "@pipedog/core/adapters/llm/base_llm_adapter";
 import {
   AssistantImageRawFrame,
   type CancelFrame,

@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/mistral_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/mistral_adapter.py
 
 /**
  * Mistral LLM adapter for Pipecat.
@@ -30,7 +30,7 @@ import {
   OpenAILLMAdapter,
   type OpenAILLMInvocationParams,
   type OpenAILLMInvocationParamsOptions,
-} from "@pipedog/core/adapters/services/open_ai_adapter";
+} from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import type { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 
 /**

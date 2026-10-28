@@ -37,7 +37,7 @@ import {
   type Task,
   waitFor,
 } from "@pipedog/asyncio";
-import type { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import type { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { type FunctionCallRegistryItem, LLMService } from "@pipedog/core/services/llm_service";
 import { LLMSettings } from "@pipedog/core/services/settings";
 import {

@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/schemas/tools_schema.py
+// Ported from pipecat: src/pipecat/adapters/llm/schemas/tools_schema.py
 
 /**
  * Tools schema definitions for function calling adapters.

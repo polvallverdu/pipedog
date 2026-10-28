@@ -48,7 +48,7 @@
       "workerd"
     ],
     "upstream": [
-      "src/pipecat/adapters/services/anthropic_adapter.py",
+      "src/pipecat/adapters/llm/services/anthropic_adapter.py",
       "src/pipecat/services/anthropic"
     ]
   }

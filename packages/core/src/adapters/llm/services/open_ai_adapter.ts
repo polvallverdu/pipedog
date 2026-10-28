@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/open_ai_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/open_ai_adapter.py
 
 /**
  * OpenAI LLM adapter for Pipecat.
@@ -19,9 +19,9 @@ import type {
   LLMContextToolChoice,
   LLMStandardMessage,
   NotGiven,
-} from "../../processors/aggregators/llm_context.ts";
-import { LLMSpecificMessage } from "../../processors/aggregators/llm_context.ts";
-import { isGiven } from "../../utils/types.ts";
+} from "../../../processors/aggregators/llm_context.ts";
+import { LLMSpecificMessage } from "../../../processors/aggregators/llm_context.ts";
+import { isGiven } from "../../../utils/types.ts";
 import { BaseLLMAdapter, LLMContextConversionError } from "../base_llm_adapter.ts";
 import { AdapterType, type ToolsSchema } from "../schemas/tools_schema.ts";
 

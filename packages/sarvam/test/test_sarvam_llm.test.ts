@@ -27,7 +27,7 @@ import { CancelledError, TimeoutError } from "@pipedog/asyncio";
 import {
   OPENAI_NOT_GIVEN,
   type OpenAILLMInvocationParams,
-} from "@pipedog/core/adapters/services/open_ai_adapter";
+} from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import { LLMContextFrame } from "@pipedog/core/frames/frames";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import { FrameDirection } from "@pipedog/core/processors/frame_processor";

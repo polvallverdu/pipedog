@@ -65,8 +65,8 @@
       "workerd"
     ],
     "upstream": [
-      "src/pipecat/adapters/services/aws_nova_sonic_adapter.py",
-      "src/pipecat/adapters/services/bedrock_adapter.py",
+      "src/pipecat/adapters/llm/services/aws_nova_sonic_adapter.py",
+      "src/pipecat/adapters/llm/services/bedrock_adapter.py",
       "src/pipecat/services/aws"
     ]
   },

@@ -18,7 +18,7 @@ import { AnthropicLLMService, AnthropicLLMSettings } from "@pipedog/anthropic/ll
 import { createTask, monotonic, sleep } from "@pipedog/asyncio";
 import { WorkersAIFluxSTTService } from "@pipedog/cloudflare/flux_stt";
 import { WorkersAIAuraTTSService } from "@pipedog/cloudflare/tts";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { EndFrame, TTSSpeakFrame } from "@pipedog/core/frames/frames";
 import type { LatencyBreakdown } from "@pipedog/core/observers/user_bot_latency_observer";
 import { Pipeline } from "@pipedog/core/pipeline/pipeline";

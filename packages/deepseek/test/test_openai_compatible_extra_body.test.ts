@@ -22,7 +22,7 @@ import { expect, spyOn, test } from "bun:test";
 import {
   OPENAI_NOT_GIVEN,
   type OpenAILLMInvocationParams,
-} from "@pipedog/core/adapters/services/open_ai_adapter";
+} from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import { NOT_GIVEN } from "@pipedog/core/utils/types";
 import { BaseOpenAILLMService } from "@pipedog/openai/base_llm";
 import { InceptionLLMService } from "../../inception/src/llm.ts";

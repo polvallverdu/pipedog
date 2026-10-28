@@ -17,8 +17,8 @@
  */
 
 import { rethrowIfCancelled, type Task, time } from "@pipedog/asyncio";
-import type { BaseLLMAdapter } from "@pipedog/core/adapters/base_llm_adapter";
-import type { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import type { BaseLLMAdapter } from "@pipedog/core/adapters/llm/base_llm_adapter";
+import type { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   BotStoppedSpeakingFrame,
   type CancelFrame,

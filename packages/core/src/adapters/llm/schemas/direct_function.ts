@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/schemas/direct_function.py
+// Ported from pipecat: src/pipecat/adapters/llm/schemas/direct_function.py
 
 /**
  * Direct function wrapper utilities for LLM function calling.
@@ -21,7 +21,7 @@
  * lose their parameter names, so direct functions must ship unminified.
  */
 
-import type { FunctionCallParams } from "../../services/llm_service.ts";
+import type { FunctionCallParams } from "../../../services/llm_service.ts";
 import { FunctionSchema } from "./function_schema.ts";
 
 /**

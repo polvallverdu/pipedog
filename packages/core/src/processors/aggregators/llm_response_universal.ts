@@ -18,7 +18,7 @@
  */
 
 import { rethrowIfCancelled, sleep, type Task } from "@pipedog/asyncio";
-import type { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
+import type { ToolsSchema } from "../../adapters/llm/schemas/tools_schema.ts";
 import type { VADAnalyzer } from "../../audio/vad/vad_analyzer.ts";
 import { VADController } from "../../audio/vad/vad_controller.ts";
 import {
