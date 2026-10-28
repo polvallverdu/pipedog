@@ -13,7 +13,7 @@
  */
 
 import { logger } from "../../utils/logger.ts";
-import { expSmoothing } from "../utils.ts";
+import { expSmoothing, normalizeValue } from "../utils.ts";
 import { AudioVolumeTracker } from "../volume.ts";
 
 export const VAD_CONFIDENCE = 0.7;
@@ -44,8 +44,38 @@ export interface VADParamsOptions {
   startSecs?: number;
   /** Duration to wait before confirming voice stop. */
   stopSecs?: number;
-  /** Minimum audio volume threshold for voice detection. */
+  /**
+   * Minimum audio volume threshold for voice detection, between 0 and 1. The
+   * volume is the audio's loudness mapped linearly from -110 LUFS (0) to
+   * -10 LUFS (1), so the default 0.6 is -50 LUFS.
+   */
   minVolume?: number;
+  /**
+   * The same threshold as a loudness in LUFS (ITU-R BS.1770, dB relative to
+   * full scale), e.g. `-35`. Easier to tune than `minVolume`: measure the
+   * line's noise floor and set this above it. Mutually exclusive with
+   * `minVolume`.
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  minVolumeDb?: number;
+}
+
+// The loudness range `calculateAudioVolume()` maps onto 0..1.
+const VOLUME_MIN_LUFS = -110;
+const VOLUME_MAX_LUFS = -10;
+
+/**
+ * Convert a loudness in LUFS to the 0–1 volume that `VADParams.minVolume` and
+ * `calculateAudioVolume()` use, clamped to that range.
+ */
+export function volumeFromDb(db: number): number {
+  return normalizeValue(db, VOLUME_MIN_LUFS, VOLUME_MAX_LUFS);
+}
+
+/** Convert a 0–1 volume back to its loudness in LUFS. */
+export function volumeToDb(volume: number): number {
+  return VOLUME_MIN_LUFS + volume * (VOLUME_MAX_LUFS - VOLUME_MIN_LUFS);
 }
 
 /** Configuration parameters for Voice Activity Detection. */
@@ -56,10 +86,25 @@ export class VADParams {
   minVolume: number;
 
   constructor(options: VADParamsOptions = {}) {
+    if (options.minVolume !== undefined && options.minVolumeDb !== undefined) {
+      throw new Error("VADParams: set either minVolume or minVolumeDb, not both");
+    }
     this.confidence = options.confidence ?? VAD_CONFIDENCE;
     this.startSecs = options.startSecs ?? VAD_START_SECS;
     this.stopSecs = options.stopSecs ?? VAD_STOP_SECS;
-    this.minVolume = options.minVolume ?? VAD_MIN_VOLUME;
+    this.minVolume =
+      options.minVolumeDb !== undefined
+        ? volumeFromDb(options.minVolumeDb)
+        : (options.minVolume ?? VAD_MIN_VOLUME);
+  }
+
+  /** `minVolume` as a loudness in LUFS. Setting it sets `minVolume`. */
+  get minVolumeDb(): number {
+    return volumeToDb(this.minVolume);
+  }
+
+  set minVolumeDb(db: number) {
+    this.minVolume = volumeFromDb(db);
   }
 
   toString(): string {

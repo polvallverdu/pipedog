@@ -9,6 +9,11 @@
 // importable; its Krisp runtime is injected (see its own module).
 
 export {
+  BACKCHANNEL_PHRASES,
+  type BackchannelMatcher,
+  createBackchannelMatcher,
+} from "./backchannel.ts";
+export {
   BaseUserTurnStartStrategy,
   UserTurnStartedParams,
 } from "./base_user_turn_start_strategy.ts";
