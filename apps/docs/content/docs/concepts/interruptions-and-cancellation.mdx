@@ -174,6 +174,12 @@ pipeline cleans up, so nothing is left floating. Never fire and forget a bare pr
 
 <include cwd meta="twoslash">snippets/processor_tasks.ts#processor-task</include>
 
+`await task` waits for the task as asyncio does: if your task is cancelled while it waits, `task`
+is cancelled too. To react to a task's end without waiting for it, use `task.addDoneCallback(cb)`,
+`task.promise.then(cb)` or `task.then(cb)`. These don't tie the two tasks together, so cancelling
+yours leaves `task` running until it is cancelled itself. (In 0.10.0 and earlier, `task.then(cb)`
+could leave the calling task impossible to cancel and hang `cleanup()`.)
+
 ## Rules of thumb
 
 1. Every broad `catch` begins with `rethrowIfCancelled(e)`.
