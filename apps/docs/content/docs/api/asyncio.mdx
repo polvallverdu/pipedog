@@ -14,7 +14,8 @@ cancellation points work.
 
 A unit of concurrent work, like `asyncio.Task`. Created with `createTask()`. Awaiting a task (it
 is thenable) is a cancellation point, and cancelling the awaiting task also cancels the awaited
-one.
+one. Only `await` links the two: `task.then(cb)`, `task.promise` and `addDoneCallback` observe the
+task without suspending the caller, so cancelling the caller cancels the caller alone.
 
 <auto-type-table cwd path="../../packages/asyncio/src/task.ts" name="Task" />
 

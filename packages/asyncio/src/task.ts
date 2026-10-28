@@ -144,7 +144,12 @@ export class Future<T = unknown> implements PromiseLike<T> {
     onfulfilled?: ((value: T) => R1 | PromiseLike<R1>) | null,
     onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | null,
   ): Promise<R1 | R2> {
-    return awaitFuture(this).then(onfulfilled, onrejected);
+    // `await future` suspends the current task on it, so cancelling the task
+    // cancels the future. A plain `future.then(cb)` doesn't suspend anything:
+    // the caller keeps running and must stay the target of its own
+    // cancellation (pipedog#96).
+    const block = !this.done() && isEngineResolver(onfulfilled);
+    return awaitFuture(this, block).then(onfulfilled, onrejected);
   }
 
   /** @internal The CancelledError a cancelled future raises. */
@@ -168,9 +173,10 @@ export class Future<T = unknown> implements PromiseLike<T> {
  * Await `future` from the current task (Future.__await__ plus the task's
  * wakeup). A done future returns at once, without suspending. Otherwise the
  * task resumes on the ready queue once the future is done, and cancelling
- * the task meanwhile cancels the future.
+ * the task meanwhile cancels the future. With `block` false, the promise
+ * settles with the future but the current task isn't suspended on it.
  */
-export function awaitFuture<T>(future: Future<T>): Promise<T> {
+export function awaitFuture<T>(future: Future<T>, block = true): Promise<T> {
   if (future.done()) {
     try {
       return Promise.resolve(future.result());
@@ -178,10 +184,14 @@ export function awaitFuture<T>(future: Future<T>): Promise<T> {
       return Promise.reject(e);
     }
   }
-  const task = currentTask();
+  const task = block ? currentTask() : undefined;
   return new Promise<T>((resolve, reject) => {
     future.addDoneCallback(() => {
-      if (task) {
+      // `then()` is also how `await` reaches us, so a plain `task.then(cb)`
+      // registers its caller as blocked on `task` without suspending it. By
+      // the time `future` is done, that caller may be blocked on something
+      // else: only the wakeup of the future it is blocked on may touch it.
+      if (task && task._futWaiter === future) {
         task._futWaiter = null;
         // A cancellation requested after the wakeup was queued wins (Task.__step).
         const cancelled = task._takeCancelRequest();
@@ -198,6 +208,20 @@ export function awaitFuture<T>(future: Future<T>): Promise<T> {
     });
     task?._block(future);
   });
+}
+
+/**
+ * Whether `fn` is a resolving function the engine made: what `await`,
+ * `Promise.resolve(thenable)` and `Promise.all` pass to `then()`. Bun, Node,
+ * Deno and workerd all give them an empty name and native source; a user
+ * callback (or a bound one, named "bound …") never has both.
+ */
+function isEngineResolver(fn: unknown): boolean {
+  return (
+    typeof fn === "function" &&
+    fn.name === "" &&
+    Function.prototype.toString.call(fn).endsWith("{ [native code] }")
+  );
 }
 
 let taskCounter = 0;

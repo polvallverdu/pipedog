@@ -75,6 +75,14 @@ These differences apply everywhere, not to one module. They come from the portin
   flushes the spans still queued, so a flush that landed just after its 5 s timer started an
   export returned before the collector had the spans. `packages/tracing/src/index.ts`
 
+### asyncio
+
+- **Only `await` suspends on a task.** A `Task` is thenable so it can be awaited, but `then()` is
+  also an ordinary method. Calling `task.then(cb)` yourself (Python has no equivalent) observes the
+  task without making the caller wait on it: cancelling the caller doesn't cancel `task`. `await`,
+  `Promise.all` and `Promise.resolve(task)` still suspend the caller, as in asyncio.
+  `packages/asyncio/src/task.ts`
+
 ### asyncio on Cloudflare Workers
 
 - **Callbacks run in the I/O context that scheduled them.** One workerd isolate serves many
@@ -125,6 +133,15 @@ These differences apply everywhere, not to one module. They come from the portin
 - **Silero sessions are shared.** Upstream loads one session per model. pipedog shares sessions by
   default, since a bot builds one VAD per call. Pass `shareSession: false` for a session of its
   own. `packages/audio-silero/src/silero.ts`
+- **`minVolumeDb` (pipedog only).** `VADParams` takes the volume gate as a loudness in LUFS as an
+  alternative to the 0–1 `minVolume`, converted with the same mapping (`volumeFromDb`,
+  `volumeToDb`). Setting both throws. `packages/core/src/audio/vad/vad_analyzer.ts`
+- **Backchannels and VAD-backed words (pipedog only).** `MinWordsUserTurnStartStrategy` takes
+  `isBackchannel` (with `createBackchannelMatcher()` and per-language `BACKCHANNEL_PHRASES`), so an
+  acknowledgement over the bot never starts a turn, and `requireVadWithinSeconds`, so words over the
+  bot count only if the VAD heard the user recently. Both are off by default.
+  `packages/core/src/turns/user_start/min_words_user_turn_start_strategy.ts`,
+  `packages/core/src/turns/user_start/backchannel.ts`
 
 ## Providers
 
@@ -218,6 +235,44 @@ These differences apply everywhere, not to one module. They come from the portin
 - **Image decoding is injectable.** Upstream decodes inline images with Pillow. Here that is the
   `imageDecoder` option; the default throws "not ported yet", so without one an image response
   surfaces as an error. `packages/google/src/llm.ts`, `packages/google/src/image.ts`
+- **Gemini STT on Vertex AI (pipedog-only).** `GeminiSTTService` takes `vertexai: true` with
+  `location`, `projectId`, and `credentials` / `credentialsPath` (or ADC) instead of `apiKey`,
+  as the Vertex LLM services do. Vertex's Live API rejects `languageAuto` and `languageHints`, so
+  in that mode the codes go in `inputAudioTranscription.languageCodes` and none means automatic
+  detection. The client is created on first connect rather than in the constructor, so a
+  subclass's `_createClient()` can read its own fields. `packages/google/src/gemini_live/stt.ts`
+- **Gemini STT language options (pipedog-only).** `reportDetectedLanguage: false` puts the
+  configured language (when exactly one is set) or `null` on transcription frames instead of the
+  language the model reports. `setLanguageCodes(codes | () => codes)` changes the languages during
+  a session; the service reconnects on the next `BotStartedSpeakingFrame`, or after the user's
+  turn if they are speaking, buffering audio meanwhile. `packages/google/src/gemini_live/stt.ts`
+- **Gemini STT connects in the background.** Upstream opens the Live session in `setup()`, so the
+  `StartFrame` waits for it. Here it is opened in a background task on `StartFrame` and audio is
+  buffered until the session is live; a failure is reported through `on_connection_error`.
+  `awaitConnectionOnStart: true` (pipedog-only) restores the blocking behaviour.
+  `packages/google/src/gemini_live/stt.ts`
+- **`retryOnBlocked` on `GeminiTTSService` (pipedog-only).** Gemini TTS sometimes refuses a
+  harmless sentence for Google's usage guidelines, and the same request usually succeeds on the
+  next try. With `retryOnBlocked` the sentence is requested again (`retries`, default 1); if part
+  of its audio already played, it starts over (optionally as `restartText(text)`, e.g. "Sorry, …")
+  rather than resuming mid-sentence. A `fallback`, a `GeminiTTSSettings` delta or a function
+  yielding frames, gets one last attempt. Only the usage-guidelines block is retried
+  (`isGeminiTTSBlockedError`), and restarted or fallback audio is never cached. Off by default, so
+  a blocked sentence fails with an `ErrorFrame` as upstream. `packages/google/src/tts.ts`
+- **Shared Cloud clients and `prewarm()` (pipedog-only).** `sharedClient: true` on
+  `GoogleSTTService`, `GoogleTTSService`, `GoogleHttpTTSService` and `GeminiTTSService` (Cloud
+  backend) uses one gRPC client per process for the same endpoint, credentials and client options
+  (`getSharedGoogleCloudTTSClient` for TTS). `prewarm()` loads the SDK, opens the channel and
+  fetches a token at start-up, and returns `false` instead of throwing. Opt-in, because one shared
+  channel carries every concurrent stream. Upstream builds a client per service.
+  `packages/google/src/tts.ts`, `packages/google/src/stt.ts`
+- **`GoogleSTTService.setLanguageCodes()` (pipedog-only).** Changes the `languageCodes` mid-call
+  (an array, or a function re-read on each `BotStartedSpeakingFrame`). The stream reconnects on
+  the next `BotStartedSpeakingFrame`, or after the user's turn if they are speaking over the bot,
+  so no utterance is cut. Same API as `GeminiSTTService`. `packages/google/src/stt.ts`
+- **Audio cache key for Google TTS.** With the pipedog-only TTS audio cache, the key also covers
+  what changes the audio outside `settings`: `GoogleTTSService`'s `voiceCloningKey` (hashed) and
+  the backend of `GeminiTTSService`. `packages/google/src/tts.ts`
 
 ### Inworld and xAI realtime
 

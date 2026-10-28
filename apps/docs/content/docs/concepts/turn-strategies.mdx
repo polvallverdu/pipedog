@@ -48,6 +48,15 @@ To make the bot answer sooner or later, change the stop strategy (for example `u
 Leave the VAD's `stopSecs` (0.2 s by default) alone: it is a low-level threshold that the strategies
 already account for.
 
+The VAD's volume gate is different: line noise and clicks often pass the model's confidence check,
+and `VADParams.minVolume` is what stops them. `minVolume` is a 0–1 value mapped from -110 LUFS to
+-10 LUFS (the default 0.6 is -50 LUFS). To tune it on a phone line, measure the noise floor in LUFS
+and set `minVolumeDb` a few dB above it instead (pipedog only):
+
+```ts
+new SileroVADAnalyzer({ params: new VADParams({ minVolumeDb: -35 }) });
+```
+
 ### Where the waiting time goes
 
 - **VAD silence (`stopSecs`).** The VAD only reports that speech stopped after this much silence.
@@ -116,7 +125,7 @@ Use it **instead of** the VAD start strategy, which would open the turn on the f
 
 <auto-type-table cwd path="../../packages/core/src/turns/user_start/min_words_user_turn_start_strategy.ts" name="MinWordsUserTurnStartStrategyOptions" />
 
-Two options change upstream behavior, and both are off by default:
+Four options change upstream behavior, and all are off by default:
 
 - `startOnVadWhenBotQuiet` starts the turn on `VADUserStartedSpeakingFrame` while the bot is silent,
   instead of waiting for the first transcript. A turn that starts with the transcript starts late:
@@ -126,6 +135,25 @@ Two options change upstream behavior, and both are off by default:
 - `keepBotSpeakingOnTurnStart` keeps the bot-speaking state when a turn starts. By default it is
   cleared, which assumes the turn interrupted the bot; if the bot goes on speaking (interruptions
   disabled, say), one word would then start the next turn.
+- `isBackchannel` keeps acknowledgements from interrupting the bot, however many words they have:
+  "yes, okay", "mm-hm, right". While the bot speaks, a transcript it matches is discarded like a
+  short one. `createBackchannelMatcher()` builds a matcher from per-language phrase lists
+  (`BACKCHANNEL_PHRASES`: English, Spanish, French, German, Italian, Portuguese and Catalan),
+  picked by the transcript's language; pass your own lists to extend them. With the bot silent, a
+  backchannel is an answer and starts the turn as usual.
+- `requireVadWithinSeconds` counts words over the bot only if the VAD heard the user: they are
+  speaking, or the VAD reported the end of their speech at most that many seconds ago. A TV in the
+  background, or words the STT service hallucinates from clicks, then can't interrupt. It needs a
+  VAD in the pipeline; tune what the VAD counts as speech with `VADParams` (see `minVolumeDb`
+  above).
+
+```ts
+new MinWordsUserTurnStartStrategy({
+  minWords: 3,
+  isBackchannel: createBackchannelMatcher(),
+  requireVadWithinSeconds: 1.0,
+});
+```
 
 ### WakePhraseUserTurnStartStrategy
 

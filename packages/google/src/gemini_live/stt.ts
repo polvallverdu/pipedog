@@ -31,9 +31,37 @@
  *   camelCase field names.
  * - Audio is sent base64 encoded (the JS SDK's `Blob.data` is a base64
  *   string).
+ * - DIVERGENCE: pipedog-only Vertex AI mode (`vertexai: true` with
+ *   `location`, and optionally `projectId`, `credentials` or
+ *   `credentialsPath`, as the Vertex LLM services take them) instead of
+ *   `apiKey`. Vertex's Live API rejects `languageAuto` / `languageHints`, so
+ *   in that mode the codes go in `inputAudioTranscription.languageCodes`, and
+ *   an empty `inputAudioTranscription` means automatic detection. Credentials
+ *   go through google-auth-library, which only the SDK's Node build supports:
+ *   Vertex mode runs on Bun, Node and Deno, not on Workers.
+ * - DIVERGENCE: pipedog-only. The client is created on first connect, not in
+ *   the constructor. Upstream's constructor calls `_create_client()` after
+ *   storing its options; in JS a subclass's fields are set only after
+ *   `super()` returns, so a `_createClient()` override called from the base
+ *   constructor could not read them.
+ * - DIVERGENCE: pipedog-only `reportDetectedLanguage` option and
+ *   `setLanguageCodes()`. Changed codes are applied by reconnecting on the
+ *   next `BotStartedSpeakingFrame` (or after the user's turn, if they are
+ *   speaking then), in a background task so frames keep flowing.
+ * - DIVERGENCE: upstream connects in `setup()`, so the pipeline's StartFrame
+ *   waits for the Live session (about a second on a cold connection). Here
+ *   the session is opened in a background task on StartFrame, and audio is
+ *   buffered until it is live, as during a reconnect. `awaitConnectionOnStart:
+ *   true` (pipedog-only) restores upstream's behaviour.
  */
 
-import { GoogleGenAI, type HttpOptions, type LiveConnectConfig, type Session } from "@google/genai";
+import {
+  GoogleGenAI,
+  type GoogleGenAIOptions,
+  type HttpOptions,
+  type LiveConnectConfig,
+  type Session,
+} from "@google/genai";
 import {
   CancelledError,
   Future,
@@ -43,10 +71,13 @@ import {
   time,
 } from "@pipedog/asyncio";
 import {
+  BotStartedSpeakingFrame,
   type CancelFrame,
   type EndFrame,
   type Frame,
+  type InputAudioRawFrame,
   InterimTranscriptionFrame,
+  type StartFrame,
   TranscriptionFrame,
   VADUserStartedSpeakingFrame,
   VADUserStoppedSpeakingFrame,
@@ -58,6 +89,7 @@ import { STTService, type STTServiceOptions } from "@pipedog/core/services/stt_s
 import { isLanguage, type Language } from "@pipedog/core/transcriptions/language";
 import { bytesToBase64 } from "@pipedog/core/utils/base64";
 import { logger } from "@pipedog/core/utils/logger";
+import { pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { timeNowIso8601 } from "@pipedog/core/utils/time";
 import { installTracedStt } from "@pipedog/core/utils/tracing/service_decorators";
 import { assertGiven, isGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
@@ -70,6 +102,15 @@ const CONNECTION_ESTABLISHED_THRESHOLD = 10.0; // seconds
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/** google-auth-library options, as `GoogleGenAI` takes them. */
+export type GoogleAuthOptions = NonNullable<GoogleGenAIOptions["googleAuthOptions"]>;
+
+const CLOUD_PLATFORM_SCOPES = ["https://www.googleapis.com/auth/cloud-platform"];
+
+function sameCodes(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((code, i) => code === b[i]);
 }
 
 /** A transcription in a Live server message (`Transcription`). */
@@ -154,8 +195,32 @@ export class GeminiSTTSettings extends STTSettings {
 }
 
 export interface GeminiSTTServiceOptions extends STTServiceOptions {
-  /** Google AI (Gemini) API key. */
-  apiKey: string;
+  /** Google AI (Gemini) API key. Required unless `vertexai` is true. */
+  apiKey?: string;
+  /**
+   * Connect through Vertex AI instead of the Gemini Developer API, with
+   * Google Cloud credentials instead of an API key. Requires `location`
+   * (pipedog only).
+   */
+  vertexai?: boolean;
+  /**
+   * Vertex AI location, e.g. `"eu"` or `"us-central1"`. Required with
+   * `vertexai` (pipedog only).
+   */
+  location?: string;
+  /**
+   * Google Cloud project ID, with `vertexai`. Defaults to the
+   * `GOOGLE_CLOUD_PROJECT` environment variable (pipedog only).
+   */
+  projectId?: string | null;
+  /**
+   * JSON string of service account credentials, with `vertexai`. Without it
+   * (or `credentialsPath`), Application Default Credentials are used
+   * (pipedog only).
+   */
+  credentials?: string | null;
+  /** Path to the service account JSON file, with `vertexai` (pipedog only). */
+  credentialsPath?: string | null;
   /** Optional HTTP options passed to the google-genai client. */
   httpOptions?: GoogleClientHttpOptions | null;
   /**
@@ -163,6 +228,18 @@ export interface GeminiSTTServiceOptions extends STTServiceOptions {
    * model with automatic language detection.
    */
   settings?: GeminiSTTSettings | null;
+  /**
+   * Put the language the model reports on transcription frames. Defaults to
+   * true. When false, frames carry the configured language if exactly one is
+   * configured, and `null` otherwise (pipedog only).
+   */
+  reportDetectedLanguage?: boolean;
+  /**
+   * Hold the pipeline's StartFrame until the Live session is open, as
+   * upstream does. Defaults to false: the session is opened in the
+   * background and audio is buffered until it is live (pipedog only).
+   */
+  awaitConnectionOnStart?: boolean;
 }
 
 /**
@@ -191,9 +268,25 @@ export class GeminiSTTService extends STTService {
     installTracedStt(GeminiSTTService.prototype, "_handleTranscription");
   }
 
-  protected _apiKey: string;
+  protected _apiKey: string | null;
+  protected _vertexai: boolean;
+  protected _projectId: string | null;
+  protected _location: string | null;
+  protected _credentials: GoogleAuthOptions | null;
   protected _httpOptions: GoogleClientHttpOptions;
-  protected _client!: GoogleGenAI;
+  protected _reportDetectedLanguage: boolean;
+  protected _awaitConnectionOnStart: boolean;
+  // Created on first connect by _getClient(), so a _createClient() override
+  // can read the subclass's own fields.
+  protected _client: GoogleGenAI | null = null;
+  // The background task opening the session (on StartFrame, or to apply new
+  // language codes). Audio is buffered in `_reconnectAudioBuffer` meanwhile.
+  protected _connectTask: Task<unknown> | null = null;
+  // Codes from setLanguageCodes(), which take precedence over the
+  // `language` / `languages` settings until those change.
+  protected _languageCodes: string[] | (() => string[]) | null = null;
+  // The codes the current session was opened with.
+  protected _sessionLanguageCodes: string[] | null = null;
   protected _session: Session | null = null;
   // The SDK hands out a session from `live.connect()`. The open session (the
   // counterpart of upstream's session context) and the queue its callbacks
@@ -209,9 +302,24 @@ export class GeminiSTTService extends STTService {
   /**
    * Initialize the Gemini STT service.
    *
-   * @param options.apiKey Google AI (Gemini) API key.
+   * @param options.apiKey Google AI (Gemini) API key. Required unless
+   *   `vertexai` is true.
+   * @param options.vertexai Connect through Vertex AI with Google Cloud
+   *   credentials instead of an API key. Requires `location`.
+   * @param options.location Vertex AI location (e.g. "eu", "us-central1").
+   * @param options.projectId Google Cloud project ID for Vertex AI.
+   * @param options.credentials JSON string of service account credentials
+   *   for Vertex AI. Defaults to Application Default Credentials.
+   * @param options.credentialsPath Path to the service account JSON file for
+   *   Vertex AI.
    * @param options.httpOptions Optional HTTP options passed to the
    *   google-genai client.
+   * @param options.reportDetectedLanguage Put the language the model reports
+   *   on transcription frames (default true). When false, frames carry the
+   *   configured language if exactly one is configured, else null.
+   * @param options.awaitConnectionOnStart Hold the StartFrame until the Live
+   *   session is open (default false: connect in the background and buffer
+   *   audio until the session is live).
    * @param options.sampleRate The sample rate for audio input. If null, will
    *   be determined from the start frame.
    * @param options.settings Runtime-updatable settings. Defaults to the
@@ -222,6 +330,21 @@ export class GeminiSTTService extends STTService {
    *   Other options are passed to the parent STTService.
    */
   constructor(options: GeminiSTTServiceOptions) {
+    const vertexai = options.vertexai ?? false;
+    if (vertexai) {
+      if (options.apiKey !== undefined) {
+        throw new Error(
+          "Invalid parameter 'apiKey' with 'vertexai'. Use 'credentials' or " +
+            "'credentialsPath' (or Application Default Credentials) for Vertex AI authentication.",
+        );
+      }
+      if (!options.location) {
+        throw new Error("GeminiSTTService with 'vertexai' requires a 'location'");
+      }
+    } else if (options.apiKey === undefined) {
+      throw new Error("GeminiSTTService requires an 'apiKey', or 'vertexai' with a 'location'");
+    }
+
     const defaultSettings = new GeminiSTTSettings({
       model: "gemini-3.5-transcribe-live",
       language: null,
@@ -243,24 +366,86 @@ export class GeminiSTTService extends STTService {
       settings: defaultSettings,
     });
 
-    this._apiKey = options.apiKey;
+    this._apiKey = options.apiKey ?? null;
+    this._vertexai = vertexai;
+    this._projectId = options.projectId ?? null;
+    this._location = options.location ?? null;
+    // Inline credentials are parsed here, so bad JSON fails construction;
+    // a key file and ADC are loaded by the client on first connect.
+    this._credentials = vertexai
+      ? GeminiSTTService._getCredentials(
+          options.credentials ?? null,
+          options.credentialsPath ?? null,
+        )
+      : null;
     this._httpOptions = updateGoogleClientHttpOptions(
       options.httpOptions ?? null,
     ) as GoogleClientHttpOptions;
-    this._createClient();
+    this._reportDetectedLanguage = options.reportDetectedLanguage ?? true;
+    this._awaitConnectionOnStart = options.awaitConnectionOnStart ?? false;
   }
 
   /**
    * Create the google-genai client.
    *
-   * Subclasses (e.g. a Vertex AI variant) can override this to customize
-   * client construction and authentication.
+   * Called on first connect, after the constructor (and any subclass
+   * constructor) has finished, so overrides can read their own fields.
+   * Subclasses can override this to customize client construction and
+   * authentication.
    */
   protected _createClient(): void {
+    if (this._vertexai) {
+      this._client = new GoogleGenAI({
+        vertexai: true,
+        googleAuthOptions: this._credentials ?? undefined,
+        project: this._projectId ?? undefined,
+        location: this._location ?? undefined,
+        httpOptions: this._httpOptions as HttpOptions,
+      });
+      return;
+    }
     this._client = new GoogleGenAI({
-      apiKey: this._apiKey,
+      apiKey: this._apiKey ?? undefined,
       httpOptions: this._httpOptions as HttpOptions,
     });
+  }
+
+  /** The google-genai client, created by `_createClient()` on first use. */
+  protected _getClient(): GoogleGenAI {
+    if (this._client === null) {
+      this._createClient();
+    }
+    if (this._client === null) {
+      throw new Error(`${this}: _createClient() did not set _client`);
+    }
+    return this._client;
+  }
+
+  /**
+   * Resolve Vertex AI credentials, as the Vertex LLM services do.
+   *
+   * Supports, in order: a JSON credentials string, a service account JSON
+   * file, and Application Default Credentials (ADC).
+   *
+   * @param credentials JSON string of service account credentials.
+   * @param credentialsPath Path to the service account JSON file.
+   * @returns google-auth-library options for the client. The file and ADC
+   *   are loaded, and the access token refreshed, by the client.
+   */
+  static _getCredentials(
+    credentials: string | null,
+    credentialsPath: string | null,
+  ): GoogleAuthOptions {
+    if (credentials) {
+      return {
+        credentials: pyJsonLoads(credentials) as GoogleAuthOptions["credentials"],
+        scopes: CLOUD_PLATFORM_SCOPES,
+      };
+    }
+    if (credentialsPath) {
+      return { keyFilename: credentialsPath, scopes: CLOUD_PLATFORM_SCOPES };
+    }
+    return { scopes: CLOUD_PLATFORM_SCOPES };
   }
 
   /**
@@ -289,7 +474,28 @@ export class GeminiSTTService extends STTService {
    */
   override async setup(setup: FrameProcessorSetup): Promise<void> {
     await super.setup(setup);
-    await this._connect();
+    // Upstream connects here, which holds the pipeline's StartFrame until the
+    // session is open. By default the session is opened on StartFrame
+    // instead, in the background (see start()).
+    if (this._awaitConnectionOnStart) {
+      await this._connect();
+    }
+  }
+
+  /**
+   * Start the Gemini STT service, opening the Live session in the background.
+   *
+   * The StartFrame goes on at once; audio is buffered until the session is
+   * live, and a failure to connect is reported through
+   * `on_connection_error` and an error frame.
+   *
+   * @param frame The start frame.
+   */
+  override async start(frame: StartFrame): Promise<void> {
+    await super.start(frame);
+    if (!this._awaitConnectionOnStart) {
+      await this._startBackgroundConnect();
+    }
   }
 
   /**
@@ -299,6 +505,7 @@ export class GeminiSTTService extends STTService {
    */
   override async stop(frame: EndFrame): Promise<void> {
     await super.stop(frame);
+    await this._cancelConnectTask();
     await this._disconnect();
   }
 
@@ -309,13 +516,38 @@ export class GeminiSTTService extends STTService {
    */
   override async cancel(frame: CancelFrame): Promise<void> {
     await super.cancel(frame);
+    await this._cancelConnectTask();
     await this._disconnect();
   }
 
   /** Release Gemini STT resources. */
   override async cleanup(): Promise<void> {
     await super.cleanup();
+    await this._cancelConnectTask();
     await this._disconnect();
+  }
+
+  /**
+   * Set the language codes to transcribe, e.g. when the bot switches language.
+   *
+   * The codes (BCP-47, sent as-is) take precedence over the `language` and
+   * `languages` settings until either of those is updated. An empty list
+   * means automatic detection. Pass a function to have the codes read each
+   * time they are needed.
+   *
+   * The session is not reconnected at once: when the codes differ from the
+   * ones the session was opened with, the service reconnects on the next
+   * `BotStartedSpeakingFrame`, or once the user's turn ends if they are
+   * speaking then, so no utterance is cut. Audio that arrives during the
+   * reconnect is buffered and sent to the new session.
+   *
+   * DIVERGENCE: pipedog-only.
+   *
+   * @param codes The language codes, or a function returning them.
+   */
+  async setLanguageCodes(codes: string[] | (() => string[])): Promise<void> {
+    this._languageCodes = typeof codes === "function" ? codes : [...codes];
+    logger.debug(`${this}: language codes set; applied on the next safe reconnect`);
   }
 
   /**
@@ -361,7 +593,36 @@ export class GeminiSTTService extends STTService {
       await this.startProcessingMetrics();
     } else if (frame instanceof VADUserStoppedSpeakingFrame) {
       await this._sendFinalizationSignal();
+    } else if (frame instanceof BotStartedSpeakingFrame) {
+      await this._maybeApplyLanguageCodes();
     }
+  }
+
+  /**
+   * Reconnect if the language codes changed since the session was opened.
+   *
+   * Called when the bot starts speaking, a moment when the user is usually
+   * not. If the user is mid-turn, the reconnect is deferred until the turn
+   * ends (`_requestReconnect()` semantics). The reconnect runs in a
+   * background task so frames keep flowing; audio is buffered meanwhile.
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  protected async _maybeApplyLanguageCodes(): Promise<void> {
+    // Not connected yet: the next connect reads the current codes.
+    if (this._sessionLanguageCodes === null) {
+      return;
+    }
+    const codes = this._getLanguageCodes();
+    if (sameCodes(codes, this._sessionLanguageCodes)) {
+      return;
+    }
+    logger.debug(`${this}: language codes changed to [${codes.join(", ")}], reconnecting`);
+    if (!this._canReconnect) {
+      this._needReconnect = true;
+      return;
+    }
+    await this._startBackgroundConnect();
   }
 
   /**
@@ -394,10 +655,29 @@ export class GeminiSTTService extends STTService {
    */
   protected override async _updateSettings(delta: STTSettings): Promise<Record<string, unknown>> {
     const changed = await super._updateSettings(delta);
+    if ("language" in changed || "languages" in changed) {
+      // New language settings replace codes set with setLanguageCodes().
+      this._languageCodes = null;
+    }
     if (Object.keys(changed).length > 0) {
       await this._requestReconnect();
     }
     return changed;
+  }
+
+  /**
+   * Reconnect now if safe, or once the user's turn ends.
+   *
+   * While the first session is still being opened in the background, that
+   * attempt is restarted instead, so it uses the current settings; the audio
+   * buffered so far is kept.
+   */
+  protected override async _requestReconnect(): Promise<void> {
+    if (this._connectTask !== null) {
+      await this._startBackgroundConnect();
+      return;
+    }
+    await super._requestReconnect();
   }
 
   /**
@@ -407,6 +687,10 @@ export class GeminiSTTService extends STTService {
    * when no hints are configured (automatic detection).
    */
   protected _getLanguageCodes(): string[] {
+    const override = this._languageCodes;
+    if (override !== null) {
+      return [...(typeof override === "function" ? override() : override)];
+    }
     const languages = this._settings.languages;
     if (isGiven(languages) && languages && languages.length > 0) {
       // Upstream's `Language` is a `StrEnum`, so its `isinstance(lang, str)`
@@ -422,22 +706,34 @@ export class GeminiSTTService extends STTService {
     return [];
   }
 
-  /** Build the Live API connection config from current settings. */
-  protected _buildLiveConfig(): LiveConnectConfig {
+  /**
+   * Build the Live API connection config from current settings.
+   *
+   * @param languageCodes The language codes to send. Defaults to
+   *   `_getLanguageCodes()`.
+   */
+  protected _buildLiveConfig(
+    languageCodes: string[] = this._getLanguageCodes(),
+  ): LiveConnectConfig {
     const transcriptionKwargs: Record<string, unknown> = {};
 
-    const languageCodes = this._getLanguageCodes();
     let languageAuto = this._settings.languageAuto;
     if (!isGiven(languageAuto)) {
       languageAuto = null;
     }
-    if (languageCodes.length > 0) {
-      if (languageAuto) {
-        logger.warning(
-          `${this}: language_auto and language hints are mutually exclusive; ` +
-            "using language hints",
-        );
+    if (languageCodes.length > 0 && languageAuto) {
+      logger.warning(
+        `${this}: language_auto and language hints are mutually exclusive; ` +
+          "using language hints",
+      );
+    }
+    if (this._vertexai) {
+      // Vertex's Live API rejects languageAuto and languageHints: the codes
+      // go in languageCodes, and none means automatic detection.
+      if (languageCodes.length > 0) {
+        transcriptionKwargs.languageCodes = [...languageCodes];
       }
+    } else if (languageCodes.length > 0) {
       transcriptionKwargs.languageHints = { languageCodes };
     } else if (languageAuto !== false) {
       transcriptionKwargs.languageAuto = {};
@@ -476,6 +772,59 @@ export class GeminiSTTService extends STTService {
     this._createKeepaliveTask();
   }
 
+  /**
+   * Open the session in a background task, replacing any connection.
+   *
+   * Audio is buffered (as during a reconnect) until the session is live and
+   * then sent to it. A connect already in progress is cancelled first. The
+   * task is tracked, so stop, cancel and cleanup cancel it.
+   */
+  protected async _startBackgroundConnect(): Promise<void> {
+    await this._cancelConnectTask();
+    this._reconnecting = true;
+    this._connectTask = this.createTask(() => this._backgroundConnect(), "_backgroundConnect");
+  }
+
+  /** Cancel the background connect, if one is in progress. */
+  protected async _cancelConnectTask(): Promise<void> {
+    const task = this._connectTask;
+    if (task === null) {
+      return;
+    }
+    this._connectTask = null;
+    await this.cancelTask(task, 1.0);
+  }
+
+  /**
+   * Close any session and open a new one, then send the buffered audio.
+   *
+   * On failure the error goes through `on_connection_error` and an error
+   * frame, as for a failed reconnect, and the buffered audio is dropped.
+   */
+  protected async _backgroundConnect(): Promise<void> {
+    try {
+      await this._disconnect();
+      await this._connect();
+    } catch (e) {
+      rethrowIfCancelled(e);
+      this._connectTask = null;
+      this._reconnecting = false;
+      this._reconnectAudioBuffer.length = 0;
+      logger.error(`${this} connection failed: ${errorMessage(e)}`);
+      await this._callEventHandler("on_connection_error", errorMessage(e));
+      await this.pushError(`${this} connection failed: ${errorMessage(e)}`, { exception: e });
+      return;
+    }
+    this._connectTask = null;
+    this._reconnecting = false;
+
+    // Send the audio that arrived while the session was being opened.
+    const buffered: [InputAudioRawFrame, FrameDirection][] = this._reconnectAudioBuffer.splice(0);
+    for (const [bufferedFrame, bufferedDirection] of buffered) {
+      await this.processAudioFrame(bufferedFrame, bufferedDirection);
+    }
+  }
+
   protected async _disconnect(): Promise<void> {
     if (!this._receiveTask) {
       return;
@@ -500,7 +849,8 @@ export class GeminiSTTService extends STTService {
       throw new Error("GeminiSTTService requires a model");
     }
 
-    const config = this._buildLiveConfig();
+    const languageCodes = this._getLanguageCodes();
+    const config = this._buildLiveConfig(languageCodes);
     const messages = new Queue<SessionEvent>();
     this._sessionMessages = messages;
 
@@ -516,8 +866,8 @@ export class GeminiSTTService extends STTService {
     const failConnect = (error: unknown) => {
       if (!opened.done()) opened.setException(error);
     };
-    this._client.live
-      .connect({
+    this._getClient()
+      .live.connect({
         model,
         config,
         callbacks: {
@@ -574,6 +924,7 @@ export class GeminiSTTService extends STTService {
     }
     this._sessionCtx = session;
     this._session = session;
+    this._sessionLanguageCodes = languageCodes;
     this._connectionStartTime = time();
     await this._callEventHandler("on_connected");
     logger.debug(`${this}: connected to Gemini`);
@@ -618,6 +969,7 @@ export class GeminiSTTService extends STTService {
    * replayed only once the new session can accept them.
    */
   protected override async _doReconnect(): Promise<void> {
+    await this._cancelConnectTask();
     await this._disconnect();
     await this._connect();
   }
@@ -718,7 +1070,7 @@ export class GeminiSTTService extends STTService {
         text,
         userId: this._userId,
         timestamp: timeNowIso8601(),
-        language: this._languageFromCode(transcription.languageCode),
+        language: this._transcriptionLanguage(transcription.languageCode),
         result: message,
       }),
     );
@@ -740,7 +1092,7 @@ export class GeminiSTTService extends STTService {
       return;
     }
 
-    const language = this._languageFromCode(transcription.languageCode);
+    const language = this._transcriptionLanguage(transcription.languageCode);
     await this.pushFrame(
       new TranscriptionFrame({
         text,
@@ -761,6 +1113,20 @@ export class GeminiSTTService extends STTService {
       return null;
     }
     return isLanguage(languageCode) ? languageCode : null;
+  }
+
+  /**
+   * The language to put on a transcription frame.
+   *
+   * The language the model reports, or with `reportDetectedLanguage: false`
+   * the configured language when exactly one is configured, else null.
+   */
+  protected _transcriptionLanguage(languageCode: string | null | undefined): Language | null {
+    if (this._reportDetectedLanguage) {
+      return this._languageFromCode(languageCode);
+    }
+    const codes = this._sessionLanguageCodes ?? this._getLanguageCodes();
+    return codes.length === 1 ? this._languageFromCode(codes[0]) : null;
   }
 
   /** Handle a transcription result with tracing. */

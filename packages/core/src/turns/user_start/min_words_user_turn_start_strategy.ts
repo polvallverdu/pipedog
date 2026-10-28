@@ -6,6 +6,7 @@
 
 /** User turn start strategy based on a minimum number of words spoken by the user. */
 
+import { time } from "@pipedog/asyncio";
 import {
   BotStartedSpeakingFrame,
   BotStoppedSpeakingFrame,
@@ -13,9 +14,12 @@ import {
   InterimTranscriptionFrame,
   TranscriptionFrame,
   VADUserStartedSpeakingFrame,
+  VADUserStoppedSpeakingFrame,
 } from "../../frames/frames.ts";
+import type { Language } from "../../transcriptions/language.ts";
 import { logger } from "../../utils/logger.ts";
 import { ProcessFrameResult } from "../types.ts";
+import type { BackchannelMatcher } from "./backchannel.ts";
 import {
   BaseUserTurnStartStrategy,
   type BaseUserTurnStartStrategyOptions,
@@ -52,6 +56,28 @@ export interface MinWordsUserTurnStartStrategyOptions extends BaseUserTurnStartS
    * and `BotStoppedSpeakingFrame`.
    */
   keepBotSpeakingOnTurnStart?: boolean;
+  /**
+   * Decides whether a transcript is a backchannel ("mm-hm", "yes, okay",
+   * "right"): the user acknowledging the bot, not taking the turn. While the
+   * bot speaks, a backchannel never starts a turn, whatever its word count.
+   * `createBackchannelMatcher()` builds one from per-language phrase lists
+   * (`BACKCHANNEL_PHRASES` by default). Defaults to null (upstream behavior).
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  isBackchannel?: BackchannelMatcher | null;
+  /**
+   * While the bot speaks, count a transcript's words only if VAD heard the
+   * user within this many seconds: the user is speaking, or VAD reported the
+   * end of their speech at most this long ago. Transcripts with no speech
+   * behind them (a TV in the background, STT hallucinating words from line
+   * clicks) then can't interrupt the bot. VAD already gates on volume and
+   * confidence, so tune it with `VADParams`. Requires a VAD in the pipeline.
+   * Defaults to null (no check, upstream behavior).
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  requireVadWithinSeconds?: number | null;
 }
 
 /**
@@ -66,7 +92,12 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
   protected _useInterim: boolean;
   protected _startOnVadWhenBotQuiet: boolean;
   protected _keepBotSpeakingOnTurnStart: boolean;
+  protected _isBackchannel: BackchannelMatcher | null;
+  protected _requireVadWithinSeconds: number | null;
   protected _botSpeaking = false;
+  protected _userVadSpeaking = false;
+  // When VAD last reported the user stopped speaking (time() seconds).
+  protected _userVadStoppedAt: number | null = null;
 
   constructor(options: MinWordsUserTurnStartStrategyOptions) {
     super(options);
@@ -74,6 +105,8 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
     this._useInterim = options.useInterim ?? true;
     this._startOnVadWhenBotQuiet = options.startOnVadWhenBotQuiet ?? false;
     this._keepBotSpeakingOnTurnStart = options.keepBotSpeakingOnTurnStart ?? false;
+    this._isBackchannel = options.isBackchannel ?? null;
+    this._requireVadWithinSeconds = options.requireVadWithinSeconds ?? null;
   }
 
   /**
@@ -99,6 +132,13 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
    * @returns STOP if the minimum word count was reached, CONTINUE otherwise.
    */
   override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+    if (frame instanceof VADUserStartedSpeakingFrame) {
+      this._userVadSpeaking = true;
+    } else if (frame instanceof VADUserStoppedSpeakingFrame) {
+      this._userVadSpeaking = false;
+      this._userVadStoppedAt = frame.timestamp;
+    }
+
     if (frame instanceof BotStartedSpeakingFrame) {
       await this._handleBotStartedSpeaking(frame);
     } else if (frame instanceof BotStoppedSpeakingFrame) {
@@ -151,12 +191,14 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
     // Python's str.split(): split on whitespace runs, ignoring leading/trailing.
     const trimmed = frame.text.trim();
     const wordCount = trimmed ? trimmed.split(/\s+/).length : 0;
-    const shouldTrigger = wordCount >= minWords;
     const isInterim = frame instanceof InterimTranscriptionFrame;
+    const ignored = this._botSpeaking ? this._ignoredOverBot(trimmed, frame.language) : null;
+    const shouldTrigger = wordCount >= minWords && ignored === null;
 
     logger.debug(
       `${this} should_trigger=${pyBool(shouldTrigger)} num_spoken_words=${wordCount} ` +
-        `min_words=${minWords} bot_speaking=${pyBool(this._botSpeaking)} interim_transcription=${pyBool(isInterim)}`,
+        `min_words=${minWords} bot_speaking=${pyBool(this._botSpeaking)} interim_transcription=${pyBool(isInterim)}` +
+        (ignored ? ` ignored=${ignored}` : ""),
     );
 
     if (shouldTrigger) {
@@ -166,6 +208,23 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
     await this.triggerResetAggregation();
 
     return ProcessFrameResult.CONTINUE;
+  }
+
+  /**
+   * Why a transcript heard over the bot can't start a turn, or null if it
+   * can: it is a backchannel, or VAD heard no speech recently enough.
+   */
+  protected _ignoredOverBot(text: string, language: Language | null): string | null {
+    if (this._isBackchannel?.(text, language)) {
+      return "backchannel";
+    }
+    if (this._requireVadWithinSeconds !== null && !this._userVadSpeaking) {
+      const stoppedAt = this._userVadStoppedAt;
+      if (stoppedAt === null || time() - stoppedAt > this._requireVadWithinSeconds) {
+        return "no_recent_vad";
+      }
+    }
+    return null;
   }
 }
 

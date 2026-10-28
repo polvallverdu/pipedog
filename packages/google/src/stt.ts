@@ -35,10 +35,19 @@
  * - DIVERGENCE: pipedog-only `finalizeOnVadStop` option (see
  *   `GoogleSTTServiceOptions`), and a gRPC CANCELLED error (code 1) on the
  *   response stream is a quiet end of that stream, not an error.
+ * - DIVERGENCE: pipedog-only `sharedClient` option (one Speech client per
+ *   location, credentials and client options in the process) and
+ *   `prewarm()`, which connects the gRPC channel and fetches a token ahead of
+ *   the first stream.
+ * - DIVERGENCE: pipedog-only `setLanguageCodes()`, the same API as
+ *   `GeminiSTTService`'s: changed codes are applied, reconnecting, on the
+ *   next `BotStartedSpeakingFrame`, or once the user's turn ends if they are
+ *   speaking then.
  */
 
 import { abortable, Queue, rethrowIfCancelled, sleep, type Task, time } from "@pipedog/asyncio";
 import {
+  BotStartedSpeakingFrame,
   type CancelFrame,
   type EndFrame,
   type Frame,
@@ -420,6 +429,11 @@ export interface GoogleSTTClient {
   streamingRecognize(): GoogleSTTStreamingCall;
   /** Resolve the project ID of the client's credentials. */
   getProjectId?(): Promise<string | null | undefined>;
+  /**
+   * Connect ahead of the first stream: open the gRPC channel and fetch an
+   * access token. Rejects if that fails. pipedog-only.
+   */
+  prewarm?(options?: { timeout?: number }): Promise<void>;
 }
 
 /** The parts of `@google-cloud/speech`'s v2 `SpeechClient` we use. */
@@ -427,6 +441,37 @@ interface NodeSpeechV2ClientLike {
   _streamingRecognize?(): GoogleSTTStreamingCall;
   streamingRecognize?(): GoogleSTTStreamingCall;
   getProjectId(): Promise<string>;
+  /** Builds the gRPC stub (and its channel). */
+  initialize?(): Promise<{
+    waitForReady?(deadline: number, callback: (error?: Error | null) => void): void;
+  }>;
+  auth?: { getAccessToken?(): Promise<unknown> };
+}
+
+// Shared Speech clients (`sharedClient`), by everything the client is built
+// from: plain values by content, anything else (a module, gRPC channel
+// credentials) by identity. A failed build is dropped, so the next connect
+// tries again.
+const sharedSttClients = new Map<string, Promise<GoogleSTTClient>>();
+const sharedKeyIds = new WeakMap<object, number>();
+let nextSharedKeyId = 0;
+
+function sharedClientKey(options: object): string {
+  return JSON.stringify(options, (_key, value: unknown) => {
+    const isObject = typeof value === "object" && value !== null;
+    if (
+      typeof value === "function" ||
+      (isObject && !Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype)
+    ) {
+      let id = sharedKeyIds.get(value as object);
+      if (id === undefined) {
+        id = ++nextSharedKeyId;
+        sharedKeyIds.set(value as object, id);
+      }
+      return `#${id}`;
+    }
+    return value;
+  });
 }
 
 interface NodeSpeechModuleLike {
@@ -716,6 +761,18 @@ export interface GoogleSTTServiceOptions extends STTServiceOptions {
    */
   speechModule?: GoogleSpeechModule | null;
   /**
+   * Use the process-wide Speech client for this location, credentials,
+   * `clientOptions` and `speechModule` instead of building one per service,
+   * so a server running one pipeline per call opens one gRPC channel and
+   * fetches tokens once. Pair it with `prewarm()` at start-up. Default false:
+   * each service has its own client (upstream's behavior), since one channel
+   * carries every concurrent stream of the process. Services never close
+   * clients. Ignored when `client` is given.
+   *
+   * DIVERGENCE: pipedog-only.
+   */
+  sharedClient?: boolean;
+  /**
    * Finalize an utterance as soon as VAD reports the user stopped speaking.
    *
    * Google only sends a final result once its own endpointing decides the
@@ -794,6 +851,11 @@ export class GoogleSTTService extends STTService {
   #clientOptions: Record<string, unknown> | null = null;
   #speechModule: GoogleSpeechModule | null = null;
   #finalizeOnVadStop: boolean;
+  #sharedClient: boolean;
+  // Codes from setLanguageCodes(), until the language settings change, and
+  // whether they are being written to the settings.
+  #languageCodesSource: string[] | (() => string[]) | null = null;
+  #applyingLanguageCodes = false;
   // finalizeOnVadStop: a half-close is pending, and the finals it produced.
   #halfClosing = false;
   #heldFinals: TranscriptionFrame[] = [];
@@ -824,6 +886,7 @@ export class GoogleSTTService extends STTService {
       clientOptions,
       speechModule,
       finalizeOnVadStop,
+      sharedClient,
       settings,
       ...rest
     } = options;
@@ -871,6 +934,7 @@ export class GoogleSTTService extends STTService {
     this.#clientOptions = clientOptions ?? null;
     this.#speechModule = speechModule ?? null;
     this.#finalizeOnVadStop = finalizeOnVadStop ?? false;
+    this.#sharedClient = sharedClient ?? false;
 
     // Extract project ID. With a credentials file or default credentials the
     // client (and the project ID) are resolved on first connect.
@@ -970,6 +1034,16 @@ export class GoogleSTTService extends STTService {
   protected override async _updateSettings(delta: STTSettings): Promise<Record<string, unknown>> {
     const googleDelta = delta as GoogleSTTSettings;
 
+    if (
+      !this.#applyingLanguageCodes &&
+      (isGiven(delta.language) ||
+        (delta instanceof GoogleSTTSettings &&
+          (isGiven(delta.languages) || isGiven(delta.languageCodes))))
+    ) {
+      // New language settings replace codes set with setLanguageCodes().
+      this.#languageCodesSource = null;
+    }
+
     // If base set_language sent a Language value, convert to languages list
     if (isGiven(delta.language)) {
       googleDelta.languages = [delta.language as Language];
@@ -1060,35 +1134,21 @@ export class GoogleSTTService extends STTService {
       }
       Object.assign(clientOptions, this.#clientOptions);
 
-      let speech: NodeSpeechModuleLike;
-      try {
-        const mod = (this.#speechModule ??
-          (await import(GOOGLE_CLOUD_SPEECH))) as NodeSpeechModuleLike & {
-          default?: NodeSpeechModuleLike;
-        };
-        speech = mod.v2 ? mod : (mod.default as NodeSpeechModuleLike);
-      } catch (e) {
-        rethrowIfCancelled(e);
-        logger.error(`Exception: ${errorMessage(e)}`);
-        logger.error(
-          "In order to use Google STT, you need to install `@google-cloud/speech`. Also, set `GOOGLE_APPLICATION_CREDENTIALS` environment variable. " +
-            "In a bundled app (bun build) it is not found by name: import it yourself " +
-            "(`import * as speechModule`) and pass `speechModule` to the service.",
-        );
-        throw new Error(`Missing module: ${GOOGLE_CLOUD_SPEECH}`, { cause: e });
+      if (this.#sharedClient) {
+        const key = sharedClientKey({ clientOptions, module: this.#speechModule });
+        let shared = sharedSttClients.get(key);
+        if (!shared) {
+          shared = this.#buildClient(clientOptions);
+          sharedSttClients.set(key, shared);
+          const built = shared;
+          built.catch(() => {
+            if (sharedSttClients.get(key) === built) sharedSttClients.delete(key);
+          });
+        }
+        this._client = await abortable(shared);
+      } else {
+        this._client = await this.#buildClient(clientOptions);
       }
-
-      const sdkClient = new speech.v2.SpeechClient(clientOptions);
-      this._client = {
-        streamingRecognize: () => {
-          const fn = sdkClient._streamingRecognize ?? sdkClient.streamingRecognize;
-          if (!fn) {
-            throw new Error("@google-cloud/speech v2 client has no streamingRecognize method");
-          }
-          return fn.call(sdkClient);
-        },
-        getProjectId: () => sdkClient.getProjectId(),
-      };
     }
 
     if (!this._projectId) {
@@ -1110,6 +1170,134 @@ export class GoogleSTTService extends STTService {
     }
 
     return this._client;
+  }
+
+  /** Load `@google-cloud/speech` and build a v2 `SpeechClient` behind `GoogleSTTClient`. */
+  async #buildClient(clientOptions: Record<string, unknown>): Promise<GoogleSTTClient> {
+    let speech: NodeSpeechModuleLike;
+    try {
+      const mod = (this.#speechModule ??
+        (await import(GOOGLE_CLOUD_SPEECH))) as NodeSpeechModuleLike & {
+        default?: NodeSpeechModuleLike;
+      };
+      speech = mod.v2 ? mod : (mod.default as NodeSpeechModuleLike);
+    } catch (e) {
+      rethrowIfCancelled(e);
+      logger.error(`Exception: ${errorMessage(e)}`);
+      logger.error(
+        "In order to use Google STT, you need to install `@google-cloud/speech`. Also, set `GOOGLE_APPLICATION_CREDENTIALS` environment variable. " +
+          "In a bundled app (bun build) it is not found by name: import it yourself " +
+          "(`import * as speechModule`) and pass `speechModule` to the service.",
+      );
+      throw new Error(`Missing module: ${GOOGLE_CLOUD_SPEECH}`, { cause: e });
+    }
+
+    const sdkClient = new speech.v2.SpeechClient(clientOptions);
+    return {
+      streamingRecognize: () => {
+        const fn = sdkClient._streamingRecognize ?? sdkClient.streamingRecognize;
+        if (!fn) {
+          throw new Error("@google-cloud/speech v2 client has no streamingRecognize method");
+        }
+        return fn.call(sdkClient);
+      },
+      getProjectId: () => sdkClient.getProjectId(),
+      prewarm: async (options = {}) => {
+        // Build the stub, wait for its channel, and fetch a token (cached by
+        // the client for the streams that follow).
+        const stub = await abortable(sdkClient.initialize?.() ?? Promise.resolve(undefined));
+        if (stub?.waitForReady) {
+          const deadline = Date.now() + (options.timeout ?? 10) * 1000;
+          // A callback API: wrapped here, and awaited through abortable().
+          const ready = new Promise<void>((resolve, reject) =>
+            stub.waitForReady?.(deadline, (error) => (error ? reject(error) : resolve())),
+          );
+          await abortable(ready);
+        }
+        await abortable(sdkClient.auth?.getAccessToken?.() ?? Promise.resolve(undefined));
+      },
+    };
+  }
+
+  /**
+   * Connect the client ahead of the first stream (load the SDK, resolve the
+   * project ID, open the gRPC channel, fetch a token), e.g. at server
+   * start-up with `sharedClient`. Fails soft: on failure the first stream
+   * connects.
+   *
+   * DIVERGENCE: pipedog-only.
+   *
+   * @param options.timeout Seconds to wait for the channel. Default 10.
+   * @returns Whether the client is connected.
+   */
+  async prewarm(options: { timeout?: number } = {}): Promise<boolean> {
+    try {
+      const client = await this._ensureClient();
+      await client.prewarm?.({ timeout: options.timeout ?? 10 });
+      return true;
+    } catch (e) {
+      rethrowIfCancelled(e);
+      logger.warning(`${this}: prewarm failed, the first stream connects: ${errorMessage(e)}`);
+      return false;
+    }
+  }
+
+  /**
+   * Set the language codes to recognize, e.g. when the bot switches
+   * language: Google codes sent as-is (e.g. `["es-ES", "en-US"]`), written to
+   * the `languageCodes` setting. Pass a function to have the codes read again
+   * on every `BotStartedSpeakingFrame`; it stays in effect until the
+   * `language`, `languages` or `languageCodes` setting is updated.
+   *
+   * The stream is not reconnected at once: when the codes differ from the
+   * current ones, the service reconnects on the next
+   * `BotStartedSpeakingFrame`, or once the user's turn ends if they are
+   * speaking then, so no utterance is cut. Before the stream opens, the codes
+   * are written right away.
+   *
+   * DIVERGENCE: pipedog-only (the same API as `GeminiSTTService`).
+   *
+   * @param codes The language codes, or a function returning them.
+   */
+  async setLanguageCodes(codes: string[] | (() => string[])): Promise<void> {
+    this.#languageCodesSource = typeof codes === "function" ? codes : [...codes];
+    if (!this._streamingTask) {
+      await this.#applyLanguageCodes();
+    } else {
+      logger.debug(`${this}: language codes set; applied on the next safe reconnect`);
+    }
+  }
+
+  /** The codes from `setLanguageCodes()`, if they differ from the current ones. */
+  #changedLanguageCodes(): string[] | null {
+    const source = this.#languageCodesSource;
+    if (source === null) return null;
+    const codes = [...(typeof source === "function" ? source() : source)];
+    const current = assertGiven(this._settings.languageCodes) ?? [];
+    const same = codes.length === current.length && codes.every((c, i) => c === current[i]);
+    return same ? null : codes;
+  }
+
+  /** Write the codes from `setLanguageCodes()`, reconnecting if they changed. */
+  async #applyLanguageCodes(): Promise<void> {
+    const codes = this.#changedLanguageCodes();
+    if (codes === null) return;
+    logger.debug(`${this}: language codes changed to [${codes.join(", ")}]`);
+    this.#applyingLanguageCodes = true;
+    try {
+      await this._updateSettings(new GoogleSTTSettings({ languageCodes: codes }));
+    } finally {
+      this.#applyingLanguageCodes = false;
+    }
+  }
+
+  /**
+   * Called by `STTService._reconnect()`, which buffers the audio meanwhile.
+   * This service only asks for a reconnect for `setLanguageCodes()`, so it
+   * writes the codes, which reconnects the stream if they changed.
+   */
+  protected override async _doReconnect(): Promise<void> {
+    await this.#applyLanguageCodes();
   }
 
   /** Initialize streaming recognition config and stream. */
@@ -1314,12 +1502,23 @@ export class GoogleSTTService extends STTService {
 
   /**
    * Process a frame; with `finalizeOnVadStop`, a `VADUserStoppedSpeakingFrame`
-   * half-closes the current request stream.
+   * half-closes the current request stream, and a `BotStartedSpeakingFrame`
+   * applies codes from `setLanguageCodes()`.
    *
    * DIVERGENCE: pipedog-only override (upstream does not override it).
    */
   override async processFrame(frame: Frame, direction: FrameDirection): Promise<void> {
     await super.processFrame(frame, direction);
+    if (
+      frame instanceof BotStartedSpeakingFrame &&
+      this._streamingTask &&
+      this.#changedLanguageCodes() !== null
+    ) {
+      // setLanguageCodes(): the bot is talking, so the user's turn is over
+      // and a reconnect cuts no speech; if the user is speaking over the bot,
+      // it waits for the end of their turn.
+      await this._requestReconnect();
+    }
     if (
       this.#finalizeOnVadStop &&
       frame instanceof VADUserStoppedSpeakingFrame &&

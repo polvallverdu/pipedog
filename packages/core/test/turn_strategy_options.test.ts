@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 import { describe, expect, test } from "bun:test";
+import { time } from "@pipedog/asyncio";
 
 import {
   BotStartedSpeakingFrame,
@@ -13,10 +14,16 @@ import {
   StopWorkerFrame,
   TranscriptionFrame,
   VADUserStartedSpeakingFrame,
+  VADUserStoppedSpeakingFrame,
 } from "../src/frames/frames.ts";
+import { Language } from "../src/transcriptions/language.ts";
 import { ProcessFrameResult } from "../src/turns/types.ts";
 import { EndingUserMuteStrategy, OpeningUserMuteStrategy } from "../src/turns/user_mute/index.ts";
-import { MinWordsUserTurnStartStrategy } from "../src/turns/user_start/index.ts";
+import {
+  BACKCHANNEL_PHRASES,
+  createBackchannelMatcher,
+  MinWordsUserTurnStartStrategy,
+} from "../src/turns/user_start/index.ts";
 
 function captureStarts(strategy: MinWordsUserTurnStartStrategy): { count: number } {
   const starts = { count: 0 };
@@ -26,8 +33,8 @@ function captureStarts(strategy: MinWordsUserTurnStartStrategy): { count: number
   return starts;
 }
 
-function transcription(text: string): TranscriptionFrame {
-  return new TranscriptionFrame({ text, userId: "cat", timestamp: "" });
+function transcription(text: string, language: Language | null = null): TranscriptionFrame {
+  return new TranscriptionFrame({ text, userId: "cat", timestamp: "", language });
 }
 
 describe("MinWordsUserTurnStartStrategy options", () => {
@@ -96,6 +103,86 @@ describe("MinWordsUserTurnStartStrategy options", () => {
     await strategy.processFrame(new BotStoppedSpeakingFrame());
     await strategy.processFrame(transcription("yes"));
     expect(starts.count).toBe(1);
+  });
+
+  test("isBackchannel: a backchannel over the bot never starts a turn", async () => {
+    const strategy = new MinWordsUserTurnStartStrategy({
+      minWords: 2,
+      isBackchannel: createBackchannelMatcher(),
+    });
+    const starts = captureStarts(strategy);
+
+    await strategy.processFrame(new BotStartedSpeakingFrame());
+    expect(await strategy.processFrame(transcription("Yes, okay."))).toBe(
+      ProcessFrameResult.CONTINUE,
+    );
+    expect(await strategy.processFrame(transcription("Mm-hm, right"))).toBe(
+      ProcessFrameResult.CONTINUE,
+    );
+    expect(starts.count).toBe(0);
+    expect(await strategy.processFrame(transcription("yes, but what about Friday?"))).toBe(
+      ProcessFrameResult.STOP,
+    );
+    expect(starts.count).toBe(1);
+
+    // With the bot quiet, a backchannel is an answer and starts the turn.
+    await strategy.processFrame(new BotStoppedSpeakingFrame());
+    expect(await strategy.processFrame(transcription("yes okay"))).toBe(ProcessFrameResult.STOP);
+    expect(starts.count).toBe(2);
+  });
+
+  test("createBackchannelMatcher picks the transcript's language", () => {
+    const isBackchannel = createBackchannelMatcher();
+    expect(isBackchannel("Sí, vale, de acuerdo", Language.ES_ES)).toBe(true);
+    expect(isBackchannel("vale", Language.EN_US)).toBe(false);
+    expect(isBackchannel("vale", null)).toBe(true);
+    expect(isBackchannel("no", null)).toBe(false);
+    expect(isBackchannel("", null)).toBe(false);
+    expect(isBackchannel("okay let's go", Language.EN)).toBe(false);
+
+    const custom = createBackchannelMatcher({ en: [...(BACKCHANNEL_PHRASES.en ?? []), "gotcha"] });
+    expect(custom("gotcha, sure", Language.EN)).toBe(true);
+  });
+
+  test("requireVadWithinSeconds: words over the bot need recent speech", async () => {
+    const strategy = new MinWordsUserTurnStartStrategy({
+      minWords: 2,
+      requireVadWithinSeconds: 1.0,
+    });
+    const starts = captureStarts(strategy);
+
+    await strategy.processFrame(new BotStartedSpeakingFrame());
+    // No VAD at all: a background TV.
+    expect(await strategy.processFrame(transcription("and now the weather"))).toBe(
+      ProcessFrameResult.CONTINUE,
+    );
+    // VAD stopped long ago.
+    await strategy.processFrame(new VADUserStartedSpeakingFrame());
+    await strategy.processFrame(new VADUserStoppedSpeakingFrame({ timestamp: time() - 5 }));
+    expect(await strategy.processFrame(transcription("and now the weather"))).toBe(
+      ProcessFrameResult.CONTINUE,
+    );
+    expect(starts.count).toBe(0);
+
+    // VAD hears the user now.
+    await strategy.processFrame(new VADUserStartedSpeakingFrame());
+    expect(await strategy.processFrame(transcription("hold on please"))).toBe(
+      ProcessFrameResult.STOP,
+    );
+    expect(starts.count).toBe(1);
+
+    // The final transcript arrives just after VAD stopped.
+    await strategy.processFrame(new BotStartedSpeakingFrame());
+    await strategy.processFrame(new VADUserStoppedSpeakingFrame());
+    expect(await strategy.processFrame(transcription("hold on please"))).toBe(
+      ProcessFrameResult.STOP,
+    );
+    expect(starts.count).toBe(2);
+
+    // With the bot quiet, there is no check.
+    await strategy.processFrame(new BotStoppedSpeakingFrame());
+    await strategy.processFrame(new VADUserStoppedSpeakingFrame({ timestamp: time() - 5 }));
+    expect(await strategy.processFrame(transcription("hello"))).toBe(ProcessFrameResult.STOP);
   });
 });
 

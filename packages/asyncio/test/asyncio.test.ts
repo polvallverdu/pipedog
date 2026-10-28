@@ -13,6 +13,7 @@ import {
   PriorityQueue,
   Queue,
   sleep,
+  type Task,
   TimeoutError,
   wait,
   waitFor,
@@ -157,6 +158,59 @@ describe("Task", () => {
     outer.cancel();
     await expect(outer.promise).rejects.toBeInstanceOf(CancelledError);
     await expect(inner.promise).rejects.toBeInstanceOf(CancelledError);
+  });
+
+  // pipedog#96: `child.then(cb)` without awaiting made the caller a waiter on
+  // `child`. The child's wakeup then cleared what the caller was really
+  // blocked on, and cancelling the caller cancelled the child instead.
+  test("then() on a task leaves the caller cancellable once the task is done", async () => {
+    const caller = createTask(async () => {
+      const child = createTask(() => sleep(0.01));
+      child.then(() => {});
+      await new Queue<number>().get();
+    });
+    await sleep(0.05);
+    caller.cancel();
+    await waitFor(
+      caller.promise.catch(() => {}),
+      0.5,
+    );
+    expect(caller.cancelled()).toBe(true);
+  });
+
+  test("then() on a pending task: cancelling the caller cancels the caller", async () => {
+    let child!: Task<void>;
+    const caller = createTask(async () => {
+      child = createTask(() => new Event().wait());
+      child.then(
+        () => {},
+        () => {},
+      );
+      // A foreign await: the cancellation is raised at the next checkpoint.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await sleep(10);
+    });
+    await sleep(0.005);
+    caller.cancel();
+    await waitFor(
+      caller.promise.catch(() => {}),
+      0.5,
+    );
+    expect(caller.cancelled()).toBe(true);
+    expect(child.done()).toBe(false);
+    child.cancel();
+  });
+
+  test("await Promise.all over tasks is still a cancellation point", async () => {
+    const a = createTask(() => sleep(10));
+    const b = createTask(() => sleep(10));
+    const caller = createTask(async () => {
+      await Promise.all([a, b]);
+    });
+    await sleep(0.005);
+    caller.cancel();
+    await expect(caller.promise).rejects.toBeInstanceOf(CancelledError);
+    a.cancel();
   });
 
   test("exceptions are kept on the task", async () => {

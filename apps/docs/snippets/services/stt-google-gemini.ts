@@ -26,3 +26,20 @@ const hinted = new GeminiSTTService({
   }),
 });
 // #endregion hints
+
+// #region vertex
+const vertex = new GeminiSTTService({
+  vertexai: true,
+  location: "eu",
+  projectId: process.env.GOOGLE_CLOUD_PROJECT ?? "",
+  // credentials: "<service account JSON>", or credentialsPath; otherwise ADC.
+  reportDetectedLanguage: false,
+  settings: new GeminiSTTService.Settings({ languages: [Language.ES_ES] }),
+});
+// #endregion vertex
+
+// #region switch-language
+// For example from a function the LLM calls when the conversation changes language.
+// The session reconnects with the new codes when the bot next starts speaking.
+await vertex.setLanguageCodes(["en-US"]);
+// #endregion switch-language
