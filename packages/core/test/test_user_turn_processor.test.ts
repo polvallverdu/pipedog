@@ -23,6 +23,7 @@ import {
   LLMUserAggregatorParams,
 } from "../src/processors/aggregators/llm_response_universal.ts";
 import { runTest, SleepFrame } from "../src/tests/utils.ts";
+import type { UserTurnResumedParams } from "../src/turns/types.ts";
 import { SpeechTimeoutUserTurnStopStrategy } from "../src/turns/user_stop/index.ts";
 import { UserTurnProcessor } from "../src/turns/user_turn_processor.ts";
 import {
@@ -184,5 +185,38 @@ describe("TestUserTurnProcessor", () => {
     expect(count("InterruptionFrame")).toEqual(1);
     expect(count("ProposedUserStartedSpeakingFrame")).toEqual(0);
     expect(count("ProposedUserStoppedSpeakingFrame")).toEqual(0);
+  });
+
+  test("test_user_turn_resumed", async () => {
+    const userTurnProcessor = new UserTurnProcessor({
+      userTurnStrategies: new UserTurnStrategies({
+        stop: [new SpeechTimeoutUserTurnStopStrategy({ userSpeechTimeout: 1.0 })],
+      }),
+    });
+    const resumes: boolean[] = [];
+
+    userTurnProcessor.eventHandler(
+      "on_user_turn_resumed",
+      async (_processor: unknown, params: UserTurnResumedParams) => {
+        resumes.push(params.inferenceTriggered);
+      },
+    );
+
+    const framesToSend = [
+      new VADUserStartedSpeakingFrame(),
+      new TranscriptionFrame({ text: "Book a flight", userId: "", timestamp: "now" }),
+      new SleepFrame(),
+      new VADUserStoppedSpeakingFrame(),
+      new SleepFrame(),
+      // The turn is still open, so speaking again resumes it.
+      new VADUserStartedSpeakingFrame(),
+      new SleepFrame(),
+    ];
+    await runTest(new Pipeline([userTurnProcessor]), {
+      framesToSend,
+      expectedDownFrames: null,
+    });
+
+    expect(resumes).toEqual([false]);
   });
 });

@@ -134,8 +134,8 @@ The user aggregator emits `on_user_mute_started` when the user becomes muted and
 ## Writing a strategy
 
 Subclass `BaseUserMuteStrategy` (`@pipedog/core/turns/user_mute/base_user_mute_strategy`) and
-override `processFrame()`. Unlike turn strategies, a mute strategy doesn't return a
-`ProcessFrameResult`: it returns a boolean, `true` to mute. The user aggregator calls it with every
+override `processFrame()`. Unlike turn strategies, which report their decisions through events, a
+mute strategy returns a boolean, `true` to mute. The user aggregator calls it with every
 frame it receives (except the lifecycle frames above), so it sees the frames that flow downstream
 to the aggregator and those broadcast upstream to it, such as the bot speaking frames, the function
 call frames and errors. Frames that only travel downstream after the aggregator, like the LLM's

@@ -9,22 +9,20 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import {
   type Frame,
   FunctionCallsStartedFrame,
+  LLMContextFrame,
   LLMFullResponseEndFrame,
   LLMFullResponseStartFrame,
   LLMMarkerFrame,
   LLMMarkerResponseFrame,
-  LLMMessagesAppendFrame,
   LLMTextFrame,
-  UserStartedSpeakingFrame,
+  UserTurnCompletionFrame,
   UserTurnInferenceCompletedFrame,
-  VADUserStartedSpeakingFrame,
-  VADUserStoppedSpeakingFrame,
 } from "../src/frames/frames.ts";
+import { LLMContext } from "../src/processors/aggregators/llm_context.ts";
 import { FrameDirection, FrameProcessor } from "../src/processors/frame_processor.ts";
 import { LLMService, type LLMServiceOptions } from "../src/services/llm_service.ts";
 import { LLMSettings } from "../src/services/settings.ts";
 import {
-  IncompleteType,
   TurnMarker,
   USER_TURN_COMPLETE_MARKER,
   USER_TURN_COMPLETION_INSTRUCTIONS,
@@ -34,8 +32,16 @@ import {
   UserTurnCompletionLLMServiceMixin,
 } from "../src/turns/user_turn_completion_mixin.ts";
 
-/** Simple mock processor using the turn completion mixin. */
-class MockProcessor extends UserTurnCompletionLLMServiceMixin(FrameProcessor) {}
+/** Simple mock processor using the turn completion mixin, as LLMService does. */
+class MockProcessor extends UserTurnCompletionLLMServiceMixin(FrameProcessor) {
+  override async pushFrame(
+    frame: Frame,
+    direction: FrameDirection = FrameDirection.DOWNSTREAM,
+  ): Promise<void> {
+    await this._trackPushedFrame(frame);
+    await super.pushFrame(frame, direction);
+  }
+}
 
 // Python tests replace methods on the instance (AsyncMock) and read
 // protected attributes; give the tests the same freedom.
@@ -71,10 +77,6 @@ async function withPatch(patch: { mockRestore(): void }, fn: () => Promise<void>
   } finally {
     patch.mockRestore();
   }
-}
-
-function asyncMock() {
-  return mock(async (..._args: unknown[]) => {});
 }
 
 afterEach(() => {
@@ -116,8 +118,6 @@ describe("TestUserUserTurnCompletionLLMServiceMixin", () => {
 
     const pushedFrames: Frame[] = [];
     captureInstancePush(processor, pushedFrames);
-    // Mock timeout to avoid needing task manager
-    (processor as Loose)._startIncompleteTimeout = asyncMock();
 
     await processor._pushTurnText(USER_TURN_INCOMPLETE_SHORT_MARKER);
 
@@ -142,8 +142,6 @@ describe("TestUserUserTurnCompletionLLMServiceMixin", () => {
 
     const pushedFrames: Frame[] = [];
     captureInstancePush(processor, pushedFrames);
-    // Mock timeout to avoid needing task manager
-    (processor as Loose)._startIncompleteTimeout = asyncMock();
 
     await processor._pushTurnText(USER_TURN_INCOMPLETE_LONG_MARKER);
 
@@ -213,8 +211,6 @@ describe("TestUserUserTurnCompletionLLMServiceMixin", () => {
 
   test("test_response_end_reports_the_raw_text_and_marker", async () => {
     const processor = new MockProcessor();
-    // Mock timeout to avoid needing task manager
-    (processor as Loose)._startIncompleteTimeout = asyncMock();
     const pushedFrames: Frame[] = [];
     await withPatch(patchFrameProcessorPush(pushedFrames), async () => {
       await processor.pushFrame(new LLMFullResponseStartFrame());
@@ -267,355 +263,6 @@ describe("TestUserUserTurnCompletionLLMServiceMixin", () => {
       await processor.pushFrame(new LLMFullResponseEndFrame());
     });
     expect(pushedFrames.filter((f) => f instanceof LLMMarkerResponseFrame)).toEqual([]);
-  });
-
-  test("test_new_response_cancels_pending_incomplete_timeout", async () => {
-    // A new LLM response starting must cancel a pending incomplete timeout.
-    //
-    // This closes the race where the timeout fires at the same time a new
-    // (completed) inference arrives: whichever response starts first cancels
-    // the timeout before its text is parsed, so only one inference runs.
-    const processor = new MockProcessor();
-
-    // Arm an incomplete timeout via an ◐ marker.
-    captureInstancePush(processor);
-    (processor as Loose)._startIncompleteTimeout = asyncMock();
-    await processor._pushTurnText(USER_TURN_INCOMPLETE_SHORT_MARKER);
-    expect(processor._turnMarker).toEqual(TurnMarker.INCOMPLETE);
-
-    // Simulate a live pending timeout task.
-    (processor as Loose)._incompleteTimeoutTask = {};
-    const cancel = asyncMock();
-    (processor as Loose)._cancelIncompleteTimeout = cancel;
-
-    // A new response begins (either the user's completed turn or the
-    // timeout's own re-prompt): the pending timeout must be cancelled.
-    delete (processor as Loose).pushFrame; // restore the mixin override
-    await withPatch(patchFrameProcessorPush(), async () => {
-      await processor.pushFrame(new LLMFullResponseStartFrame());
-    });
-
-    expect(cancel).toHaveBeenCalledTimes(1);
-  });
-
-  test("test_vad_resume_cancels_pending_incomplete_timeout", async () => {
-    // The user resuming speech mid-turn cancels the pending re-prompt timeout.
-    //
-    // A resume inside an already-open turn produces a
-    // VADUserStartedSpeakingFrame but no InterruptionFrame, so the incomplete
-    // (◐/○) re-prompt timeout would otherwise expire and talk over the user.
-    const processor = new MockProcessor();
-    (processor as Loose)._incompleteTimeoutTask = {};
-    const cancel = asyncMock();
-    (processor as Loose)._cancelIncompleteTimeout = cancel;
-
-    await withPatch(patchFrameProcessorProcess(), async () => {
-      await processor.processFrame(new VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM);
-    });
-
-    expect(cancel).toHaveBeenCalledTimes(1);
-  });
-
-  test("test_only_first_completion_voiced_per_user_turn", async () => {
-    // A second ● inference within the same user turn is not voiced again.
-    const processor = new MockProcessor();
-
-    const pushedFrames: Frame[] = [];
-    captureInstancePush(processor, pushedFrames);
-
-    // First inference: ● is voiced.
-    await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} How are you?`);
-    // End of that response resets per-response state but not the per-turn latch.
-    await processor._turnReset();
-
-    const textBefore = (
-      pushedFrames.filter((f) => f instanceof LLMTextFrame) as LLMTextFrame[]
-    ).map((f) => f.text);
-    expect(textBefore).toEqual(["How are you?"]);
-
-    // Second inference in the same user turn: identical ● must be dropped.
-    pushedFrames.length = 0;
-    await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} How are you?`);
-    expect(pushedFrames.filter((f) => f instanceof LLMTextFrame)).toEqual([]);
-    const completed = pushedFrames.filter((f) => f instanceof UserTurnInferenceCompletedFrame);
-    expect(completed).toEqual([]);
-  });
-
-  test("test_voiced_response_keeps_streaming_after_latch", async () => {
-    // The response that set the latch keeps streaming its own continuation.
-    const processor = new MockProcessor();
-
-    const pushedFrames: Frame[] = [];
-    captureInstancePush(processor, pushedFrames);
-
-    await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Hello`);
-    await processor._pushTurnText(" there!");
-
-    const text = (pushedFrames.filter((f) => f instanceof LLMTextFrame) as LLMTextFrame[]).map(
-      (f) => f.text,
-    );
-    expect(text).toEqual(["Hello", " there!"]);
-  });
-
-  test("test_new_user_turn_resets_completion_latch", async () => {
-    // UserStartedSpeakingFrame lets the next user turn voice a completion again.
-    const processor = new MockProcessor();
-    processor._userTurnCompletionVoiced = true;
-
-    await withPatch(patchFrameProcessorProcess(), async () => {
-      await processor.processFrame(new UserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM);
-    });
-
-    expect(processor._userTurnCompletionVoiced).toBe(false);
-  });
-
-  test("test_vad_resume_resets_completion_latch", async () => {
-    // VADUserStartedSpeakingFrame lets the same open turn voice a completion again.
-    const processor = new MockProcessor();
-    processor._userTurnCompletionVoiced = true;
-
-    await withPatch(patchFrameProcessorProcess(), async () => {
-      await processor.processFrame(new VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM);
-    });
-
-    expect(processor._userTurnCompletionVoiced).toBe(false);
-  });
-
-  test("test_resumed_speech_does_not_permanently_silence_the_turn", async () => {
-    // Regression test for the confirmed double-inference-fix interaction bug.
-    const processor = new MockProcessor();
-
-    const pushedFrames: Frame[] = [];
-    captureInstancePush(processor, pushedFrames);
-
-    // First (premature) inference: LLM says ●, voiced, latch set.
-    await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} First answer`);
-    await processor._turnReset();
-    expect(processor._userTurnCompletionVoiced).toBe(true);
-
-    // The user resumes speaking within the same still-open turn (no new
-    // UserStartedSpeakingFrame, since the turn never closed), then pauses.
-    await withPatch(patchFrameProcessorProcess(), async () => {
-      await processor.processFrame(new VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM);
-      await processor.processFrame(new VADUserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM);
-    });
-
-    // A second, legitimate inference completes once the user pauses again.
-    await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Second answer`);
-    await processor._turnReset();
-
-    const texts = (pushedFrames.filter((f) => f instanceof LLMTextFrame) as LLMTextFrame[]).map(
-      (f) => f.text,
-    );
-    expect(texts).toEqual(["First answer", "Second answer"]);
-  });
-
-  test("test_complete_while_user_speaking_is_treated_as_incomplete", async () => {
-    // A ● that resolves while VAD hears the user is stale and handled as ◐.
-    const processor = new MockProcessor();
-
-    const pushedFrames: Frame[] = [];
-    captureInstancePush(processor, pushedFrames);
-    const startTimeout = asyncMock();
-    (processor as Loose)._startIncompleteTimeout = startTimeout;
-
-    await withPatch(patchFrameProcessorProcess(), async () => {
-      await processor.processFrame(new VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM);
-    });
-
-    await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Stale answer`);
-    // Any continuation of the stale response stays suppressed.
-    await processor._pushTurnText(" and more");
-
-    expect(pushedFrames.filter((f) => f instanceof LLMTextFrame)).toEqual([]);
-    expect(pushedFrames.filter((f) => f instanceof UserTurnInferenceCompletedFrame)).toEqual([]);
-    const markerFrames = pushedFrames.filter(
-      (f) => f instanceof LLMMarkerFrame,
-    ) as LLMMarkerFrame[];
-    expect(markerFrames.length).toEqual(1);
-    expect(markerFrames[0]!.marker).toEqual(USER_TURN_INCOMPLETE_SHORT_MARKER);
-    expect(markerFrames[0]!.appendToContextImmediately).toBe(true);
-    expect(processor._turnMarker).toEqual(TurnMarker.INCOMPLETE);
-    expect(processor._userTurnCompletionVoiced).toBe(false);
-    expect(startTimeout).toHaveBeenCalledTimes(1);
-    expect(startTimeout).toHaveBeenCalledWith(IncompleteType.SHORT);
-
-    // Once the user pauses, the next ● is voiced normally.
-    await processor._turnReset();
-    await withPatch(patchFrameProcessorProcess(), async () => {
-      await processor.processFrame(new VADUserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM);
-    });
-    pushedFrames.length = 0;
-    await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Real answer`);
-    expect(
-      (pushedFrames.filter((f) => f instanceof LLMTextFrame) as LLMTextFrame[]).map((f) => f.text),
-    ).toEqual(["Real answer"]);
-  });
-
-  test("test_function_call_resets_completion_latch", async () => {
-    // A FunctionCallsStartedFrame lets the post-tool inference voice a completion.
-    const processor = new MockProcessor();
-    processor._userTurnCompletionVoiced = true;
-    (processor as Loose).broadcastFrame = asyncMock();
-
-    await withPatch(patchFrameProcessorPush(), async () => {
-      await processor.pushFrame(new FunctionCallsStartedFrame({ functionCalls: [] }));
-    });
-
-    expect(processor._userTurnCompletionVoiced).toBe(false);
-  });
-
-  test("test_post_tool_response_speaks_after_voiced_filler", async () => {
-    // Regression test for #5063: silence after a tool call following a spoken ● filler.
-    const processor = new MockProcessor();
-    (processor as Loose).broadcastFrame = asyncMock();
-
-    const pushedFrames: Frame[] = [];
-    await withPatch(patchFrameProcessorPush(pushedFrames), async () => {
-      // Filler response: LLM speaks a ● acknowledgement, latch is set.
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} One moment.`);
-      expect(processor._userTurnCompletionVoiced).toBe(true);
-
-      // LLM commits to a tool call, then the filler response ends.
-      await processor.pushFrame(new FunctionCallsStartedFrame({ functionCalls: [] }));
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-
-      // Post-tool inference: fresh ● with the real answer must be spoken.
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Here are the openings.`);
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-    });
-
-    const texts = (pushedFrames.filter((f) => f instanceof LLMTextFrame) as LLMTextFrame[]).map(
-      (f) => f.text,
-    );
-    expect(texts).toEqual(["One moment.", "Here are the openings."]);
-  });
-
-  test("test_tool_call_allows_only_one_extra_completion", async () => {
-    // A tool call grants exactly ONE extra spoken completion, then re-latches.
-    const processor = new MockProcessor();
-    (processor as Loose).broadcastFrame = asyncMock();
-
-    const pushedFrames: Frame[] = [];
-    await withPatch(patchFrameProcessorPush(pushedFrames), async () => {
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} One moment.`);
-      await processor.pushFrame(new FunctionCallsStartedFrame({ functionCalls: [] }));
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Here are the openings.`);
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-      // Stray acoustic-detector inference, same turn, no new tool call.
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Duplicate!`);
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-    });
-
-    const texts = (pushedFrames.filter((f) => f instanceof LLMTextFrame) as LLMTextFrame[]).map(
-      (f) => f.text,
-    );
-    expect(texts).toEqual(["One moment.", "Here are the openings."]);
-    expect(processor._userTurnCompletionVoiced).toBe(true);
-  });
-
-  test("test_requested_run_resets_completion_latch", async () => {
-    // An appended message requesting a run lets its response voice a completion.
-    const processor = new MockProcessor();
-    processor._userTurnCompletionVoiced = true;
-
-    await withPatch(patchFrameProcessorProcess(), async () => {
-      await processor.processFrame(
-        new LLMMessagesAppendFrame({
-          messages: [{ role: "developer", content: "The user has been quiet." }],
-          runLlm: true,
-        }),
-        FrameDirection.DOWNSTREAM,
-      );
-    });
-
-    expect(processor._userTurnCompletionVoiced).toBe(false);
-  });
-
-  test("test_append_without_run_keeps_completion_latch", async () => {
-    // Appending messages without requesting a run leaves the latch armed.
-    const processor = new MockProcessor();
-    processor._userTurnCompletionVoiced = true;
-
-    await withPatch(patchFrameProcessorProcess(), async () => {
-      await processor.processFrame(
-        new LLMMessagesAppendFrame({
-          messages: [{ role: "developer", content: "Background note." }],
-        }),
-        FrameDirection.DOWNSTREAM,
-      );
-    });
-
-    expect(processor._userTurnCompletionVoiced).toBe(true);
-  });
-
-  test("test_reprompt_speaks_after_voiced_completion", async () => {
-    // Regression test for #5145: silence after a re-prompt following a spoken ●.
-    const processor = new MockProcessor();
-    (processor as Loose).broadcastFrame = asyncMock();
-
-    const pushedFrames: Frame[] = [];
-    await withPatch(patchFrameProcessorPush(pushedFrames), async () => {
-      // The user's turn completes and the bot answers, setting the latch.
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Japan is a great pick.`);
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-      expect(processor._userTurnCompletionVoiced).toBe(true);
-
-      // The user says nothing, so the idle handler asks for a check-in.
-      await withPatch(patchFrameProcessorProcess(), async () => {
-        await processor.processFrame(
-          new LLMMessagesAppendFrame({
-            messages: [{ role: "developer", content: "The user has been quiet." }],
-            runLlm: true,
-          }),
-          FrameDirection.DOWNSTREAM,
-        );
-      });
-
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Are you still there?`);
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-    });
-
-    const texts = (pushedFrames.filter((f) => f instanceof LLMTextFrame) as LLMTextFrame[]).map(
-      (f) => f.text,
-    );
-    expect(texts).toEqual(["Japan is a great pick.", "Are you still there?"]);
-  });
-
-  test("test_requested_run_allows_only_one_extra_completion", async () => {
-    // A requested run grants exactly ONE extra spoken completion, then re-latches.
-    const processor = new MockProcessor();
-    (processor as Loose).broadcastFrame = asyncMock();
-
-    const pushedFrames: Frame[] = [];
-    await withPatch(patchFrameProcessorPush(pushedFrames), async () => {
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Japan is a great pick.`);
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-
-      await withPatch(patchFrameProcessorProcess(), async () => {
-        await processor.processFrame(
-          new LLMMessagesAppendFrame({
-            messages: [{ role: "developer", content: "The user has been quiet." }],
-            runLlm: true,
-          }),
-          FrameDirection.DOWNSTREAM,
-        );
-      });
-
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Are you still there?`);
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-
-      // Stray acoustic-detector inference, same turn, no new run requested.
-      await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Duplicate!`);
-      await processor.pushFrame(new LLMFullResponseEndFrame());
-    });
-
-    const texts = (pushedFrames.filter((f) => f instanceof LLMTextFrame) as LLMTextFrame[]).map(
-      (f) => f.text,
-    );
-    expect(texts).toEqual(["Japan is a great pick.", "Are you still there?"]);
-    expect(processor._userTurnCompletionVoiced).toBe(true);
   });
 });
 
@@ -820,5 +467,146 @@ describe("TestConfigurableMarkers", () => {
       (f) => f instanceof LLMMarkerFrame,
     ) as LLMMarkerFrame[];
     expect(markerFrames.map((f) => f.marker)).toEqual(["Y"]);
+  });
+});
+
+describe("TestUserTurnCompletionReports", () => {
+  // The turn-completion judgment pushed upstream as UserTurnCompletionFrame.
+
+  function processorFor(options: { filtering?: boolean } = {}): MockProcessor {
+    const processor = new MockProcessor();
+    processor._filterIncompleteUserTurns = options.filtering ?? true;
+    return processor;
+  }
+
+  type Pushed = [Frame, FrameDirection];
+
+  function recorder(pushed: Pushed[]) {
+    return async (f: Frame, direction: FrameDirection = FrameDirection.DOWNSTREAM) => {
+      pushed.push([f, direction]);
+    };
+  }
+
+  function reports(pushed: Pushed[]): UserTurnCompletionFrame[] {
+    return pushed
+      .map(([f]) => f)
+      .filter((f): f is UserTurnCompletionFrame => f instanceof UserTurnCompletionFrame);
+  }
+
+  test("test_each_marker_is_reported_upstream", async () => {
+    for (const [marker, kind] of [
+      [USER_TURN_COMPLETE_MARKER, "complete"],
+      [USER_TURN_INCOMPLETE_SHORT_MARKER, "short"],
+      [USER_TURN_INCOMPLETE_LONG_MARKER, "long"],
+    ] as const) {
+      const processor = processorFor();
+      const pushed: Pushed[] = [];
+      (processor as Loose).pushFrame = mock(recorder(pushed));
+
+      await processor._pushTurnText(`${marker} Hello`);
+
+      const found = pushed.filter(([f]) => f instanceof UserTurnCompletionFrame);
+      expect(found.length).toEqual(1);
+      const [report, direction] = found[0]! as [UserTurnCompletionFrame, FrameDirection];
+      expect([report.kind, report.marker]).toEqual([kind, marker]);
+      expect(direction).toEqual(FrameDirection.UPSTREAM);
+    }
+  });
+
+  test("test_reports_carry_the_context_frame_id", async () => {
+    const processor = processorFor();
+    const contextFrame = new LLMContextFrame({ context: new LLMContext() });
+    await withPatch(patchFrameProcessorProcess(), async () => {
+      await processor.processFrame(contextFrame, FrameDirection.DOWNSTREAM);
+    });
+    const pushed: Pushed[] = [];
+    (processor as Loose).pushFrame = mock(recorder(pushed));
+
+    await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Hello`);
+
+    const found = reports(pushed);
+    expect(found.length).toEqual(1);
+    expect(found[0]!.contextFrameId).toEqual(contextFrame.id);
+  });
+
+  test("test_a_tool_call_is_reported_as_complete", async () => {
+    const processor = processorFor();
+    const pushed: Pushed[] = [];
+    await withPatch(
+      spyOn(FrameProcessor.prototype, "pushFrame").mockImplementation(recorder(pushed)),
+      async () => {
+        await processor.pushFrame(new FunctionCallsStartedFrame({ functionCalls: [] }));
+      },
+    );
+
+    const found = reports(pushed);
+    expect(found.length).toEqual(1);
+    expect([found[0]!.kind, found[0]!.marker]).toEqual(["complete", null]);
+    const completed = pushed.filter(([f]) => f instanceof UserTurnInferenceCompletedFrame);
+    expect(completed.length).toEqual(2);
+  });
+
+  test("test_a_response_without_a_marker_is_reported_with_no_kind", async () => {
+    const processor = processorFor();
+    const pushed: Pushed[] = [];
+    await withPatch(
+      spyOn(FrameProcessor.prototype, "pushFrame").mockImplementation(recorder(pushed)),
+      async () => {
+        await processor.pushFrame(new LLMFullResponseStartFrame());
+        await processor._pushTurnText("Hello there");
+        await processor.pushFrame(new LLMFullResponseEndFrame());
+      },
+    );
+
+    const found = reports(pushed);
+    expect(found.length).toEqual(1);
+    expect([found[0]!.kind, found[0]!.marker]).toEqual([null, null]);
+  });
+
+  test("test_each_inference_is_reported_once", async () => {
+    const processor = processorFor();
+    const pushed: Pushed[] = [];
+    const processPatch = patchFrameProcessorProcess();
+    await withPatch(processPatch, async () => {
+      await withPatch(
+        spyOn(FrameProcessor.prototype, "pushFrame").mockImplementation(recorder(pushed)),
+        async () => {
+          await processor.processFrame(
+            new LLMContextFrame({ context: new LLMContext() }),
+            FrameDirection.DOWNSTREAM,
+          );
+          await processor.pushFrame(new LLMFullResponseStartFrame());
+          await processor._pushTurnText(`${USER_TURN_COMPLETE_MARKER} Let me check`);
+          await processor.pushFrame(new FunctionCallsStartedFrame({ functionCalls: [] }));
+          await processor.pushFrame(new LLMFullResponseEndFrame());
+
+          // The next inference is reported afresh.
+          await processor.processFrame(
+            new LLMContextFrame({ context: new LLMContext() }),
+            FrameDirection.DOWNSTREAM,
+          );
+          await processor.pushFrame(new LLMFullResponseStartFrame());
+          await processor._pushTurnText(USER_TURN_INCOMPLETE_SHORT_MARKER);
+          await processor.pushFrame(new LLMFullResponseEndFrame());
+        },
+      );
+    });
+
+    expect(reports(pushed).map((r) => r.kind)).toEqual(["complete", "short"]);
+  });
+
+  test("test_nothing_is_reported_while_filtering_is_off", async () => {
+    const processor = processorFor({ filtering: false });
+    const pushed: Pushed[] = [];
+    await withPatch(
+      spyOn(FrameProcessor.prototype, "pushFrame").mockImplementation(recorder(pushed)),
+      async () => {
+        await processor.pushFrame(new LLMFullResponseStartFrame());
+        await processor.pushFrame(new FunctionCallsStartedFrame({ functionCalls: [] }));
+        await processor.pushFrame(new LLMFullResponseEndFrame());
+      },
+    );
+
+    expect(reports(pushed)).toEqual([]);
   });
 });

@@ -18,7 +18,6 @@ import {
   VADUserStartedSpeakingFrame,
   VADUserStoppedSpeakingFrame,
 } from "../src/frames/frames.ts";
-import { ProcessFrameResult } from "../src/turns/types.ts";
 import {
   type KrispIpSession,
   KrispVivaIPUserTurnStartStrategy,
@@ -122,10 +121,9 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
       });
 
       await strategy.processFrame(new VADUserStartedSpeakingFrame());
-      const result = await strategy.processFrame(_audioFrame());
+      await strategy.processFrame(_audioFrame());
 
       expect(fired).toBe(true);
-      expect(result).toEqual(ProcessFrameResult.STOP);
       expect(mockIpSession.process).toHaveBeenCalled();
     } finally {
       await strategy.cleanup();
@@ -144,10 +142,9 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
       });
 
       await strategy.processFrame(new VADUserStartedSpeakingFrame());
-      const result = await strategy.processFrame(_audioFrame());
+      await strategy.processFrame(_audioFrame());
 
       expect(fired).toBe(false);
-      expect(result).toEqual(ProcessFrameResult.CONTINUE);
     } finally {
       await strategy.cleanup();
     }
@@ -163,9 +160,7 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
       mockIpSession.process.mockClear();
 
       await strategy.processFrame(new VADUserStoppedSpeakingFrame());
-      const result = await strategy.processFrame(_audioFrame());
-
-      expect(result).toEqual(ProcessFrameResult.CONTINUE);
+      await strategy.processFrame(_audioFrame());
       // process() is still called (continuous state), but with speech_active=False
       expect(mockIpSession.process).toHaveBeenCalled();
       const args = mockIpSession.process.mock.lastCall as unknown[];
@@ -185,9 +180,7 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
       mockIpSession.process.mockClear();
 
       await strategy.processFrame(new BotStoppedSpeakingFrame());
-      const result = await strategy.processFrame(_audioFrame());
-
-      expect(result).toEqual(ProcessFrameResult.CONTINUE);
+      await strategy.processFrame(_audioFrame());
       // process() is still called (continuous state), but with speech_active=False
       expect(mockIpSession.process).toHaveBeenCalled();
       const args = mockIpSession.process.mock.lastCall as unknown[];
@@ -202,8 +195,7 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
 
     const strategy = _makeStrategy();
     try {
-      const result = await strategy.processFrame(_audioFrame());
-      expect(result).toEqual(ProcessFrameResult.CONTINUE);
+      await strategy.processFrame(_audioFrame());
       // process() is called (continuous state) even before VAD start,
       // but _speech_active=False prevents triggering despite high prob
       expect(mockIpSession.process).toHaveBeenCalled();
@@ -226,11 +218,8 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
       });
 
       await strategy.processFrame(new VADUserStartedSpeakingFrame());
-      const r1 = await strategy.processFrame(_audioFrame());
-      const r2 = await strategy.processFrame(_audioFrame());
-
-      expect(r1).toEqual(ProcessFrameResult.STOP);
-      expect(r2).toEqual(ProcessFrameResult.CONTINUE);
+      await strategy.processFrame(_audioFrame());
+      await strategy.processFrame(_audioFrame());
       expect(count).toEqual(1);
     } finally {
       await strategy.cleanup();
@@ -257,12 +246,10 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
   test("test_unrelated_frames_continue", async () => {
     const strategy = _makeStrategy();
     try {
-      const r1 = await strategy.processFrame(new BotStartedSpeakingFrame());
-      const r2 = await strategy.processFrame(
+      await strategy.processFrame(new BotStartedSpeakingFrame());
+      await strategy.processFrame(
         new TranscriptionFrame({ text: "hi", userId: "", timestamp: "" }),
       );
-      expect(r1).toEqual(ProcessFrameResult.CONTINUE);
-      expect(r2).toEqual(ProcessFrameResult.CONTINUE);
     } finally {
       await strategy.cleanup();
     }
@@ -357,8 +344,7 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
   test("test_vad_stopped_when_speech_inactive_is_no_op", async () => {
     const strategy = _makeStrategy();
     try {
-      const result = await strategy.processFrame(new VADUserStoppedSpeakingFrame());
-      expect(result).toEqual(ProcessFrameResult.CONTINUE);
+      await strategy.processFrame(new VADUserStoppedSpeakingFrame());
       expect(internals(strategy)._speechActive).toBe(false);
     } finally {
       await strategy.cleanup();
@@ -378,10 +364,9 @@ describe("TestKrispVivaIPUserTurnStartStrategy", () => {
       });
 
       await strategy.processFrame(new VADUserStartedSpeakingFrame());
-      const result = await strategy.processFrame(_audioFrame());
+      await strategy.processFrame(_audioFrame());
 
       expect(fired).toBe(true);
-      expect(result).toEqual(ProcessFrameResult.STOP);
     } finally {
       await strategy.cleanup();
     }

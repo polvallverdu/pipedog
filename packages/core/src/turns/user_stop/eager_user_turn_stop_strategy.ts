@@ -8,13 +8,16 @@
 
 import { sleep, type Task } from "@pipedog/asyncio";
 import {
-  EagerEndOfTurnCancelFrame,
   EagerTranscriptionFrame,
   type Frame,
+  ProposedUserStartedSpeakingFrame,
+  UserStartedSpeakingFrame,
+  UserTurnResponseCancelFrame,
+  VADUserStartedSpeakingFrame,
 } from "../../frames/frames.ts";
 import { logger } from "../../utils/logger.ts";
-import { type ProcessFrameResult, UserTurnSpeculation } from "../types.ts";
-import type { TriggerUserTurnStoppedOptions } from "./base_user_turn_stop_strategy.ts";
+import { UserTurnSpeculation } from "../types.ts";
+import type { ReportUserTurnStoppedOptions } from "./base_user_turn_stop_strategy.ts";
 import { type EagerMatchPolicy, NormalizedMatch } from "./eager_match_policy.ts";
 import {
   ExternalUserTurnStopStrategy,
@@ -52,7 +55,7 @@ export interface EagerUserTurnStopStrategyOptions extends ExternalUserTurnStopSt
  * - the committed transcript differs from the eager one, per `matchPolicy`
  * - the turn never commits within `speculationTimeout`
  *
- * Every one of those leaves as an `EagerEndOfTurnCancelFrame` from here, so a
+ * Every one of those leaves as a `UserTurnResponseCancelFrame` from here, so a
  * response is never dropped somewhere the rest of the pipeline cannot see.
  *
  * Nothing the speculation produces reaches the user or the context. The
@@ -70,6 +73,9 @@ export class EagerUserTurnStopStrategy extends ExternalUserTurnStopStrategy {
   protected _speculationTimeout: number;
   protected _speculationTimeoutTask: Task<unknown> | null = null;
   protected _speculation: UserTurnSpeculation | null = null;
+  // The speculation this turn's end confirmed. Other stop strategies may
+  // still be deciding, and a stop asked for again confirms it again.
+  protected _confirmed: UserTurnSpeculation | null = null;
 
   constructor(options: EagerUserTurnStopStrategyOptions = {}) {
     super(options);
@@ -83,41 +89,57 @@ export class EagerUserTurnStopStrategy extends ExternalUserTurnStopStrategy {
   }
 
   /**
-   * Start a speculation on an eager end of turn, or withdraw one.
+   * Start a speculation on an eager end of turn, withdraw one, or forget one.
    *
    * @param frame The frame to be analyzed.
-   * @returns Always CONTINUE, so subsequent stop strategies are evaluated.
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     if (frame instanceof EagerTranscriptionFrame) {
       await this._speculate(frame);
-    } else if (frame instanceof EagerEndOfTurnCancelFrame) {
+    } else if (frame instanceof UserTurnResponseCancelFrame) {
       // The service withdrew its prediction, and its frame reaches every
       // consumer on its own. Only our own state is left to clear.
       await this._forget();
+    } else if (
+      frame instanceof VADUserStartedSpeakingFrame ||
+      frame instanceof UserStartedSpeakingFrame ||
+      frame instanceof ProposedUserStartedSpeakingFrame
+    ) {
+      // Speech voids the turn's answer, and with it the confirmation of the
+      // speculation that gave it.
+      this._confirmed = null;
     }
 
-    return await super.processFrame(frame);
+    await super.processFrame(frame);
   }
 
-  /** End the turn, keeping the speculative response only if it still applies. */
-  override async triggerUserTurnStopped(
-    options: TriggerUserTurnStoppedOptions = {},
-  ): Promise<void> {
+  /**
+   * Report that the user is done, keeping the speculative response only if it
+   * applies.
+   *
+   * `confirmsSpeculation`: whether a response generated ahead of this turn
+   * ending already answers it. The strategy decides this itself for its own
+   * speculation.
+   */
+  override async reportUserTurnStopped(options: ReportUserTurnStoppedOptions = {}): Promise<void> {
     const enableUserSpeakingFrames = options.enableUserSpeakingFrames ?? null;
-    const speculation = await this._takeSpeculation();
+    const speculation = (await this._takeSpeculation()) ?? this._confirmed;
     if (!speculation) {
-      await super.triggerUserTurnStopped({ enableUserSpeakingFrames });
+      await super.reportUserTurnStopped({
+        enableUserSpeakingFrames,
+        confirmsSpeculation: options.confirmsSpeculation ?? false,
+      });
       return;
     }
 
     if (this._matchPolicy.matches(speculation.text, this._text)) {
       logger.debug(`${this}: eager end of turn held, keeping the speculative response`);
-      // Inference already ran, on the eager transcript. Only finalize:
-      // the UserStoppedSpeakingFrame it emits is what releases the
+      this._confirmed = speculation;
+      // Inference already ran, on the eager transcript. The
+      // UserStoppedSpeakingFrame the turn end emits is what releases the
       // response, and the flag stops a second inference answering the
       // same turn.
-      await this.triggerUserTurnFinalized({
+      await super.reportUserTurnStopped({
         enableUserSpeakingFrames,
         confirmsSpeculation: true,
       });
@@ -128,22 +150,24 @@ export class EagerUserTurnStopStrategy extends ExternalUserTurnStopStrategy {
       `${this}: eager end of turn missed, discarding the speculative response ` +
         `(eager: [${speculation.text}], committed: [${this._text}])`,
     );
-    await this.triggerUserTurnSpeculationCancelled();
-    // Inference has to run again, on the committed transcript, so fire both
-    // events rather than just finalizing.
-    await super.triggerUserTurnStopped({ enableUserSpeakingFrames });
+    this._confirmed = null;
+    await this.cancelUserTurnSpeculation();
+    // The committed transcript needs an inference of its own, which the
+    // controller runs for this decision.
+    await super.reportUserTurnStopped({ enableUserSpeakingFrames });
   }
 
   /** Clear per-turn state. Runs at both turn boundaries. */
   protected override async _reset(): Promise<void> {
     const speculation = await this._takeSpeculation();
+    this._confirmed = null;
     await super._reset();
     if (speculation) {
       // The turn ended without resolving the speculation — the stop
       // watchdog, an interruption, session end. Nothing else will withdraw
       // it, so the response would be held until the gate times out.
       logger.debug(`${this}: turn ended unresolved, discarding the speculative response`);
-      await this.triggerUserTurnSpeculationCancelled();
+      await this.cancelUserTurnSpeculation();
     }
   }
 
@@ -153,12 +177,13 @@ export class EagerUserTurnStopStrategy extends ExternalUserTurnStopStrategy {
     // see, so they're part of what the committed transcript is compared to.
     const speculation = new UserTurnSpeculation({ text: this._text + frame.text });
     this._speculation = speculation;
+    this._confirmed = null;
     this._speculationTimeoutTask = this.taskManager.createTask(
       () => this._speculationTimeoutHandler(speculation),
       `${this}::_speculation_timeout_handler`,
     );
     logger.debug(`${this}: speculating on eager end of turn: [${speculation.text}]`);
-    await this.triggerUserTurnInferenceTriggered({ speculation });
+    await this.startUserTurnSpeculation(speculation);
   }
 
   /** Withdraw a prediction the turn never resolved. */
@@ -176,7 +201,7 @@ export class EagerUserTurnStopStrategy extends ExternalUserTurnStopStrategy {
         "discarding the speculative response",
     );
     this._speculation = null;
-    await this.triggerUserTurnSpeculationCancelled();
+    await this.cancelUserTurnSpeculation();
   }
 
   /**
@@ -199,5 +224,6 @@ export class EagerUserTurnStopStrategy extends ExternalUserTurnStopStrategy {
   /** Drop a speculation the service withdrew. */
   protected async _forget(): Promise<void> {
     await this._takeSpeculation();
+    this._confirmed = null;
   }
 }

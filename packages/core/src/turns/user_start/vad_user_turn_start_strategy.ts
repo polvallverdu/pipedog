@@ -7,7 +7,6 @@
 /** User turn start strategy based on VAD events. */
 
 import { type Frame, VADUserStartedSpeakingFrame } from "../../frames/frames.ts";
-import { ProcessFrameResult } from "../types.ts";
 import { BaseUserTurnStartStrategy } from "./base_user_turn_start_strategy.ts";
 
 /**
@@ -21,14 +20,10 @@ export class VADUserTurnStartStrategy extends BaseUserTurnStartStrategy {
    * Process an incoming frame to detect user turn start.
    *
    * @param frame The frame to be analyzed.
-   * @returns STOP if the user started speaking, CONTINUE otherwise.
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     if (frame instanceof VADUserStartedSpeakingFrame) {
-      await this.triggerUserTurnStarted();
-      return ProcessFrameResult.STOP;
+      await this.reportUserTurnStarted();
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 }

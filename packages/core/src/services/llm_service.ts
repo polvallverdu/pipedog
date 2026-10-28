@@ -36,7 +36,6 @@ import { ToolsSchema } from "../adapters/llm/schemas/tools_schema.ts";
 import { OpenAILLMAdapter } from "../adapters/llm/services/open_ai_adapter.ts";
 import {
   type CancelFrame,
-  EagerEndOfTurnCancelFrame,
   type EndFrame,
   type ErrorFrame,
   type Frame,
@@ -57,6 +56,7 @@ import {
   LLMTextFrame,
   LLMUpdateSettingsFrame,
   type StartFrame,
+  UserTurnResponseCancelFrame,
 } from "../frames/frames.ts";
 import type { PipelineWorker } from "../pipeline/worker.ts";
 import { ASYNC_TOOL_INSTRUCTIONS } from "../processors/aggregators/async_tool_messages.ts";
@@ -433,9 +433,6 @@ export class LLMService<
   protected _functionCallTimeoutSecs: number | null;
   protected _fileResolver: FileResolver;
   protected _reportsTtfat: boolean | null = null;
-  // Turn completion is owned by LLMTurnCompletionUserTurnStopStrategy, which
-  // enables it over an LLMUpdateSettingsFrame once the pipeline starts.
-  protected _filterIncompleteUserTurns = false;
   protected _loggedThinkingDefaultModel: string | null = null;
   // Holds a speculative response until its turn is confirmed. Frames are
   // routed through it on the way out, in `pushFrame`.
@@ -981,8 +978,8 @@ export class LLMService<
 
     if (frame instanceof InterruptionFrame) {
       await this._handleInterruptions(frame);
-    } else if (frame instanceof EagerEndOfTurnCancelFrame) {
-      await this._handleEagerEndOfTurnCancel(frame);
+    } else if (frame instanceof UserTurnResponseCancelFrame) {
+      await this._handleUserTurnResponseCancel(frame);
     } else if (frame instanceof LLMConfigureOutputFrame) {
       this._skipTts = frame.skipTts;
     } else if (frame instanceof LLMUpdateSettingsFrame) {
@@ -1033,6 +1030,8 @@ export class LLMService<
       }
     }
 
+    await this._trackPushedFrame(frame);
+
     // The gate decides synchronously, so its verdict can't be torn by another
     // task pushing at the same time. Everything it hands back is pushed past
     // it — routing that back through here would re-gate it.
@@ -1080,7 +1079,9 @@ export class LLMService<
    * rest of them. Unlike an interruption this leaves the turn open — the bot
    * never spoke, and the user is still mid-turn.
    */
-  protected async _handleEagerEndOfTurnCancel(_frame: EagerEndOfTurnCancelFrame): Promise<void> {
+  protected async _handleUserTurnResponseCancel(
+    _frame: UserTurnResponseCancelFrame,
+  ): Promise<void> {
     // Runs before the frame reaches the gate, which is what clears the
     // speculation, so this still sees the one being withdrawn.
     if (!this._speculationGate.isSpeculating) {
@@ -1839,7 +1840,7 @@ export class LLMService<
       // turn confirmed before the call was reached leaves nothing pending,
       // and the call runs as an ordinary one.
       logger.debug(`${this}: speculative inference wants a tool call, cancelling it`);
-      await this.broadcastFrame(EagerEndOfTurnCancelFrame);
+      await this.broadcastFrame(UserTurnResponseCancelFrame);
       return;
     }
 

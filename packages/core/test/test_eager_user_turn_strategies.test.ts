@@ -10,7 +10,6 @@ import { sleep } from "@pipedog/asyncio";
 
 import { SystemClock } from "../src/clocks/system_clock.ts";
 import {
-  EagerEndOfTurnCancelFrame,
   EagerTranscriptionFrame,
   type Frame,
   FunctionCallFromLLM,
@@ -21,8 +20,10 @@ import {
   ProposedUserStartedSpeakingFrame,
   ProposedUserStoppedSpeakingFrame,
   TranscriptionFrame,
-  UserStartedSpeakingFrame,
   UserStoppedSpeakingFrame,
+  UserTurnResponseCancelFrame,
+  VADUserStartedSpeakingFrame,
+  VADUserStoppedSpeakingFrame,
 } from "../src/frames/frames.ts";
 import { Pipeline } from "../src/pipeline/pipeline.ts";
 import { LLMContext } from "../src/processors/aggregators/llm_context.ts";
@@ -39,18 +40,14 @@ import type { FunctionCallParams } from "../src/services/llm_service.ts";
 import { LLMService, type LLMServiceOptions } from "../src/services/llm_service.ts";
 import { LLMSettings } from "../src/services/settings.ts";
 import { runTest, SleepFrame } from "../src/tests/utils.ts";
-import type { UserTurnSpeculation } from "../src/turns/types.ts";
+import type { UserTurnStoppedParams } from "../src/turns/user_stop/base_user_turn_stop_strategy.ts";
 import {
-  deferred,
   type EagerMatchPolicy,
   EagerUserTurnStopStrategy,
   ExactMatch,
 } from "../src/turns/user_stop/index.ts";
 import { EagerUserTurnStrategies } from "../src/turns/user_turn_strategies.ts";
 import { type BaseTaskManager, TaskManager } from "../src/utils/asyncio/task_manager.ts";
-
-// Imported upstream but unused there too; kept so the import lists diff cleanly.
-void UserStartedSpeakingFrame;
 
 /**
  * Port of `tests/frame_processor_helpers.frame_processor_setup`: build a setup
@@ -147,7 +144,7 @@ describe("TestEagerUserTurnStrategies", () => {
     const contexts = ofType(down, LLMContextFrame);
     const stops = ofType(down, UserStoppedSpeakingFrame);
 
-    expect(down.some((f) => f instanceof EagerEndOfTurnCancelFrame)).toBe(false);
+    expect(down.some((f) => f instanceof UserTurnResponseCancelFrame)).toBe(false);
     // One inference, the speculative one: the confirmed turn is written to
     // the context without answering it a second time.
     expect(contexts.length).toBe(1);
@@ -174,11 +171,11 @@ describe("TestEagerUserTurnStrategies", () => {
     });
 
     const contexts = ofType(down, LLMContextFrame);
-    const cancel = ofType(down, EagerEndOfTurnCancelFrame)[0];
+    const cancel = ofType(down, UserTurnResponseCancelFrame)[0];
 
     // The speculative inference, then a second one on the committed transcript.
     expect(contexts.map((c) => c.speculation)).toEqual([true, false]);
-    expect(cancel).toBeInstanceOf(EagerEndOfTurnCancelFrame);
+    expect(cancel).toBeInstanceOf(UserTurnResponseCancelFrame);
     expect(contexts[1]!.context.messages.at(-1)).toEqual({
       role: "user",
       content: "i want to cancel, actually reschedule it",
@@ -202,7 +199,7 @@ describe("TestEagerUserTurnStrategies", () => {
         eager("i think"),
         new SleepFrame(),
         // The service withdraws the prediction it made.
-        new EagerEndOfTurnCancelFrame(),
+        new UserTurnResponseCancelFrame(),
         new SleepFrame(),
         final("i think i'll book it tomorrow"),
         new SleepFrame(),
@@ -212,7 +209,7 @@ describe("TestEagerUserTurnStrategies", () => {
     });
 
     const contexts = ofType(down, LLMContextFrame);
-    const cancels = ofType(down, EagerEndOfTurnCancelFrame);
+    const cancels = ofType(down, UserTurnResponseCancelFrame);
 
     // The service's withdrawal travels on its own; the strategy adds none of
     // its own, since the prediction was already withdrawn.
@@ -242,7 +239,7 @@ describe("TestEagerUserTurnStrategies", () => {
 
     const contexts = ofType(down, LLMContextFrame);
 
-    expect(down.some((f) => f instanceof EagerEndOfTurnCancelFrame)).toBe(false);
+    expect(down.some((f) => f instanceof UserTurnResponseCancelFrame)).toBe(false);
     expect(contexts.length).toBe(1);
     // The eager transcript drove the response; the committed one is what the
     // context records.
@@ -269,7 +266,7 @@ describe("TestEagerUserTurnStrategies", () => {
 
     const contexts = ofType(down, LLMContextFrame);
 
-    expect(down.some((f) => f instanceof EagerEndOfTurnCancelFrame)).toBe(false);
+    expect(down.some((f) => f instanceof UserTurnResponseCancelFrame)).toBe(false);
     expect(contexts.length).toBe(1);
     expect(contexts[0]!.speculation).toBe(false);
     expect(down.some((f) => f instanceof UserStoppedSpeakingFrame)).toBe(true);
@@ -334,7 +331,7 @@ describe("TestSpeculativeToolCalls", () => {
     const [down, up] = await runTest(llm, { framesToSend: [speculative, new SleepFrame()] });
 
     expect(calls).toEqual([]);
-    const withdrawals = ofType([...down, ...up], EagerEndOfTurnCancelFrame);
+    const withdrawals = ofType([...down, ...up], UserTurnResponseCancelFrame);
     expect(withdrawals.length).toBe(2);
   });
 
@@ -353,7 +350,7 @@ describe("TestSpeculativeToolCalls", () => {
     });
 
     expect(calls.length).toBe(1);
-    expect([...down, ...up].some((f) => f instanceof EagerEndOfTurnCancelFrame)).toBe(false);
+    expect([...down, ...up].some((f) => f instanceof UserTurnResponseCancelFrame)).toBe(false);
   });
 });
 
@@ -412,7 +409,7 @@ describe("TestTurnCommittedWithoutATranscript", () => {
     });
 
     const contexts = ofType(down, LLMContextFrame);
-    const cancels = ofType(down, EagerEndOfTurnCancelFrame);
+    const cancels = ofType(down, UserTurnResponseCancelFrame);
 
     // Only the speculative inference ran, and it was withdrawn.
     expect(contexts.map((c) => c.speculation)).toEqual([true]);
@@ -426,25 +423,8 @@ describe("TestTurnCommittedWithoutATranscript", () => {
 });
 
 describe("TestDeferredEagerStrategy", () => {
-  test("test_deferring_carries_the_speculation_to_the_subscriber", async () => {
-    // The wrapper is transparent apart from the event it suppresses, so the
-    // speculation reaches the subscriber on the event that starts it.
-    const triggered: UserTurnSpeculation[] = [];
-
-    const inner = new EagerUserTurnStopStrategy();
-    await inner.setup(frameProcessorSetup(new TaskManager()));
-    const wrapper = deferred(inner);
-    wrapper.addEventHandler(
-      "on_user_turn_inference_triggered",
-      (_strategy, speculation: UserTurnSpeculation) => {
-        triggered.push(speculation);
-      },
-    );
-
-    await wrapper.processFrame(eager("book a flight"));
-
-    expect(triggered.map((s) => s.text)).toEqual(["book a flight"]);
-  });
+  // Skipped: exercises the deprecated `deferred()` wrapper, which is not ported.
+  test.skip("test_deferring_carries_the_speculation_to_the_subscriber", () => {});
 });
 
 describe("TestExactMatchPolicy", () => {
@@ -467,7 +447,7 @@ describe("TestExactMatchPolicy", () => {
       ],
     });
 
-    const cancels = ofType(down, EagerEndOfTurnCancelFrame);
+    const cancels = ofType(down, UserTurnResponseCancelFrame);
     expect(cancels.length).toBe(1);
     expect(context.messages).toEqual([{ role: "user", content: "Book a flight to Tokyo." }]);
   });
@@ -536,7 +516,7 @@ describe("TestLLMServiceHoldsTheSpeculation", () => {
       framesToSend: [
         contextFrame(true),
         new SleepFrame(),
-        new EagerEndOfTurnCancelFrame(),
+        new UserTurnResponseCancelFrame(),
         new SleepFrame(),
       ],
     });
@@ -595,7 +575,7 @@ describe("TestATurnOutlastingTheHoldIsStillAnswered", () => {
     expect(context.messages).toEqual([{ role: "user", content: "Book a flight." }]);
     // Withdrawn where every other discard is withdrawn, so the gate drops
     // the held response rather than relying on a later one to supersede it.
-    expect(ofType(down, EagerEndOfTurnCancelFrame).length).toBe(1);
+    expect(ofType(down, UserTurnResponseCancelFrame).length).toBe(1);
   });
 
   test("test_a_hold_that_does_not_expire_is_released_as_before", async () => {
@@ -671,10 +651,10 @@ describe("TestAWithdrawnResponseIsNeverSpoken", () => {
 
     const order = down
       .filter(
-        (f) => f instanceof EagerEndOfTurnCancelFrame || f instanceof UserStoppedSpeakingFrame,
+        (f) => f instanceof UserTurnResponseCancelFrame || f instanceof UserStoppedSpeakingFrame,
       )
       .map((f) => f.constructor.name);
-    expect(order).toEqual(["EagerEndOfTurnCancelFrame", "UserStoppedSpeakingFrame"]);
+    expect(order).toEqual(["UserTurnResponseCancelFrame", "UserStoppedSpeakingFrame"]);
   });
 });
 
@@ -729,7 +709,7 @@ describe("TestToolCallsAcrossTheConfirmation", () => {
   };
 
   const withdrawals = (down: Frame[], up: Frame[]): Frame[] =>
-    ofType([...down, ...up], EagerEndOfTurnCancelFrame);
+    ofType([...down, ...up], UserTurnResponseCancelFrame);
 
   test("test_a_turn_confirmed_mid_stream_lets_the_call_run", async () => {
     // The committed end of turn arrives while the response is still
@@ -793,5 +773,34 @@ describe("TestToolCallsAcrossTheConfirmation", () => {
 
     expect(llm.calls).toEqual(["call-1"]);
     expect(withdrawals(down, up)).toEqual([]);
+  });
+});
+
+describe("TestSpeechVoidsTheConfirmation", () => {
+  // Speech after a confirmation voids the turn's answer, and the confirmation with it.
+
+  test("test_a_decision_after_speech_confirms_nothing", async () => {
+    const strategy = new EagerUserTurnStopStrategy();
+    await strategy.setup(frameProcessorSetup(new TaskManager()));
+    const decisions: UserTurnStoppedParams[] = [];
+
+    strategy.eventHandler(
+      "on_user_turn_stopped",
+      async (_strategy: unknown, params: UserTurnStoppedParams) => {
+        decisions.push(params);
+      },
+    );
+
+    await strategy.handleUserTurnStarted();
+    await strategy.processFrame(new ProposedUserStartedSpeakingFrame());
+    await strategy.processFrame(eager("Book a flight"));
+    await strategy.processFrame(final("Book a flight"));
+    await strategy.processFrame(new ProposedUserStoppedSpeakingFrame());
+
+    await strategy.processFrame(new VADUserStartedSpeakingFrame());
+    await strategy.processFrame(new VADUserStoppedSpeakingFrame());
+
+    expect(decisions.map((d) => d.confirmsSpeculation)).toEqual([true, false]);
+    await strategy.cleanup();
   });
 });

@@ -175,8 +175,8 @@ export interface CartesiaTurnsSTTServiceOptions
  * Each `turn.start` pushes a `ProposedUserStartedSpeakingFrame`; each
  * `turn.update` pushes an `InterimTranscriptionFrame`; `turn.end` pushes a
  * final `TranscriptionFrame` followed by a `ProposedUserStoppedSpeakingFrame`.
- * `turn.eager_end` pushes an `EagerTranscriptionFrame` and `turn.resume` an
- * `EagerEndOfTurnCancelFrame`, which `EagerUserTurnStrategies` uses to answer
+ * `turn.eager_end` pushes an `EagerTranscriptionFrame` and `turn.resume` a
+ * `UserTurnResponseCancelFrame`, which `EagerUserTurnStrategies` uses to answer
  * a predicted end of turn ahead of the committed one.
  *
  * Event handlers available (in addition to the base `on_connected` /

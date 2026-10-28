@@ -142,6 +142,12 @@ These differences apply everywhere, not to one module. They come from the portin
   bot count only if the VAD heard the user recently. Both are off by default.
   `packages/core/src/turns/user_start/min_words_user_turn_start_strategy.ts`,
   `packages/core/src/turns/user_start/backchannel.ts`
+- **A wake phrase doesn't gate a `StrategyMode.FIRST` list.** Upstream's
+  `WakePhraseUserTurnStartStrategy`, while asleep, still keeps the start strategies after it in a
+  `FIRST` list from seeing frames, through the deprecated `ProcessFrameResult.STOP`. pipedog doesn't
+  port `ProcessFrameResult`, so every strategy sees every frame: use the wake phrase strategy alone,
+  or combine it with other conditions in a `StrategyMode.ALL` list (both work the same upstream).
+  `packages/core/src/turns/user_start/wake_phrase_user_turn_start_strategy.ts`
 
 ## Providers
 
