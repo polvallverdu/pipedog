@@ -391,6 +391,30 @@ describe("TestOpenAIDecisionsClient", () => {
     await client.close();
   });
 
+  test("test_a_broken_tls_connection_is_an_error", async () => {
+    const handler = (_request: MockRequest): Response => {
+      // Upstream raises ssl.SSLError; fetch rejects with a plain error.
+      throw new Error("bad record mac");
+    };
+
+    const client = _client(handler);
+
+    await expectRaises(client.ask("a", PREDICATE), ClassifierError, /failed/);
+    await client.close();
+  });
+
+  test("test_a_broken_tls_connection_at_connect_is_an_error", async () => {
+    const handler = (_request: MockRequest): Response => {
+      // Upstream raises ssl.SSLError; fetch rejects with a plain error.
+      throw new Error("bad record mac");
+    };
+
+    const client = _client(handler);
+
+    await expectRaises(client.connect(), ClassifierError, /could not connect/);
+    await client.close();
+  });
+
   test("test_connect_looks_up_the_model", async () => {
     const seen: [string, string][] = [];
 

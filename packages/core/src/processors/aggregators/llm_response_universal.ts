@@ -21,6 +21,8 @@ import { rethrowIfCancelled, sleep, type Task } from "@pipedog/asyncio";
 import type { ToolsSchema } from "../../adapters/llm/schemas/tools_schema.ts";
 import type { VADAnalyzer } from "../../audio/vad/vad_analyzer.ts";
 import { VADController } from "../../audio/vad/vad_controller.ts";
+import { stripExpressionTags } from "../../expressive/formatter.ts";
+import { formatPerception, type PerceptionSignal } from "../../expressive/perception.ts";
 import {
   AggregatedTextFrame,
   AssistantImageRawFrame,
@@ -29,6 +31,7 @@ import {
   CancelFrame,
   EagerTranscriptionFrame,
   EndFrame,
+  ExpressionMetadataFrame,
   type Frame,
   FunctionCallCancelFrame,
   FunctionCallInProgressFrame,
@@ -279,6 +282,7 @@ export interface UserTurnStoppedMessageOptions {
   content: string | null;
   timestamp: string;
   userId?: string | null;
+  perception?: PerceptionSignal[] | null;
 }
 
 /**
@@ -295,16 +299,21 @@ export interface UserTurnStoppedMessageOptions {
  *   instead.
  * - `timestamp`: When the user turn started.
  * - `userId`: Optional identifier for the user.
+ * - `perception`: The turn's final reading of how the user spoke, with
+ *   expressive conversation on and a perception producer in the pipeline, or
+ *   null. Part of expressive conversation (alpha).
  */
 export class UserTurnStoppedMessage {
   content: string | null;
   timestamp: string;
   userId: string | null;
+  perception: PerceptionSignal[] | null;
 
   constructor(options: UserTurnStoppedMessageOptions) {
     this.content = options.content;
     this.timestamp = options.timestamp;
     this.userId = options.userId ?? null;
+    this.perception = options.perception ?? null;
   }
 }
 
@@ -376,8 +385,10 @@ export interface AssistantTurnStoppedMessageOptions {
 /**
  * An assistant turn stopped message containing an assistant transcript update.
  *
- * A message in a conversation transcript containing the assistant content.
- * This is the aggregated transcript that is then used in the context.
+ * A message in a conversation transcript containing the assistant content:
+ * the aggregated transcript, which the context also records. With expressive
+ * conversation on, it is the words alone, while the context keeps the
+ * expression tags the LLM wrote.
  *
  * - `content`: The message content/text. May be empty if the LLM returned
  *   zero tokens (e.g. turn was interrupted before any tokens were received or
@@ -750,6 +761,13 @@ export class LLMUserAggregator extends LLMContextAggregator {
   // several inferences fire before finalization.
   protected _fullUserTurnAggregation: string | null = null;
 
+  // With expressive conversation on, the latest final reading of how the
+  // user spoke: for the user message, written at its head, and for the
+  // turn, reported when it stops. A turn can write several messages.
+  protected _expressive = false;
+  protected _perception: PerceptionSignal[] | null = null;
+  protected _turnPerception: PerceptionSignal[] | null = null;
+
   // Whether the current user turn interrupted the bot.
   protected _userTurnInterruptedBot = false;
   protected _consecutiveEmptyUserTurnRecoveries = 0;
@@ -767,7 +785,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
    * @param context The LLM context for conversation storage.
    */
   constructor(context: LLMContext, options: LLMUserAggregatorOptions = {}) {
-    const params = options.params || new LLMUserAggregatorParams();
+    const params = options.params ?? new LLMUserAggregatorParams();
     super({
       ...options,
       context,
@@ -788,7 +806,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
 
     this._realtimeServiceMode = options._realtimeServiceMode ?? null;
 
-    let userTurnStrategies = this._params.userTurnStrategies || new UserTurnStrategies();
+    let userTurnStrategies = this._params.userTurnStrategies ?? new UserTurnStrategies();
 
     // No service has recommended strategies yet, so an extending list joins
     // the defaults.
@@ -895,6 +913,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
    */
   override async setup(setup: FrameProcessorSetup): Promise<void> {
     await super.setup(setup);
+    this._expressive = setup.enableExpressiveConversation;
     if (this._vadController) {
       await this._vadController.setup(setup);
     }
@@ -951,6 +970,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
       await this._cancel(frame);
       await this.pushFrame(frame, direction);
     } else if (frame instanceof TranscriptionFrame) {
+      this._handlePerception(frame.perception);
       await this._handleTranscription(frame);
     } else if (
       frame instanceof InterimTranscriptionFrame ||
@@ -1018,6 +1038,12 @@ export class LLMUserAggregator extends LLMContextAggregator {
     await this._userIdleController.processFrame(frame);
   }
 
+  /** Reset the aggregation state, with the turn's reading of how the user spoke. */
+  override async reset(): Promise<void> {
+    await super.reset();
+    this._perception = null;
+  }
+
   /** Push the current aggregation. */
   async pushAggregation(): Promise<string> {
     return await this._pushAggregation();
@@ -1038,11 +1064,17 @@ export class LLMUserAggregator extends LLMContextAggregator {
     }
 
     const aggregation = this.aggregationString();
+    const perception = this._perception;
+    const content =
+      perception && perception.length > 0
+        ? `${formatPerception(perception)} ${aggregation}`
+        : aggregation;
     await this.reset();
-    this._context.addMessage({ role: this.role, content: aggregation });
+    this._context.addMessage({ role: this.role, content });
     await this.broadcastFrame(LLMContextUserTurnFrame, {
       text: aggregation,
       timestamp: this._userTurnStartTimestamp,
+      perception,
     });
     if (runLlm) {
       const frame = await this.pushContextFrame();
@@ -1471,6 +1503,14 @@ export class LLMUserAggregator extends LLMContextAggregator {
     }
   }
 
+  protected _handlePerception(signals: PerceptionSignal[] | null): void {
+    if (!this._expressive || !signals || signals.length === 0) {
+      return;
+    }
+    this._perception = signals;
+    this._turnPerception = signals;
+  }
+
   protected async _handleTranscription(frame: TranscriptionFrame): Promise<void> {
     const text = frame.text;
 
@@ -1650,17 +1690,32 @@ export class LLMUserAggregator extends LLMContextAggregator {
    * Run an inference for a turn that hasn't ended yet.
    *
    * The turn is still open, so the context must not record it. The inference
-   * runs against a provisional copy carrying the speculated turn text:
-   * nothing here mutates the real context, and `_aggregation` keeps
+   * runs against a provisional copy carrying the speculated turn and its
+   * reading: nothing here mutates the real context, and `_aggregation` keeps
    * accumulating for whenever the turn does end. The response is held
    * downstream until the turn is confirmed, and discarded if it isn't.
+   *
+   * The turn is broadcast as a speculation first. Queued ahead of the
+   * inference, it passes the LLM before the response is held, while the
+   * turn written once it ends waits for the inference to finish.
    *
    * @param speculation The speculation to run, from the stop strategy that
    *   started it.
    */
   protected async _runSpeculativeInference(speculation: UserTurnSpeculation): Promise<void> {
+    const perception = this._expressive ? speculation.perception : null;
+    const content =
+      perception && perception.length > 0
+        ? `${formatPerception(perception)} ${speculation.text}`
+        : speculation.text;
+    await this.broadcastFrame(LLMContextUserTurnFrame, {
+      text: speculation.text,
+      timestamp: this._userTurnStartTimestamp,
+      perception,
+      speculation: true,
+    });
     const provisional = new LLMContext({
-      messages: [...this._context.messages, { role: this.role, content: speculation.text }],
+      messages: [...this._context.messages, { role: this.role, content }],
       tools: this._context.tools,
       toolChoice: this._context.toolChoice,
     });
@@ -1712,6 +1767,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
   ): Promise<void> {
     logger.debug(`${this}: Resetting aggregation (strategy: ${strategy})`);
     await this.reset();
+    this._turnPerception = null;
   }
 
   protected async _onUserTurnStopTimeout(_controller: unknown): Promise<void> {
@@ -1758,10 +1814,14 @@ export class LLMUserAggregator extends LLMContextAggregator {
       content = fullAggregation || segment;
     }
 
+    const perception = this._turnPerception;
+    this._turnPerception = null;
+
     if (!onSessionEnd || content) {
       const message = new UserTurnStoppedMessage({
         content,
         timestamp: this._userTurnStartTimestamp,
+        perception,
       });
       await this._callEventHandler("on_user_turn_stopped", strategy, message);
       this._userTurnStartTimestamp = "";
@@ -1921,13 +1981,16 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
 
   protected _summarizer: LLMContextSummarizer | null;
 
+  protected _expressive = false;
+  protected _taggedAfterLlm = false;
+
   /**
    * Initialize the assistant context aggregator.
    *
    * @param context The LLM context for conversation storage.
    */
   constructor(context: LLMContext, options: LLMAssistantAggregatorOptions = {}) {
-    const params = options.params || new LLMAssistantAggregatorParams();
+    const params = options.params ?? new LLMAssistantAggregatorParams();
     super({
       ...options,
       context,
@@ -1954,6 +2017,10 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
     this._summarizer.addEventHandler("on_summary_applied", (summarizer, event) =>
       this._onSummaryApplied(summarizer, event),
     );
+
+    this._expressive = false;
+    // Whether a tagger after the LLM writes the replies' expression tags.
+    this._taggedAfterLlm = false;
 
     this._registerEventHandler("on_assistant_turn_started");
     this._registerEventHandler("on_assistant_turn_stopped");
@@ -1992,6 +2059,7 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
    */
   override async setup(setup: FrameProcessorSetup): Promise<void> {
     await super.setup(setup);
+    this._expressive = setup.enableExpressiveConversation;
     if (this._summarizer) {
       await this._summarizer.setup(setup);
     }
@@ -2075,6 +2143,9 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
       this.setTools(normalizedTools);
     } else if (frame instanceof LLMSetToolChoiceFrame) {
       this.setToolChoice(frame.toolChoice);
+    } else if (frame instanceof ExpressionMetadataFrame) {
+      this._taggedAfterLlm = true;
+      await this.pushFrame(frame, direction);
     } else if (frame instanceof FunctionCallsStartedFrame) {
       await this._handleFunctionCallsStarted(frame);
     } else if (frame instanceof FunctionCallInProgressFrame) {
@@ -2206,9 +2277,17 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
       return "";
     }
 
-    const aggregation = this.aggregationString();
+    let aggregation = this.aggregationString();
     await this.reset();
 
+    // The LLM writes its own replies' tags, or a tagger writes them and
+    // the LLM, never taught them, reads its replies as plain words.
+    if (this._expressive && this._taggedAfterLlm) {
+      aggregation = stripExpressionTags(aggregation);
+      if (!aggregation) {
+        return "";
+      }
+    }
     this._context.addMessage({ role: "assistant", content: aggregation });
 
     return aggregation;
@@ -2703,12 +2782,14 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
       return;
     }
 
+    // The text as the LLM wrote it, which a unit that is only tags has
+    // without any words to show.
+    const text = frame instanceof AggregatedTextFrame && frame.rawText ? frame.rawText : frame.text;
     // Make sure we really have text (spaces count, too!)
-    if (frame.text.length === 0) {
+    if (text.length === 0) {
       return;
     }
 
-    const text = frame instanceof AggregatedTextFrame && frame.rawText ? frame.rawText : frame.text;
     this._aggregation.push(
       new TextPartForConcatenation({
         text,
@@ -2908,6 +2989,11 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
       // Strip turn completion markers from the transcript
       aggregation = this._maybeStripTurnCompletionMarkers(aggregation);
     }
+    // The context keeps the expression tags the LLM wrote; the transcript
+    // is the words.
+    if (aggregation && this._expressive) {
+      aggregation = stripExpressionTags(aggregation);
+    }
 
     const message = new AssistantTurnStoppedMessage({
       content: aggregation,
@@ -3023,8 +3109,8 @@ export class LLMContextAggregatorPair {
    * @param context The context to be managed by the aggregators.
    */
   constructor(context: LLMContext, options: LLMContextAggregatorPairOptions = {}) {
-    const userParams = options.userParams || new LLMUserAggregatorParams();
-    const assistantParams = options.assistantParams || new LLMAssistantAggregatorParams();
+    const userParams = options.userParams ?? new LLMUserAggregatorParams();
+    const assistantParams = options.assistantParams ?? new LLMAssistantAggregatorParams();
     const addToolChangeMessages = options.addToolChangeMessages ?? null;
     if (addToolChangeMessages !== null) {
       userParams.addToolChangeMessages = addToolChangeMessages;

@@ -14,6 +14,7 @@ import {
   type Frame,
   FunctionCallFromLLM,
   LLMContextFrame,
+  LLMContextUserTurnFrame,
   LLMFullResponseEndFrame,
   LLMFullResponseStartFrame,
   LLMTextFrame,
@@ -123,6 +124,12 @@ describe("TestEagerUserTurnStrategies", () => {
 
     // The real context is untouched: the turn hasn't ended.
     expect(context.messages).toEqual([{ role: "system", content: "Be brief." }]);
+
+    // The turn the inference answers goes ahead of it, as a speculation.
+    const turn = ofType(down, LLMContextUserTurnFrame)[0];
+    expect(turn).toBeDefined();
+    expect([turn!.text, turn!.speculation]).toEqual(["book a flight", true]);
+    expect(down.indexOf(turn!)).toBeLessThan(down.indexOf(provisional!));
   });
 
   test("test_matching_transcript_ends_the_turn_and_keeps_the_response", async () => {
@@ -152,6 +159,12 @@ describe("TestEagerUserTurnStrategies", () => {
     // The turn end is what releases the held response.
     expect(stops.length).toBe(1);
     expect(context.messages).toEqual([{ role: "user", content: "book a flight" }]);
+    // The turn is broadcast as a speculation, then as written once it ends.
+    const turns = ofType(down, LLMContextUserTurnFrame);
+    expect(turns.map((t) => [t.text, t.speculation])).toEqual([
+      ["book a flight", true],
+      ["book a flight", false],
+    ]);
   });
 
   test("test_differing_transcript_withdraws_the_speculation", async () => {
@@ -617,6 +630,34 @@ class EchoLLM extends LLMService {
     await this.pushFrame(new LLMFullResponseEndFrame());
   }
 }
+
+describe("TestTheSpeculatedTurnPassesTheLLM", () => {
+  test("test_the_turn_reaches_processors_after_the_llm_before_its_response", async () => {
+    const [down] = await runTest(new Pipeline([aggregator(new LLMContext()), new EchoLLM()]), {
+      framesToSend: [
+        new ProposedUserStartedSpeakingFrame(),
+        new SleepFrame(),
+        eager("book a flight"),
+        new SleepFrame(),
+        final("book a flight"),
+        new SleepFrame(),
+        new ProposedUserStoppedSpeakingFrame(),
+        new SleepFrame({ sleep: 0.8 }),
+      ],
+    });
+
+    const order = down
+      .filter((f) => f instanceof LLMContextUserTurnFrame || f instanceof LLMFullResponseStartFrame)
+      .map((f) => [
+        f.constructor.name,
+        f instanceof LLMContextUserTurnFrame ? f.speculation : null,
+      ]);
+    expect(order.slice(0, 2)).toEqual([
+      ["LLMContextUserTurnFrame", true],
+      ["LLMFullResponseStartFrame", null],
+    ]);
+  });
+});
 
 /**
  * A withdrawal has to reach the gate before the turn end that follows it.

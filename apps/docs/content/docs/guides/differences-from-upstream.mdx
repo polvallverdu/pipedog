@@ -43,10 +43,6 @@ These differences apply everywhere, not to one module. They come from the portin
 - **Connection limits.** Upstream's `connection_limits` returns an httpx `Limits` instance.
   `fetch` has no such object, so `connectionLimits` returns the plain options for an SDK or agent
   that reads them field by field. `packages/core/src/utils/http.ts`
-- **Markdown filter.** Upstream converts Markdown to HTML with the Python-Markdown package. Core
-  takes no runtime dependencies, so it uses a small built-in converter that follows
-  Python-Markdown's rules for common constructs. Exotic Markdown (reference links, nested lists)
-  may convert differently. `packages/core/src/utils/text/markdown_text_filter.ts`
 
 ### TTS
 
@@ -54,6 +50,17 @@ These differences apply everywhere, not to one module. They come from the portin
   `warmAudioCache()` synthesizes fixed lines ahead of time, so they play without a request to the
   provider. Off by default. See [TTS audio cache](/docs/concepts/tts-audio-cache).
   `packages/core/src/services/tts_audio_cache.ts`
+
+### Expressive conversation
+
+- **Text offsets.** The expression formatter and `SpokenExpression` count offsets in UTF-16 code
+  units (JavaScript string indices), not code points, so they differ from upstream only after an
+  astral character such as an emoji. A `[[pause N]]` tag takes ASCII digits only (Python's `\d`
+  also accepts other Unicode digits). `packages/core/src/expressive/formatter.ts`
+- **`ExpressionGuidance`.** Upstream's `StrEnum` is a class with static instances (`value`,
+  `values()`, `fromValue()`) rather than an `as const` object, so `instanceof` can still tell a
+  preset from a developer line with the same text, which upstream's `isinstance` check relies on.
+  `packages/core/src/expressive/policy.ts`
 
 ### Logging
 

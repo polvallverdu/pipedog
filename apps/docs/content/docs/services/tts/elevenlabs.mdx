@@ -175,7 +175,7 @@ current audio context, and the next one registers the new values.
   server joins inputs verbatim. A `textAggregationMode` other than `SENTENCE` is ignored with a
   warning.
 - Eleven v3 and v4 perform inline audio tags such as `[laughs]`. They come back as spoken
-  characters in the alignment, so they reach the LLM context unless a text filter removes them.
+  characters in the alignment, so they reach the LLM context unless a text transform removes them.
 - A keepalive context is registered when the socket opens, because the server drops a connection
   that is idle for 20 seconds and rejects a keepalive that names no registered context. Set a
   `voice` so it can be registered.

@@ -1689,6 +1689,20 @@ describe("TestRegisterSpokenStreaming", () => {
     expect(words[0]!.willBeSpoken).toBe(true);
     expect(words[0]!.appendToContext).toBe(true);
   });
+
+  test("test_no_tracker_sentence_text_is_trimmed_for_the_context", async () => {
+    // The context joins its parts with a space, so a second sentence that
+    // keeps its token's leading space would be joined with two.
+    const seq = _seq(true);
+    const result: Frame[] = [];
+    for (const t of ["Hi.", " Bye", " now", ".", " Ok"]) {
+      result.push(
+        ...(await seq.registerSpoken(_spokenFrame(t), "ctx1", t, true, { buildTracker: false })),
+      );
+    }
+    const words = ttsFrames(result);
+    expect(words.map((f) => [f.text, f.rawText]).at(-1)).toEqual(["Bye now.", "Bye now."]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -2351,12 +2365,21 @@ describe("TestProcessWordResyncWithMarkup", () => {
     expect(seq.processWord("whenx", 20, "ctx1")).toEqual([]);
   });
 
-  test("test_resync_carries_the_closing_delimiter_into_context", async () => {
+  test("test_the_closing_delimiter_goes_into_context_with_the_word_it_touches", async () => {
+    const seq = _seq();
+    const frame = _spokenFrame(USER_FACING, LLM);
+    await seq.registerSpoken(frame, "ctx1", TTS, true);
+    seq.processWord("Call", 10, "ctx1");
+    const words = ttsFrames(seq.processWord("4111", 20, "ctx1"));
+    expect(words[0]!.rawText).toBe("<card>4111</card>");
+  });
+
+  test("test_resync_carries_the_skipped_words_into_context", async () => {
     const seq = await _seqPastTheTag();
     seq.processWord("whenx", 20, "ctx1");
     const words = ttsFrames(seq.processWord("ís", 30, "ctx1"));
     expect(words.map((f) => f.text)).toEqual(["when it is"]);
-    expect(words[0]!.rawText).toBe("</card> when it is");
+    expect(words[0]!.rawText).toBe("when it is");
   });
 
   test("test_slot_completes_after_the_resync", async () => {

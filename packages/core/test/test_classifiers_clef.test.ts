@@ -352,6 +352,35 @@ describe("TestClefClient", () => {
     await client.close();
   });
 
+  test("test_a_broken_tls_connection_is_an_error", async () => {
+    const handler = (_request: MockRequest): Response => {
+      // Upstream raises ssl.SSLError("bad record mac"); fetch rejects with a
+      // plain Error carrying the TLS failure.
+      throw new Error("bad record mac");
+    };
+
+    const client = _client(handler);
+
+    const promise = client.ask("a", NOUL);
+    await expect(promise).rejects.toThrow(ClassifierError);
+    await expect(promise).rejects.toThrow(/failed/);
+    await client.close();
+  });
+
+  test("test_a_broken_tls_connection_at_connect_is_an_error", async () => {
+    const handler = (_request: MockRequest): Response => {
+      // Upstream raises ssl.SSLError("bad record mac").
+      throw new Error("bad record mac");
+    };
+
+    const client = _client(handler);
+
+    const promise = client.connect();
+    await expect(promise).rejects.toThrow(ClassifierError);
+    await expect(promise).rejects.toThrow(/could not connect/);
+    await client.close();
+  });
+
   test("test_connect_asks_for_the_models_schema", async () => {
     const seen: [string, string, string | null][] = [];
 

@@ -38,6 +38,7 @@ export { expandNumbers } from "./numbers.ts";
 export { expandPercentages } from "./percentages.ts";
 export { expandPhoneNumbers } from "./phone.ts";
 export { replaceText } from "./replacements.ts";
-export { stripMarkdown } from "./strip_markdown.ts";
+export { StripMarkdown, stripMarkdown } from "./strip_markdown.ts";
+export type { TextTransform } from "./text_transform.ts";
 export { expandUnits } from "./units.ts";
 export { VoiceFormatter } from "./voice_formatter.ts";

@@ -20,7 +20,7 @@ import { expandNumbers } from "./numbers.ts";
 import { expandPercentages } from "./percentages.ts";
 import { expandPhoneNumbers } from "./phone.ts";
 import { replaceText, type TextReplacement } from "./replacements.ts";
-import { stripMarkdown } from "./strip_markdown.ts";
+import { StripMarkdown } from "./strip_markdown.ts";
 import { expandUnits } from "./units.ts";
 
 type Transform = (text: string, textType: string | TextType) => Promise<string>;
@@ -31,6 +31,11 @@ export interface VoiceFormatterOptions {
    * Enabled by default.
    */
   stripMarkdown?: boolean;
+  /**
+   * Reduce a Markdown link or image to its label or alt text so the URL is
+   * not spoken. Enabled by default; only used when `stripMarkdown` is true.
+   */
+  stripUrls?: boolean;
   /** Space out phone number digits for individual pronunciation. Enabled by default. */
   expandPhoneNumbers?: boolean;
   /** Space out uppercase acronyms (e.g. `"API"` → `"A P I"`). Enabled by default. */
@@ -104,7 +109,7 @@ export class VoiceFormatter {
     self._transforms = [];
 
     if (options.stripMarkdown ?? true) {
-      self._transforms.push(stripMarkdown);
+      self._transforms.push(new StripMarkdown({ stripUrls: options.stripUrls ?? true }));
     }
 
     // emailToSpeech must run before expandPhoneNumbers (phone regex matches

@@ -14,14 +14,25 @@
  * `TTSUpdateSettingsFrame(settings={...})` path and the deprecated
  * `WordTTSService`, `WebsocketWordTTSService`, `InterruptibleWordTTSService`,
  * `AudioContextTTSService` and `AudioContextWordTTSService` classes are not
- * ported.
+ * ported. Nor is the `textFilters` option (deprecated since 1.14.0; use
+ * `textTransforms`, with `stripMarkdown` in place of `MarkdownTextFilter`).
  */
 
 import { gather, rethrowIfCancelled, sleep, type Task, TimeoutError } from "@pipedog/asyncio";
+import { BaseExpressionAdapter } from "../adapters/tts/base_expression_adapter.ts";
 import type { BaseAudioResampler } from "../audio/resamplers/base_audio_resampler.ts";
 import { createStreamResampler } from "../audio/utils.ts";
 import {
+  EXPRESSION_TAG_PATTERN,
+  EXPRESSION_TAGS,
+  ExpressionFormatter,
+  type ExpressionSpan,
+  type Segment,
+} from "../expressive/formatter.ts";
+import { SpokenExpression } from "../expressive/spoken.ts";
+import {
   AggregatedTextFrame,
+  AggregatedTextProgressFrame,
   BotStartedSpeakingFrame,
   BotStoppedSpeakingFrame,
   type CancelFrame,
@@ -41,6 +52,7 @@ import {
   TextType,
   TranscriptionFrame,
   TTSAudioRawFrame,
+  TTSMetadataFrame,
   TTSSpeakFrame,
   TTSStartedFrame,
   TTSStoppedFrame,
@@ -56,13 +68,14 @@ import { ErrorCategory } from "../utils/errors.ts";
 import { logger } from "../utils/logger.ts";
 import { resolveSentenceTokenizerLanguage } from "../utils/string.ts";
 import type { Aggregation } from "../utils/text/base_text_aggregator.ts";
-import type { BaseTextFilter } from "../utils/text/base_text_filter.ts";
 import { PatternMatch } from "../utils/text/pattern_pair_aggregator.ts";
 import { SimpleTextAggregator } from "../utils/text/simple_text_aggregator.ts";
+import { SkipTagsAggregator } from "../utils/text/skip_tags_aggregator.ts";
 import {
   PronunciationTransform,
   pronunciationTransform,
 } from "../utils/text/transforms/pronunciations.ts";
+import type { TextTransform } from "../utils/text/transforms/text_transform.ts";
 import { mergePunctTokens } from "../utils/text/word_timestamp_utils.ts";
 import { isGiven } from "../utils/types.ts";
 import { AIService, type AIServiceOptions } from "./ai_service.ts";
@@ -85,12 +98,6 @@ export const TextAggregationMode = {
 } as const;
 export type TextAggregationMode = (typeof TextAggregationMode)[keyof typeof TextAggregationMode];
 
-/**
- * A text transform: takes the aggregated text and its type, and returns the
- * transformed text.
- */
-export type TextTransformFunction = (text: string, textType: TextType | string) => Promise<string>;
-
 export interface TTSContextOptions {
   /**
    * Whether this TTS output should be appended to the conversation context
@@ -105,6 +112,11 @@ export interface TTSContextOptions {
   pushAssistantAggregation?: boolean;
   /** Whether an interruption may discard this synthesis. */
   interruptible?: boolean;
+  /**
+   * The delivery and sounds of the words the service reports speaking in this
+   * context. Part of expressive conversation (alpha).
+   */
+  spokenExpression?: SpokenExpression;
 }
 
 /**
@@ -117,16 +129,20 @@ export interface TTSContextOptions {
  *   forcing the assistant aggregator to commit its current text buffer to the
  *   conversation context.
  * - `interruptible`: Whether an interruption may discard this synthesis.
+ * - `spokenExpression`: The delivery and sounds of the words the service
+ *   reports speaking in this context. Part of expressive conversation (alpha).
  */
 export class TTSContext {
   appendToContext: boolean;
   pushAssistantAggregation: boolean;
   interruptible: boolean;
+  spokenExpression: SpokenExpression;
 
   constructor(options: TTSContextOptions = {}) {
     this.appendToContext = options.appendToContext ?? true;
     this.pushAssistantAggregation = options.pushAssistantAggregation ?? false;
     this.interruptible = options.interruptible ?? true;
+    this.spokenExpression = options.spokenExpression ?? new SpokenExpression();
   }
 }
 
@@ -135,6 +151,10 @@ export class _AudioContextPlayback {
   receivedAudio = false;
   stopFrameDue = false;
 }
+
+// The text types an LLM writes its replies in, where expressive conversation
+// reads expression tags. Other text, such as a pattern's match, is spoken as is.
+const _EXPRESSIVE_TEXT_TYPES: readonly string[] = [TextType.SENTENCE, TextType.TOKEN];
 
 /** An item queued in an audio context. */
 export type AudioContextItem = Frame | WordTimestamp;
@@ -193,14 +213,12 @@ export interface TTSServiceOptions extends AIServiceOptions {
   /** List of text types that should not be spoken. */
   skipTextTypes?: string[] | null;
   /**
-   * A list of callables to transform text just before sending it to TTS.
-   * Each callable takes the aggregated text and its type, and returns the
-   * transformed text. To register, provide a list of tuples of
+   * A list of TextTransforms to transform text just before sending it to TTS.
+   * Each TextTransform takes the aggregated text and its type, and returns
+   * the transformed text. To register, provide a list of tuples of
    * `[textType | "*", transformFunction]`.
    */
-  textTransforms?: [TextType | string, TextTransformFunction][] | null;
-  /** Sequence of text filters to apply after aggregation. */
-  textFilters?: readonly BaseTextFilter[] | null;
+  textTransforms?: [TextType | string, TextTransform][] | null;
   /** Destination for generated audio frames. */
   transportDestination?: string | null;
   /** The runtime-updatable settings for the TTS service. */
@@ -277,6 +295,12 @@ export interface WarmAudioCacheOptions {
 export abstract class TTSService extends AIService {
   declare protected _settings: TTSSettings;
 
+  /**
+   * Formats expressive conversation's tags for this service (alpha). The base
+   * adapter performs nothing.
+   */
+  static expressionAdapterClass: new () => BaseExpressionAdapter = BaseExpressionAdapter;
+
   protected _textAggregationMode: TextAggregationMode;
   protected _pushTextFrames: boolean;
   protected _pushStopFrames: boolean;
@@ -293,9 +317,8 @@ export abstract class TTSService extends AIService {
   protected _textAggregator: SimpleTextAggregator;
   protected _skippedTextAggregator: SimpleTextAggregator;
   protected _skipTextTypes: string[];
-  protected _textTransforms: [TextType | string, TextTransformFunction][];
+  protected _textTransforms: [TextType | string, TextTransform][];
   protected _skippingPronunciations = false;
-  protected _textFilters: readonly BaseTextFilter[];
   protected _transportDestination: string | null;
   protected _aggregatedFrameSequencer: AggregatedFrameSequencer;
   protected _resampler: BaseAudioResampler;
@@ -314,6 +337,12 @@ export abstract class TTSService extends AIService {
   protected _audioCacheNamespace: string;
   // Error frames pushed so far, so a synthesis that reported one isn't cached.
   protected _errorFramesPushed = 0;
+  protected _expressionAdapter: BaseExpressionAdapter;
+  // Formats the expression tags an LLM writes, when the pipeline has
+  // expressive conversation on.
+  protected _expressionFormatter: ExpressionFormatter | null = null;
+  // What the adapter asked to send beside the latest request's text.
+  protected _expressionSettings: Record<string, unknown> = {};
 
   /**
    * Initialize the TTS service.
@@ -369,8 +398,6 @@ export abstract class TTSService extends AIService {
 
     this._skipTextTypes = options.skipTextTypes ?? [];
     this._textTransforms = options.textTransforms ?? [];
-    // TODO: Deprecate _textFilters when added to LLMTextProcessor
-    this._textFilters = options.textFilters ?? [];
     this._transportDestination = options.transportDestination ?? null;
 
     // Ordered sequence of every AggregatedTextFrame slot that passes through
@@ -418,6 +445,8 @@ export abstract class TTSService extends AIService {
 
     // _isYieldingFramesSynchronously: whether the TTS process is currently
     // yielding audio frames synchronously.
+
+    this._expressionAdapter = new (this.constructor as typeof TTSService).expressionAdapterClass();
   }
 
   /** The current sample rate for audio output, in Hz. */
@@ -471,6 +500,53 @@ export abstract class TTSService extends AIService {
   }
 
   /**
+   * The adapter that formats this service's expression tags.
+   *
+   * Part of expressive conversation (alpha). Its capabilities are what the
+   * service can perform: what it broadcasts at start, and what it reads and
+   * formats. A service whose expression depends on its settings, such as its
+   * model, overrides this to choose an adapter for them.
+   *
+   * @returns An instance of `expressionAdapterClass`.
+   */
+  getExpressionAdapter(): BaseExpressionAdapter {
+    return this._expressionAdapter;
+  }
+
+  /**
+   * Settings to send with the request being synthesized.
+   *
+   * Part of expressive conversation (alpha). Set before each request from the
+   * service's expression adapter (`BaseExpressionAdapter.requestSettings()`),
+   * for a service that takes some of its expression as request settings
+   * rather than as markup in its text.
+   *
+   * @returns The settings, empty for none.
+   */
+  get expressionSettings(): Record<string, unknown> {
+    return this._expressionSettings;
+  }
+
+  /**
+   * Build the TTS metadata frame broadcast at start.
+   *
+   * Overrides `AIService.serviceMetadataFrame()`. With expressive conversation
+   * on, a `TTSMetadataFrame` carries its expression adapter's capabilities;
+   * otherwise nothing is broadcast.
+   *
+   * @returns The metadata frame, or null when expressive conversation is off.
+   */
+  override serviceMetadataFrame(): TTSMetadataFrame | null {
+    if (!this._expressionFormatter) {
+      return null;
+    }
+    return new TTSMetadataFrame({
+      serviceName: this.name,
+      expression: this.getExpressionAdapter().capabilities(),
+    });
+  }
+
+  /**
    * Record TTS usage metrics.
    *
    * When streaming tokens, usage metrics are aggregated and reported at flush
@@ -509,6 +585,21 @@ export abstract class TTSService extends AIService {
   override async setup(setup: FrameProcessorSetup): Promise<void> {
     await super.setup(setup);
     this._sampleRate = this._initSampleRate || setup.audioOutSampleRate;
+    if (setup.enableExpressiveConversation) {
+      this._expressionFormatter = new ExpressionFormatter(() => this.getExpressionAdapter(), {
+        owner: this,
+      });
+      this._aggregatedFrameSequencer.llmMarkup = EXPRESSION_TAG_PATTERN;
+      // Each tag reaches the parser whole, however the text streams in, and so
+      // do the tags the service keeps whole itself, such as <spell>.
+      const ownTags =
+        this._textAggregator instanceof SkipTagsAggregator ? this._textAggregator.tags : [];
+      this._textAggregator = new SkipTagsAggregator({
+        tags: [...EXPRESSION_TAGS, ...ownTags],
+        aggregationType: this._textAggregationMode,
+        language: this._textAggregator.language,
+      });
+    }
   }
 
   /**
@@ -582,10 +673,7 @@ export abstract class TTSService extends AIService {
    *   "*" indicating the function should handle all text before sending to
    *   TTS.
    */
-  addTextTransformer(
-    transformFunction: TextTransformFunction,
-    textType: TextType | string = "*",
-  ): void {
+  addTextTransformer(transformFunction: TextTransform, textType: TextType | string = "*"): void {
     this._textTransforms.push([textType, transformFunction]);
   }
 
@@ -595,10 +683,7 @@ export abstract class TTSService extends AIService {
    * @param transformFunction The function to remove.
    * @param textType The type of text to remove the transformer for.
    */
-  removeTextTransformer(
-    transformFunction: TextTransformFunction,
-    textType: TextType | string = "*",
-  ): void {
+  removeTextTransformer(transformFunction: TextTransform, textType: TextType | string = "*"): void {
     this._textTransforms = this._textTransforms.filter(
       ([transformType, func]) => !(transformType === textType && func === transformFunction),
     );
@@ -1111,6 +1196,7 @@ export abstract class TTSService extends AIService {
       this._errorFramesPushed += 1;
     }
     if (frame instanceof TTSStoppedFrame) {
+      await this._reportUnreportedExpression(frame, direction);
       await this._finishTtsContext(frame);
       await this._pushStopSilence(frame);
     }
@@ -1125,7 +1211,137 @@ export abstract class TTSService extends AIService {
     if (frame instanceof AggregatedTextFrame) {
       this._stampSegmentAnnouncement(frame);
     }
+    if (this._expressionFormatter) {
+      const [sounds, keep] = this._reportExpression(frame);
+      for (const sound of sounds) {
+        await this.pushFrame(sound, direction);
+      }
+      if (!keep) {
+        return;
+      }
+    }
     await super.pushFrame(frame, direction);
+  }
+
+  /** Report the sounds and pauses no text reported, once a context's audio has ended. */
+  protected async _reportUnreportedExpression(
+    frame: TTSStoppedFrame,
+    direction: FrameDirection,
+  ): Promise<void> {
+    const context = frame.contextId ? this._ttsContexts.get(frame.contextId) : undefined;
+    if (!this._expressionFormatter || !context) {
+      return;
+    }
+    for (const sound of this._expressionSoundFrames(frame, context.spokenExpression.unreported())) {
+      // Ordered after the context's last words, as the stop frame is.
+      if (this._wordTimestampTracker.lastPts) {
+        sound.pts = this._wordTimestampTracker.lastPts + 1;
+      }
+      await this.pushFrame(sound, direction);
+    }
+  }
+
+  /**
+   * Give spoken text the delivery it is spoken in, and report the sounds
+   * before it.
+   *
+   * The text the service reports speaking covers part of the text the LLM
+   * wrote, tags included, which tells its delivery and the sounds performed
+   * since the text before it. Markup the service reports as a word stands for
+   * the sound it performs, or isn't spoken.
+   *
+   * @returns A frame for each sound or pause performed before the text, and
+   *   whether the frame itself is pushed.
+   */
+  protected _reportExpression(frame: Frame): [TTSTextFrame[], boolean] {
+    if (
+      !(frame instanceof TTSTextFrame || frame instanceof AggregatedTextProgressFrame) ||
+      frame.textType === TextType.EXPRESSION_SOUND ||
+      frame.textType === TextType.EXPRESSION_PAUSE
+    ) {
+      return [[], true];
+    }
+    const context = frame.contextId ? this._ttsContexts.get(frame.contextId) : undefined;
+    const spoken = context ? context.spokenExpression : null;
+    if (frame instanceof AggregatedTextProgressFrame) {
+      frame.delivery = spoken ? spoken.delivery : null;
+      return [[], true];
+    }
+    if (_isMarkup(frame.text)) {
+      return this._reportMarkup(frame, spoken);
+    }
+    return [this._reportWords(frame, spoken), true];
+  }
+
+  /**
+   * Report markup the service reported as a word: the sound it stands for, or
+   * nothing.
+   *
+   * @returns A frame for each sound or pause performed before it, and whether
+   *   the frame itself is pushed.
+   */
+  protected _reportMarkup(
+    frame: TTSTextFrame,
+    spoken: SpokenExpression | null,
+  ): [TTSTextFrame[], boolean] {
+    const sound = spoken ? spoken.spokenMarkup() : null;
+    if (sound === null) {
+      // Markup that stands for no sound isn't spoken, unless it covers some of
+      // the LLM's text.
+      if (frame.rawText === null) {
+        return [[], false];
+      }
+      return [this._reportWords(frame, spoken), true];
+    }
+    [frame.textType, frame.text] = sound;
+    // A sound the bot performed, in a segment of its own, as the sounds found
+    // between words are reported; as a word it was neither.
+    frame.willBeSpoken = true;
+    frame.segmentId = null;
+    if (frame.rawText === null || spoken === null) {
+      frame.appendToContext = false;
+      return [[], true];
+    }
+    // Markup can cover the LLM's text, as "[laughs]" covers "[[laugh]]!" when
+    // the punctuation was written after the tag. The context records that
+    // text with the sound.
+    const [, sounds] = spoken.spoken(frame.rawText);
+    return [this._expressionSoundFrames(frame, sounds), true];
+  }
+
+  /**
+   * Give words the delivery they are spoken in, and report the sounds before
+   * them.
+   *
+   * @returns A frame for each sound or pause performed before the words.
+   */
+  protected _reportWords(frame: TTSTextFrame, spoken: SpokenExpression | null): TTSTextFrame[] {
+    if (spoken === null) {
+      return [];
+    }
+    const [delivery, sounds] = spoken.spoken(frame.rawText);
+    if (delivery !== null) {
+      frame.delivery = delivery;
+    }
+    return this._expressionSoundFrames(frame, sounds);
+  }
+
+  /** Frames for sounds and pauses performed at a frame's time. */
+  protected _expressionSoundFrames(
+    frame: TTSTextFrame | TTSStoppedFrame,
+    sounds: [TextType, string][],
+  ): TTSTextFrame[] {
+    const frames: TTSTextFrame[] = [];
+    for (const [textType, text] of sounds) {
+      const sound = new TTSTextFrame({ text, textType });
+      sound.pts = frame.pts;
+      sound.contextId = frame.contextId;
+      sound.willBeSpoken = true;
+      // The context records the sound's tag with the text around it.
+      sound.appendToContext = false;
+      frames.push(sound);
+    }
+    return frames;
   }
 
   //
@@ -1135,7 +1351,9 @@ export abstract class TTSService extends AIService {
   /**
    * Apply a TTS settings delta.
    *
-   * Translates language to service-specific value before applying.
+   * Translates language to service-specific value before applying. With
+   * expressive conversation on, broadcasts the service's metadata again when
+   * the change alters what it can perform.
    *
    * @param delta A TTS settings delta.
    * @returns Record mapping changed field names to their previous values.
@@ -1147,11 +1365,22 @@ export abstract class TTSService extends AIService {
       delta.language = this._serviceLanguage(delta.language);
     }
 
+    const capabilities = this._expressionFormatter
+      ? this._expressionFormatter.capabilities()
+      : null;
     const changed = await super._updateSettings(delta);
 
     if (isGiven(language)) {
       this._textAggregator.setLanguage(language as string | null);
       this._skippedTextAggregator.setLanguage(language as string | null);
+    }
+
+    // A setting such as the model can change what the service performs.
+    if (
+      this._expressionFormatter &&
+      !capabilitiesEqual(this._expressionFormatter.capabilities(), capabilities)
+    ) {
+      await this.broadcastServiceMetadata();
     }
 
     return changed;
@@ -1199,6 +1428,9 @@ export abstract class TTSService extends AIService {
     if (remaining) {
       await this._handleAggregatedText(this._aggregatedTextFrame(remaining));
     }
+    if (this._expressionFormatter) {
+      this._expressionFormatter.reset();
+    }
 
     // Force-promote any sentence still pending in the sequencer (streaming
     // mode only; a no-op otherwise) — handles a response that ends with no
@@ -1207,6 +1439,17 @@ export abstract class TTSService extends AIService {
       await this._aggregatedFrameSequencer.finalize(this._turnContextId),
       this._turnContextId,
     );
+    // A reply that is only tags speaks nothing, so no audio context ends it to
+    // complete its text.
+    const contextId = this._turnContextId;
+    if (
+      contextId !== null &&
+      this._ttsContexts.has(contextId) &&
+      !this.audioContextAvailable(contextId)
+    ) {
+      await this._applyForceComplete(contextId);
+      this._ttsContexts.delete(contextId);
+    }
 
     await this._holdFramesWhileAudioContextsOpen();
 
@@ -1283,7 +1526,14 @@ export abstract class TTSService extends AIService {
       rawText: frame.text,
     });
     textFrame.interruptible = frame.interruptible;
-    await this._handleAggregatedText(textFrame, speakContextId);
+    if (this._expressionFormatter && _EXPRESSIVE_TEXT_TYPES.includes(frame.textType)) {
+      // Text of its own, apart from any response it is spoken in the middle of.
+      this._expressionFormatter.restateDelivery();
+      await this._speakExpression(textFrame, speakContextId, { whole: true });
+      this._expressionFormatter.restateDelivery();
+    } else {
+      await this._handleAggregatedText(textFrame, speakContextId);
+    }
     // Force-promote the utterance's pending sentence into a real slot
     // (streaming mode only; a no-op otherwise). A TTSSpeakFrame is a
     // self-contained sentence with no following token to confirm its
@@ -1327,8 +1577,8 @@ export abstract class TTSService extends AIService {
 
     await this._textAggregator.handleInterruption();
     await this._skippedTextAggregator.handleInterruption();
-    for (const filter of this._textFilters) {
-      await filter.handleInterruption();
+    if (this._expressionFormatter) {
+      this._expressionFormatter.reset();
     }
 
     await this._interruptAudioContexts();
@@ -1506,12 +1756,50 @@ export abstract class TTSService extends AIService {
     contextId: string | null = null,
   ): Promise<void> {
     const id = contextId || this.createContextId();
-    const text = this._trimText(srcFrame.text);
     if (this._skipTextTypes.includes(srcFrame.textType)) {
       await this._pushSkippedText(srcFrame, id);
-    } else if (text !== null) {
-      await this._speakText(srcFrame, text, id);
+    } else if (this._expressionFormatter && _EXPRESSIVE_TEXT_TYPES.includes(srcFrame.textType)) {
+      await this._speakExpression(srcFrame, id);
+    } else {
+      const text = this._trimText(srcFrame.text);
+      if (text !== null) {
+        await this._speakText(srcFrame, text, id);
+      }
     }
+  }
+
+  /**
+   * Speak a unit of text with expression tags in it.
+   *
+   * The unit stays one frame: its words without the tags, for clients, and
+   * its text as the LLM wrote it, for the context. The request is built from
+   * its segments.
+   *
+   * @param srcFrame The unit.
+   * @param contextId The context to speak it in.
+   * @param options.whole Whether the text stands on its own, apart from the
+   *   response, such as a `TTSSpeakFrame`'s.
+   */
+  protected async _speakExpression(
+    srcFrame: AggregatedTextFrame,
+    contextId: string,
+    options: { whole?: boolean } = {},
+  ): Promise<void> {
+    if (!this._expressionFormatter) {
+      return;
+    }
+    let text = srcFrame.text;
+    if (srcFrame.textType !== TextType.TOKEN) {
+      text = text.trim();
+    }
+    const segments = this._expressionFormatter.parse(text, { whole: options.whole ?? false });
+    const frame = new AggregatedTextFrame({
+      text: ExpressionFormatter.shownText(segments, srcFrame.textType),
+      textType: srcFrame.textType,
+      rawText: text,
+    });
+    frame.interruptible = srcFrame.interruptible;
+    await this._speakText(frame, this._trimText(frame.text) || "", contextId, segments);
   }
 
   /** Push text that isn't spoken, in order with the spoken text around it. */
@@ -1530,11 +1818,18 @@ export abstract class TTSService extends AIService {
     );
   }
 
-  /** Filter, transform and synthesize text, timing it as processing. */
+  /**
+   * Filter, transform and synthesize text, timing it as processing.
+   *
+   * With expressive conversation on, `segments` are the unit's words and
+   * tags, and the request is built from them: the words transformed, and the
+   * tags formatted in the service's markup.
+   */
   protected async _speakText(
     srcFrame: AggregatedTextFrame,
     text: string,
     contextId: string,
+    segments: Segment[] | null = null,
   ): Promise<void> {
     // Accumulate text for a single debug log at flush time when streaming
     // tokens.
@@ -1551,26 +1846,57 @@ export abstract class TTSService extends AIService {
       await this.startProcessingMetrics();
     }
 
-    const filteredText = await this._filterText(text);
-    if (filteredText !== null) {
-      const preparedText = await this._transformText(filteredText, srcFrame.textType);
-      if (preparedText !== null) {
-        // A TTSSpeakFrame sets up its context before its text gets here.
-        let context = this._ttsContexts.get(contextId);
-        if (!context) {
-          context = new TTSContext({ interruptible: srcFrame.interruptible });
-          this._ttsContexts.set(contextId, context);
-        }
-        await this._announceText(srcFrame, contextId);
-        await this._callEventHandler("on_tts_request", contextId, preparedText);
-        await this._startAudioContext(contextId);
-        await this._registerSpokenText(srcFrame, preparedText, contextId);
-        await this._synthesizeText(preparedText, contextId);
-        await this._pushSpokenText(srcFrame, filteredText, contextId, context.appendToContext);
+    let spans: ExpressionSpan[] | null = null;
+    let preparedText: string | null;
+    if (segments !== null && this._expressionFormatter) {
+      const request = await this._expressionFormatter.format(
+        segments,
+        srcFrame.textType,
+        (t, tt) => this._transformText(t, tt),
+        (t) => this._trimText(t),
+      );
+      preparedText = request.text;
+      spans = request.spans;
+      this._expressionSettings = request.settings;
+      // The formatter trims a sentence's request, so a service that needs its
+      // inputs to end in a space gets it back here.
+      if (preparedText) {
+        preparedText = this._prepareTextForTts(preparedText);
       }
+    } else {
+      preparedText = await this._transformText(text, srcFrame.textType);
+    }
+    if (preparedText) {
+      // A TTSSpeakFrame sets up its context before its text gets here.
+      const context = this._ttsContextFor(contextId, srcFrame);
+      if (spans !== null) {
+        context.spokenExpression.add(srcFrame.rawText || "", spans);
+      }
+      await this._announceText(srcFrame, contextId);
+      await this._callEventHandler("on_tts_request", contextId, preparedText);
+      await this._startAudioContext(contextId);
+      await this._registerSpokenText(srcFrame, preparedText, contextId);
+      await this._synthesizeText(preparedText, contextId);
+      await this._pushSpokenText(srcFrame, text, contextId, context.appendToContext);
+    } else if (spans !== null && srcFrame.rawText?.trim()) {
+      // A unit with nothing to say, such as a tag alone, still reaches the
+      // context as the LLM wrote it, in order with the text around it.
+      const context = this._ttsContextFor(contextId, srcFrame);
+      await this._registerSpokenText(srcFrame, "", contextId);
+      await this._pushSpokenText(srcFrame, "", contextId, context.appendToContext);
     }
 
     await this.stopProcessingMetrics();
+  }
+
+  /** The context `contextId` is spoken in, created for `srcFrame` if new (`setdefault`). */
+  protected _ttsContextFor(contextId: string, srcFrame: AggregatedTextFrame): TTSContext {
+    let context = this._ttsContexts.get(contextId);
+    if (!context) {
+      context = new TTSContext({ interruptible: srcFrame.interruptible });
+      this._ttsContexts.set(contextId, context);
+    }
+    return context;
   }
 
   /** Trim leading whitespace from text to synthesize, or null if nothing is left to say. */
@@ -1598,45 +1924,17 @@ export abstract class TTSService extends AIService {
   }
 
   /**
-   * Run the text filters on text about to be synthesized.
+   * Turn text to speak into the text sent to the TTS.
    *
-   * @returns The filtered text, or null if nothing is left to say.
-   */
-  protected async _filterText(text: string): Promise<string | null> {
-    let result = text;
-    for (const filter of this._textFilters) {
-      await filter.resetInterruption();
-      result = await filter.filter(result);
-    }
-
-    // Mirrors the whitespace gate before the filters, so filter output that
-    // collapses to whitespace-only is handled consistently. When streaming
-    // tokens, whitespace is only sent once something else has been.
-    let hasText: boolean;
-    if (this._isStreamingTokens) {
-      hasText = result.trim().length > 0 || (result.length > 0 && this._sentNonWhitespaceInContext);
-      if (hasText) {
-        this._sentNonWhitespaceInContext = true;
-      }
-    } else {
-      hasText = result.trim().length > 0;
-    }
-    return hasText ? result : null;
-  }
-
-  /**
-   * Turn filtered text into the text sent to the TTS.
+   * Transforms only affect the text sent to the TTS, for TTS-specific
+   * purposes (e.g. inserting tags for spelling or emotion, or replacing an @
+   * with "at"). The context keeps the text as it arrived.
    *
-   * Transforms only affect the text sent to the TTS for TTS-specific purposes
-   * (e.g. inserting tags for spelling or emotion, or replacing an @ with
-   * "at"). For services with word timestamps they can affect the context,
-   * since TTSTextFrames are built from the TTS output.
-   *
-   * @returns The text to synthesize, or null if a transform failed.
+   * @returns The text to synthesize, or null if nothing is left to say or a
+   *   transform failed.
    */
   protected async _transformText(text: string, textType: string): Promise<string | null> {
     let transformedText = text;
-    let preparedText: string | null = null;
     try {
       for (const [transformType, transform] of this._textTransforms) {
         if (
@@ -1647,8 +1945,6 @@ export abstract class TTSService extends AIService {
           transformedText = await transform(transformedText, textType);
         }
       }
-      // Apply any final text preparation (e.g., trailing space)
-      preparedText = this._prepareTextForTts(transformedText);
     } catch (e) {
       rethrowIfCancelled(e);
       // Pushing the error with category "APPLICATION" since the failure came
@@ -1662,8 +1958,28 @@ export abstract class TTSService extends AIService {
           category: ErrorCategory.APPLICATION,
         },
       );
+      return null;
     }
-    return preparedText;
+
+    // Mirrors the whitespace gate in _trimText, so output that collapses to
+    // whitespace-only is handled consistently. When streaming tokens,
+    // whitespace is only sent once something else has been.
+    let hasText: boolean;
+    if (this._isStreamingTokens) {
+      hasText =
+        transformedText.trim().length > 0 ||
+        (transformedText.length > 0 && this._sentNonWhitespaceInContext);
+      if (hasText) {
+        this._sentNonWhitespaceInContext = true;
+      }
+    } else {
+      hasText = transformedText.trim().length > 0;
+    }
+    if (!hasText) {
+      return null;
+    }
+    // Apply any final text preparation (e.g., trailing space)
+    return this._prepareTextForTts(transformedText);
   }
 
   /** Whether pronunciation transforms apply, warning once when they stop applying. */
@@ -1764,20 +2080,20 @@ export abstract class TTSService extends AIService {
   /**
    * Emit frames returned by the aggregated-frame sequencer in audio order.
    *
-   * In streaming (TOKEN) mode these frames — a promoted sentence anchor and
-   * any replayed word/progress frames — describe an audio context whose audio
-   * and word frames are emitted by the dedicated audio-context task. Routing
-   * them through that context's queue keeps a single consumer emitting
-   * everything in order; pushing directly here would let them race the
-   * audio-context task. When the context is gone (or the sequencer is
-   * non-streaming), push directly.
+   * These frames — skipped text the spoken text before it has released, and
+   * in streaming (TOKEN) mode a promoted sentence anchor and any replayed
+   * word/progress frames — follow text queued in an audio context, whose
+   * audio and text frames are emitted by the dedicated audio-context task.
+   * Routing them through that context's queue keeps a single consumer
+   * emitting everything in order; pushing directly here would let them
+   * overtake it. When the context is gone, push directly.
    *
    * @param frames Frames returned by registerSpoken/registerSkipped/finalize.
    * @param contextId The context these frames belong to.
    */
   protected async _pushSequencerFrames(frames: Frame[], contextId: string | null): Promise<void> {
     for (const f of frames) {
-      if (this._isStreamingTokens && contextId && this.audioContextAvailable(contextId)) {
+      if (contextId && this.audioContextAvailable(contextId)) {
         await this.appendToAudioContext(contextId, f);
       } else {
         await this.pushFrame(f);
@@ -1972,9 +2288,7 @@ export abstract class TTSService extends AIService {
   protected async _warmLine(cache: TTSAudioCacheStore, line: string): Promise<boolean> {
     const trimmed = this._trimText(line);
     if (trimmed === null) return false;
-    const filtered = await this._filterText(trimmed);
-    if (filtered === null) return false;
-    const prepared = await this._transformText(filtered, TextType.SENTENCE);
+    const prepared = await this._transformText(trimmed, TextType.SENTENCE);
     if (prepared === null) return false;
     const key = this._audioCacheKey(prepared);
     if (await cache.get(key)) return false;
@@ -2002,7 +2316,9 @@ export abstract class TTSService extends AIService {
     // (_pushTextFrames) get the original (non-transformed) text after the TTS
     // generation has completed. This way, if we are interrupted, the text is
     // not added to the assistant context and the context that IS added does
-    // not include TTS-specific tags or transformations.
+    // not include TTS-specific tags or transformations. The frame carries the
+    // text as the LLM wrote it, which the context records, as it does for
+    // services with word timestamps.
     //
     // In streaming (TOKEN) mode this is handled instead by the sequencer's
     // per-sentence promotion (see AggregatedFrameSequencer._promote): a call
@@ -2012,18 +2328,23 @@ export abstract class TTSService extends AIService {
     const frame = new TTSTextFrame({
       text,
       textType: srcFrame.textType,
+      rawText: srcFrame.rawText,
       segmentId: srcFrame.id,
     });
     frame.willBeSpoken = true;
     frame.contextId = contextId;
     frame.appendToContext = appendToContext;
-    // Appending to the context, so it preserves the ordering.
-    await this.appendToAudioContext(contextId, frame);
+    // Appending to the audio context, so it preserves the ordering. A unit
+    // that is only tags may come before anything is spoken, with no audio
+    // context.
+    if (this.audioContextAvailable(contextId)) {
+      await this.appendToAudioContext(contextId, frame);
+    } else {
+      await this.pushFrame(frame);
+    }
     // TTSTextFrame is queued; mark the spoken slot complete so any skipped
     // frames (e.g. code blocks) waiting behind it can be flushed in order.
-    for (const f of this._aggregatedFrameSequencer.completeSpokenSlot()) {
-      await this.pushFrame(f);
-    }
+    await this._pushSequencerFrames(this._aggregatedFrameSequencer.completeSpokenSlot(), contextId);
   }
 
   /**
@@ -2725,4 +3046,36 @@ function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
 /** Python's `f"{e}"` for an exception. */
 function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/**
+ * Whether a word a service reports is its markup, rather than speech.
+ *
+ * The shape alone decides, and that is safe: a bracketed word that covers some
+ * of the LLM's text, such as a literal "[note]" it wrote, is still reported as
+ * that text. Only a word that covers none of it, which can only be the
+ * adapter's markup, is read as a sound or left out.
+ */
+function _isMarkup(text: string): boolean {
+  const t = text.trim();
+  return (t.startsWith("[") && t.endsWith("]")) || (t.startsWith("<") && t.endsWith(">"));
+}
+
+/** Python's `==` on expression capabilities (dataclasses): structural equality. */
+function capabilitiesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return false;
+  if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;
+  if (Array.isArray(a)) {
+    const other = b as unknown[];
+    return a.length === other.length && a.every((v, i) => capabilitiesEqual(v, other[i]));
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every(
+    (key) =>
+      Object.hasOwn(b, key) &&
+      capabilitiesEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]),
+  );
 }

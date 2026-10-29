@@ -253,25 +253,25 @@ describe("TestStartEndTags", () => {
     // (<a>, </a>)
     expect(parseStartEndTags("Hello from <a>Pipecat</a>!", [["<a>", "</a>"]], null, 0)).toEqual([
       null,
-      26,
+      25,
     ]);
     expect(parseStartEndTags("Hello from <a>Pipecat", [["<a>", "</a>"]], null, 0)).toEqual([
       ["<a>", "</a>"],
-      21,
+      14,
     ]);
     expect(parseStartEndTags("Hello from <a>Pipecat", [["<a>", "</a>"]], null, 6)).toEqual([
       ["<a>", "</a>"],
-      21,
+      14,
     ]);
 
     // (spell(, ))
     expect(parseStartEndTags("Hello from spell(Pipecat)!", [["spell(", ")"]], null, 0)).toEqual([
       null,
-      26,
+      25,
     ]);
     expect(parseStartEndTags("Hello from spell(Pipecat", [["spell(", ")"]], null, 0)).toEqual([
       ["spell(", ")"],
-      24,
+      17,
     ]);
   });
 
@@ -284,11 +284,30 @@ describe("TestStartEndTags", () => {
         null,
         0,
       ),
-    ).toEqual([null, 46]);
+    ).toEqual([null, 45]);
 
     expect(
       parseStartEndTags("Hello from <a>Pipecat</a>! Hello <a>World", [["<a>", "</a>"]], null, 0),
-    ).toEqual([["<a>", "</a>"], 41]);
+    ).toEqual([["<a>", "</a>"], 36]);
+  });
+
+  test("test_several_pairs", async () => {
+    const tags: [string, string][] = [
+      ["<a>", "</a>"],
+      ["spell(", ")"],
+    ];
+    // A tag of any pair opens, not only the first pair's.
+    expect(parseStartEndTags("Hello spell(Pip", tags, null, 0)).toEqual([["spell(", ")"], 12]);
+    expect(parseStartEndTags("<a>Hi</a> and spell(Pipecat) now", tags, null, 0)).toEqual([
+      null,
+      28,
+    ]);
+  });
+
+  test("test_a_pair_with_one_delimiter", async () => {
+    const tags: [string, string][] = [["**", "**"]];
+    expect(parseStartEndTags("It's **back", tags, null, 0)).toEqual([["**", "**"], 7]);
+    expect(parseStartEndTags("It's **back up** now", tags, null, 0)).toEqual([null, 16]);
   });
 });
 

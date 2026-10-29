@@ -99,6 +99,34 @@ describe("TestSkipTagsAggregator", () => {
     expect(results.length).toEqual(1);
     expect(results[0]!.text).toEqual("Hi there.");
   });
+
+  test("test_closed_tag_content_not_split", async () => {
+    // Punctuation inside a closed tag is not a sentence boundary.
+    await aggregator.reset();
+
+    const text = "Your code is <spell>X. Y. Z</spell>. Say <spell>St. Louis</spell> slowly. Done";
+    const results = await collect(aggregator.aggregate(text));
+
+    expect(results.map((r) => r.text)).toEqual([
+      "Your code is <spell>X. Y. Z</spell>.",
+      "Say <spell>St. Louis</spell> slowly.",
+    ]);
+    const result = await aggregator.flush();
+    expect(result!.text).toEqual("Done");
+  });
+
+  test("test_tag_after_emitted_sentence_not_split", async () => {
+    // A tag is still recognized after an earlier sentence has been emitted.
+    await aggregator.reset();
+
+    const text = "Hi <spell>AB</spell>. My name is <spell>Bob. Smith</spell> today. Done";
+    const results = await collect(aggregator.aggregate(text));
+
+    expect(results.map((r) => r.text)).toEqual([
+      "Hi <spell>AB</spell>.",
+      "My name is <spell>Bob. Smith</spell> today.",
+    ]);
+  });
 });
 
 describe("TestSkipTagsAggregatorTokenMode", () => {

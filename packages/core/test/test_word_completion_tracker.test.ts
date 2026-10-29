@@ -3041,7 +3041,8 @@ describe("TestWordCompletionTrackerResyncWithTags", () => {
   // Resyncing in a frame that also carries synthesis and LLM markup.
   //
   // The tags are their own segment, so a resync in the text after them has to keep
-  // the LLM cursor -- still sitting before the closing ``</card>`` -- in step.
+  // the LLM cursor -- already past the ``</card>`` written against ``4111`` -- in
+  // step.
   const TTS = "Call <spell>4111</spell> when it is ready";
 
   const LLM = "Call <card>4111</card> when it is ready";
@@ -3070,10 +3071,20 @@ describe("TestWordCompletionTrackerResyncWithTags", () => {
     expect(tracker.getWordForFrame()).toEqual("when it is");
   });
 
-  test("test_resync_after_the_tag_carries_the_closing_tag_into_context", () => {
+  test("test_the_closing_tag_goes_into_context_with_the_word_it_touches", () => {
+    const tracker = new WordCompletionTracker(TTS, {
+      llmText: LLM,
+      userFacingText: USER_FACING,
+    });
+    tracker.addWordAndCheckComplete("Call");
+    tracker.addWordAndCheckComplete("4111");
+    expect(tracker.getLlmConsumed()).toEqual("<card>4111</card>");
+  });
+
+  test("test_resync_after_the_tag_carries_the_skipped_words_into_context", () => {
     const tracker = _tracker();
     tracker.addWordAndCheckComplete("ís");
-    expect(tracker.getLlmConsumed()).toEqual("</card> when it is");
+    expect(tracker.getLlmConsumed()).toEqual("when it is");
   });
 
   test("test_progress_skips_the_tag_it_never_shows", () => {
@@ -3472,5 +3483,43 @@ describe("TestWordCompletionTrackerUnmatchedSymbolStaysPut", () => {
     // A letter right after the symbol already stops the step.
     const text = "Step one → step two";
     _assertTracksToTheEnd(text, ["Step", "one", "-", "step", "two"]);
+  });
+});
+
+describe("TestTagsOnlyTheLLMTextCarries", () => {
+  // Tags such as expressive conversation's are in the LLM's text alone: the
+  // cursor into it passes over them, so a word is never attributed half a tag.
+  const LLM_TEXT = "<<calm>> It's [[laugh]] fine now.";
+  const TTS_TEXT = "It's [laughter] fine now.";
+  const USER_FACING = "It's fine now.";
+
+  function _llmConsumed(llmMarkup: RegExp): (string | null)[] {
+    const tracker = new WordCompletionTracker(TTS_TEXT, {
+      llmText: LLM_TEXT,
+      userFacingText: USER_FACING,
+      llmMarkup,
+    });
+    const consumed: (string | null)[] = [];
+    for (const word of ["It's", "[laughter]", "fine", "now."]) {
+      tracker.addWordAndCheckComplete(word);
+      consumed.push(tracker.getLlmConsumed());
+    }
+    return consumed;
+  }
+
+  test("test_a_word_is_attributed_whole_tags", () => {
+    const consumed = _llmConsumed(/<<[^<>]*>>|\[\[[^[\]]*\]\]/);
+    expect(consumed).toEqual(["<<calm>> It's", null, "[[laugh]] fine", "now."]);
+  });
+
+  test("test_what_is_left_starts_after_the_words_spoken", () => {
+    // The service's markup takes the space after it, as the tag does.
+    const tracker = new WordCompletionTracker('<emotion value="calm"/> I\'m so sorry.', {
+      llmText: "<<calm>> I'm so sorry.",
+      userFacingText: "I'm so sorry.",
+      llmMarkup: /<<[^<>]*>>|\[\[[^[\]]*\]\]/,
+    });
+    tracker.addWordAndCheckComplete("I'm");
+    expect(tracker.getRemainingLlmText()).toEqual("so sorry.");
   });
 });

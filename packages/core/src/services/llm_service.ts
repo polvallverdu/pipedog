@@ -34,10 +34,15 @@ import type { BaseLLMAdapter } from "../adapters/llm/base_llm_adapter.ts";
 import { DirectFunctionWrapper } from "../adapters/llm/schemas/direct_function.ts";
 import { ToolsSchema } from "../adapters/llm/schemas/tools_schema.ts";
 import { OpenAILLMAdapter } from "../adapters/llm/services/open_ai_adapter.ts";
+import type { ExpressionCapabilities } from "../expressive/expression.ts";
+import { expressionInstructions, expressionPolicyWarning } from "../expressive/instructions.ts";
+import type { PerceptionCapabilities } from "../expressive/perception.ts";
+import type { ExpressionPolicy } from "../expressive/policy.ts";
 import {
   type CancelFrame,
   type EndFrame,
   type ErrorFrame,
+  ExpressionMetadataFrame,
   type Frame,
   FunctionCallCancelFrame,
   FunctionCallFromLLM,
@@ -55,7 +60,9 @@ import {
   LLMServiceMetadataFrame,
   LLMTextFrame,
   LLMUpdateSettingsFrame,
+  PerceptionMetadataFrame,
   type StartFrame,
+  TTSMetadataFrame,
   UserTurnResponseCancelFrame,
 } from "../frames/frames.ts";
 import type { PipelineWorker } from "../pipeline/worker.ts";
@@ -78,6 +85,7 @@ import { ErrorCategory } from "../utils/errors.ts";
 import { FileResolver } from "../utils/file_resolver.ts";
 import { _getLlmContextLogMode, _LLMContextLogMode } from "../utils/log_config.ts";
 import { logger } from "../utils/logger.ts";
+import { pyJsonDumps, pyJsonLoads, pyNumberRepr } from "../utils/py_json.ts";
 import { assertGiven, isGiven, NOT_GIVEN } from "../utils/types.ts";
 import type { WorkerRunner } from "../workers/runner.ts";
 import { AIService, type AIServiceOptions } from "./ai_service.ts";
@@ -105,6 +113,41 @@ export type FunctionCallHandler = (params: FunctionCallParams) => Promise<void>;
  * frontend, or the LLM inside the backend worker.
  */
 export type LLMWithBackendRole = "frontend" | "backend";
+
+/**
+ * Decides whether the service's output goes out: each frame it pushes, and
+ * its function calls.
+ *
+ * It lets output through or drops it; it never changes it. It sees each frame
+ * the service processes, to keep track of what the service is doing. Used by
+ * predictive delegation (see
+ * `pipeline/llm_with_backend/predictive_delegation`) to drop what a
+ * frontend's inference outputs once its turn is delegated early.
+ */
+export interface _OutputGate {
+  /**
+   * Called with each frame the service processes.
+   *
+   * @param service The service.
+   * @param frame The frame it is processing.
+   */
+  processFrame(service: LLMService<any>, frame: Frame): Promise<void>;
+
+  /**
+   * Whether the service may push a frame.
+   *
+   * @param frame The frame the service is about to push.
+   * @returns Whether the service may push it.
+   */
+  allowPush(frame: Frame): boolean;
+
+  /**
+   * Whether the service may run its inference's function calls.
+   *
+   * @returns Whether the service may run them.
+   */
+  allowFunctionCalls(): boolean;
+}
 
 /**
  * Function call result callback.
@@ -307,6 +350,7 @@ function repr(value: unknown): string {
   if (value === null || value === undefined) return "None";
   if (value === true) return "True";
   if (value === false) return "False";
+  if (typeof value === "number") return pyNumberRepr(value);
   if (Array.isArray(value)) return `[${value.map(repr).join(", ")}]`;
   if (typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
     const entries = Object.entries(value as Record<string, unknown>);
@@ -437,6 +481,9 @@ export class LLMService<
   // Holds a speculative response until its turn is confirmed. Frames are
   // routed through it on the way out, in `pushFrame`.
   protected _speculationGate: SpeculationGate;
+  // Can drop what this service pushes or the function calls it runs.
+  // See `_OutputGate`.
+  _outputGate: _OutputGate | null = null;
   // The per-tool cancel tools currently advertised, by name.
   protected _cancelToolNames = new Set<string>();
   // Cancel-tool names that collide with a user's own tool, warned about once.
@@ -450,6 +497,20 @@ export class LLMService<
   // The instruction as last composed, so a recomposition that changes nothing
   // (every tool sync recomposes) is not logged again.
   protected _composedSystemInstruction: string | null = null;
+  // With expressive conversation on, the expression the TTS service
+  // downstream performs, from its latest TTSMetadataFrame, and the
+  // signals perceived of how the user spoke, from the latest
+  // PerceptionMetadataFrame, and the pipeline's policy on which tags to
+  // offer and when. A tagger after the LLM, announced by an
+  // ExpressionMetadataFrame, writes the tags instead, so the LLM
+  // is taught none.
+  protected _expressive = false;
+  protected _taggedAfterLlm = false;
+  protected _ttsExpression: ExpressionCapabilities | null = null;
+  protected _perception: PerceptionCapabilities | null = null;
+  protected _expressionPolicy: ExpressionPolicy | null = null;
+  // The last warning about the policy, so it isn't repeated.
+  protected _policyWarning: string | null = null;
   protected _functions = new Map<string | null, FunctionCallRegistryItem>();
   // Cleanup callables carried by registered tool handlers, awaited at service
   // teardown (see _recordToolCleanup).
@@ -517,7 +578,9 @@ export class LLMService<
 
   /** Return the adapter class to instantiate for this service. */
   static _resolveAdapterClass(): LLMAdapterClass {
+    // biome-ignore lint/complexity/noThisInStatic: `this` is upstream's `cls`, so a subclass's `adapterClass` is seen.
     if (this.adapterClass !== null) {
+      // biome-ignore lint/complexity/noThisInStatic: as above.
       return this.adapterClass;
     }
     return OpenAILLMAdapter;
@@ -575,7 +638,7 @@ export class LLMService<
       return;
     }
     const messages = this.getLlmAdapter().getMessagesForLogging(context);
-    logger.debug(`${this}: ${event} ${JSON.stringify(messages)}`);
+    logger.debug(`${this}: ${event} ${repr(messages)}`);
   }
 
   /**
@@ -860,6 +923,41 @@ export class LLMService<
   }
 
   /**
+   * Set up the service.
+   *
+   * @param setup Configuration object containing setup parameters.
+   */
+  override async setup(setup: FrameProcessorSetup): Promise<void> {
+    await super.setup(setup);
+    this._expressive = setup.enableExpressiveConversation;
+    this._expressionPolicy = setup.expressionPolicy;
+  }
+
+  /** Teach the expression the TTS service performs, replacing any before it. */
+  protected _handleTtsMetadata(frame: TTSMetadataFrame): void {
+    this._ttsExpression = frame.expression;
+    this._warnAboutPolicy();
+    this._composeSystemInstruction();
+  }
+
+  /**
+   * Warn about what the policy asks for that the TTS service can't perform.
+   *
+   * Each warning is given once, until what is left out changes, so a switch
+   * to a service with the same gap doesn't repeat it.
+   */
+  protected _warnAboutPolicy(): void {
+    if (this._taggedAfterLlm) {
+      return;
+    }
+    const warning = expressionPolicyWarning(this._ttsExpression, this._expressionPolicy);
+    if (warning && warning !== this._policyWarning) {
+      logger.warning(`${this}: ${warning}`);
+    }
+    this._policyWarning = warning;
+  }
+
+  /**
    * Append durable text to the system instruction, preserving the user's
    * prompt.
    *
@@ -900,8 +998,9 @@ export class LLMService<
    * Joins the user's base system instruction (the single source of truth,
    * captured at construction and refreshed on runtime `systemInstruction`
    * updates) with any appended instructions (e.g. the `UIWorker` prompt
-   * guide), turn completion instructions (when enabled), and async tool
-   * cancellation instructions (when enabled). Safe to call repeatedly — it
+   * guide), how to read perception and the expression tags the TTS service
+   * performs (with expressive conversation on), turn completion instructions
+   * (when enabled), and async tool cancellation instructions (when enabled). Safe to call repeatedly — it
    * always rebuilds from the base, so it never compounds, and it logs the
    * result only when it differs from the previous composition.
    */
@@ -909,6 +1008,14 @@ export class LLMService<
     const base = this._baseSystemInstruction;
     const parts: string[] = base ? [base] : [];
     parts.push(...this._appendedSystemInstructions);
+    const expression = expressionInstructions(
+      this._taggedAfterLlm ? null : this._ttsExpression,
+      this._expressionPolicy,
+      { perception: this._perception },
+    );
+    if (expression) {
+      parts.push(expression);
+    }
     if (this._filterIncompleteUserTurns) {
       parts.push(this._userTurnCompletionConfig.completionInstructions);
     }
@@ -976,6 +1083,10 @@ export class LLMService<
   override async processFrame(frame: Frame, direction: FrameDirection): Promise<void> {
     await super.processFrame(frame, direction);
 
+    if (this._outputGate !== null) {
+      await this._outputGate.processFrame(this, frame);
+    }
+
     if (frame instanceof InterruptionFrame) {
       await this._handleInterruptions(frame);
     } else if (frame instanceof UserTurnResponseCancelFrame) {
@@ -990,6 +1101,14 @@ export class LLMService<
       }
     } else if (frame instanceof LLMContextSummaryRequestFrame) {
       await this._handleSummaryRequest(frame);
+    } else if (frame instanceof TTSMetadataFrame && this._expressive) {
+      this._handleTtsMetadata(frame);
+    } else if (frame instanceof PerceptionMetadataFrame && this._expressive) {
+      this._perception = frame.perception;
+      this._composeSystemInstruction();
+    } else if (frame instanceof ExpressionMetadataFrame && this._expressive) {
+      this._taggedAfterLlm = true;
+      this._composeSystemInstruction();
     }
 
     if (frame instanceof LLMContextFrame) {
@@ -1020,6 +1139,10 @@ export class LLMService<
     frame: Frame,
     direction: FrameDirection = FrameDirection.DOWNSTREAM,
   ): Promise<void> {
+    if (this._outputGate !== null && !this._outputGate.allowPush(frame)) {
+      return;
+    }
+
     if (
       frame instanceof LLMTextFrame ||
       frame instanceof LLMFullResponseStartFrame ||
@@ -1032,9 +1155,10 @@ export class LLMService<
 
     await this._trackPushedFrame(frame);
 
-    // The gate decides synchronously, so its verdict can't be torn by another
-    // task pushing at the same time. Everything it hands back is pushed past
-    // it — routing that back through here would re-gate it.
+    // The speculation gate decides synchronously, so its verdict can't be
+    // torn by another task pushing at the same time. Everything it hands
+    // back is pushed past it — routing that back through here would
+    // re-gate it.
     const emitted = this._speculationGate.process(frame, direction);
     for (const [gatedFrame, gatedDirection] of emitted) {
       await super.pushFrame(gatedFrame, gatedDirection);
@@ -1760,9 +1884,12 @@ export class LLMService<
    * Remove a registered function handler.
    *
    * This removes the handler but does not stop advertising the tool to the
-   * LLM. To remove a tool cleanly, prefer an `LLMSetToolsFrame` with the
-   * updated tool set — that both stops advertising it and avoids the LLM
-   * trying to call a tool that's no longer there.
+   * LLM. To remove a tool, push an `LLMSetToolsFrame` without it. That also
+   * drops a handler that came with the tool definition (a direct function,
+   * or a `FunctionSchema` with a `handler`). A handler added with
+   * `registerFunction()` needs this call too, made after the updated tool
+   * set takes effect, since removing the handler of a still-advertised tool
+   * leaves the LLM able to call a handler that's gone.
    *
    * @param functionName The name of the function handler to remove.
    * @throws Error if no handler is registered under that name.
@@ -1830,6 +1957,10 @@ export class LLMService<
    */
   async runFunctionCalls(functionCalls: readonly FunctionCallFromLLM[]): Promise<void> {
     if (functionCalls.length === 0) {
+      return;
+    }
+
+    if (this._outputGate !== null && !this._outputGate.allowFunctionCalls()) {
       return;
     }
 
@@ -1999,7 +2130,7 @@ export class LLMService<
     }
 
     logger.debug(
-      `${this} Calling function [${runnerItem.functionName}:${runnerItem.toolCallId}] with arguments ${JSON.stringify(runnerItem.arguments)}`,
+      `${this} Calling function [${runnerItem.functionName}:${runnerItem.toolCallId}] with arguments ${repr(runnerItem.arguments)}`,
     );
 
     // Broadcast function call in-progress. This frame will let our assistant
@@ -2125,7 +2256,10 @@ export class LLMService<
       await this.pushError(errorMessage, { exception: e, category: ErrorCategory.APPLICATION });
       // A handler that raised will never report, so settle the call on its
       // behalf.
-      callError = e instanceof Error ? `${e.name}: ${e.message}` : `Error: ${String(e)}`;
+      callError =
+        e !== null && typeof e === "object"
+          ? `${e.constructor.name}: ${errorText(e)}`
+          : `Error: ${String(e)}`;
       const cls = this.constructor as typeof LLMService;
       await functionCallResultCallback(
         cls.FUNCTION_CALL_ERROR_MESSAGE_TEMPLATE.replaceAll(
@@ -2319,10 +2453,7 @@ export class LLMService<
       // acts on what it says far more readily than on a field beside it.
       const choices = candidates
         .map(
-          (i) =>
-            `${i.toolCallId} (called with ${JSON.stringify(i.arguments, (_k, v) =>
-              typeof v === "bigint" ? String(v) : v,
-            )})`,
+          (i) => `${i.toolCallId} (called with ${pyJsonDumps(i.arguments, { default: String })})`,
         )
         .join("; ");
       await refuse(
@@ -2627,7 +2758,7 @@ export abstract class WebsocketLLMService<
       return;
     }
     try {
-      await this._websocket.send(JSON.stringify(message));
+      await this._websocket.send(pyJsonDumps(message));
     } catch (e) {
       if (!(e instanceof ConnectionClosed)) throw e;
       if (this._disconnecting) {
@@ -2661,7 +2792,7 @@ export abstract class WebsocketLLMService<
     }
     try {
       const raw = await this._websocket.recv();
-      return JSON.parse(typeof raw === "string" ? raw : new TextDecoder().decode(raw));
+      return pyJsonLoads(typeof raw === "string" ? raw : new TextDecoder().decode(raw));
     } catch (e) {
       if (!(e instanceof ConnectionClosed)) throw e;
       if (this._disconnecting) {

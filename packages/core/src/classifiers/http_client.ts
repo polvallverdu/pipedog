@@ -13,8 +13,6 @@ import { abortable, currentSignal, rethrowIfCancelled } from "@pipedog/asyncio";
 
 export { bytesToBase64 } from "../utils/base64.ts";
 
-import { bytesToBase64 } from "../utils/base64.ts";
-
 /** A request could not be sent or answered (upstream's `httpx.HTTPError`). */
 export class HttpError extends Error {
   override name = "HttpError";
@@ -196,4 +194,15 @@ export function orEmpty(value: unknown): unknown {
     return "";
   }
   return value;
+}
+
+/** Python's truthiness of a JSON value: null, false, 0, "", [] and {} are falsy. */
+export function pyTruthy(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (isDict(value)) {
+    return Object.keys(value).length > 0;
+  }
+  return Boolean(value);
 }

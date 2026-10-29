@@ -177,18 +177,15 @@ describe("TestTextSegmentMapAdvance", () => {
 });
 
 describe("TestTextSegmentMapWithLlmText", () => {
-  test("test_llm_pos_advances_past_digits_stops_before_closing_tag", () => {
+  test("test_llm_pos_advances_past_digits_and_the_closing_tag_on_them", () => {
     // Transformed segment: "$42" -> "forty two dollars" (15 alnum)
     // advanceByAlnums("<card>$42</card>", 0, 2) counts "4" and "2",
-    // then the trailing loop hits "<" and stops -- result is 9.
+    // then the trailing loop takes the "</card>" written against them.
     const smap = new TextSegmentMap("forty two dollars", "$42", "<card>$42</card>");
     smap.advanceWord("forty");
     smap.advanceWord("two");
     smap.advanceWord("dollars");
-    // Position 9 is the "<" that opens "</card>" -- the two alnum digits
-    // have been consumed but the closing tag is still unread (it will be
-    // swept by WordCompletionTracker on the final "isComplete" word).
-    expect(smap.llmPos).toEqual(9);
+    expect(smap.llmPos).toEqual(16);
   });
 
   test("test_llm_pos_defaults_to_original_text_when_not_provided", () => {

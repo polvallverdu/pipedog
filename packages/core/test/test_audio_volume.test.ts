@@ -184,3 +184,31 @@ describe("TestAudioVolumeTracker", () => {
     }
   });
 });
+
+describe("TestAudioVolumeTrackerHeldView", () => {
+  test("test_update_succeeds_while_a_view_of_the_measured_audio_is_held", () => {
+    // A frame sampler on another thread keeps the measured buffer's view
+    // alive after the measurement returns.
+    const tracker = new AudioVolumeTracker();
+    const held: Int16Array[] = [];
+
+    const measureAndHold = (data: Uint8Array, _sampleRate: number): number => {
+      held.push(new Int16Array(data.buffer, data.byteOffset, Math.floor(data.byteLength / 2)));
+      return 0.5;
+    };
+
+    // Equivalent of patch("pipecat.audio.volume.calculate_audio_volume", measure_and_hold).
+    const original = { ...audioUtils };
+    mock.module("../src/audio/utils.ts", () => ({
+      ...original,
+      calculateAudioVolume: measureAndHold,
+    }));
+    try {
+      feed(tracker, audio(SAMPLE_RATE, 1000));
+    } finally {
+      mock.module("../src/audio/utils.ts", () => original);
+    }
+
+    expect(held.length > 0).toBe(true);
+  });
+});
