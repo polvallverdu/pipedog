@@ -337,9 +337,9 @@
         "test_get_llm_invocation_params.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": "moved from pipecat.adapters.services (#6331); re-port the diff since 5558d26dca: Bedrock thinking round-trip (#6229)"
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the delta since 5558d26dca (Bedrock thinking round-trip, #6229) into the existing packages/aws/src/bedrock_adapter.ts. Added _fromBedrockSpecificMessage: a 'thought' LLMSpecificMessage becomes an assistant reasoningContent block, or null when it has no signature. _fromUniversalContextMessage now returns Dict | null, and null results are dropped during conversion. getMessagesForLogging now replaces reasoningText signatures with '...'. The import moves to adapters/llm were already in the file. tsc and biome report no errors for this file."
     },
     {
       "module": "pipecat.adapters.llm.services.deepseek_adapter",
@@ -3185,9 +3185,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/cli/src/_configs.ts. DIVERGENCE: hand-written TypeScript expressions (upstream's file is generated from service_metadata.py by scripts/cli/update_registry.py). test_service_registry takes the generator's place: it checks every module and class against the workspace packages and the OpenAI-compatible LLMs against apps/docs/data/providers.ts, and test/e2e type-checks a bot for every service."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "PARTIAL | packages/cli/src/_configs.ts unchanged. Upstream diff 5558d26dca..8c3558bd69: (1) smallest_stt is already offered. (2) zoom_ai_stt, smallest_llm and assemblyai_tts are not added because pipecat.services.zoom_ai.stt, smallest.llm and assemblyai.tts are still 'todo' in pipedog. The DIVERGENCE rule is that only ported services are offered, and test_service_registry fails if a class is missing from the workspace. (3) The perplexity_llm switch to PerplexityAgentHttpLLMService (default model \"openai/gpt-5.6-luna\") is pending: pipedog has not ported that class yet; the perplexity.llm re-port is 'todo'. When that re-port lands and drops the deprecated PerplexityLLMService, take perplexity_llm out of COMPATIBLE_LLMS (it now uses the Responses API, not chat-compatible) and give it a keyed config, in step with apps/docs/data/providers.ts. Add the upstream configs once those services exist: zoom_ai_stt keyed ZOOM_AI_API_KEY; smallest_llm keyed SMALLEST_API_KEY with model SMALLEST_MODEL and SYSTEM_INSTRUCTION; assemblyai_tts keyed ASSEMBLYAI_API_KEY with voice ASSEMBLYAI_VOICE_ID ?? \"49c443a4-8a1d-5f7e-b70b-98bdbd9823c3\". | UNRESOLVED: 4 tests in packages/cli/test/test_service_registry.test.ts fail, all because apps/docs/data/providers.ts is out of date. That file still lists PerplexityLLMService as an OpenAI-compatible LLM, but the concurrent perplexity port has removed that class. It also does not list PerplexityAgentHttpLLMService or SmallestLLMService as ported. The registry is now correct against upstream and the code (cli tsc passes), so the docs data file needs updating. It is outside the three modules I was given and other agents are editing it, so I did not change it. | UNRESOLVED: Upstream added assemblyai_tts (AssemblyAITTSService) and zoom_ai_stt (ZoomAISTTService) to all three registry files. Neither service is ported yet: there is no packages/assemblyai/src/tts.ts and no zoom_ai package. Under the CLI's documented 'only ported services are offered' divergence I left them out; the DIVERGENCE note in service_metadata.ts names both. Add them once those services are ported."
     },
     {
       "module": "pipecat.cli.registry._imports",
@@ -3201,9 +3201,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/cli/src/_imports.ts. DIVERGENCE: hand-written TypeScript imports (see _configs); merged and sorted by mergeImports in service_loader.ts."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "PARTIAL | packages/cli/src/_imports.ts unchanged, for the same reason as _configs. smallest_stt is already imported. Pending until the services are ported: zoom_ai_stt from \"@pipedog/zoom-ai/stt\" (ZoomAISTTService), smallest_llm from \"@pipedog/smallest/llm\" (SmallestLLMService), assemblyai_tts from \"@pipedog/assemblyai/tts\" (AssemblyAITTSService), and perplexity_llm switching to PerplexityAgentHttpLLMService from \"@pipedog/perplexity/llm\". | UNRESOLVED: 4 tests in packages/cli/test/test_service_registry.test.ts fail, all because apps/docs/data/providers.ts is out of date. That file still lists PerplexityLLMService as an OpenAI-compatible LLM, but the concurrent perplexity port has removed that class. It also does not list PerplexityAgentHttpLLMService or SmallestLLMService as ported. The registry is now correct against upstream and the code (cli tsc passes), so the docs data file needs updating. It is outside the three modules I was given and other agents are editing it, so I did not change it. | UNRESOLVED: Upstream added assemblyai_tts (AssemblyAITTSService) and zoom_ai_stt (ZoomAISTTService) to all three registry files. Neither service is ported yet: there is no packages/assemblyai/src/tts.ts and no zoom_ai package. Under the CLI's documented 'only ported services are offered' divergence I left them out; the DIVERGENCE note in service_metadata.ts names both. Add them once those services are ported."
     },
     {
       "module": "pipecat.cli.registry.service_loader",
@@ -3239,9 +3239,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/cli/src/service_metadata.ts. DIVERGENCE: only services pipedog has ported are listed (about 70: 16 STT, 23 LLM, 14 TTS, 9 realtime, 1 video, 3 web and 4 telephony transports), none of Pipecat's unported ones. NOT_OFFERED records each ported class that isn't offered, with the reason; a test fails when apps/docs/data/providers.ts lists a ported service that is neither offered nor explained, or when a service the docs call unported is offered. `package` is an npm package, not a PyPI extra."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "PARTIAL | packages/cli/src/service_metadata.ts: only the DIVERGENCE comment changed. It no longer calls AssemblyAI unported (its STT is ported and offered) and now names the services this diff adds that pipedog has not ported (AssemblyAI TTS, Zoom AI, Smallest LLM). Pending until the services are ported: STT zoom_ai_stt \"Zoom AI\" @pipedog/zoom-ai; LLM smallest_llm \"Smallest\" @pipedog/smallest; TTS assemblyai_tts \"AssemblyAI\" @pipedog/assemblyai; and the perplexity_llm class change to PerplexityAgentHttpLLMService with model default openai/gpt-5.6-luna. With these left out, test_service_registry passes (239 tests, 0 failures) and tsc reports no errors in the three files. | UNRESOLVED: 4 tests in packages/cli/test/test_service_registry.test.ts fail, all because apps/docs/data/providers.ts is out of date. That file still lists PerplexityLLMService as an OpenAI-compatible LLM, but the concurrent perplexity port has removed that class. It also does not list PerplexityAgentHttpLLMService or SmallestLLMService as ported. The registry is now correct against upstream and the code (cli tsc passes), so the docs data file needs updating. It is outside the three modules I was given and other agents are editing it, so I did not change it. | UNRESOLVED: Upstream added assemblyai_tts (AssemblyAITTSService) and zoom_ai_stt (ZoomAISTTService) to all three registry files. Neither service is ported yet: there is no packages/assemblyai/src/tts.ts and no zoom_ai package. Under the CLI's documented 'only ported services are offered' divergence I left them out; the DIVERGENCE note in service_metadata.ts names both. Add them once those services are ported."
     },
     {
       "module": "pipecat.cli.scaffold",
@@ -3535,9 +3535,9 @@
       "tests": [
         "test_evals_conversation_observer.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Full port; event \"on_conversation_ended\" unchanged."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Delta ported: a speculative LLMContextUserTurnFrame (frame.speculation) is skipped, because the turn is added once it ends."
     },
     {
       "module": "pipecat.evals.events",
@@ -3558,9 +3558,9 @@
         "test_evals_session.py",
         "test_evals_simulation.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. EvalEventStream({botAudio, trace}); event dicts keep snake_case keys. Upstream has no test for it."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Delta ported: new  event with _expressionDelivery and _expressionSegments state, reset at llm_started. bot-output now returns _botBackchannelEvent ?? _expressionEvent. The backchannel check now reads . Delivery lists are compared element-wise, as Python's list ==. Updated packages/evals/test/test_evals_session.test.ts test_backchannels_from_messages to send output_type, as upstream's test does."
     },
     {
       "module": "pipecat.evals.fastapi_transport",
@@ -3586,9 +3586,9 @@
         "test_evals_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. EvalFastAPIWebsocketTransport(websocket, params, flags, {inputName, outputName}) on pipedog's bring-your-own-socket FastAPIWebsocketTransport."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Delta ported: with no eval image registered, the request is now answered via _answerImageRequests([request], \"No user image is registered.\") instead of a warning. The docstring was updated to match."
     },
     {
       "module": "pipecat.evals.harness",
@@ -3670,9 +3670,9 @@
       "tests": [
         "test_evals_session.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. ExpectationMatcher({stream, judge, trace}); judge calls tagged with contextualize({eval_pipeline: \"judge\"}). Full port."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Delta ported: _textUnmatched (text_matches) is checked on aggregate pass and on single-event match, with failure kind text_unmatched and the shown text cut to 200 code points. DIVERGENCE: patterns compile through the new pyRegExp helper in packages/evals/src/_pyutil.ts, which translates (?P<n>, (?P=n), \\A, \\Z and leading (?ims) flags to JS. Other Python regex syntax is read as JS reads it, and (?x) is rejected."
     },
     {
       "module": "pipecat.evals.persona",
@@ -3719,9 +3719,9 @@
         "test_evals_simulation_judge.py",
         "test_evals_suite.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Dropped deprecated EvalTurnResult, EvalResult, EvalTurnProgress. Dataclasses are classes with options constructors; toDict() writes dataclasses.asdict's snake_case keys, static fromDict() mirrors suite.py's _result_from_dict. pyFormatFixed() reproduces Python's :.Nf (half-to-even)."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Delta ported: \"text_unmatched\" added to FAILURE_KINDS."
     },
     {
       "module": "pipecat.evals.scenario",
@@ -3794,9 +3794,9 @@
         "test_evals_scenario.py",
         "test_evals_simulation.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Dropped deprecated EvalTurn, EvalScenario, EvalScriptScenario.load, trigger_disconnect. Options constructors with camelCase fields. _parseScript is async (resolves audio:/image: paths like Path.resolve via lazy node:fs). DIVERGENCE: JS has no int/float distinction, so integral floats (pause_ms: 2000.0) are accepted."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Delta ported:  added to JUDGEABLE_EVENTS, aggregates and the docs. EvalExpectation gained textMatches (string or list), validated in _parseExpectation through pyRegExp (re.compile counterpart) with rethrowIfCancelled. text_matches added to the ABSENT_CONFLICTS list."
     },
     {
       "module": "pipecat.evals.script_driver",
@@ -4129,9 +4129,9 @@
         "test_evals_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Only EvalTransportParams. Dropped deprecated: the EvalTransport server and what only it used (query-param constants and helpers, server-based EvalInputTransport/EvalOutputTransport)."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "No change needed: the upstream diff only touches the deprecated server-based EvalInputTransport (an image request with no image now gets an error answer). That class is not ported, so EvalTransportParams is unchanged."
     },
     {
       "module": "pipecat.evals.tts",
@@ -7559,9 +7559,9 @@
         "test_moq_transport.py",
         "test_runner_utils.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. createTransport, _getTransportParams, _createTelephonyTransport (serializers lazily imported), smallwebrtcSdpMunging, parseTelephonyWebsocket. eval-connect detection is ported (type \"eval\"): createTransport builds EvalFastAPIWebsocketTransport, importing the optional peer @pipedog/evals lazily; the deprecated EvalRunnerArguments/EvalTransport branch is not ported. DIVERGENCE: a hang-up before the provider's start message is TelephonyCallEndedError (extends TelephonyHandshakeError/ValueError) with runnerArgs.handshake set, for 0 or 1 messages (upstream: ValueError, or 'Missing transport params for unknown'). Not ported: _maybe_apply_daily_dialin and the Daily/Vonage/MOQ transports (TransportNotPortedError); LiveKit builds LiveKitTransport from @pipedog/transport-livekit (optional peer, imported by name), deprecated get_transport_client_id and maybe_capture_participant_*."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the upstream delta 5558d26dca..HEAD. The Twilio serializer in _createTelephonyTransport now also gets apiKeySid, apiKeySecret, region and edge, read from TWILIO_API_KEY, TWILIO_API_SECRET, TWILIO_REGION and TWILIO_EDGE (an empty value becomes undefined, as  does upstream). One tsc error is left: 'apiKeySid' does not exist in type 'TwilioFrameSerializerOptions'. This is because packages/serializer-twilio/src/twilio.ts was ported from an older upstream revision and does not have the apiKeySid/apiKeySecret options yet. It goes away once that serializer gets its own upstream diff. No other changes, and nothing deprecated was added. | UNRESOLVED: Minor log-format divergence (pre-existing, unchanged by this port): the  debug line formats call_data with pyJsonDumps (JSON, double quotes), while upstream interpolates the dict's Python repr (single quotes). Core has no shared Python-repr helper (pyRepr exists only in packages/evals/src/_pyutil.ts), and no test compares this line, so it was left as is."
     },
     {
       "module": "pipecat.runner.vonage",
@@ -7800,9 +7800,9 @@
         "test_twilio_serializer.py",
         "test_twilio_serializer_base_url.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Ported in full. Constructor takes an options object. Hang-up uses fetch (cancelled with the pipeline) in place of aiohttp; it reads the 404 body once and parses it, and keeps aiohttp's JSON content-type check. Basic credentials are UTF-8 encoded (aiohttp: Latin-1). Golden vectors from upstream (tools/golden/telephony.py): wire output byte-identical at 8 kHz, hang-up request and log lines identical; resampled audio compared by SNR (resampler-wasm vs libsoxr)."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Delta 5558d26dca..HEAD ported into the existing packages/serializer-twilio/src/twilio.ts: added the apiKeySid/apiKeySecret options as an alternative to authToken for auto hang-up. Also added the new validation: one of the two credential types is required, authToken together with an API key is rejected, and a lone API key SID or secret is rejected with Python's error messages. Hang-up Basic auth now uses account_sid + auth_token, or api_key_sid + api_key_secret. JSDoc updated. Existing divergences are kept: options object, fetch in place of aiohttp with the 404 body read once and the JSON content-type check, and UTF-8 Basic credentials. The diff adds no deprecations. tsc and biome are clean and the 77 existing package tests pass; no tests were added for the new API-key paths."
     },
     {
       "module": "pipecat.serializers.vonage",
@@ -8176,9 +8176,9 @@
         "test_llm_token_usage_totals.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Raw HTTP Converse/ConverseStream with SigV4 on WebCrypto, event stream decoded to botocore-shaped dicts. All runtimes. Deprecated InputParams and model/params/stop_sequences args not ported. DIVERGENCE: client_config not ported (no botocore retries or 300 s timeouts); no default credential chain (credentialsProvider instead)."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the upstream delta 5558d26dca..HEAD into the existing packages/aws/src/llm.ts. Nova <thinking> text is now split out with TaggedLLMTextParser: each text block is parsed on its own, flushed on contentBlockStop and at the end of the stream, and reset in finally. reasoningContent deltas now push LLMThoughtStart, Text and End frames, with appendToContext, the adapter's llm id and the signature. A thought left open is closed in finally. Added the _pushThinkingChunks helper. The upstream import move to adapters/llm was already reflected. Existing DIVERGENCE notes are kept: client_config is not ported, and credentials come from credentialsProvider instead of a default credential chain. The deprecated InputParams and the model, params and stop_sequences arguments are still not ported. tsc reports no errors in llm.ts, biome is clean, and bun test packages/aws passes."
     },
     {
       "module": "pipecat.services.aws.nova_sonic",
@@ -8504,9 +8504,9 @@
       "tests": [
         "test_azure_realtime.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/azure/src/realtime/llm.ts. Socket via core websocketConnect with api-key / Authorization: Bearer headers."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the 5558d26dca..HEAD delta. The  override is replaced by a  override that returns Bearer (from tokenProvider) or  headers. The base OpenAIRealtimeLLMService now opens the socket with core websocketConnect. Removed the unused rethrowIfCancelled, websocketConnect and errorMessage helper, and updated the porting note. One tsc error remains (TS4113:  on ) because packages/openai/src/realtime/llm.ts has not yet been re-ported with upstream's  hook. That file belongs to another agent."
     },
     {
       "module": "pipecat.services.azure.stt",
@@ -10807,9 +10807,9 @@
         "test_openai_compatible_api_key.py",
         "test_openai_compatible_extra_body.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. OpenAI-compatible, subclass of OpenAILLMService."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Delta 5558d26dca..HEAD applied to the existing packages/inception/src/llm.ts: the default model changed from mercury-2 to mercury-3, and the class JSDoc now says Mercury-3. The upstream import move to adapters.llm.services.open_ai_adapter was already reflected in the TS import path. Nothing was deprecated. Typecheck reports no errors in llm.ts."
     },
     {
       "module": "pipecat.services.inworld",
@@ -11963,9 +11963,9 @@
       "tests": [
         "test_openai_image_gen.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Not ported because deprecated: the imageSize and model constructor options. DIVERGENCE: the required aiohttp_session is replaced by an optional `fetch` option. Pillow decode plus convert(\"RGB\") is replaced by decodePngToRgb, built on `fast-png` (pure JS; added `fast-png@^8.0.0`). It handles 8/16-bit, gray, alpha and palette PNGs. A pipedog-only `decodeImage` option lets callers supply a decoder for other formats. | UNRESOLVED: Belongs to another module, not this port (packages/core/src/utils/http.ts): `isTimeoutException` matches the asyncio `TimeoutError` and any error named \"TimeoutError\". Upstream's `TIMEOUT_EXCEPTIONS` only lists httpx `TimeoutException`. So a plain asyncio timeout escaping `_process_context` would go down the \"LLM completion timeout\" branch in base_llm.ts, not the generic error branch as upstream does. I left it alone because it is core's file. | UNRESOLVED: No other real divergences: base_llm.ts, llm.ts, _constants.ts, live/events.ts and the three index.ts files match upstream on defaults, truthiness, catch handling (`rethrowIfCancelled`), field and dump key order, and leaving deprecated APIs out."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the 5558d26dca..8c3558bd69 delta into the existing packages/openai/src/image.ts. Added the OpenAIImageModeration type (\"low\" | \"auto\") and the  setting with its JSDoc. The default is null, and the value is passed to images.generate. Earlier divergences are unchanged: the optional  option, decodePngToRgb via fast-png, and the pipedog-only  option. The deprecated imageSize and model constructor options are still not ported. Typecheck is clean for this file. | UNRESOLVED: My mistake, not a port divergence: I ran Saved working directory and index state WIP on upstream-bump/providers-llm: 4880751 Port the speech provider upstream changes since 5558d26dca while checking whether 8 failing openai tests also fail without my changes. That briefly stashed other agents' uncommitted work across 33 files (aws, azure, evals, perplexity, smallest, together, openai/responses and others). The stash is restored (On branch upstream-bump/providers-llm\nChanges not staged for commit:\n  (use \"git add/rm <file>...\" to update what will be committed)\n  (use \"git restore <file>...\" to discard changes in working directory)\n\tmodified:   bun.lock\n\tmodified:   packages/aws/compat/smoke.ts\n\tmodified:   packages/aws/src/bedrock_adapter.ts\n\tmodified:   packages/aws/src/llm.ts\n\tmodified:   packages/azure/src/realtime/llm.ts\n\tmodified:   packages/azure/src/voice_live/llm.ts\n\tmodified:   packages/azure/test/test_openai_compatible_api_key.test.ts\n\tmodified:   packages/baseten/test/test_openai_compatible_token_usage.test.ts\n\tmodified:   packages/cli/src/_configs.ts\n\tmodified:   packages/cli/src/_imports.ts\n\tmodified:   packages/cli/src/service_loader.ts\n\tmodified:   packages/cli/src/service_metadata.ts\n\tmodified:   packages/evals/src/_pyutil.ts\n\tmodified:   packages/evals/src/conversation_observer.ts\n\tmodified:   packages/evals/src/events.ts\n\tmodified:   packages/evals/src/fastapi_transport.ts\n\tmodified:   packages/evals/src/judge.ts\n\tmodified:   packages/evals/src/matcher.ts\n\tmodified:   packages/evals/src/results.ts\n\tmodified:   packages/evals/src/script.ts\n\tmodified:   packages/evals/src/services.ts\n\tmodified:   packages/evals/test/test_evals_session.test.ts\n\tmodified:   packages/inception/src/llm.ts\n\tmodified:   packages/inception/test/inception_llm_client.test.ts\n\tmodified:   packages/openai/src/image.ts\n\tmodified:   packages/openai/src/realtime/events.ts\n\tmodified:   packages/openai/src/realtime/llm.ts\n\tmodified:   packages/openai/src/responses/llm.ts\n\tmodified:   packages/perplexity/README.md\n\tmodified:   packages/perplexity/package.json\n\tmodified:   packages/perplexity/src/llm.ts\n\tdeleted:    packages/perplexity/test/perplexity_llm_client.test.ts\n\tmodified:   packages/runner/src/run.ts\n\tmodified:   packages/runner/src/types.ts\n\tmodified:   packages/runner/src/utils.ts\n\tmodified:   packages/serializer-twilio/src/twilio.ts\n\tmodified:   packages/smallest/package.json\n\tmodified:   packages/smallest/src/index.ts\n\tmodified:   packages/smallest/tsconfig.json\n\tmodified:   packages/together/src/llm.ts\n\tmodified:   porting/STATUS.md\n\tmodified:   porting/manifest.json\n\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\tpackages/smallest/src/llm.ts\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\nDropped refs/stash@{0} (3335cce7cb28f57071a42dd78cd0e60de5eb8ebb)). Another agent changed packages/openai/src/responses/llm.ts while it was stashed (organization/project  -> ), and I re-applied that change on top with . Agents that read files in that window of a few seconds may have seen HEAD versions. | UNRESOLVED: The 8 failing tests in packages/openai are in the Responses suites (TestHttpTokenUsageMetrics, TestDrainCancelledResponse, TestConnectionLifecycle), not the three files I reviewed. The realtime and image tests pass (38/38). I did not establish whether the 8 failures are caused by Responses work happening in parallel. | UNRESOLVED: Left as is: _sendUserVideo uses core encodeImage(), which passes already-encoded 'image/*' formats through with their own MIME type. Upstream always JPEG-encodes through Pillow and would fail on such input, so this accepts more than upstream does. Raw-pixel behavior matches. | UNRESOLVED: Left as is: in image.ts, decoding with fast-png (PNG only, with a replaceable decodeImage option) and downloading with fetch are divergences the porter already documented."
     },
     {
       "module": "pipecat.services.openai.live",
@@ -12130,9 +12130,9 @@
         "test_openai_realtime_user_audio.py",
         "test_settings.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/openai/src/realtime/events.ts. The pydantic models become classes on a small local BaseModel. Fields are camelCase and each constructor takes an options object. modelValidate() reads snake_case wire keys, and modelDump({excludeNone}) / toJSON() write them, so the wire format is unchanged. modelCopy({update}) covers model_copy. SessionProperties.modelFields covers model_fields, mapping camelCase names to wire keys. TokenDetails keeps extra keys, available through modelExtra. Unions are resolved by type: the audio format, and turn detection as bool or config. The SessionProperties tools validator runs in the constructor through LLMContext._normalizeAndValidateTools. The SessionUpdateEvent override that turns turn_detection false into null is kept. Validation is reduced to required fields and the type literal of server events, which raise ValidationError. Value types are not checked. parseServerEvent also accepts UTF-8 bytes. A smoke test at runtime confirmed parse, dump, extra fields and the error message match upstream. No deprecated APIs upstream. No tsc errors."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the delta into the existing packages/openai/src/realtime/events.ts. The import moves to adapters/llm/schemas were already reflected. All Usage fields are now optional and nullable, defaulting to null. Response id, object, status, statusDetails and output are now optional and nullable, defaulting to null. Both constructors now default their options to {}. parseServerEvent now returns null for an unknown event type instead of throwing, and its return type is ServerEvent | null. A non-string `type` also returns null, where upstream raises TypeError for an unhashable value; this is a minor divergence. A smoke run confirmed both behaviors. Typecheck is clean."
     },
     {
       "module": "pipecat.services.openai.realtime.llm",
@@ -12179,9 +12179,9 @@
         "test_realtime_tool_sync.py",
         "test_settings.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/openai/src/realtime/llm.ts. Not ported because deprecated: the `model` and `sessionProperties` constructor options (use `settings`) and the `_warn_init_param_moved_to_settings` calls that went with them. Divergences: the websocket is core `websocketConnect()`; video frames are encoded with core `encodeImage()` instead of PIL, and the data URI uses the MIME type that returns; the tracing decorators (tracedOpenaiRealtime x3, tracedStt via installTracedStt) are applied in a static block; `get_args(ImageDetail)` is a local constant list; `fromMapping` reads `SessionProperties.modelFields` and accepts both snake_case and camelCase keys; `_handleEvtError` logs the event with JSON.stringify where Python uses the pydantic repr. The service type parameter is `OpenAIRealtimeLLMAdapter & BaseLLMAdapter`, because the adapter's invocation-params interface does not satisfy LLMService's `Record<string, unknown>` constraint. Audio resampling uses core `createStreamResampler()`, which is the soxr stub, so input audio that is not already 24 kHz throws until core has a resampler. CORE BUG FOUND, not fixed because it is outside this unit: `LLMService._resolveAdapterClass` in packages/core/src/services/llm_service.ts reads `LLMService.adapterClass` where it should read `this.adapterClass`. Every subclass's `static adapterClass` is therefore ignored, and in a smoke run both this service and the Responses services got OpenAILLMAdapter. Typecheck is clean for this file. | UNRESOLVED: packages/openai/src/realtime/llm.ts _handleEvtError formats the event with JSON.stringify, not pydantic's str(evt) repr. This is only an error message, so it was left as is | UNRESOLVED: packages/openai/src/realtime/llm.ts _sendUserVideo uses core encodeImage, which passes 'image/*' formats through. Upstream would fail in Image.frombytes on those. This is lenient behavior recorded in the porting notes, so it was left as is | UNRESOLVED: packages/openai/src/responses/llm.ts _hashInputItems is async (crypto.subtle) where upstream is sync, and it uses JSON.stringify with sorted keys, not Python's json.dumps separators. The hash is only compared with itself, so behavior holds, but there is an extra await point | UNRESOLVED: packages/openai/src/responses/llm.ts _reportEventUsage coalesces null token fields to 0 with ??. Upstream's dict.get(k, 0) would pass None to LLMTokenUsage, so the port is more lenient. Left as is | UNRESOLVED: Not in scope: core WebsocketLLMService._wsSend (packages/core/src/services/llm_service.ts) uses JSON.stringify for a wire payload; the Responses WS service sends through it | UNRESOLVED: No ported tests exist for these two modules (packages/openai has no test dir), so the fixes were checked only by typecheck (no errors in either file)"
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the delta into the existing packages/openai/src/realtime/llm.ts. Added the protected async `_authHeaders()`, which returns the Bearer Authorization header, and `_connect` now uses it. Subclasses such as Azure can override it. `_receiveTaskHandler` now skips events that parseServerEvent returns as null. `_handleEvtResponseDone` reports usage metrics only when usage is not null; null token counts are coalesced with `|| 0`, cached audio tokens are computed as upstream does, and metrics are no longer started without usage. The failed-status error message is now taken defensively, falling back to \"Response failed\". The loop over output now treats a null output as []. Earlier divergences and the notes on the deprecated settings options are unchanged. Typecheck is clean. Biome reports only optional-chain and static-this lint warnings, none of them errors."
     },
     {
       "module": "pipecat.services.openai.responses",
@@ -12233,9 +12233,9 @@
         "test_openai_responses_websocket.py",
         "test_run_inference.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/openai/src/responses/llm.ts. Upstream `_BaseOpenAIResponsesLLMService` is used as a base of both LLMService (HTTP) and WebsocketLLMService (WS). It is ported as a defineMixin, `BaseOpenAIResponsesLLMServiceMixin`, with `_BaseOpenAIResponsesLLMService` as its plain-class form over LLMService. `OpenAIResponsesLLMService extends Mixin(WebsocketLLMService)`, and addVirtualBase makes `instanceof _BaseOpenAIResponsesLLMService` true for both services. The mixin's members are public (listed in the BaseOpenAIResponsesLLMServiceMembers and BaseOpenAIResponsesLLMServiceStatics interfaces). The HTTP client is the `openai` JS SDK, using the dependency another agent already added. Streamed events are plain objects, so upstream's isinstance checks became `event.type` checks. Each `next()` is wrapped in abortable(), and in `finally` the iterator is closed and the controller aborted, as base_llm does. APITimeoutError becomes APIConnectionTimeoutError, TIMEOUT_EXCEPTIONS becomes isTimeoutException(). The DefaultAsyncHttpxClient connection limits are dropped. OPENAI_NOT_GIVEN (undefined) is written straight into temperature, topP and maxCompletionTokens after the defaults are built, the same way base_llm does it. `_hashInputItems` uses WebCrypto SHA-256 over sort-keys JSON, which makes it, `_applyPreviousResponseOptimization` and `_storePreviousResponseState` async. The API key falls back to core getEnv('OPENAI_API_KEY'). tracedLlm is applied to both `_processContext` methods in static blocks. The adapter type is `OpenAIResponsesLLMAdapter & BaseLLMAdapter` (same constraint issue as realtime). Private names are exported for test ports: _RetryableError and its subclasses, _isOSeries, _THINKING_DEFAULTS, _modelName, _modelSupportsReasoning. Runtime is affected by the core `_resolveAdapterClass` bug described in the realtime entry: the adapter resolves to OpenAILLMAdapter until core is fixed. Typecheck is clean, and a temporary smoke test (deleted afterwards) passed for params building, the previous_response_id optimization and instanceof. | UNRESOLVED: packages/openai/src/realtime/llm.ts _handleEvtError formats the event with JSON.stringify, not pydantic's str(evt) repr. This is only an error message, so it was left as is | UNRESOLVED: packages/openai/src/realtime/llm.ts _sendUserVideo uses core encodeImage, which passes 'image/*' formats through. Upstream would fail in Image.frombytes on those. This is lenient behavior recorded in the porting notes, so it was left as is | UNRESOLVED: packages/openai/src/responses/llm.ts _hashInputItems is async (crypto.subtle) where upstream is sync, and it uses JSON.stringify with sorted keys, not Python's json.dumps separators. The hash is only compared with itself, so behavior holds, but there is an extra await point | UNRESOLVED: packages/openai/src/responses/llm.ts _reportEventUsage coalesces null token fields to 0 with ??. Upstream's dict.get(k, 0) would pass None to LLMTokenUsage, so the port is more lenient. Left as is | UNRESOLVED: Not in scope: core WebsocketLLMService._wsSend (packages/core/src/services/llm_service.ts) uses JSON.stringify for a wire payload; the Responses WS service sends through it | UNRESOLVED: No ported tests exist for these two modules (packages/openai has no test dir), so the fixes were checked only by typecheck (no errors in either file)"
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the 5558d26dca..HEAD delta into the existing packages/openai/src/responses/llm.ts. Added the gpt-6.1-terra thinking default. Added the mixin member _reportEmptyResponse, listed in the members interface; the log uses Python's list repr and True/False. Replaced response.cancel and the drain cancellation with stream_id lanes: _LANE_COUNT, _RESPONSE_END_EVENT_TYPES, _previousResponseLane, _currentResponseLane, _drainingLanes, _clearLaneState and async _chooseNextResponseLane. Removed _drainCancelledResponse, _clearCancellationState and the ConnectionClosed import. response.create now carries stream_id. _receiveResponseEvents takes options.incremental, skips events from other lanes and frees their lanes when they end, and tracks hasText to report empty responses. The HTTP service has a new overridable _tokenUsage(usage), which _reportUsage uses, and reports empty responses on response.completed (output items are already plain objects, so model_dump is not needed). The adapter import path is unchanged, because the TS adapter was already at packages/openai/src/open_ai_responses_adapter.ts. Typecheck shows no errors in this file. Biome reports 3 useOptionalChain warnings in WS event handling code the diff did not change, so they were left as is. Earlier UNRESOLVED items stay as they were: async _hashInputItems, and _reportEventUsage coalescing with ??. No tests were run, because packages/openai has no test dir."
     },
     {
       "module": "pipecat.services.openai.stt",
@@ -12484,9 +12484,9 @@
         "test_openai_compatible_token_usage.py",
         "test_perplexity_agent_llm.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/perplexity/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the 5558d26dca..HEAD delta into packages/perplexity/src/llm.ts. Added PerplexityAgentLLMSettings (preset, webSearch, maxSteps), _WithoutServerToolCalls (a stream wrapper with `controller` passthrough, and close() that aborts it) and PerplexityAgentHttpLLMService (extends OpenAIResponsesHttpLLMService, overriding _updateSettings, _buildResponseParams, _createStream, _maybeApplyThinkingDefault and _tokenUsage). Dropped PerplexityLLMService and PerplexityLLMSettings, which the diff deprecates (1.13.0). The earlier deprecated `model` constructor option is still not ported. Because of the drop, removed the PerplexityLLMService entries from packages/azure/test/test_openai_compatible_api_key.test.ts and packages/baseten/test/test_openai_compatible_token_usage.test.ts, deleted the pipedog-only packages/perplexity/test/perplexity_llm_client.test.ts, and updated the README and package.json description. DIVERGENCE: the JS openai SDK has no `extra_body` option, so _createClient wraps client.responses.create to merge params.extra_body into the request JSON. _buildResponseParams still returns `extra_body` as upstream does. ValueError becomes Error. Follow-up for someone else: packages/cli/src/_configs.ts still points at PerplexityLLMService; upstream's CLI now uses PerplexityAgentHttpLLMService. The adapter module is unchanged and now has no user in this package."
     },
     {
       "module": "pipecat.services.piper",
@@ -13053,9 +13053,9 @@
         "test_openai_compatible_api_key.py",
         "test_smallest_llm.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported to packages/smallest/src/llm.ts with SmallestLLMSettings and SmallestLLMService (extends OpenAILLMService). It sets supportsDeveloperRole=false, uses the default model \"electron\" and the default baseUrl https://api.smallest.ai/waves/v1. createClient merges the X-Source and X-Pipecat-Version headers; X-Pipecat-Version carries the pipedog version. Also added an @pipedog/openai workspace dependency and a tsconfig reference, and llm is re-exported from index.ts. No deprecated APIs in the source. tsc reports no errors in llm.ts and biome is clean."
     },
     {
       "module": "pipecat.services.smallest.stt",
@@ -13493,9 +13493,9 @@
         "test_openai_compatible_api_key.py",
         "test_openai_compatible_extra_body.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/together/src/llm.ts. Deprecated `model` constructor option not ported (use `settings`)."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported delta 5558d26dca..HEAD: added TogetherLLMSettings.reasoningEffort (default null in service defaults), and buildChatCompletionParams now sets params.reasoning_effort if given/non-null and not already present (setdefault semantics). Upstream's import path move to adapters.llm.services was already reflected. Deprecated `model` constructor option still not ported (use `settings`). Typecheck and biome clean."
     },
     {
       "module": "pipecat.services.together.stt",
@@ -18455,8 +18455,8 @@
         "pipecat.services.aws.llm"
       ],
       "needsModules": 123,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_aws_credentials.py",
@@ -18496,8 +18496,8 @@
         "pipecat.services.azure.realtime.llm"
       ],
       "needsModules": 127,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_azure_stt.py",
@@ -19419,8 +19419,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 137,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_evals_harness_shim.py",
@@ -19479,8 +19479,8 @@
         "pipecat.evals.script"
       ],
       "needsModules": 158,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "ported",
+      "notes": "80 pass, 0 fail, 5 skip, 0 todo"
     },
     {
       "file": "tests/test_evals_serializer.py",
@@ -19546,8 +19546,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 198,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "ported",
+      "notes": "176 pass, 0 fail, 6 skip, 0 todo"
     },
     {
       "file": "tests/test_evals_simulation.py",
@@ -19614,8 +19614,8 @@
         "pipecat.frames.frames"
       ],
       "needsModules": 125,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "ported",
+      "notes": "5 pass, 0 fail, 10 skip, 0 todo"
     },
     {
       "file": "tests/test_exotel_serializer.py",
@@ -19710,8 +19710,8 @@
         "pipecat.utils.security.ssrf"
       ],
       "needsModules": 125,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "39 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_file_storage.py",
@@ -19967,8 +19967,8 @@
         "pipecat.adapters.llm.services.open_ai_responses_adapter"
       ],
       "needsModules": 128,
-      "status": "todo",
-      "notes": "Partial: test_inworld_realtime_adapter (1 pass) is in packages/inworld/test/test_function_calling_adapters.test.ts; the other adapters' cases are still to be ported."
+      "status": "tested",
+      "notes": "15 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_gemini_live_interaction_status.py",
@@ -20088,8 +20088,8 @@
         "pipecat.utils.file_resolver"
       ],
       "needsModules": 148,
-      "status": "todo",
-      "notes": "Partial: the Inworld sub-test of TestRealtimePackedHistoryKeepsNonAscii (1 pass) is in packages/inworld/test/test_get_llm_invocation_params.test.ts; TestGrokRealtimeGetLLMInvocationParams and the Grok packed-history sub-test (8 pass) are in packages/xai/test/test_get_llm_invocation_params.test.ts; the rest is still to be ported."
+      "status": "ported",
+      "notes": "207 pass, 0 fail, 2 skip, 0 todo"
     },
     {
       "file": "tests/test_gladia_stt.py",
@@ -20668,8 +20668,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 142,
-      "status": "todo",
-      "notes": ""
+      "status": "ported",
+      "notes": "0 pass, 0 fail, 27 skip, 1 todo"
     },
     {
       "file": "tests/test_llm_token_usage_totals.py",
@@ -20681,8 +20681,8 @@
         "pipecat.services.aws.llm"
       ],
       "needsModules": 126,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_llm_ttfb_normalization.py",
@@ -21131,7 +21131,7 @@
       ],
       "needsModules": 132,
       "status": "ported",
-      "notes": "42 pass, 0 fail, 0 skip, 1 todo"
+      "notes": "35 pass, 0 fail, 0 skip, 1 todo"
     },
     {
       "file": "tests/test_openai_http_client.py",
@@ -21157,8 +21157,8 @@
         "pipecat.services.openai.image"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_live_service.py",
@@ -21228,8 +21228,8 @@
         "pipecat.services.openai.realtime.events"
       ],
       "needsModules": 120,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_realtime_reasoning.py",
@@ -21260,8 +21260,8 @@
         "pipecat.utils.tracing.service_decorators"
       ],
       "needsModules": 125,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_realtime_user_audio.py",
@@ -21292,8 +21292,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 124,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "tested",
+      "notes": "30 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_responses_logging.py",
@@ -21320,8 +21320,8 @@
         "pipecat.services.openai.responses.llm"
       ],
       "needsModules": 123,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "tested",
+      "notes": "78 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_stt.py",
@@ -21381,8 +21381,8 @@
         "pipecat.services.perplexity.llm"
       ],
       "needsModules": 126,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "25 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_pgmq_backends.py",
@@ -22031,8 +22031,8 @@
         "pipecat.services.openrouter.llm"
       ],
       "needsModules": 137,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "67 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_runner.py",
@@ -22263,7 +22263,7 @@
       ],
       "needsModules": 117,
       "status": "ported",
-      "notes": "191 pass, 0 fail, 49 skip, 0 todo"
+      "notes": "192 pass, 0 fail, 50 skip, 0 todo"
     },
     {
       "file": "tests/test_service_language.py",
@@ -22404,8 +22404,8 @@
         "pipecat.services.smallest.llm"
       ],
       "needsModules": 123,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_smallest_stt.py",
@@ -23152,8 +23152,8 @@
         "pipecat.serializers.twilio"
       ],
       "needsModules": 119,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "tested",
+      "notes": "12 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_twilio_serializer_base_url.py",

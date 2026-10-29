@@ -78,9 +78,27 @@ scenarios:
 Each turn sends `user:` (or nothing, to wait for the bot) and checks the bot's events in order.
 `response` is the bot's reply: the LLM's text in text modality, the default, or a transcription of
 its speech in audio modality. Other events include `user_transcription`, `bot_started_speaking`,
-`function_call` (with `calls:`), `llm_marker` and `image`. `text_contains` and `text_excludes`
-check the text exactly, `within_ms` sets a latency budget, and `eval:` asks the judge. The module
-docs of `script.ts` and `simulation.ts` describe every key, as upstream's do.
+`function_call` (with `calls:`), `llm_marker`, `image` and `expression`. `text_contains` and
+`text_excludes` check the text exactly, `text_matches` takes one regular expression or a list that
+the text must each match (Python `re.search` semantics), `within_ms` sets a latency budget, and
+`eval:` asks the judge. A missed `text_matches` pattern fails the expectation with the
+`text_unmatched` failure kind, naming the first pattern that didn't match. The module docs of
+`script.ts` and `simulation.ts` describe every key, as upstream's do.
+
+```yaml
+      - user: "Read me my order number."
+        expect:
+          - event: response
+            text_matches:
+              - "^(Sure|Okay)"   # how the reply must open
+              - "\\d{6}"         # it has a six-digit number
+```
+
+`expression` is the expression the bot's TTS performed in expressive conversation (alpha), written
+as the LLM writes its tags: `<<excited>>` where the delivery of the spoken text changes
+(`<<neutral>>` back to the baseline), `[[laughter]]` for a sound, `[[pause 600]]` for a pause. A
+tag the TTS can't perform is never reported, so a scenario can check that what the LLM wrote was
+performed. It takes `text_contains`, `text_matches` and `eval:` like a response.
 
 A simulation swaps `turns:` for a persona:
 

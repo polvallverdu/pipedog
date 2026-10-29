@@ -15,9 +15,10 @@
  *
  * DIVERGENCE: upstream lists every Pipecat service, whether or not it is installed. This list is
  * limited to what pipedog has ported, so a service that isn't ported can't be offered (Daily,
- * Deepgram's SageMaker variants, AssemblyAI, ...). Pipecat Cloud, Daily PSTN, Twilio +
- * Daily SIP and Krisp aren't offered either; they have no pipedog counterpart. Upstream's
- * `package` field (`pipecat-ai[deepgram]`, a PyPI extra) is an npm package here.
+ * Deepgram's SageMaker variants, AssemblyAI TTS, Zoom AI, ...). Pipecat Cloud,
+ * Daily PSTN, Twilio + Daily SIP and Krisp aren't offered either; they have no pipedog
+ * counterpart. Upstream's `package` field (`pipecat-ai[deepgram]`, a PyPI extra) is an npm
+ * package here.
  *
  * For operations on services, use `ServiceLoader` from `service_loader.ts`.
  */
@@ -348,6 +349,7 @@ export class ServiceRegistry {
     svc("openai_responses_llm", "OpenAI Responses", "@pipedog/openai", [
       "OpenAIResponsesLLMService",
     ]),
+    svc("perplexity_llm", "Perplexity", "@pipedog/perplexity", ["PerplexityAgentHttpLLMService"]),
     // The OpenAI-compatible services, one package each.
     ...COMPATIBLE_LLMS.map((l) => svc(l.value, l.label, l.pkg, [l.cls])),
   ].sort((a, b) => a.label.localeCompare(b.label));

@@ -132,3 +132,13 @@ test("test_quality_setting_is_forwarded", async () => {
 
   expect((generate.mock.calls.at(-1)![0] as Record<string, unknown>).quality).toBe("low");
 });
+
+test("test_moderation_setting_is_forwarded", async () => {
+  // A configured moderation level reaches the Images API.
+  const b64 = bytesToBase64(pngBytes("RGB"));
+  const { service, generate } = makeService([{ b64_json: b64 }], { moderation: "low" });
+
+  await frames(service);
+
+  expect((generate.mock.calls.at(-1)![0] as Record<string, unknown>).moderation).toBe("low");
+});

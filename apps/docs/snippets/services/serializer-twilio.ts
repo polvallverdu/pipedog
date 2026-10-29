@@ -40,6 +40,17 @@ async function runCall(connection: WebsocketConnection): Promise<void> {
 const handler = websocketFetchHandler(runCall);
 // #endregion usage
 
+// #region api-key
+const withApiKey = new TwilioFrameSerializer({
+  streamSid: "MZ...",
+  callSid: "CA...",
+  accountSid: process.env.TWILIO_ACCOUNT_SID,
+  // An API key replaces the auth token. Pass both parts, and no authToken.
+  apiKeySid: process.env.TWILIO_API_KEY,
+  apiKeySecret: process.env.TWILIO_API_SECRET,
+});
+// #endregion api-key
+
 // #region region
 const regional = new TwilioFrameSerializer({
   streamSid: "MZ...",

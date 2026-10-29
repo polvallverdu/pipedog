@@ -954,6 +954,11 @@ export class OpenAIRealtimeLLMService extends LLMService<RealtimeAdapter> {
     await this._wsSend(event.modelDump({ excludeNone: true }));
   }
 
+  /** Return the headers that authenticate the WebSocket connection. */
+  protected async _authHeaders(): Promise<Record<string, string>> {
+    return { Authorization: `Bearer ${this.apiKey}` };
+  }
+
   protected async _connect(): Promise<void> {
     try {
       if (this._websocket) {
@@ -962,9 +967,7 @@ export class OpenAIRealtimeLLMService extends LLMService<RealtimeAdapter> {
         return;
       }
       this._websocket = await websocketConnect(this.baseUrl, {
-        additionalHeaders: {
-          Authorization: `Bearer ${this.apiKey}`,
-        },
+        additionalHeaders: await this._authHeaders(),
       });
       this._receiveTask = this.createTask(
         () => this._receiveTaskHandler(),
@@ -1115,6 +1118,9 @@ export class OpenAIRealtimeLLMService extends LLMService<RealtimeAdapter> {
       const evt: any = events.parseServerEvent(
         typeof message === "string" ? message : new TextDecoder().decode(message),
       );
+      if (evt === null) {
+        continue;
+      }
       if (evt.type === "session.created") {
         await this._handleEvtSessionCreated(evt);
       } else if (evt.type === "session.updated") {
@@ -1328,20 +1334,23 @@ export class OpenAIRealtimeLLMService extends LLMService<RealtimeAdapter> {
   protected async _handleEvtResponseDone(evt: events.ResponseDone): Promise<void> {
     // todo: figure out whether there's anything we need to do for "cancelled" events
     // usage metrics
-    const usage = evt.response.usage as any;
-    const inputDetails = usage?.inputTokenDetails ?? null;
-    const outputDetails = usage?.outputTokenDetails ?? null;
-    const cachedDetails = inputDetails ? (inputDetails.cachedTokensDetails ?? null) : null;
-    const tokens = new LLMTokenUsage({
-      promptTokens: usage.inputTokens,
-      completionTokens: usage.outputTokens,
-      totalTokens: usage.totalTokens,
-      cacheReadInputTokens: inputDetails ? inputDetails.cachedTokens : null,
-      inputAudioTokens: inputDetails ? inputDetails.audioTokens : null,
-      outputAudioTokens: outputDetails ? outputDetails.audioTokens : null,
-      cacheReadInputAudioTokens: cachedDetails ? cachedDetails.audioTokens : null,
-    });
-    await this.startLlmUsageMetrics(tokens);
+    const usage = evt.response.usage;
+    if (usage !== null) {
+      const inputDetails = usage.inputTokenDetails as any;
+      const outputDetails = usage.outputTokenDetails as any;
+      const cachedDetails = inputDetails ? (inputDetails.cachedTokensDetails ?? null) : null;
+      const cachedAudioTokens = cachedDetails ? cachedDetails.audioTokens : null;
+      const tokens = new LLMTokenUsage({
+        promptTokens: usage.inputTokens || 0,
+        completionTokens: usage.outputTokens || 0,
+        totalTokens: usage.totalTokens || 0,
+        cacheReadInputTokens: inputDetails ? inputDetails.cachedTokens : null,
+        inputAudioTokens: inputDetails ? inputDetails.audioTokens : null,
+        outputAudioTokens: outputDetails ? outputDetails.audioTokens : null,
+        cacheReadInputAudioTokens: cachedAudioTokens,
+      });
+      await this.startLlmUsageMetrics(tokens);
+    }
     await this.stopProcessingMetrics();
     // Push TTSStoppedFrame here (rather than on each per-item
     // response.output_audio.done) so that a response containing multiple
@@ -1368,12 +1377,12 @@ export class OpenAIRealtimeLLMService extends LLMService<RealtimeAdapter> {
     }
     // error handling
     if (evt.response.status === "failed") {
-      const statusDetails = evt.response.statusDetails as any;
-      await this.pushError(statusDetails.error.message);
+      const error = (evt.response.statusDetails || {}).error || {};
+      await this.pushError(error.message || "Response failed");
       return;
     }
     // response content
-    for (const item of evt.response.output) {
+    for (const item of evt.response.output ?? []) {
       await this._callEventHandler("on_conversation_item_updated", item.id, item);
     }
   }
@@ -1511,7 +1520,12 @@ export class OpenAIRealtimeLLMService extends LLMService<RealtimeAdapter> {
         throw new Error("AssertionError: error.event_id is None");
       }
       // event_id is of the form "rci_{item_id}"
-      const itemId = eventId.slice(eventId.indexOf("_") + 1);
+      const sep = eventId.indexOf("_");
+      if (sep === -1) {
+        // Python's `split("_", 1)[1]` on an id without "_".
+        throw new Error("IndexError: list index out of range");
+      }
+      const itemId = eventId.slice(sep + 1);
       const futures = this._retrieveConversationItemFutures.get(itemId);
       this._retrieveConversationItemFutures.delete(itemId);
       if (futures && futures.length > 0) {
@@ -1526,7 +1540,7 @@ export class OpenAIRealtimeLLMService extends LLMService<RealtimeAdapter> {
 
   protected async _handleEvtError(evt: events.ErrorEvent): Promise<void> {
     // Errors are fatal to this connection. Send an ErrorFrame.
-    await this.pushError(`Error: ${JSON.stringify(evt)}`);
+    await this.pushError(`Error: ${evt}`);
   }
 
   //

@@ -86,7 +86,10 @@ function pyTypeName(value: unknown): string {
   return typeof value;
 }
 
-/** Python `obj.get(key, default)`: raises when `obj` is not a dict. */
+/**
+ * Python `obj.get(key, default)`: raises when `obj` is not a dict. Returns `any` because the
+ * provider's websocket handshake JSON is untyped (genuinely dynamic in upstream).
+ */
 function dictGet(obj: unknown, key: string, defaultValue: unknown = null): any {
   if (!isRecord(obj)) {
     throw new TypeError(`'${pyTypeName(obj)}' object has no attribute 'get'`);
@@ -489,7 +492,10 @@ export class TransportNotPortedError extends Error {
   }
 }
 
-/** A function returning the transport params for one transport. */
+/**
+ * A function returning the transport params for one transport. Returns `any` because upstream's
+ * `transport_params` is `Dict[str, Callable]`: each factory returns a different params class.
+ */
 export type TransportParamsFactory = () => any;
 
 /**
@@ -589,6 +595,10 @@ export async function _createTelephonyTransport(
       callSid: wire("call_id"),
       accountSid: getEnv("TWILIO_ACCOUNT_SID") ?? "",
       authToken: getEnv("TWILIO_AUTH_TOKEN") ?? "",
+      apiKeySid: getEnv("TWILIO_API_KEY") || undefined,
+      apiKeySecret: getEnv("TWILIO_API_SECRET") || undefined,
+      region: getEnv("TWILIO_REGION") || undefined,
+      edge: getEnv("TWILIO_EDGE") || undefined,
     });
   } else if (transportType === "telnyx") {
     const { TelnyxFrameSerializer } = await import("@pipedog/serializer-telnyx/telnyx");

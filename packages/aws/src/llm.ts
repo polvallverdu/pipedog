@@ -49,6 +49,9 @@ import {
   LLMEnablePromptCachingFrame,
   LLMFullResponseEndFrame,
   LLMFullResponseStartFrame,
+  LLMThoughtEndFrame,
+  LLMThoughtStartFrame,
+  LLMThoughtTextFrame,
 } from "@pipedog/core/frames/frames";
 import { LLMTokenUsage } from "@pipedog/core/metrics/metrics";
 import type { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
@@ -60,6 +63,11 @@ import { ErrorCategory } from "@pipedog/core/utils/errors";
 import { isTimeoutException } from "@pipedog/core/utils/http";
 import { logger } from "@pipedog/core/utils/logger";
 import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
+import {
+  type TaggedLLMTextParsedOutputChunk,
+  TaggedLLMTextParsedOutputChunkKind,
+  TaggedLLMTextParser,
+} from "@pipedog/core/utils/text/tagged_llm_text_parser";
 import { tracedLlm } from "@pipedog/core/utils/tracing/service_decorators";
 import { assertGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
 import { type AWSClientOptions, AWSServiceError, AWSSession, awsEndpoint } from "./aws_session.ts";
@@ -474,6 +482,7 @@ export class AWSBedrockLLMService extends LLMService<AWSBedrockLLMAdapter> {
         );
         return response;
       } catch (e) {
+        rethrowIfCancelled(e);
         if (e instanceof TimeoutError || isTimeoutException(e)) {
           // Stop the request that timed out.
           attempt.abort();
@@ -548,6 +557,14 @@ export class AWSBedrockLLMService extends LLMService<AWSBedrockLLMAdapter> {
     let useCompletionTokensEstimate = false;
 
     let usingNoopTool = false;
+    // Amazon Nova (v1) models write their reasoning into a text block,
+    // wrapped in <thinking> tags, ahead of a tool call. A response can hold
+    // several such blocks, so each text block is parsed on its own.
+    const thinkingParser = new TaggedLLMTextParser("<thinking>", "</thinking>");
+    let textIndex: number | null = null;
+    // The content block of the reasoning in progress, and its signature.
+    let reasoningIndex: number | null = null;
+    let reasoningSignature: string | null = null;
 
     try {
       await this.pushFrame(new LLMFullResponseStartFrame());
@@ -683,13 +700,31 @@ export class AWSBedrockLLMService extends LLMService<AWSBedrockLLMAdapter> {
           const block = event.contentBlockDelta as Dict;
           const delta = block.delta as Dict;
           if ("text" in delta) {
-            await this._pushLlmText(delta.text);
+            textIndex = block.contentBlockIndex as number;
+            await this._pushThinkingChunks(thinkingParser.parseNextChunk(delta.text));
             completionTokensEstimate += this._estimateTokens(delta.text);
           } else if ("toolUse" in delta && "input" in delta.toolUse) {
             // Handle partial JSON for tool use
             const index = block.contentBlockIndex as number;
             jsonAccumulators.set(index, (jsonAccumulators.get(index) ?? "") + delta.toolUse.input);
             completionTokensEstimate += this._estimateTokens(delta.toolUse.input);
+          } else if ("reasoningContent" in delta) {
+            const reasoning = delta.reasoningContent as Dict;
+            if (reasoningIndex === null && ("text" in reasoning || "signature" in reasoning)) {
+              reasoningIndex = block.contentBlockIndex as number;
+              await this.pushFrame(
+                new LLMThoughtStartFrame({
+                  appendToContext: true,
+                  llm: this.getLlmAdapter().idForLlmSpecificMessages,
+                }),
+              );
+            }
+            if ("text" in reasoning) {
+              await this.pushFrame(new LLMThoughtTextFrame({ text: reasoning.text }));
+              completionTokensEstimate += this._estimateTokens(reasoning.text);
+            } else if ("signature" in reasoning) {
+              reasoningSignature = reasoning.signature;
+            }
           }
         }
         // Handle tool use start
@@ -712,6 +747,15 @@ export class AWSBedrockLLMService extends LLMService<AWSBedrockLLMAdapter> {
         // Handle tool use completion
         else if ("contentBlockStop" in event) {
           const index = event.contentBlockStop.contentBlockIndex as number;
+          if (index === textIndex) {
+            await this._pushThinkingChunks(thinkingParser.flush());
+            textIndex = null;
+          }
+          if (index === reasoningIndex) {
+            await this.pushFrame(new LLMThoughtEndFrame({ signature: reasoningSignature }));
+            reasoningIndex = null;
+            reasoningSignature = null;
+          }
           const toolUseBlock = toolUseBlocks.get(index);
           toolUseBlocks.delete(index);
           if (toolUseBlock) {
@@ -751,6 +795,8 @@ export class AWSBedrockLLMService extends LLMService<AWSBedrockLLMAdapter> {
           cacheCreationInputTokens += usage.cacheWriteInputTokens ?? 0;
         }
       }
+
+      await this._pushThinkingChunks(thinkingParser.flush());
 
       await this.runFunctionCalls(functionCalls);
     } catch (e) {
@@ -798,6 +844,11 @@ export class AWSBedrockLLMService extends LLMService<AWSBedrockLLMAdapter> {
         await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
       }
     } finally {
+      // Closes a thought left open by an interrupted or failed stream.
+      await this._pushThinkingChunks(thinkingParser.reset());
+      if (reasoningIndex !== null) {
+        await this.pushFrame(new LLMThoughtEndFrame());
+      }
       await this.stopProcessingMetrics();
       await this.pushFrame(new LLMFullResponseEndFrame());
       const compTokens = !useCompletionTokensEstimate ? completionTokens : completionTokensEstimate;
@@ -831,6 +882,21 @@ export class AWSBedrockLLMService extends LLMService<AWSBedrockLLMAdapter> {
 
   protected _estimateTokens(text: string): number {
     return Math.trunc(text.split(/[^\p{L}\p{N}_]+/u).length * 1.3);
+  }
+
+  /** Push text as LLM text and leading `<thinking>` content as thoughts. */
+  protected async _pushThinkingChunks(chunks: TaggedLLMTextParsedOutputChunk[]): Promise<void> {
+    for (const chunk of chunks) {
+      if (chunk.kind === TaggedLLMTextParsedOutputChunkKind.TEXT) {
+        await this._pushLlmText(chunk.text);
+      } else if (chunk.kind === TaggedLLMTextParsedOutputChunkKind.THOUGHT_START) {
+        await this.pushFrame(new LLMThoughtStartFrame());
+      } else if (chunk.kind === TaggedLLMTextParsedOutputChunkKind.THOUGHT_TEXT) {
+        await this.pushFrame(new LLMThoughtTextFrame({ text: chunk.text }));
+      } else if (chunk.kind === TaggedLLMTextParsedOutputChunkKind.THOUGHT_END) {
+        await this.pushFrame(new LLMThoughtEndFrame());
+      }
+    }
   }
 
   protected async _reportUsageMetrics(

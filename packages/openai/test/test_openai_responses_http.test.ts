@@ -6,7 +6,7 @@
 
 /** Tests for the HTTP variant of OpenAIResponsesHttpLLMService. */
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, spyOn, test } from "bun:test";
 
 import { sleep } from "@pipedog/asyncio";
 import {
@@ -24,6 +24,7 @@ import {
 import type { LLMTokenUsage } from "@pipedog/core/metrics/metrics";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import { runTest } from "@pipedog/core/tests/utils";
+import { logger } from "@pipedog/core/utils/logger";
 import { APIConnectionTimeoutError } from "openai";
 
 import { OpenAIResponsesHttpLLMService } from "../src/responses/llm.ts";
@@ -79,7 +80,8 @@ class _FakeAsyncStream {
 
 /** Build a response.completed event carrying the given usage object. */
 function _completedEvent(usage: Dict): Dict {
-  return { type: "response.completed", response: { usage, model: "gpt-4.1" } };
+  // Upstream's response is a MagicMock, whose `output` iterates as empty.
+  return { type: "response.completed", response: { usage, model: "gpt-4.1", output: [] } };
 }
 
 /** Drive _processContext over a fake stream of the given events. */
@@ -520,6 +522,106 @@ describe("TestHttpStreamErrorEvents", () => {
     const errorFrames = [...downFrames, ...upFrames].filter((f) => f instanceof ErrorFrame);
     // Expected an ErrorFrame after an in-stream response.failed event.
     expect(errorFrames.length).toBeGreaterThan(0);
+  });
+});
+
+/** A response that completes with no text and no function call is reported. */
+describe("TestHttpEmptyResponse", () => {
+  const _completed = (output: Dict[]): Dict => ({
+    type: "response.completed",
+    response: { id: "resp_1", model: "gpt-5.4-mini", usage: null, output },
+  });
+
+  const _message = (content: Dict[]): Dict => ({
+    id: "msg_1",
+    type: "message",
+    role: "assistant",
+    status: "completed",
+    content,
+  });
+
+  /** Returns the service and the messages passed to `logger.warning`. */
+  const _runEmpty = async (...events: Dict[]): Promise<[Service, string[]]> => {
+    const service = _makeService();
+    service.pushError = mock(async () => {});
+    service.runFunctionCalls = mock(async () => {});
+    const mockWarning = spyOn(logger, "warning");
+    let warnings: string[];
+    try {
+      await _run(service, ...events);
+    } finally {
+      // mockRestore() clears the recorded calls, so copy them first.
+      warnings = mockWarning.mock.calls.map((c) => c[0]);
+      mockWarning.mockRestore();
+    }
+    return [service, warnings];
+  };
+
+  test("test_reasoning_only_response_pushes_error", async () => {
+    const reasoning = { id: "rs_1", type: "reasoning", summary: [] };
+    const [service, mockWarning] = await _runEmpty(_completed([reasoning]));
+
+    expect(service.pushError).toHaveBeenCalledTimes(1);
+    expect(_errorMsg(service)).toContain("resp_1");
+    expect(mockWarning.at(-1)).toContain("['reasoning']");
+  });
+
+  test("test_refusal_is_named_in_the_warning", async () => {
+    const refusal = { type: "refusal", refusal: "I can't help with that." };
+    const [service, mockWarning] = await _runEmpty(_completed([_message([refusal])]));
+
+    expect(service.pushError).toHaveBeenCalledTimes(1);
+    expect(mockWarning.at(-1)).toContain("['message[refusal]']");
+  });
+
+  test("test_text_response_pushes_no_error", async () => {
+    const text = { type: "output_text", text: "Hello", annotations: [] };
+    const [service, mockWarning] = await _runEmpty(
+      _textDeltaEvent("Hello"),
+      _completed([_message([text])]),
+    );
+
+    expect(service.pushError).not.toHaveBeenCalled();
+    expect(mockWarning).toEqual([]);
+  });
+
+  test("test_function_call_only_response_pushes_no_error", async () => {
+    const call = {
+      id: "fc_1",
+      type: "function_call",
+      name: "end_session",
+      call_id: "call_1",
+      arguments: "{}",
+    };
+    const added = { type: "response.output_item.added", item: call };
+    const done = { type: "response.output_item.done", item: call };
+    const [service] = await _runEmpty(added, done, _completed([call]));
+
+    expect(service.pushError).not.toHaveBeenCalled();
+    expect(service.runFunctionCalls).toHaveBeenCalledTimes(1);
+  });
+
+  test("test_empty_response_reaches_pipeline_as_error_frame", async () => {
+    const service = _makeService();
+    const reasoning = { id: "rs_1", type: "reasoning", summary: [] };
+    service._client.responses.create = mock(
+      async () => new _FakeAsyncStream([_completed([reasoning])]),
+    );
+
+    const [downFrames, upFrames] = await runTest(service, {
+      framesToSend: [new LLMContextFrame({ context: new LLMContext() })],
+      expectedDownFrames: [
+        LLMServiceMetadataFrame,
+        LLMFullResponseStartFrame,
+        LLMFullResponseEndFrame,
+      ],
+    });
+
+    const errorFrames = [...downFrames, ...upFrames].filter((f) => f instanceof ErrorFrame);
+    expect(errorFrames.length).toBe(1);
+    // Upstream also asserts `not error_frames[0].fatal`; `ErrorFrame.fatal`
+    // (and FatalErrorFrame) are deprecated upstream and not ported, so every
+    // ErrorFrame here is non-fatal.
   });
 });
 

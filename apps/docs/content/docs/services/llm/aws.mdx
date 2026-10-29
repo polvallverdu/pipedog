@@ -102,6 +102,13 @@ Inherited from `LLMService`:
 
 - Consumes `LLMContextFrame` and emits `LLMFullResponseStartFrame`, `LLMTextFrame`s and
   `LLMFullResponseEndFrame`.
+- Reasoning the model returns in `reasoningContent` (Claude with extended thinking, Nova 2 with
+  reasoning enabled) comes out as `LLMThoughtStartFrame`, `LLMThoughtTextFrame` and
+  `LLMThoughtEndFrame`. Signed reasoning, such as Claude's, is kept in the context and sent back
+  on later turns, so Claude keeps its reasoning across tool calls.
+- Amazon Nova (v1) models write their reasoning into the answer, in `<thinking>...</thinking>`,
+  before a tool call. A `<thinking>` block at the start of the response, or of any text between
+  tool calls, is emitted as thought frames instead of `LLMTextFrame`s, so it isn't spoken.
 - When the context has tool calls in its history but no tools are configured, the service sends
   a no-op tool, because Bedrock rejects tool messages without a `toolConfig`.
 - For Claude models that reject assistant prefill, a trailing user message is added when the

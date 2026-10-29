@@ -7,7 +7,7 @@
 /** Tests for the WebSocket variant of OpenAIResponsesLLMService. */
 
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
-import { CancelledError, sleep, TimeoutError } from "@pipedog/asyncio";
+import { CancelledError, sleep } from "@pipedog/asyncio";
 import {
   LLMContextFrame,
   LLMMessagesAppendFrame,
@@ -628,64 +628,286 @@ describe("TestReceiveResponseEventsErrors", () => {
   });
 });
 
-describe("TestDrainCancelledResponse", () => {
-  test("test_drain_discards_events_until_terminal", async () => {
-    // Draining should discard events until a terminal event arrives.
+describe("TestReceiveResponseEventsEmpty", () => {
+  // A response that completes with no text and no function call is reported.
+
+  async function _receive(
+    events: unknown[],
+    options: { incremental?: boolean } = {},
+  ): Promise<[Any, ReturnType<typeof patchLogger>]> {
     const service = _makeService();
-    service._needsDrain = true;
+    service._pushLlmText = mock(async () => {});
+    service.stopTtfbMetrics = mock(async () => {});
+    service.startLlmUsageMetrics = mock(async () => {});
+    service.runFunctionCalls = mock(async () => {});
+    service.pushError = mock(async () => {});
+    service._websocket = _wsEvents(...events);
 
-    service._websocket = _wsEvents(
-      { type: "response.output_text.delta", delta: "stale" },
-      { type: "response.output_text.delta", delta: "also stale" },
-      { type: "response.completed", response: { id: "resp_old" } },
-    );
+    const mockLogger = patchLogger();
+    await service._receiveResponseEvents(mockContext(), [], null, {
+      incremental: options.incremental ?? false,
+    });
+    return [service, mockLogger];
+  }
 
-    await service._drainCancelledResponse();
-
-    expect(service._needsDrain).toBe(false);
-  });
-
-  test("test_drain_handles_pending_cancel", async () => {
-    // If cancelled before response.created, drain should send cancel once it
-    // sees the response.created, then continue draining.
-    const service = _makeService();
-    service._needsDrain = true;
-    service._cancelPendingResponse = true;
-
-    const mockWs = _wsEvents(
-      { type: "response.created", response: { id: "resp_late" } },
-      { type: "response.output_text.delta", delta: "stale" },
-      { type: "response.failed", response: { id: "resp_late" } },
-    );
-    service._websocket = mockWs;
-
-    await service._drainCancelledResponse();
-
-    expect(service._needsDrain).toBe(false);
-    expect(service._cancelPendingResponse).toBe(false);
-    // Should have sent response.cancel
-    const cancelCalls = mockWs.send.mock.calls.filter((call: Any[]) =>
-      String(call[0]).includes("response.cancel"),
-    );
-    expect(cancelCalls.length).toBe(1);
-  });
-
-  test("test_drain_timeout_clears_state", async () => {
-    // If draining times out, should clear cancellation state.
-    const service = _makeService();
-    service._needsDrain = true;
-
-    // recv() never returns a terminal event — times out
-    service._websocket = {
-      recv: mock(async () => {
-        throw new TimeoutError();
-      }),
+  function _completed(output: unknown[]): Any {
+    return {
+      type: "response.completed",
+      response: { id: "resp_1", model: "gpt-5.4-mini", output },
     };
+  }
 
-    await service._drainCancelledResponse();
+  // `push_error(error_msg=...)` is `pushError(errorMsg, ...)`: the message is
+  // the first argument.
+  const errorMsg = (service: Any): string => service.pushError.mock.calls.at(-1)[0];
 
-    expect(service._needsDrain).toBe(false);
-    expect(service._cancelPendingResponse).toBe(false);
+  test("test_reasoning_only_response_pushes_error", async () => {
+    const [service, mockLogger] = await _receive(
+      [_completed([{ type: "reasoning", id: "rs_1", summary: [] }])],
+      { incremental: true },
+    );
+
+    expect(service.pushError).toHaveBeenCalledTimes(1);
+    expect(errorMsg(service)).toContain("resp_1");
+    const warning = mockLogger.warning.mock.calls.at(-1)![0] as string;
+    expect(warning).toContain("['reasoning']");
+    expect(warning).toContain("incremental: True");
+  });
+
+  test("test_refusal_is_named_in_the_warning", async () => {
+    const [service, mockLogger] = await _receive([
+      _completed([
+        {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "refusal", refusal: "I can't help with that." }],
+        },
+      ]),
+    ]);
+
+    expect(service.pushError).toHaveBeenCalledTimes(1);
+    const warning = mockLogger.warning.mock.calls.at(-1)![0] as string;
+    expect(warning).toContain("['message[refusal]']");
+    expect(warning).toContain("incremental: False");
+  });
+
+  test("test_whitespace_only_text_pushes_error", async () => {
+    const [service] = await _receive([
+      { type: "response.output_text.delta", delta: " \n" },
+      _completed([]),
+    ]);
+
+    expect(service.pushError).toHaveBeenCalledTimes(1);
+  });
+
+  test("test_text_response_pushes_no_error", async () => {
+    const [service, mockLogger] = await _receive([
+      { type: "response.output_text.delta", delta: "Hello" },
+      _completed([]),
+    ]);
+
+    expect(service.pushError).not.toHaveBeenCalled();
+    expect(mockLogger.warning).not.toHaveBeenCalled();
+  });
+
+  test("test_function_call_only_response_pushes_no_error", async () => {
+    const call = {
+      type: "function_call",
+      id: "fc_1",
+      name: "end_session",
+      call_id: "call_1",
+      arguments: "{}",
+    };
+    const [service] = await _receive([
+      { type: "response.output_item.added", item: { ...call, arguments: "" } },
+      { type: "response.output_item.done", item: call },
+      _completed([call]),
+    ]);
+
+    expect(service.pushError).not.toHaveBeenCalled();
+    expect(service.runFunctionCalls).toHaveBeenCalledTimes(1);
+  });
+});
+
+function _created(lane: string, responseId: string): Any {
+  return { type: "response.created", stream_id: lane, response: { id: responseId } };
+}
+
+function _delta(lane: string, text: string): Any {
+  return { type: "response.output_text.delta", stream_id: lane, delta: text };
+}
+
+function _completed(lane: string, responseId: string, text: string): Any {
+  return {
+    type: "response.completed",
+    stream_id: lane,
+    response: {
+      id: responseId,
+      output: [
+        {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text }],
+        },
+      ],
+    },
+  };
+}
+
+/** Create a service that runs inferences against a mock WebSocket. */
+function _makeLaneService(...events: unknown[]): Any {
+  const service = _makeService();
+  service._ensureConnected = mock(async () => {});
+  service.startTtfbMetrics = mock(async () => {});
+  service.stopTtfbMetrics = mock(async () => {});
+  service.stopProcessingMetrics = mock(async () => {});
+  service.pushFrame = mock(async () => {});
+  service._pushLlmText = mock(async () => {});
+  service._websocket = _wsEvents(...events);
+  return service;
+}
+
+/**
+ * `ws.recv.side_effect = [...]`: recv() returns each string in order and
+ * raises each error (instance or class); exhausted, it raises.
+ */
+function _setRecvSideEffect(ws: Any, items: unknown[]): void {
+  const pending = [...items];
+  ws.recv.mockImplementation(async () => {
+    if (pending.length === 0) throw new Error("StopAsyncIteration");
+    const item = pending.shift();
+    if (item instanceof Error) throw item;
+    if (typeof item === "function") throw new (item as new () => Error)();
+    return item;
+  });
+}
+
+function _sentRequests(service: Any): Any[] {
+  return service._websocket.send.mock.calls.map((call: Any[]) => JSON.parse(call[0]));
+}
+
+async function _runInference(service: Any, messages: unknown[]): Promise<void> {
+  await service.processFrame(
+    new LLMContextFrame({ context: new LLMContext({ messages: messages as Any }) }),
+    FrameDirection.DOWNSTREAM,
+  );
+}
+
+describe("TestResponseLanes", () => {
+  test("test_next_response_does_not_wait_for_an_abandoned_one", async () => {
+    // A cancelled response is abandoned on its lane; the next goes out at once
+    // on another, continuing from the last completed response, and the
+    // abandoned response's events are discarded.
+    const first = [{ role: "user", content: "hi" }];
+    const later = [
+      ...first,
+      { role: "assistant", content: "Hello" },
+      { role: "user", content: "go" },
+    ];
+    const service = _makeLaneService(
+      _created("lane-0", "resp_1"),
+      _completed("lane-0", "resp_1", "Hello"),
+    );
+
+    await _runInference(service, first);
+
+    _setRecvSideEffect(service._websocket, [
+      JSON.stringify(_created("lane-1", "resp_2")),
+      new CancelledError(),
+    ]);
+    await expect(_runInference(service, later)).rejects.toThrow(CancelledError);
+
+    service._pushLlmText.mockClear();
+    _setRecvSideEffect(
+      service._websocket,
+      [
+        _delta("lane-1", "stale"),
+        _created("lane-2", "resp_3"),
+        _completed("lane-1", "resp_2", "stale"),
+        _delta("lane-2", "fresh"),
+        _completed("lane-2", "resp_3", "fresh"),
+      ].map((e) => JSON.stringify(e)),
+    );
+    await _runInference(service, later);
+
+    const requests = _sentRequests(service);
+    expect(requests.map((r) => r.type)).toEqual(Array(3).fill("response.create"));
+    expect(requests.map((r) => r.stream_id)).toEqual(["lane-0", "lane-1", "lane-2"]);
+    expect(requests[2].previous_response_id).toBe("resp_1");
+    expect(service._pushLlmText).toHaveBeenCalledTimes(1);
+    expect(service._pushLlmText).toHaveBeenCalledWith("fresh");
+    expect(service._previousResponseId).toBe("resp_3");
+    expect(service._drainingLanes.size).toBe(0);
+  });
+
+  test("test_responses_alternate_lanes", async () => {
+    // Each response goes on a lane other than the previous response's.
+    const service = _makeLaneService(
+      _completed("lane-0", "resp_1", "one"),
+      _completed("lane-1", "resp_2", "two"),
+      _completed("lane-0", "resp_3", "three"),
+    );
+
+    let messages: unknown[] = [{ role: "user", content: "hi" }];
+    await _runInference(service, messages);
+    messages = [...messages, { role: "assistant", content: "one" }];
+    await _runInference(service, [...messages, { role: "user", content: "again" }]);
+    messages = [...messages, { role: "user", content: "again" }];
+    messages = [...messages, { role: "assistant", content: "two" }];
+    await _runInference(service, [...messages, { role: "user", content: "more" }]);
+
+    const requests = _sentRequests(service);
+    expect(requests.map((r) => r.stream_id)).toEqual(["lane-0", "lane-1", "lane-0"]);
+    expect(requests.map((r) => r.previous_response_id ?? null)).toEqual([null, "resp_1", "resp_2"]);
+  });
+
+  test("test_cancellation_keeps_the_connection", async () => {
+    // A cancelled response is abandoned on its lane, with no request to the
+    // server, and the connection is kept.
+    const service = _makeLaneService();
+    const websocket = service._websocket;
+    websocket.recv.mockImplementation(async () => {
+      throw new CancelledError();
+    });
+
+    await expect(_runInference(service, [{ role: "user", content: "hi" }])).rejects.toThrow(
+      CancelledError,
+    );
+
+    expect(service._websocket).toBe(websocket);
+    expect(service._drainingLanes).toEqual(new Set(["lane-0"]));
+    expect(_sentRequests(service).map((r) => r.type)).toEqual(["response.create"]);
+  });
+
+  test("test_an_abandoned_responses_error_is_not_reported", async () => {
+    const service = _makeLaneService(
+      { type: "error", stream_id: "lane-1", error: { message: "stale" } },
+      _delta("lane-0", "Hello"),
+      _completed("lane-0", "resp_1", "Hello"),
+    );
+    service._drainingLanes = new Set(["lane-1"]);
+    service.pushError = mock(async () => {});
+
+    await _runInference(service, [{ role: "user", content: "hi" }]);
+
+    expect(service.pushError).not.toHaveBeenCalled();
+    expect(service._drainingLanes.size).toBe(0);
+  });
+
+  test("test_every_lane_taken_reconnects", async () => {
+    // With every lane holding an abandoned response or the previous response,
+    // the connection is closed, which ends the abandoned ones.
+    const service = _makeLaneService();
+    await service._storePreviousResponseState("resp_1", [{ role: "user", content: "hi" }], []);
+    service._previousResponseLane = "lane-0";
+    service._drainingLanes = new Set(Array.from({ length: 15 }, (_, i) => `lane-${i + 1}`));
+    service.stopAllMetrics = mock(async () => {});
+
+    expect(await service._chooseNextResponseLane()).toBe("lane-0");
+
+    expect(service._websocket).toBeNull();
+    expect(service._previousResponseId).toBeNull();
+    expect(service._drainingLanes.size).toBe(0);
   });
 });
 
@@ -726,33 +948,6 @@ describe("TestConnectionLifecycle", () => {
 
     expect(service._previousResponseId).toBeNull();
     expect(mockWs.close).toHaveBeenCalledTimes(1);
-  });
-
-  test("test_cancellation_preserves_connection_and_sets_drain", async () => {
-    // When process_frame is cancelled (e.g. interruption), the WebSocket
-    // connection should be preserved and _needs_drain set.
-    const service = _makeService();
-    service.stopProcessingMetrics = mock(async () => {});
-    service.pushFrame = mock(async () => {});
-
-    const mockWs = {
-      recv: mock(async () => {
-        throw new CancelledError();
-      }),
-      send: mock(async () => {}),
-    };
-    service._websocket = mockWs;
-
-    const context = new LLMContext({ messages: [{ role: "user", content: "hi" }] });
-
-    await expect(
-      service.processFrame(new LLMContextFrame({ context }), FrameDirection.DOWNSTREAM),
-    ).rejects.toThrow(CancelledError);
-
-    // Connection should be preserved, not closed
-    expect(service._websocket).toBe(mockWs);
-    // Should be flagged for draining before next inference
-    expect(service._needsDrain).toBe(true);
   });
 
   test("test_ensure_connected_raises_on_failure", async () => {
@@ -1285,6 +1480,7 @@ describe("TestRetryOnTimeout", () => {
       _context: unknown,
       _fullInput: unknown,
       outputTimeoutSecs: number | null = null,
+      _options: { incremental?: boolean } = {},
     ) => {
       timeouts.push(outputTimeoutSecs);
       if (timeouts.length === 1) {

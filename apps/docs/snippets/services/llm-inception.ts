@@ -10,7 +10,7 @@ import { InceptionLLMService } from "@pipedog/inception/llm";
 const llm = new InceptionLLMService({
   apiKey: process.env.INCEPTION_API_KEY ?? "",
   settings: new InceptionLLMService.Settings({
-    model: "mercury-2",
+    model: "mercury-3",
     systemInstruction: "You are a helpful assistant in a voice conversation.",
   }),
 });

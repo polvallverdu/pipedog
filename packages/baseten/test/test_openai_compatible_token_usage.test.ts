@@ -27,7 +27,6 @@ import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import { FrameProcessor } from "@pipedog/core/processors/frame_processor";
 import { OpenAILLMService } from "@pipedog/openai/llm";
 import { NovitaLLMService } from "../../novita/src/llm.ts";
-import { PerplexityLLMService } from "../../perplexity/src/llm.ts";
 import { SambaNovaLLMService } from "../../sambanova/src/llm.ts";
 import { GrokLLMService } from "../../xai/src/llm.ts";
 import { BasetenLLMService } from "../src/llm.ts";
@@ -39,7 +38,7 @@ const SERVICES: [string, ServiceClass, Record<string, unknown>][] = [
   ["baseten", BasetenLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
   ["grok", GrokLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
   ["novita", NovitaLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
-  ["perplexity", PerplexityLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
+  // perplexity (PerplexityLLMService): deprecated upstream (1.13.0), not ported.
   ["sambanova", SambaNovaLLMService as unknown as ServiceClass, { apiKey: "test-key" }],
 ];
 

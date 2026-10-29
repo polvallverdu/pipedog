@@ -1127,6 +1127,8 @@ export class AzureVoiceLiveLLMService extends LLMService<VoiceLiveAdapter> {
     }
 
     for await (const message of this._websocket) {
+      // Dispatch below is by the `type` string, as upstream (pydantic models, not a
+      // discriminated union), so the parsed event is genuinely dynamic here.
       let evt: any;
       try {
         evt = events.parseServerEvent(message as string | Uint8Array);

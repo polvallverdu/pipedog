@@ -15,7 +15,7 @@
 
 import { monotonic, TimeoutError } from "@pipedog/asyncio";
 import { contextualize } from "./_log_context.ts";
-import { pyStrRepr } from "./_pyutil.ts";
+import { pyRegExp, pyStrRepr } from "./_pyutil.ts";
 import { EvalBotEndedError, type EvalEvent, type EvalEventStream } from "./events.ts";
 import type { EvalJudge } from "./judge.ts";
 import { EvalAssertionFailure, type EvalTrace } from "./results.ts";
@@ -281,6 +281,10 @@ export class ExpectationMatcher {
       const [status, reason] = await this._evaluateAggregate(aggregate, expectation);
       this._trace.log(`eval: ${status} (aggregate=${pyStrRepr(aggregate.trim())}) ${reason}`);
       if (status === "pass") {
+        const unmatched = this._textUnmatched(aggregate, expectation, turnIdx, expIdx);
+        if (unmatched !== null) {
+          return unmatched;
+        }
         this.lastMatchText = aggregate;
         this._lastMatchAt = monotonic();
         return null;
@@ -591,6 +595,10 @@ export class ExpectationMatcher {
     if (excluded !== null) {
       return excluded;
     }
+    const unmatched = this._textUnmatched(this._eventText(event), expectation, turnIdx, expIdx);
+    if (unmatched !== null) {
+      return unmatched;
+    }
     if (expectation.marker !== null) {
       const kind = event.kind ?? null;
       const wanted = expectation.marker === "incomplete" ? ["short", "long"] : [expectation.marker];
@@ -764,6 +772,28 @@ export class ExpectationMatcher {
       `text ${pyStrRepr(content.trim())} contains ${pyStrRepr(expectation.textExcludes)}`,
       "text_present",
     );
+  }
+
+  /** The failure for the first `text_matches` pattern `content` misses, else `null`. */
+  protected _textUnmatched(
+    content: string,
+    expectation: EvalExpectation,
+    turnIdx: number,
+    expIdx: number,
+  ): EvalAssertionFailure | null {
+    for (const pattern of expectation.textMatches ?? []) {
+      if (!pyRegExp(pattern).test(content)) {
+        const shown = Array.from(content.trim()).slice(0, 200).join("");
+        return this._failure(
+          expectation,
+          turnIdx,
+          expIdx,
+          `text ${pyStrRepr(shown)} does not match ${pyStrRepr(pattern)}`,
+          "text_unmatched",
+        );
+      }
+    }
+    return null;
   }
 
   /** Whether `needle` occurs in `content`, ignoring spacing. */

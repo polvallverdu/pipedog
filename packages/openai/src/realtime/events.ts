@@ -183,6 +183,24 @@ export class BaseModel {
     return this.modelDump();
   }
 
+  /** The `field=value` pairs pydantic's `__str__` / `__repr__` print. */
+  _reprArgs(): string[] {
+    const args: string[] = [];
+    for (const [name, value] of Object.entries(this)) {
+      if (value === undefined) continue;
+      args.push(`${camelToSnake(name)}=${pyRepr(value)}`);
+    }
+    const extra = modelExtras.get(this);
+    if (extra) {
+      for (const [key, value] of Object.entries(extra)) args.push(`${key}=${pyRepr(value)}`);
+    }
+    return args;
+  }
+
+  /** pydantic's `__str__`: `field=value` pairs separated by spaces. */
+  toString(): string {
+    return this._reprArgs().join(" ");
+  }
   /**
    * Shallow copy of the model, with `update` (camelCase field names) applied
    * (pydantic's `model_copy`).
@@ -194,6 +212,32 @@ export class BaseModel {
     if (options.update) Object.assign(copy, options.update);
     return copy;
   }
+}
+
+/** A value as Python's `repr()` prints it (pydantic's `__repr__` for models). */
+function pyRepr(value: unknown): string {
+  if (value === null || value === undefined) return "None";
+  if (value === true) return "True";
+  if (value === false) return "False";
+  if (typeof value === "string") {
+    const quote = value.includes("'") && !value.includes('"') ? '"' : "'";
+    const escaped = value
+      .replaceAll("\\", "\\\\")
+      .replaceAll("\n", "\\n")
+      .replaceAll("\r", "\\r")
+      .replaceAll("\t", "\\t");
+    return quote === "'" ? `'${escaped.replaceAll("'", "\\'")}'` : `"${escaped}"`;
+  }
+  if (value instanceof BaseModel) {
+    return `${value.constructor.name}(${value._reprArgs().join(", ")})`;
+  }
+  if (Array.isArray(value)) return `[${value.map(pyRepr).join(", ")}]`;
+  if (isPlainObject(value)) {
+    return `{${Object.entries(value)
+      .map(([k, v]) => `${pyRepr(k)}: ${pyRepr(v)}`)
+      .join(", ")}}`;
+  }
+  return String(value);
 }
 
 //
@@ -2158,11 +2202,11 @@ export class TokenDetails extends BaseModel {
 }
 
 export interface UsageOptions {
-  totalTokens: number;
-  inputTokens: number;
-  outputTokens: number;
-  inputTokenDetails: TokenDetails;
-  outputTokenDetails: TokenDetails;
+  totalTokens?: number | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  inputTokenDetails?: TokenDetails | null;
+  outputTokenDetails?: TokenDetails | null;
 }
 
 /**
@@ -2180,30 +2224,30 @@ export class Usage extends BaseModel {
     outputTokenDetails: model(TokenDetails),
   };
 
-  totalTokens: number;
-  inputTokens: number;
-  outputTokens: number;
-  inputTokenDetails: TokenDetails;
-  outputTokenDetails: TokenDetails;
+  totalTokens: number | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  inputTokenDetails: TokenDetails | null;
+  outputTokenDetails: TokenDetails | null;
 
-  constructor(options: UsageOptions) {
+  constructor(options: UsageOptions = {}) {
     super();
-    this.totalTokens = required(options, "totalTokens", "Usage");
-    this.inputTokens = required(options, "inputTokens", "Usage");
-    this.outputTokens = required(options, "outputTokens", "Usage");
-    this.inputTokenDetails = required(options, "inputTokenDetails", "Usage");
-    this.outputTokenDetails = required(options, "outputTokenDetails", "Usage");
+    this.totalTokens = options.totalTokens ?? null;
+    this.inputTokens = options.inputTokens ?? null;
+    this.outputTokens = options.outputTokens ?? null;
+    this.inputTokenDetails = options.inputTokenDetails ?? null;
+    this.outputTokenDetails = options.outputTokenDetails ?? null;
   }
 }
 
 export type ResponseStatus = "completed" | "in_progress" | "incomplete" | "cancelled" | "failed";
 
 export interface ResponseOptions {
-  id: string;
-  object: "realtime.response";
-  status: ResponseStatus;
-  statusDetails: any;
-  output: ConversationItem[];
+  id?: string | null;
+  object?: "realtime.response" | null;
+  status?: ResponseStatus | null;
+  statusDetails?: any;
+  output?: ConversationItem[] | null;
   outputModalities?: Modality[] | null;
   maxOutputTokens?: number | "inf" | null;
   audio?: AudioConfiguration | null;
@@ -2236,11 +2280,11 @@ export class Response extends BaseModel {
     usage: model(Usage),
   };
 
-  id: string;
-  object: "realtime.response";
-  status: ResponseStatus;
+  id: string | null;
+  object: "realtime.response" | null;
+  status: ResponseStatus | null;
   statusDetails: any;
-  output: ConversationItem[];
+  output: ConversationItem[] | null;
   outputModalities: Modality[] | null;
   maxOutputTokens: number | "inf" | null;
   audio: AudioConfiguration | null;
@@ -2249,13 +2293,13 @@ export class Response extends BaseModel {
   temperature: number | null;
   outputAudioFormat: string | null;
 
-  constructor(options: ResponseOptions) {
+  constructor(options: ResponseOptions = {}) {
     super();
-    this.id = required(options, "id", "Response");
-    this.object = required(options, "object", "Response");
-    this.status = required(options, "status", "Response");
-    this.statusDetails = required(options, "statusDetails", "Response");
-    this.output = required(options, "output", "Response");
+    this.id = options.id ?? null;
+    this.object = options.object ?? null;
+    this.status = options.status ?? null;
+    this.statusDetails = options.statusDetails ?? null;
+    this.output = options.output ?? null;
     this.outputModalities = options.outputModalities ?? null;
     this.maxOutputTokens = options.maxOutputTokens ?? null;
     this.audio = options.audio ?? null;
@@ -2309,10 +2353,11 @@ const _serverEventTypes: Record<string, ServerEventClass> = {
  * Parse a server event from JSON string.
  *
  * @param str JSON string (or UTF-8 bytes) containing the server event.
- * @returns Parsed server event object of the appropriate type.
- * @throws Error If the event type is unimplemented or parsing fails.
+ * @returns Parsed server event object of the appropriate type, or `null` if
+ *   the event type has no model here.
+ * @throws Error If parsing fails.
  */
-export function parseServerEvent(str: string | Uint8Array): ServerEvent {
+export function parseServerEvent(str: string | Uint8Array): ServerEvent | null {
   const text = typeof str === "string" ? str : new TextDecoder().decode(str);
   try {
     const event = pyJsonLoads(text);
@@ -2322,7 +2367,7 @@ export function parseServerEvent(str: string | Uint8Array): ServerEvent {
     }
     const eventType = event.type as string;
     if (typeof eventType !== "string" || !Object.hasOwn(_serverEventTypes, eventType)) {
-      throw new Error(`Unimplemented server event type: ${eventType}`);
+      return null;
     }
     return (_serverEventTypes[eventType] as ServerEventClass).modelValidate(event);
   } catch (e) {

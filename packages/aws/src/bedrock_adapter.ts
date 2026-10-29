@@ -34,6 +34,16 @@ import { isGiven, type NotGiven } from "@pipedog/core/utils/types";
 
 type Dict = Record<string, any>;
 
+// Python's `url.split(",")[1]`: a data URL without a comma has no payload, and
+// the index raises IndexError (a RangeError here) rather than yielding undefined.
+function dataUrlPayload(url: string): string {
+  const payload = url.split(",")[1];
+  if (payload === undefined) {
+    throw new RangeError("list index out of range");
+  }
+  return payload;
+}
+
 const _MIME_TO_BEDROCK_FORMAT: Record<string, string> = {
   "application/pdf": "pdf",
   "text/csv": "csv",
@@ -78,6 +88,14 @@ function _bedrockVideoFormat(mimeType: string, filename: string | null | undefin
   return Object.hasOwn(_MIME_TO_BEDROCK_VIDEO_FORMAT, mimeType)
     ? (_MIME_TO_BEDROCK_VIDEO_FORMAT[mimeType] as string)
     : null;
+}
+
+/** Python truthiness of a JSON-like value: `[]` and `{}` are falsy, as are null, 0 and "". */
+function truthy(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length > 0;
+  if (value instanceof Uint8Array) return value.length > 0;
+  if (value !== null && typeof value === "object") return Object.keys(value).length > 0;
+  return Boolean(value);
 }
 
 function lookup(table: Record<string, string>, key: string): string | null {
@@ -185,7 +203,7 @@ export class AWSBedrockLLMAdapter extends BaseLLMAdapter<AWSBedrockLLMInvocation
       system: effectiveSystem ? [{ text: effectiveSystem }] : null,
       messages: converted.messages,
       // NOTE: LLMContext's tools are guaranteed to be a ToolsSchema (or NOT_GIVEN)
-      tools: isGiven(tools) && Array.isArray(tools) && tools.length > 0 ? (tools as Dict[]) : [],
+      tools: isGiven(tools) && truthy(tools) ? (tools as Dict[]) : [],
       // To avoid refactoring in AWSBedrockLLMService, we just pass through tool_choice.
       // Eventually (when we don't have to maintain the non-LLMContext code path) we should do
       // the conversion to Bedrock's expected format here rather than in AWSBedrockLLMService.
@@ -210,9 +228,13 @@ export class AWSBedrockLLMAdapter extends BaseLLMAdapter<AWSBedrockLLMInvocation
       const msg: Dict = structuredClone(message);
       if ("content" in msg && Array.isArray(msg.content)) {
         for (const item of msg.content as Dict[]) {
-          if (item.image) item.image.source.bytes = "...";
-          if (item.document) item.document.source.bytes = "...";
-          if (item.video) item.video.source.bytes = "...";
+          if (truthy(item.image)) item.image.source.bytes = "...";
+          if (truthy(item.document)) item.document.source.bytes = "...";
+          if (truthy(item.video)) item.video.source.bytes = "...";
+          const reasoningText = item.reasoningContent?.reasoningText as Dict | undefined;
+          if (truthy(reasoningText) && truthy(reasoningText?.signature)) {
+            (reasoningText as Dict).signature = "...";
+          }
         }
       }
       messagesForLogging.push(msg);
@@ -245,7 +267,11 @@ export class AWSBedrockLLMAdapter extends BaseLLMAdapter<AWSBedrockLLMInvocation
     // underlying cause.
     let messages: Dict[];
     try {
-      messages = remaining.map((m) => this._fromUniversalContextMessage(m));
+      messages = [];
+      for (const m of remaining) {
+        const converted = this._fromUniversalContextMessage(m);
+        if (converted !== null) messages.push(converted);
+      }
     } catch (e) {
       rethrowIfCancelled(e);
       throw new LLMContextConversionError(e);
@@ -365,11 +391,55 @@ export class AWSBedrockLLMAdapter extends BaseLLMAdapter<AWSBedrockLLMInvocation
     };
   }
 
-  protected _fromUniversalContextMessage(message: LLMContextMessage): Dict {
+  protected _fromUniversalContextMessage(message: LLMContextMessage): Dict | null {
     if (message instanceof LLMSpecificMessage) {
-      return structuredClone(message.message) as Dict;
+      return this._fromBedrockSpecificMessage(message);
     }
     return this._fromStandardMessage(message);
+  }
+
+  /**
+   * Convert an LLMSpecificMessage to AWS Bedrock format.
+   *
+   * Bedrock-specific messages are either thought messages, which become
+   * `reasoningContent` blocks, or messages already in Bedrock format.
+   *
+   * @param message AWS Bedrock-specific message.
+   * @returns The message in Bedrock format, or null for a thought that can't be
+   *   passed back to the model.
+   */
+  protected _fromBedrockSpecificMessage(message: LLMSpecificMessage): Dict | null {
+    // A thought becomes a standalone assistant message, which is merged into
+    // the assistant response that follows it.
+    const inner = message.message as unknown;
+    if (
+      inner !== null &&
+      typeof inner === "object" &&
+      !Array.isArray(inner) &&
+      (inner as Dict).type === "thought"
+    ) {
+      // Reasoning is passed back only with its signature, which models
+      // such as Claude use to verify it.
+      const signature = (inner as Dict).signature;
+      if (!truthy(signature)) {
+        return null;
+      }
+      return {
+        role: "assistant",
+        content: [
+          {
+            reasoningContent: {
+              reasoningText: {
+                text: (inner as Dict).text || "",
+                signature,
+              },
+            },
+          },
+        ],
+      };
+    }
+
+    return structuredClone(message.message) as Dict;
   }
 
   /**
@@ -463,7 +533,7 @@ export class AWSBedrockLLMAdapter extends BaseLLMAdapter<AWSBedrockLLMInvocation
             newContent.push({
               image: {
                 format: imageFormat,
-                source: { bytes: base64ToBytes(url.split(",")[1] as string) },
+                source: { bytes: base64ToBytes(dataUrlPayload(url)) },
               },
             });
           } else {

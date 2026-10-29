@@ -56,7 +56,6 @@ import { OLLamaLLMService } from "../../ollama/src/llm.ts";
 import * as openrouterPkg from "../../openrouter/src/index.ts";
 import { OpenRouterLLMService } from "../../openrouter/src/llm.ts";
 import * as perplexityPkg from "../../perplexity/src/index.ts";
-import { PerplexityLLMService } from "../../perplexity/src/llm.ts";
 import * as qwenPkg from "../../qwen/src/index.ts";
 import { QwenLLMService } from "../../qwen/src/llm.ts";
 import * as sambanovaPkg from "../../sambanova/src/index.ts";
@@ -86,7 +85,7 @@ const PROVIDER_SERVICES: AnyService[] = [
   NebiusLLMService,
   NovitaLLMService,
   OpenRouterLLMService,
-  PerplexityLLMService,
+  // PerplexityLLMService: deprecated upstream (1.13.0), not ported.
   QwenLLMService,
   SambaNovaLLMService,
   SarvamLLMService,

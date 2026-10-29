@@ -70,6 +70,7 @@ Change settings mid-call with a `TTSUpdateSettingsFrame`:
 - `outputFormat` is `"pcm"` by default; it is fixed when the service is created.
 - `wordTimestamps` (on by default) makes the service push aligned per-word `TTSTextFrame`s. It works on `meher`, `devansh`, `kartik`, `maithili`, `liam` and `avery`; other voices send no word events, so leaving it on is safe.
 - `maxBufferDelayMs` (0 to 5000) bounds how long the server holds a continuation fragment. `null` keeps the server's 3000 ms.
+- The same package has Smallest AI's [LLM](/docs/services/llm/smallest) and [speech-to-text](/docs/services/stt/smallest) services.
 
 <RuntimeMatrix pkg="@pipedog/smallest" />
 

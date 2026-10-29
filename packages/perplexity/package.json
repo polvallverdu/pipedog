@@ -1,7 +1,7 @@
 {
   "name": "@pipedog/perplexity",
   "version": "0.10.0",
-  "description": "Perplexity LLM service (PerplexityLLMService, OpenAI-compatible) for pipedog.",
+  "description": "Perplexity Agent API LLM service (PerplexityAgentHttpLLMService, OpenAI Responses protocol) for pipedog.",
   "keywords": [
     "pipecat",
     "pipedog",

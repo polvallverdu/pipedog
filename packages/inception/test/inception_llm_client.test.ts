@@ -41,9 +41,9 @@ describe("InceptionLLMService client", () => {
     expect(service._client.baseURL).toBe("https://api.inceptionlabs.ai/v1");
   });
 
-  test("defaults to mercury-2", () => {
+  test("defaults to mercury-3", () => {
     const service: any = new InceptionLLMService({ apiKey: "provider-key" });
-    expect(service._settings.model).toBe("mercury-2");
+    expect(service._settings.model).toBe("mercury-3");
   });
 
   test("sends developer messages as user messages", () => {
@@ -78,7 +78,7 @@ describe("InceptionLLMService with a local OpenAI-compatible server", () => {
 
     const request = server.chatRequests.at(-1)!;
     expect(request.authorization).toBe("Bearer provider-key");
-    expect(request.body.model).toBe("mercury-2");
+    expect(request.body.model).toBe("mercury-3");
     expect(request.body.stream).toBe(true);
     expect(request.body.messages.at(-1)).toEqual({ role: "user", content: "Hello" });
   });

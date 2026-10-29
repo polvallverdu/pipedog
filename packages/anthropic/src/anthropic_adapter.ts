@@ -32,6 +32,16 @@ import { isGiven } from "@pipedog/core/utils/types";
 
 type Dict = Record<string, any>;
 
+// Python's `url.split(",")[1]`: a data URL without a comma has no payload, and
+// the index raises IndexError (a RangeError here) rather than yielding undefined.
+function dataUrlPayload(url: string): string {
+  const payload = url.split(",")[1];
+  if (payload === undefined) {
+    throw new RangeError("list index out of range");
+  }
+  return payload;
+}
+
 /** An Anthropic Messages API message (`MessageParam`). */
 export type MessageParam = { role: string; content: string | Dict[] } & Dict;
 /** An Anthropic text content block (`TextBlockParam`). */
@@ -449,7 +459,7 @@ export class AnthropicLLMAdapter extends BaseLLMAdapter<AnthropicLLMInvocationPa
             item.source = {
               type: "base64",
               media_type: mimeType,
-              data: url.split(",")[1],
+              data: dataUrlPayload(url),
             };
             delete item.image_url;
           } else if (imageUrl.startsWith("http")) {
@@ -495,7 +505,7 @@ export class AnthropicLLMAdapter extends BaseLLMAdapter<AnthropicLLMInvocationPa
             item.source = {
               type: "base64",
               media_type: mimeType,
-              data: (fData.file_data as string).split(",")[1],
+              data: dataUrlPayload(fData.file_data as string),
             };
             delete item.file;
           } else if (mimeType === "application/pdf") {
@@ -503,7 +513,7 @@ export class AnthropicLLMAdapter extends BaseLLMAdapter<AnthropicLLMInvocationPa
             item.source = {
               type: "base64",
               media_type: mimeType,
-              data: (fData.file_data as string).split(",")[1],
+              data: dataUrlPayload(fData.file_data as string),
             };
             delete item.file;
           } else {
