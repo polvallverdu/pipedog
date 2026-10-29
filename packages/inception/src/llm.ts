@@ -60,7 +60,7 @@ export interface InceptionLLMServiceOptions extends OpenAILLMServiceOptions {
  *
  * This service extends OpenAILLMService to connect to Inception's API endpoint
  * while maintaining full compatibility with OpenAI's interface and
- * functionality. Supports Mercury-2, Inception's diffusion-based reasoning
+ * functionality. Supports Mercury-3, Inception's diffusion-based reasoning
  * model.
  */
 export class InceptionLLMService extends OpenAILLMService {
@@ -78,14 +78,14 @@ export class InceptionLLMService extends OpenAILLMService {
    * @param options.baseUrl The base URL for Inception API. Defaults to
    *   "https://api.inceptionlabs.ai/v1".
    * @param options.settings Runtime-updatable settings. Its given fields
-   *   override the defaults (model "mercury-2", no reasoning effort, realtime
+   *   override the defaults (model "mercury-3", no reasoning effort, realtime
    *   true). Other options are passed to OpenAILLMService.
    */
   constructor(options: InceptionLLMServiceOptions) {
     const cls = new.target as typeof InceptionLLMService;
 
     const defaultSettings = new cls.Settings({
-      model: "mercury-2",
+      model: "mercury-3",
       reasoningEffort: null,
       realtime: true,
     });

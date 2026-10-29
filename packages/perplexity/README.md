@@ -1,8 +1,10 @@
 # @pipedog/perplexity
 
-Perplexity services for pipedog: `PerplexityLLMService`, an LLM service for Perplexity's Sonar API, and `PerplexityLLMAdapter`, which shapes the messages to the provider's rules. It
-extends `OpenAILLMService` from [`@pipedog/openai`](https://www.npmjs.com/package/@pipedog/openai),
-so streaming, function calling, usage metrics and `runInference` work as they do there.
+Perplexity services for pipedog: `PerplexityAgentHttpLLMService`, an LLM service for Perplexity's
+Agent API (web search over the OpenAI Responses protocol), and `PerplexityLLMAdapter`. The service
+extends `OpenAIResponsesHttpLLMService` from [`@pipedog/openai`](https://www.npmjs.com/package/@pipedog/openai),
+so streaming, function calling, usage metrics and `runInference` work as they do there. Upstream's
+`PerplexityLLMService` (Sonar chat completions) is deprecated and not ported.
 
 A port of Pipecat's `pipecat.services.perplexity` and `pipecat.adapters.llm.services.perplexity_adapter`. Subpaths mirror upstream: `@pipedog/perplexity/llm` and `@pipedog/perplexity/perplexity_adapter`.
 
@@ -17,12 +19,11 @@ It depends on `@pipedog/openai` (and the official `openai` JS SDK), which is ins
 ## Usage
 
 ```ts
-import { PerplexityLLMService } from "@pipedog/perplexity/llm";
+import { PerplexityAgentHttpLLMService } from "@pipedog/perplexity/llm";
 
-const llm = new PerplexityLLMService({
+const llm = new PerplexityAgentHttpLLMService({
   apiKey: process.env.PERPLEXITY_API_KEY ?? "",
-  settings: new PerplexityLLMService.Settings({
-    model: "sonar",
+  settings: new PerplexityAgentHttpLLMService.Settings({
     systemInstruction: "You are a helpful voice assistant. Keep replies short.",
   }),
 });

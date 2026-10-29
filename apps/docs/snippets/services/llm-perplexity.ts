@@ -5,21 +5,40 @@
 
 // #region usage
 import { LLMUpdateSettingsFrame } from "@pipedog/core/frames/frames";
-import { PerplexityLLMService } from "@pipedog/perplexity/llm";
+import { PerplexityAgentHttpLLMService } from "@pipedog/perplexity/llm";
 
-const llm = new PerplexityLLMService({
+const llm = new PerplexityAgentHttpLLMService({
   apiKey: process.env.PERPLEXITY_API_KEY ?? "",
-  settings: new PerplexityLLMService.Settings({
-    model: "sonar",
-    systemInstruction: "You are a helpful assistant in a voice conversation.",
-    temperature: 0.7,
+  settings: new PerplexityAgentHttpLLMService.Settings({
+    systemInstruction: "You are a helpful assistant in a voice conversation. Keep replies short.",
   }),
 });
 // #endregion usage
 
+// #region preset
+// The "high" preset chooses the model, its instructions, its search budget and its reasoning.
+// `model: null` clears the default model, so the preset's own is used.
+const thorough = new PerplexityAgentHttpLLMService({
+  apiKey: process.env.PERPLEXITY_API_KEY ?? "",
+  settings: new PerplexityAgentHttpLLMService.Settings({ preset: "high", model: null }),
+});
+// #endregion preset
+
+// #region model
+// Another provider's model, with web search capped at three steps and a set reasoning effort.
+const pinned = new PerplexityAgentHttpLLMService({
+  apiKey: process.env.PERPLEXITY_API_KEY ?? "",
+  settings: new PerplexityAgentHttpLLMService.Settings({
+    model: "openai/gpt-5.5",
+    maxSteps: 3,
+    reasoning: new PerplexityAgentHttpLLMService.ReasoningConfig({ effort: "low" }),
+  }),
+});
+// #endregion model
+
 // #region update
 // Queue it on the worker, or push it from a processor upstream of the service.
 const update = new LLMUpdateSettingsFrame({
-  delta: new PerplexityLLMService.Settings({ temperature: 0.2, maxTokens: 300 }),
+  delta: new PerplexityAgentHttpLLMService.Settings({ webSearch: false, maxSteps: 1 }),
 });
 // #endregion update

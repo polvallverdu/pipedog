@@ -100,6 +100,10 @@ export class EvalConversationObserver extends BaseObserver {
       return;
     }
 
+    if (frame instanceof LLMContextUserTurnFrame && frame.speculation) {
+      // The turn is added once it ends, as written to the context.
+      return;
+    }
     if (frame instanceof LLMContextUserTurnFrame || frame instanceof RTVISendTextFrame) {
       this._conversation.addUserMessage(frame.text);
     } else if (frame instanceof LLMContextAssistantTurnFrame) {

@@ -111,7 +111,8 @@ ignored with a warning:
 
 - The socket is opened with `websocketConnect()` from core and the key is sent as an
   `Authorization` header. Bun, Node and Deno send it from the global `WebSocket`; on Cloudflare
-  Workers core opens the socket through `fetch`.
+  Workers core opens the socket through `fetch`. A subclass that authenticates another way
+  overrides `_authHeaders()`, as [Azure Realtime](/docs/services/s2s/azure-realtime) does.
 - Video frames are encoded with core's `encodeImage()` (upstream uses Pillow).
 - The deprecated `model` and `sessionProperties` constructor options are not ported. Use
   `settings: new OpenAIRealtimeLLMService.Settings({ model, sessionProperties })`.

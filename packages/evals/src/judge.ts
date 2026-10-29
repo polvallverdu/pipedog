@@ -1159,7 +1159,7 @@ export class _Explainer {
     // Copy the conversation and append the transient ask, so neither the ask
     // nor the answer ever lands in the persistent context.
     const context = new LLMContext({
-      messages: messages.map((m) => ({ ...m })) as unknown as LLMContextMessage[],
+      messages: messages.map((m) => ({ ...m })),
     });
     context.addMessage({ role: "user", content: ask } as LLMContextMessage);
 

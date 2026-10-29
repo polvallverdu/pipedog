@@ -404,37 +404,6 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     runtimeMatrix: true,
   },
   {
-    slug: "perplexity",
-    name: "Perplexity",
-    pkg: "@pipedog/perplexity",
-    cls: "PerplexityLLMService",
-    settings: "PerplexityLLMSettings",
-    about: "Perplexity's Sonar models answer with web search built in.",
-    baseUrl: "https://api.perplexity.ai",
-    model: "sonar",
-    models: ["sonar-pro"],
-    env: "PERPLEXITY_API_KEY",
-    account: "A Perplexity account and an API key from [Perplexity](https://www.perplexity.ai/).",
-    links: [
-      {
-        title: "Perplexity docs",
-        href: "https://docs.perplexity.ai/api-reference/chat-completions-post",
-        text: "The chat completions API reference.",
-      },
-    ],
-    developerRole: false,
-    adapter: {
-      cls: "PerplexityLLMAdapter",
-      module: "perplexity_adapter",
-      about:
-        "rewrites the history to Perplexity's rules: only initial system messages, strict user/assistant alternation (merging neighbors with the same role), and no trailing assistant message",
-    },
-    notes: [
-      "Only `model`, `messages` and the sampling settings that are set (`temperature`, `topP`, `maxTokens`, the penalties) are sent: Perplexity doesn't take tools, so function calling isn't available.",
-    ],
-    runtimeMatrix: true,
-  },
-  {
     slug: "qwen",
     name: "Qwen",
     pkg: "@pipedog/qwen",
@@ -569,12 +538,18 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     developerRole: false,
     settingsRows: [
       "| `reasoning` | `Record<string, unknown> \\| null` | `null` | Together's reasoning toggle, e.g. `{ enabled: false }`, sent as `reasoning` in the request body. `null` leaves it to the model. |",
+      '| `reasoningEffort` | `"low" \\| "medium" \\| "high" \\| "max" \\| string \\| null` | `null` | How much the model reasons, sent as `reasoning_effort` when set, unless `extra` already has one. Values vary by model (`"max"` on `zai-org/GLM-5.3`). It reaches models that ignore `reasoning`, such as GLM-5.3. `null` leaves Together\'s per-model default. |',
     ],
     usage: [
       {
         region: "reasoning",
         intro:
           "Turn off a reasoning model's thinking pass, which otherwise delays the first spoken token:",
+      },
+      {
+        region: "effort",
+        intro:
+          "Models that ignore the toggle, such as `zai-org/GLM-5.3`, still take a reasoning effort:",
       },
     ],
     notes: [
@@ -625,9 +600,9 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     cls: "InceptionLLMService",
     settings: "InceptionLLMSettings",
     about:
-      "Inception serves Mercury-2, a diffusion-based reasoning language model, over an OpenAI-compatible API.",
+      "Inception serves Mercury-3, a diffusion-based reasoning language model, over an OpenAI-compatible API.",
     baseUrl: "https://api.inceptionlabs.ai/v1",
-    model: "mercury-2",
+    model: "mercury-3",
     models: [],
     env: "INCEPTION_API_KEY",
     account:
@@ -652,6 +627,7 @@ export const compatibleLlm: CompatibleLlmPage[] = [
     ],
     notes: [
       "`realtime` and `reasoningEffort` go out in the request's `extra_body`. A field you put in `settings.extra` under `extra_body` wins over the service's own.",
+      'The default model was `mercury-2` before. Inception retires Mercury 2 and 2.5 on November 15, 2026, and they are closed to new signups. Until then, `settings: new InceptionLLMService.Settings({ model: "mercury-2" })` keeps it.',
     ],
     runtimeMatrix: true,
   },
@@ -692,6 +668,33 @@ export const compatibleLlm: CompatibleLlmPage[] = [
       "When you don't pass `baseUrl`, it is chosen from the model: `/v1` for `sarvam-105b-conversations` and `/v2` for the rest.",
       "A context that a model can't serve (an image for a model without vision, say) fails with a non-fatal `ErrorFrame`, not an exception, so an `LLMSwitcher` can fall back to another service.",
       "The same package has Sarvam's [speech-to-text](/docs/services/stt/sarvam) and [text-to-speech](/docs/services/tts/sarvam) services.",
+    ],
+    runtimeMatrix: true,
+  },
+  {
+    slug: "smallest",
+    name: "Smallest AI",
+    pkg: "@pipedog/smallest",
+    cls: "SmallestLLMService",
+    settings: "SmallestLLMSettings",
+    about:
+      "Smallest AI serves Electron, its own LLM, through the Waves API's OpenAI-compatible chat completions endpoint.",
+    baseUrl: "https://api.smallest.ai/waves/v1",
+    model: "electron",
+    models: [],
+    env: "SMALLEST_API_KEY",
+    account: "A Smallest AI account and an API key from [Smallest AI](https://smallest.ai/).",
+    links: [
+      {
+        title: "Smallest AI docs",
+        href: "https://docs.smallest.ai/",
+        text: "Models and the Waves API.",
+      },
+    ],
+    developerRole: false,
+    notes: [
+      "Every request carries `X-Source: pipecat` and `X-Pipecat-Version` headers (the version is pipedog's), merged over any `defaultHeaders` you pass.",
+      "The same package has Smallest AI's [speech-to-text](/docs/services/stt/smallest) and [text-to-speech](/docs/services/tts/smallest) services.",
     ],
     runtimeMatrix: true,
   },
@@ -760,6 +763,12 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "Cloudflare Workers AI",
       pkg: "@pipedog/cloudflare",
       classes: ["WorkersAILLMService"],
+    },
+    {
+      slug: "perplexity",
+      name: "Perplexity",
+      pkg: "@pipedog/perplexity",
+      classes: ["PerplexityAgentHttpLLMService"],
     },
     ...[...compatibleLlm]
       .sort((a, b) => a.name.localeCompare(b.name))

@@ -13,7 +13,7 @@
 
 import type { OpenAILLMInvocationParams } from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import { logger } from "@pipedog/core/utils/logger";
-import { NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
+import { isGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
 import {
   type OpenAIClientOptions,
   OpenAILLMSettings,
@@ -24,6 +24,8 @@ import { OpenAILLMService, type OpenAILLMServiceOptions } from "@pipedog/openai/
 export interface TogetherLLMSettingsOptions extends OpenAILLMSettingsOptions {
   /** Together's reasoning toggle. See `TogetherLLMSettings`. */
   reasoning?: Record<string, unknown> | null | NotGiven;
+  /** How much the model reasons before answering. See `TogetherLLMSettings`. */
+  reasoningEffort?: "low" | "medium" | "high" | "max" | (string & {}) | null | NotGiven;
 }
 
 /**
@@ -33,9 +35,16 @@ export interface TogetherLLMSettingsOptions extends OpenAILLMSettingsOptions {
  *   e.g. `{ enabled: false }`. A reasoning model such as GLM runs a reasoning
  *   pass before every answer, which delays the first spoken token. `null`
  *   leaves the choice to the model's own default.
+ * - `reasoningEffort`: How much the model reasons before answering. Values
+ *   vary by model: "low", "medium" and "high" are common, `zai-org/GLM-5.3`
+ *   also takes "max", and some models map a value they don't support onto one
+ *   they do. Other strings are passed through as-is. GLM-5.3 ignores
+ *   `reasoning`, but "low" still shortens its reasoning pass. When unset,
+ *   Together's per-model default applies.
  */
 export class TogetherLLMSettings extends OpenAILLMSettings {
   reasoning: Record<string, unknown> | null | NotGiven = NOT_GIVEN;
+  reasoningEffort: "low" | "medium" | "high" | "max" | (string & {}) | null | NotGiven = NOT_GIVEN;
 
   constructor(options: TogetherLLMSettingsOptions = {}) {
     super(options);
@@ -77,14 +86,18 @@ export class TogetherLLMService extends OpenAILLMService {
    * @param options.baseUrl The base URL for Together.ai API. Defaults to
    *   "https://api.together.xyz/v1".
    * @param options.settings Runtime-updatable settings. Its given fields
-   *   override the defaults (model "zai-org/GLM-5.2", no reasoning toggle).
+   *   override the defaults (model "zai-org/GLM-5.2", no reasoning toggle or effort).
    *   Other options are passed to OpenAILLMService.
    */
   constructor(options: TogetherLLMServiceOptions) {
     const cls = new.target as typeof TogetherLLMService;
 
     // 1. Initialize default_settings with hardcoded defaults
-    const defaultSettings = new cls.Settings({ model: "zai-org/GLM-5.2", reasoning: null });
+    const defaultSettings = new cls.Settings({
+      model: "zai-org/GLM-5.2",
+      reasoning: null,
+      reasoningEffort: null,
+    });
 
     // 2. Apply settings delta (canonical API, always wins)
     if (options.settings !== undefined && options.settings !== null) {
@@ -126,6 +139,13 @@ export class TogetherLLMService extends OpenAILLMService {
     const params = super.buildChatCompletionParams(paramsFromContext);
 
     TogetherLLMService._mergeExtraBody(params, { reasoning: this._settings.reasoning });
+
+    const reasoningEffort = this._settings.reasoningEffort;
+    if (isGiven(reasoningEffort) && reasoningEffort !== null) {
+      if (!("reasoning_effort" in params)) {
+        params.reasoning_effort = reasoningEffort;
+      }
+    }
 
     return params;
   }

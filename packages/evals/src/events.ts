@@ -32,6 +32,7 @@
  * | `image`                     | `eval-bot-image`: an image the bot output, with its `width`, `height`, and `format`; sent only on request |
  * | `bot_backchannel`           | `bot-output` of type `backchannel`, once spoken to the end: a short acknowledgment the bot said while the user talked, such as "Mm-hmm." |
  * | `user_backchannel`          | `user-input` of type `backchannel`: a short acknowledgment the user said while the bot talked, which neither interrupted it nor reached the LLM |
+ * | `expression`                | `bot-output` in expressive conversation (alpha): expression the bot's TTS performed, in the tags the LLM writes: `<<excited>>` where the delivery of its spoken text changes (`<<neutral>>` back to the baseline), `[[laughter]]` for a sound, `[[pause 600]]` for a pause. A tag the TTS can't perform is never reported |
  */
 
 import {
@@ -164,6 +165,11 @@ export class EvalEventStream {
    */
   lastActivity: number;
   protected _llmTextAt: number | null;
+  // The delivery the bot last reported speaking in during the current response,
+  // so an `expression` event marks only where the delivery changes, and the
+  // event and pause segments already reported.
+  protected _expressionDelivery: string[];
+  protected _expressionSegments: Set<unknown>;
   // The reply rule's flag: set by a send or an interruption, cleared at the
   // bot's next llm-started. While set, LLM text is dropped: an interrupted
   // response can still flush a trailing token after the interruption (it
@@ -216,6 +222,8 @@ export class EvalEventStream {
     this._t0 = monotonic();
     this.lastActivity = this._t0;
     this._llmTextAt = null;
+    this._expressionDelivery = [];
+    this._expressionSegments = new Set();
     this._awaitingReply = false;
     this._inputSentAt = 0.0;
     this._talkedOverUntil = null;
@@ -527,6 +535,7 @@ export class EvalEventStream {
       this._awaitingReply = false;
       this._textBuffer = [];
       this._llmTextAt = null;
+      this._expressionDelivery = [];
       return { type: "llm_started" };
     } else if (frame instanceof LLMTextFrame) {
       if (this._awaitingReply) {
@@ -696,7 +705,7 @@ export class EvalEventStream {
     } else if (msgType === "vad-user-stopped-speaking") {
       return { type: "vad_user_stopped_speaking" };
     } else if (msgType === "bot-output") {
-      return this._botBackchannelEvent(data);
+      return this._botBackchannelEvent(data) ?? this._expressionEvent(data);
     } else if (msgType === "user-input") {
       return this._userInputEvent(data);
     } else if (msgType === EVAL_BOT_IMAGE_TYPE) {
@@ -723,7 +732,7 @@ export class EvalEventStream {
 
   /** The bot's backchannel, from the `bot-output` reporting it was spoken to the end. */
   protected _botBackchannelEvent(data: Dict): EvalEvent | null {
-    if (get(data, "text_type") !== "backchannel" || get(data, "spoken_status") !== "completed") {
+    if (get(data, "output_type") !== "backchannel" || get(data, "spoken_status") !== "completed") {
       return null;
     }
     const progress = or(get(data, "spoken_progress"), {}) as Dict;
@@ -731,6 +740,41 @@ export class EvalEventStream {
       type: "bot_backchannel",
       text: or(get(progress, "accumulated_text"), get(data, "text", "")),
     };
+  }
+
+  /**
+   * The expression the bot performed, from a `bot-output`, written as the LLM writes it.
+   *
+   * Only expressive conversation reports it: an event or pause segment,
+   * once, or spoken text carrying `delivery`, where it differs from the
+   * delivery before it in the response. Each is reported as it is spoken
+   * rather than announced, so they keep the order they were performed in.
+   */
+  protected _expressionEvent(data: Dict): EvalEvent | null {
+    const textType = get(data, "text_type");
+    const segmentId = get(data, "segment_id");
+    if (!truthy(get(data, "will_be_spoken")) || get(data, "spoken_status") === "new") {
+      return null;
+    }
+    if (textType === "expression_sound" || textType === "expression_pause") {
+      if (this._expressionSegments.has(segmentId)) {
+        return null;
+      }
+      this._expressionSegments.add(segmentId);
+      const text = pyStr(get(data, "text", ""));
+      const tag = textType === "expression_sound" ? `[[${text}]]` : `[[pause ${text}]]`;
+      return { type: "expression", text: tag };
+    }
+    const delivery = get(data, "delivery") as string[] | null;
+    if (
+      delivery === null ||
+      (delivery.length === this._expressionDelivery.length &&
+        delivery.every((d, i) => d === this._expressionDelivery[i]))
+    ) {
+      return null;
+    }
+    this._expressionDelivery = delivery;
+    return { type: "expression", text: `<<${delivery.join(", ") || "neutral"}>>` };
   }
 
   /** One response segment; the text may be empty, as after an interruption. */

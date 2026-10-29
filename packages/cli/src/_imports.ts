@@ -121,6 +121,7 @@ export const IMPORTS: Record<string, readonly string[]> = {
   openai_responses_llm: [
     'import { OpenAIResponsesLLMService } from "@pipedog/openai/responses/llm";',
   ],
+  perplexity_llm: ['import { PerplexityAgentHttpLLMService } from "@pipedog/perplexity/llm";'],
   ...compatibleLlmImports,
 
   // TTS services

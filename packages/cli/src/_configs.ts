@@ -100,7 +100,7 @@ export const COMPATIBLE_LLMS: readonly CompatibleLlm[] = [
     pkg: "@pipedog/inception",
     cls: "InceptionLLMService",
     env: "INCEPTION_API_KEY",
-    model: "mercury-2",
+    model: "mercury-3",
   },
   {
     value: "mistral_llm",
@@ -143,14 +143,6 @@ export const COMPATIBLE_LLMS: readonly CompatibleLlm[] = [
     model: "openai/gpt-4.1",
   },
   {
-    value: "perplexity_llm",
-    label: "Perplexity",
-    pkg: "@pipedog/perplexity",
-    cls: "PerplexityLLMService",
-    env: "PERPLEXITY_API_KEY",
-    model: "sonar",
-  },
-  {
     value: "qwen_llm",
     label: "Qwen",
     pkg: "@pipedog/qwen",
@@ -173,6 +165,14 @@ export const COMPATIBLE_LLMS: readonly CompatibleLlm[] = [
     cls: "SarvamLLMService",
     env: "SARVAM_API_KEY",
     model: "sarvam-105b",
+  },
+  {
+    value: "smallest_llm",
+    label: "Smallest",
+    pkg: "@pipedog/smallest",
+    cls: "SmallestLLMService",
+    env: "SMALLEST_API_KEY",
+    model: "electron",
   },
   {
     value: "together_llm",
@@ -339,6 +339,13 @@ ${CLOUDFLARE_CREDENTIALS}
     "OpenAIResponsesLLMService",
     "OPENAI_API_KEY",
     `    model: process.env.OPENAI_MODEL ?? "gpt-4.1",
+    systemInstruction: SYSTEM_INSTRUCTION,`,
+  ),
+  // Perplexity's Agent API speaks the OpenAI Responses protocol, so it isn't in COMPATIBLE_LLMS.
+  perplexity_llm: keyed(
+    "PerplexityAgentHttpLLMService",
+    "PERPLEXITY_API_KEY",
+    `    model: process.env.PERPLEXITY_MODEL ?? "openai/gpt-5.6-luna",
     systemInstruction: SYSTEM_INSTRUCTION,`,
   ),
   ...Object.fromEntries(COMPATIBLE_LLMS.map((llm) => [llm.value, compatibleLlmConfig(llm)])),

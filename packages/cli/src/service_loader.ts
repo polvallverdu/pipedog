@@ -80,12 +80,9 @@ export function mergeImports(lines: Iterable<string>): string[] {
       others.add(line);
       continue;
     }
-    const [, type, names, module] = match as unknown as [
-      string,
-      string | undefined,
-      string,
-      string,
-    ];
+    const type = match[1];
+    const names = match[2] ?? "";
+    const module = match[3] ?? "";
     const key = `${type ? "type " : ""}${module}`;
     const entry = modules.get(key) ?? { names: new Set<string>(), type: Boolean(type) };
     for (const name of names.split(",")) entry.names.add(name.trim());

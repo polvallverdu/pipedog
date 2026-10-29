@@ -65,11 +65,11 @@ import {
   WebsocketReconnectedError,
 } from "@pipedog/core/services/llm_service";
 import { LLMSettings, type LLMSettingsOptions } from "@pipedog/core/services/settings";
-import { ConnectionClosed } from "@pipedog/core/services/websocket_service";
 import { getEnv } from "@pipedog/core/utils/env";
 import { isTimeoutException } from "@pipedog/core/utils/http";
 import { logger } from "@pipedog/core/utils/logger";
 import { addVirtualBase, type Ctor, defineMixin } from "@pipedog/core/utils/mixin";
+import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { tracedLlm } from "@pipedog/core/utils/tracing/service_decorators";
 import { assertGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
 import OpenAI, { APIConnectionTimeoutError } from "openai";
@@ -94,24 +94,101 @@ function jsonIndent(value: unknown): string {
   return JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? String(v) : v), 2);
 }
 
-/** `json.dumps(value, sort_keys=True)`: keys sorted at every level. */
-function jsonSortKeys(value: unknown): string {
-  return JSON.stringify(value, (_k, v) => {
-    if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+/** A copy of `value` with every dict's keys sorted, for `json.dumps(..., sort_keys=True)`. */
+function sortKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortKeysDeep);
+  if (value !== null && typeof value === "object") {
+    const proto = Object.getPrototypeOf(value);
+    if (proto === Object.prototype || proto === null) {
+      const v = value as Record<string, unknown>;
       return Object.fromEntries(
         Object.keys(v)
           .sort()
-          .map((key) => [key, v[key]]),
+          .map((key) => [key, sortKeysDeep(v[key])]),
       );
     }
-    return v;
-  });
+  }
+  return value;
 }
 
-/** Hex SHA-256 digest of a string (`hashlib.sha256(s.encode()).hexdigest()`). */
-async function sha256Hex(text: string): Promise<string> {
-  const digest = await abortable(crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+/** `json.dumps(value, sort_keys=True)`: keys sorted at every level. */
+function jsonSortKeys(value: unknown): string {
+  return pyJsonDumps(sortKeysDeep(value));
+}
+
+const SHA256_K = new Uint32Array([
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+]);
+
+/**
+ * Hex SHA-256 digest of a string (`hashlib.sha256(s.encode()).hexdigest()`).
+ *
+ * Synchronous, as upstream's is: WebCrypto's digest is async and would add
+ * suspension points upstream doesn't have.
+ */
+function sha256Hex(text: string): string {
+  const data = new TextEncoder().encode(text);
+  const bitLength = data.length * 8;
+  const padded = new Uint8Array(((data.length + 9 + 63) >> 6) << 6);
+  padded.set(data);
+  padded[data.length] = 0x80;
+  const view = new DataView(padded.buffer);
+  view.setUint32(padded.length - 8, Math.floor(bitLength / 0x100000000));
+  view.setUint32(padded.length - 4, bitLength >>> 0);
+  const h = new Uint32Array([
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+  ]);
+  const w = new Uint32Array(64);
+  for (let offset = 0; offset < padded.length; offset += 64) {
+    for (let i = 0; i < 16; i++) w[i] = view.getUint32(offset + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const w15 = w[i - 15]!;
+      const w2 = w[i - 2]!;
+      const s0 = ((w15 >>> 7) | (w15 << 25)) ^ ((w15 >>> 18) | (w15 << 14)) ^ (w15 >>> 3);
+      const s1 = ((w2 >>> 17) | (w2 << 15)) ^ ((w2 >>> 19) | (w2 << 13)) ^ (w2 >>> 10);
+      w[i] = (w[i - 16]! + s0 + w[i - 7]! + s1) >>> 0;
+    }
+    let a = h[0]!;
+    let b = h[1]!;
+    let c = h[2]!;
+    let d = h[3]!;
+    let e = h[4]!;
+    let f = h[5]!;
+    let g = h[6]!;
+    let hh = h[7]!;
+    for (let i = 0; i < 64; i++) {
+      const s1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (hh + s1 + ch + SHA256_K[i]! + w[i]!) >>> 0;
+      const s0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (s0 + maj) >>> 0;
+      hh = g;
+      g = f;
+      f = e;
+      e = (d + t1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (t1 + t2) >>> 0;
+    }
+    h[0] = (h[0]! + a) >>> 0;
+    h[1] = (h[1]! + b) >>> 0;
+    h[2] = (h[2]! + c) >>> 0;
+    h[3] = (h[3]! + d) >>> 0;
+    h[4] = (h[4]! + e) >>> 0;
+    h[5] = (h[5]! + f) >>> 0;
+    h[6] = (h[6]! + g) >>> 0;
+    h[7] = (h[7]! + hh) >>> 0;
+  }
+  return Array.from(h, (x) => x.toString(16).padStart(8, "0")).join("");
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +356,7 @@ export const _THINKING_DEFAULTS: Readonly<Record<string, string>> = {
   "gpt-6-luna": "none",
   "gpt-6-sol": "none",
   "gpt-6.1-sol": "low",
+  "gpt-6.1-terra": "none",
   o1: "low",
   "o1-pro": "low",
   o3: "low",
@@ -406,6 +484,11 @@ export interface BaseOpenAIResponsesLLMServiceMembers {
     summary: Dict[],
     encryptedContent: string | null,
   ): Promise<void>;
+  _reportEmptyResponse(
+    responseId: string | null,
+    output: Dict[],
+    options?: { incremental?: boolean | null },
+  ): Promise<void>;
 }
 
 /** Static members a class gets from `BaseOpenAIResponsesLLMServiceMixin`. */
@@ -515,7 +598,7 @@ export const BaseOpenAIResponsesLLMServiceMixin = defineMixin<
       // Resolve the API key from the environment if not provided. The
       // AsyncOpenAI HTTP client does this automatically, but the WebSocket
       // variant connects via raw websockets and needs the key explicitly.
-      this._apiKey = options.apiKey || getEnv("OPENAI_API_KEY") || null;
+      this._apiKey = options.apiKey || (getEnv("OPENAI_API_KEY") ?? null);
       this._serviceTier = options.serviceTier ?? null;
       this._retryTimeoutSecs =
         options.retryTimeoutSecs === undefined ? 5.0 : options.retryTimeoutSecs;
@@ -547,8 +630,8 @@ export const BaseOpenAIResponsesLLMServiceMixin = defineMixin<
       return new OpenAI({
         apiKey: options.apiKey ?? undefined,
         baseURL: options.baseUrl ?? undefined,
-        organization: options.organization ?? null,
-        project: options.project ?? null,
+        organization: options.organization ?? undefined,
+        project: options.project ?? undefined,
         defaultHeaders: options.defaultHeaders ?? undefined,
       });
     }
@@ -712,7 +795,7 @@ export const BaseOpenAIResponsesLLMServiceMixin = defineMixin<
       for (const fc of functionCalls.values()) {
         let args: Record<string, unknown>;
         try {
-          args = fc.arguments ? (JSON.parse(fc.arguments) as Record<string, unknown>) : {};
+          args = fc.arguments ? (pyJsonLoads(fc.arguments) as Record<string, unknown>) : {};
         } catch (e) {
           if (!(e instanceof SyntaxError)) throw e;
           logger.warning(`${this}: Failed to parse function call arguments: ${fc.arguments}`);
@@ -825,6 +908,50 @@ export const BaseOpenAIResponsesLLMServiceMixin = defineMixin<
         }),
       );
     }
+
+    /**
+     * Report a completed response that produced no text and no function call.
+     *
+     * Nothing reaches the TTS for such a response, so the bot stays silent
+     * until the user speaks again. The warning lists the response's output
+     * items (a message with its content types, e.g. `message[refusal]`) to
+     * show why, and the non-fatal error lets the application react.
+     *
+     * @param responseId The response id.
+     * @param output The response's `output` items, as dicts.
+     * @param options.incremental Whether the request sent only the new input
+     *   items via `previous_response_id`. null for a transport that always
+     *   sends the full context.
+     */
+    async _reportEmptyResponse(
+      responseId: string | null,
+      output: Dict[],
+      options: { incremental?: boolean | null } = {},
+    ): Promise<void> {
+      const incremental = options.incremental ?? null;
+      const items: string[] = [];
+      for (const item of output) {
+        let itemType: string = item.type ?? "unknown";
+        if (itemType === "message") {
+          const contentTypes = ((item.content || []) as Dict[])
+            .map((c) => c.type ?? "unknown")
+            .join(",");
+          itemType = `message[${contentTypes}]`;
+        }
+        items.push(itemType);
+      }
+      // Python's repr of a list of strings.
+      let details = `output: [${items.map((i) => `'${i}'`).join(", ")}]`;
+      if (incremental !== null) {
+        details += `, incremental: ${incremental ? "True" : "False"}`;
+      }
+      logger.warning(
+        `${this}: Response ${responseId ?? "None"} completed with no text or function call (${details})`,
+      );
+      await this.pushError(
+        `LLM response ${responseId ?? "None"} completed with no text or function call`,
+      );
+    }
   }
 
   return BaseOpenAIResponsesLLMServiceImpl as unknown as B &
@@ -849,6 +976,19 @@ export class _BaseOpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServic
 // ---------------------------------------------------------------------------
 // WebSocket variant (default / recommended)
 // ---------------------------------------------------------------------------
+
+// Lanes the WebSocket service's responses go on. A connection runs at most 16
+// responses at once, abandoned ones included.
+const _LANE_COUNT = 16;
+
+// The events that end a response on its lane: it completed, failed or was cut
+// short, or its request got an error.
+const _RESPONSE_END_EVENT_TYPES: readonly string[] = [
+  "response.completed",
+  "response.failed",
+  "response.incomplete",
+  "error",
+];
 
 export interface OpenAIResponsesLLMServiceOptions
   extends BaseOpenAIResponsesLLMServiceOptions,
@@ -902,11 +1042,13 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
   protected _previousInputHash: string | null = null;
   protected _previousInputLength: number | null = null;
   protected _previousResponseOutput: Dict[] | null = null;
+  protected _previousResponseLane: string | null = null;
 
-  // Response cancellation state
-  protected _currentResponseId: string | null = null; // ID of current non-cancelled response
-  protected _cancelPendingResponse = false;
-  protected _needsDrain = false;
+  // Response lanes (see _chooseNextResponseLane): the lane of the response in
+  // flight, from its response.create until its last event, and the lanes
+  // still draining an abandoned response.
+  protected _currentResponseLane: string | null = null;
+  protected _drainingLanes = new Set<string>();
 
   /**
    * Initialize the WebSocket-based OpenAI Responses API LLM service.
@@ -959,7 +1101,7 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
     } finally {
       this._websocket = null;
       this._clearPreviousResponseState();
-      this._clearCancellationState();
+      this._clearLaneState();
     }
   }
 
@@ -977,8 +1119,8 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
    * @param items List of Responses API input items.
    * @returns Hex digest of the SHA-256 hash.
    */
-  static async _hashInputItems(items: unknown[]): Promise<string> {
-    return await sha256Hex(jsonSortKeys(items));
+  static _hashInputItems(items: unknown[]): string {
+    return sha256Hex(jsonSortKeys(items));
   }
 
   /**
@@ -992,10 +1134,7 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
    * @param fullInput The complete input items list from the adapter.
    * @returns The (possibly modified) params dict.
    */
-  protected async _applyPreviousResponseOptimization(
-    params: Dict,
-    fullInput: Dict[],
-  ): Promise<Dict> {
+  protected _applyPreviousResponseOptimization(params: Dict, fullInput: Dict[]): Dict {
     if (this._previousResponseId === null) {
       logger.debug(`${this}: Sending full context (${fullInput.length} items)`);
       logger.trace(`${this}: Reason: no previous response`);
@@ -1015,7 +1154,7 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
     }
 
     const prefix = fullInput.slice(0, this._previousInputLength);
-    const prefixHash = await OpenAIResponsesLLMService._hashInputItems(prefix);
+    const prefixHash = OpenAIResponsesLLMService._hashInputItems(prefix);
     if (prefixHash !== this._previousInputHash) {
       logger.debug(`${this}: Sending full context (${fullInput.length} items)`);
       logger.trace(
@@ -1141,15 +1280,14 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
    * @param responseOutput Raw `output` array from the `response.completed`
    *   event, stored for loose comparison on the next call.
    */
-  protected async _storePreviousResponseState(
+  protected _storePreviousResponseState(
     responseId: string,
     fullInput: Dict[],
     responseOutput: Dict[],
-  ): Promise<void> {
-    const inputHash = await OpenAIResponsesLLMService._hashInputItems(fullInput);
+  ): void {
     this._previousResponseId = responseId;
     this._previousInputLength = fullInput.length;
-    this._previousInputHash = inputHash;
+    this._previousInputHash = OpenAIResponsesLLMService._hashInputItems(fullInput);
     this._previousResponseOutput = responseOutput;
   }
 
@@ -1159,93 +1297,50 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
     this._previousInputLength = null;
     this._previousInputHash = null;
     this._previousResponseOutput = null;
+    this._previousResponseLane = null;
   }
 
-  // -- response cancellation ------------------------------------------------
+  // -- response lanes -------------------------------------------------------
 
-  /** Clear response cancellation tracking state. */
-  protected _clearCancellationState(): void {
-    this._currentResponseId = null;
-    this._cancelPendingResponse = false;
-    this._needsDrain = false;
+  /** Clear response lane tracking state. */
+  protected _clearLaneState(): void {
+    this._currentResponseLane = null;
+    this._drainingLanes.clear();
   }
 
   /**
-   * Drain events from a cancelled response before starting a new one.
+   * Choose the lane for the next response.
    *
-   * After a cancellation, the WebSocket may still have in-flight events from
-   * the cancelled response. We must drain them before sending a new
-   * `response.create` — we can't simply filter them inline because the API
-   * doesn't provide a reliable way to correlate events to a specific
-   * response (e.g. delta events carry neither a `response_id` nor any
-   * intermediary identifier that could be traced back to one).
+   * Every response goes on a named lane of the connection (the API's
+   * `stream_id`), so each of its events says which lane it came from. That
+   * lets a cancelled response be abandoned rather than waited for: WebSocket
+   * mode can't stop a response (it ignores `response.cancel`), so an abandoned
+   * response drains from its lane while the next one runs on another, and its
+   * events are discarded as they arrive. The lane is free again once the
+   * response ends.
    *
-   * This method reads and discards events until a terminal event
-   * (`response.completed`, `response.failed`, or `response.incomplete`)
-   * arrives, ensuring the connection is clean. If draining times out or the
-   * connection drops, clears cancellation state and returns —
-   * `_ensureConnected` will handle reconnection before the next inference.
+   * The lane chosen isn't draining, since a lane runs its responses one at a
+   * time, and isn't the previous response's lane. Each lane caches only its
+   * latest response, so an abandoned response on the previous response's lane
+   * would evict the previous response when it ended, and the next request
+   * couldn't continue from it. Continuing from another lane's response (a
+   * fork) costs no more than continuing on the same lane.
+   *
+   * If every lane is taken, the connection is closed, which ends the abandoned
+   * responses; the next send opens a new one.
+   *
+   * @returns The lane, as its `stream_id`.
    */
-  protected async _drainCancelledResponse(): Promise<void> {
-    if (!this._websocket) {
-      this._clearCancellationState();
-      return;
-    }
-
-    logger.debug(`${this}: Draining cancelled response events`);
-    try {
-      while (true) {
-        const websocket = this._websocket;
-        const raw = await waitFor(() => websocket!.recv(), 5.0);
-        const event = JSON.parse(
-          typeof raw === "string" ? raw : new TextDecoder().decode(raw),
-        ) as Dict;
-        const eventType = event.type;
-
-        // If we were cancelled before response.created, the first event here
-        // will be response.created for the cancelled request — send cancel
-        // now that we have the id.
-        if (eventType === "response.created" && this._cancelPendingResponse) {
-          const responseId = (event.response ?? {}).id ?? null;
-          logger.debug(
-            `${this}: Received response.created for pending-cancel ` +
-              `response ${responseId} — sending response.cancel`,
-          );
-          this._cancelPendingResponse = false;
-          if (responseId) {
-            try {
-              await this._wsSend({ type: "response.cancel", response_id: responseId });
-            } catch (e) {
-              rethrowIfCancelled(e);
-            }
-          }
-          continue;
-        }
-
-        if (
-          eventType === "response.completed" ||
-          eventType === "response.failed" ||
-          eventType === "response.incomplete"
-        ) {
-          logger.debug(
-            `${this}: Cancelled response terminated with ${eventType} — connection is clean`,
-          );
-          this._clearCancellationState();
-          return;
-        }
+  protected async _chooseNextResponseLane(): Promise<string> {
+    for (let i = 0; i < _LANE_COUNT; i++) {
+      const lane = `lane-${i}`;
+      if (lane !== this._previousResponseLane && !this._drainingLanes.has(lane)) {
+        return lane;
       }
-    } catch (e) {
-      if (
-        e instanceof TimeoutError ||
-        e instanceof WebsocketReconnectedError ||
-        e instanceof ConnectionClosed
-      ) {
-        logger.warning(`${this}: Error draining cancelled response: ${errorMessage(e)}`);
-        this._clearCancellationState();
-        return;
-      }
-      throw e;
     }
+    logger.debug(`${this}: Every lane is draining or holds the previous response — reconnecting`);
+    await this._disconnectWebsocket();
+    return "lane-0";
   }
 
   // -- frame processing -----------------------------------------------------
@@ -1266,33 +1361,14 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
         await this._processContext(frame.context);
       } catch (e) {
         if (e instanceof CancelledError) {
-          // The pipeline cancelled us (e.g. due to an interruption). Ask the
-          // server to stop generating and flag that we need to drain stale
-          // events before the next inference. We can't just send a new
-          // response.create and filter stale events inline — the API doesn't
-          // provide a reliable way to correlate events to a specific response.
-          if (this._currentResponseId) {
-            logger.debug(
-              `${this}: Cancelled during response ${this._currentResponseId} ` +
-                "— sending response.cancel",
-            );
-            try {
-              await this._wsSend({
-                type: "response.cancel",
-                response_id: this._currentResponseId,
-              });
-            } catch (sendError) {
-              rethrowIfCancelled(sendError);
-            }
-          } else {
-            logger.debug(
-              `${this}: Cancelled before response.created ` +
-                "— will cancel on next response.created",
-            );
-            this._cancelPendingResponse = true;
+          // The pipeline cancelled us (e.g. due to an interruption). The
+          // response drains from its lane, and the next one goes on another
+          // (see _chooseNextResponseLane).
+          if (this._currentResponseLane) {
+            logger.debug(`${this}: Abandoning the response on ${this._currentResponseLane}`);
+            this._drainingLanes.add(this._currentResponseLane);
+            this._currentResponseLane = null;
           }
-          this._currentResponseId = null;
-          this._needsDrain = true;
           throw e;
         }
         await this.pushError(`Error during inference: ${errorMessage(e)}`, { exception: e });
@@ -1322,11 +1398,7 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
    * @param context The LLM context containing conversation history.
    */
   protected async _processContext(context: LLMContext): Promise<void> {
-    // If a previous response was cancelled, drain its remaining events
-    // before starting a new one.
-    if (this._needsDrain) {
-      await this._drainCancelledResponse();
-    }
+    const lane = await this._chooseNextResponseLane();
 
     const adapter = this.getLlmAdapter();
     this._logLlmResponse(context);
@@ -1337,12 +1409,12 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
 
     const fullInput = invocationParams.input;
 
-    const buildParams = async (options: { applyOptimization: boolean }): Promise<Dict> => {
+    const buildParams = (options: { applyOptimization: boolean }): Dict => {
       let params = this._buildResponseParams(invocationParams);
       // WebSocket mode does not use the "stream" parameter.
       delete params.stream;
       if (options.applyOptimization) {
-        params = await this._applyPreviousResponseOptimization(params, fullInput);
+        params = this._applyPreviousResponseOptimization(params, fullInput);
       }
       return params;
     };
@@ -1353,8 +1425,13 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
     ): Promise<void> => {
       await this._ensureConnected();
       await this.startTtfbMetrics();
-      await this._wsSend({ type: "response.create", ...params });
-      await this._receiveResponseEvents(context, fullInput, outputTimeoutSecs);
+      // Set before sending: a cancellation during the send may still let the
+      // response go out, and its lane must then count as draining.
+      this._currentResponseLane = lane;
+      await this._wsSend({ type: "response.create", stream_id: lane, ...params });
+      await this._receiveResponseEvents(context, fullInput, outputTimeoutSecs, {
+        incremental: "previous_response_id" in params,
+      });
     };
 
     const cleanup = async (): Promise<void> => {
@@ -1366,14 +1443,14 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
 
     try {
       await sendAndReceive(
-        await buildParams({ applyOptimization: true }),
+        buildParams({ applyOptimization: true }),
         this._retryOnTimeout ? this._retryTimeoutSecs : null,
       );
       return; // Success
     } catch (e) {
       if (e instanceof _ResponseTimeoutError) {
-        // Dropping the connection discards the abandoned response's events,
-        // so the retry starts on a clean socket with no draining needed.
+        // Dropping the connection also ends the response that produced
+        // nothing, so the retry starts on a clean socket.
         logger.warning(
           `${this}: No output within ${this._retryTimeoutSecs}s — reconnecting ` +
             `and retrying with full context (${fullInput.length} items)`,
@@ -1415,7 +1492,7 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
     // -- retry with full context (no optimization) ------------------------
 
     try {
-      await sendAndReceive(await buildParams({ applyOptimization: false }));
+      await sendAndReceive(buildParams({ applyOptimization: false }));
     } catch (e) {
       rethrowIfCancelled(e);
       await cleanup();
@@ -1452,6 +1529,8 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
    *   output event arrives the wait becomes unbounded, since by then content
    *   is already on its way downstream and re-issuing would duplicate it.
    *   null waits indefinitely throughout.
+   * @param options.incremental Whether the request sent only the new input
+   *   items via `previous_response_id`.
    * @throws _PreviousResponseNotFoundError Server couldn't find previous response.
    * @throws _ConnectionLimitReachedError 60-minute connection limit reached.
    * @throws _ResponseTimeoutError Response produced no output in time.
@@ -1462,10 +1541,14 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
     context: LLMContext,
     fullInput: Dict[],
     outputTimeoutSecs: number | null = null,
+    options: { incremental?: boolean } = {},
   ): Promise<void> {
+    const incremental = options.incremental ?? false;
     const functionCalls = new Map<string, ResponsesFunctionCallData>();
     const currentArguments = new Map<string, string>();
     let reasoningSummaryOpen = false;
+    let hasText = false;
+    const lane = this._currentResponseLane;
 
     let deadline: number | null = outputTimeoutSecs ? monotonic() + outputTimeoutSecs : null;
 
@@ -1486,9 +1569,24 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
 
       const eventType = event.type;
 
+      // An event on another lane is a draining lane's, from an abandoned
+      // response; the lane is free again once that response ends. Events with
+      // no stream_id concern the connection, and so the response in flight.
+      const eventLane = event.stream_id ?? null;
+      if (eventLane !== null && eventLane !== lane) {
+        if (_RESPONSE_END_EVENT_TYPES.includes(eventType)) {
+          this._drainingLanes.delete(eventLane);
+        }
+        continue;
+      }
+
+      if (_RESPONSE_END_EVENT_TYPES.includes(eventType)) {
+        this._currentResponseLane = null;
+      }
+
       if (eventType === "response.created") {
-        this._currentResponseId = (event.response ?? {}).id ?? null;
-        logger.debug(`${this}: Response started: ${this._currentResponseId}`);
+        const responseId = (event.response ?? {}).id ?? null;
+        logger.debug(`${this}: Response started: ${responseId}`);
         continue;
       }
 
@@ -1498,7 +1596,9 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
 
       if (eventType === "response.output_text.delta") {
         await this.stopTtfbMetrics();
-        await this._pushLlmText(event.delta ?? "");
+        const delta: string = event.delta ?? "";
+        hasText = hasText || delta.trim().length > 0;
+        await this._pushLlmText(delta);
       } else if (eventType === "response.reasoning_summary_text.delta") {
         await this.stopTtfbMetrics();
         if (!reasoningSummaryOpen) {
@@ -1567,9 +1667,14 @@ export class OpenAIResponsesLLMService extends BaseOpenAIResponsesLLMServiceMixi
         // Include the response output so the hash covers the assistant's
         // reply — the server already knows it, so we won't resend it.
         const responseId = response.id;
+        const responseOutput: Dict[] = response.output || [];
         if (responseId) {
-          const responseOutput = response.output || [];
-          await this._storePreviousResponseState(responseId, fullInput, responseOutput);
+          this._storePreviousResponseState(responseId, fullInput, responseOutput);
+          this._previousResponseLane = lane;
+        }
+
+        if (!hasText && functionCalls.size === 0) {
+          await this._reportEmptyResponse(responseId ?? null, responseOutput, { incremental });
         }
 
         break; // Response complete
@@ -1686,22 +1791,7 @@ export class OpenAIResponsesHttpLLMService extends _BaseOpenAIResponsesLLMServic
     if (!usage) {
       return;
     }
-    // Third-party Responses API servers may omit fields the OpenAI SDK treats
-    // as required. Anything omitted is left undefined — at the top level
-    // (token counts), as a missing detail sub-object, or as a missing field
-    // inside one. Coalesce each to 0 so a partial usage payload can't raise
-    // or leak null into metrics.
-    const inputDetails = usage.input_tokens_details as Dict | null | undefined;
-    const outputDetails = usage.output_tokens_details as Dict | null | undefined;
-    const tokens = new LLMTokenUsage({
-      promptTokens: usage.input_tokens || 0,
-      completionTokens: usage.output_tokens || 0,
-      totalTokens: usage.total_tokens || 0,
-      cacheReadInputTokens: inputDetails ? inputDetails.cached_tokens || 0 : 0,
-      cacheCreationInputTokens: inputDetails ? inputDetails.cache_write_tokens || 0 : 0,
-      reasoningTokens: outputDetails ? outputDetails.reasoning_tokens || 0 : 0,
-    });
-    await this.startLlmUsageMetrics(tokens);
+    await this.startLlmUsageMetrics(this._tokenUsage(usage));
   }
 
   /**
@@ -1734,6 +1824,33 @@ export class OpenAIResponsesHttpLLMService extends _BaseOpenAIResponsesLLMServic
     }
   }
 
+  /**
+   * Convert a response's usage into Pipecat's token usage.
+   *
+   * Subclasses for servers that report usage fields OpenAI doesn't override
+   * this.
+   *
+   * @param usage The usage reported with the response.
+   * @returns The token usage to report.
+   */
+  protected _tokenUsage(usage: ResponseUsage): LLMTokenUsage {
+    // Third-party Responses API servers may omit fields the OpenAI SDK treats
+    // as required. Anything omitted is left undefined — at the top level
+    // (token counts), as a missing detail sub-object, or as a missing field
+    // inside one. Coalesce each to 0 so a partial usage payload can't raise or
+    // leak null into metrics.
+    const inputDetails = usage.input_tokens_details as Dict | null | undefined;
+    const outputDetails = usage.output_tokens_details as Dict | null | undefined;
+    return new LLMTokenUsage({
+      promptTokens: usage.input_tokens || 0,
+      completionTokens: usage.output_tokens || 0,
+      totalTokens: usage.total_tokens || 0,
+      cacheReadInputTokens: inputDetails ? inputDetails.cached_tokens || 0 : 0,
+      cacheCreationInputTokens: inputDetails ? inputDetails.cache_write_tokens || 0 : 0,
+      reasoningTokens: outputDetails ? outputDetails.reasoning_tokens || 0 : 0,
+    });
+  }
+
   /** Traced with `tracedLlm` (see the static block). */
   protected async _processContext(context: LLMContext): Promise<void> {
     const adapter = this.getLlmAdapter();
@@ -1756,6 +1873,7 @@ export class OpenAIResponsesHttpLLMService extends _BaseOpenAIResponsesLLMServic
     const currentArguments = new Map<string, string>();
     let reasoningSummaryOpen = false;
     let streamErrored = false;
+    let hasText = false;
 
     // Ensure the stream and its async iterator are closed on
     // cancellation/exception to release the HTTP connection. Each event is
@@ -1770,6 +1888,7 @@ export class OpenAIResponsesHttpLLMService extends _BaseOpenAIResponsesLLMServic
 
         if (event.type === "response.output_text.delta") {
           await this.stopTtfbMetrics();
+          hasText = hasText || (event.delta as string).trim().length > 0;
           await this._pushLlmText(event.delta);
         } else if (event.type === "response.reasoning_summary_text.delta") {
           await this.stopTtfbMetrics();
@@ -1836,6 +1955,10 @@ export class OpenAIResponsesHttpLLMService extends _BaseOpenAIResponsesLLMServic
           // This field is used by tracedLlm for more detailed model name in
           // tracing spans
           this._fullModelName = response.model;
+
+          if (!hasText && functionCalls.size === 0) {
+            await this._reportEmptyResponse(response.id, response.output as Dict[]);
+          }
         } else if (event.type === "response.failed") {
           await this._reportUsage(event.response.usage);
           // As with usage, the detail objects and their fields are only as

@@ -55,6 +55,7 @@ interface Internals {
   stopProcessingMetrics: ReturnType<typeof mock>;
   pushFrame: ReturnType<typeof mock>;
   _callEventHandler: ReturnType<typeof mock>;
+  pushError: ReturnType<typeof mock>;
   _currentAudioResponse: unknown;
   _handleEvtResponseDone(evt: events.ResponseDone): Promise<void>;
 }
@@ -116,6 +117,35 @@ test("test_response_done_without_cached_details_reports_none", async () => {
   expect(tokens.cacheReadInputAudioTokens).toBeNull();
   expect(tokens.inputAudioTokens).toBe(0);
   expect(tokens.outputAudioTokens).toBe(0);
+});
+
+test("test_response_done_without_usage_reports_no_usage", async () => {
+  const service = _serviceForUsageCapture();
+  const evt = events.ResponseDone.modelValidate({
+    event_id: "ev_1",
+    type: "response.done",
+    response: { status: "completed" },
+  });
+
+  await service._handleEvtResponseDone(evt);
+
+  expect(service.startLlmUsageMetrics).not.toHaveBeenCalled();
+  expect(service.stopProcessingMetrics).toHaveBeenCalledTimes(1);
+});
+
+test("test_failed_response_without_status_details_pushes_error", async () => {
+  const service = _serviceForUsageCapture();
+  service.pushError = mock(async () => {});
+  const evt = events.ResponseDone.modelValidate({
+    event_id: "ev_1",
+    type: "response.done",
+    response: { status: "failed" },
+  });
+
+  await service._handleEvtResponseDone(evt);
+
+  expect(service.pushError).toHaveBeenCalledTimes(1);
+  expect(service.pushError).toHaveBeenCalledWith("Response failed");
 });
 
 // ---------------------------------------------------------------------------

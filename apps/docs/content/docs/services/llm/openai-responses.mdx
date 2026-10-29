@@ -113,7 +113,7 @@ These come from the `LLMService` and `WebsocketLLMService` base classes.
   response, the service sends the full context again. It also reconnects and retries when it
   hits OpenAI's 60 minute connection limit.
 - With `reasoning` left `null`, the service sends the lowest effort OpenAI documents for a
-  known reasoning model (for example `"none"` for `gpt-5.4`, `"low"` for `o3`), for the fastest
+  known reasoning model (for example `"none"` for `gpt-5.4` and `gpt-6.1-terra`, `"low"` for `o3`), for the fastest
   replies, and logs what it sent. Set `useProviderThinkingDefault` to keep OpenAI's default.
   `gpt-4.1`, the default model, does not reason.
 - Reasoning summaries come out as `LLMThoughtStartFrame`, `LLMThoughtTextFrame` and

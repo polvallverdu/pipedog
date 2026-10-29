@@ -7,7 +7,7 @@ description: "InceptionLLMService streams chat completions from Inception throug
 
 ## Overview
 
-Inception serves Mercury-2, a diffusion-based reasoning language model, over an OpenAI-compatible API.
+Inception serves Mercury-3, a diffusion-based reasoning language model, over an OpenAI-compatible API.
 
 - **`InceptionLLMService`**: an `OpenAILLMService` subclass with Inception's base URL and default
   model.
@@ -55,8 +55,8 @@ The other options (`organization`, `project`, `defaultHeaders`, `serviceTier`,
 | | |
 |---|---|
 | Base URL | `https://api.inceptionlabs.ai/v1` |
-| Default model | `mercury-2` |
-| Models to try | `mercury-2`. See the provider's catalog for the rest. |
+| Default model | `mercury-3` |
+| Models to try | `mercury-3`. See the provider's catalog for the rest. |
 
 ### Settings
 
@@ -66,7 +66,7 @@ defaults:
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `model` | `string` | `"mercury-2"` | Model name. |
+| `model` | `string` | `"mercury-3"` | Model name. |
 | `reasoningEffort` | `"instant" \| "low" \| "medium" \| "high" \| null` | `null` | Sent as `reasoning_effort` when set. When unset, Inception's server-side default applies. |
 | `realtime` | `boolean \| null` | `true` | Sent as `realtime` in the request body, to cut the time to the first diffusion block. |
 
@@ -93,6 +93,7 @@ Change settings mid-call with an `LLMUpdateSettingsFrame`. The next completion u
   `runInference` work the same way.
 - "developer" messages are sent as "user" messages, since the API doesn't support that role (`supportsDeveloperRole` is `false`).
 - `realtime` and `reasoningEffort` go out in the request's `extra_body`. A field you put in `settings.extra` under `extra_body` wins over the service's own.
+- The default model was `mercury-2` before. Inception retires Mercury 2 and 2.5 on November 15, 2026, and they are closed to new signups. Until then, `settings: new InceptionLLMService.Settings({ model: "mercury-2" })` keeps it.
 
 ## Runtime notes
 

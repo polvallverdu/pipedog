@@ -100,6 +100,9 @@ existing file, keeping its structure and anything pipedog-only (DIVERGENCE comme
 helpers that upstream lacks, unless the diff replaces them). Deprecations the diff adds are not ported:
 drop the deprecated API instead, and say so in notes.`
 
+// Single-quote for the shell: notes quote code (backticks, `$`), which double quotes would expand.
+const shellQuote = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`
+
 async function record(commands, label) {
   if (!commands.length) return
   await agent(
@@ -207,7 +210,7 @@ for (const r of portResults) {
     const note = [m.status === 'partial' ? 'PARTIAL' : '', m.notes, ...(r.review?.unresolved || []).map((u) => `UNRESOLVED: ${u}`)]
       .filter(Boolean)
       .join(' | ')
-    moduleCommands.push(`bun tools/port/status.ts --set ${m.module} ${status} ${JSON.stringify(note)}`)
+    moduleCommands.push(`bun tools/port/status.ts --set ${m.module} ${status} ${shellQuote(note)}`)
   }
 }
 // Recorded before Tests: tests are selected by whether their modules are ported.

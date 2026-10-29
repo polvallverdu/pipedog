@@ -43,6 +43,16 @@ import { pyJsonLoads } from "@pipedog/core/utils/py_json";
 
 type Dict = Record<string, any>;
 
+// Python's `url.split(",")[1]`: a data URL without a comma has no payload, and
+// the index raises IndexError (a RangeError here) rather than yielding undefined.
+function dataUrlPayload(url: string): string {
+  const payload = url.split(",")[1];
+  if (payload === undefined) {
+    throw new RangeError("list index out of range");
+  }
+  return payload;
+}
+
 /** Context-based parameters for invoking Gemini LLM. */
 export interface GeminiLLMInvocationParams {
   system_instruction: string | null;
@@ -736,7 +746,7 @@ export class GeminiLLMAdapter extends BaseLLMAdapter<GeminiLLMInvocationParams> 
           parts.push({
             inlineData: {
               mimeType,
-              data: bytesToBase64(base64ToBytes(url.split(",")[1] as string)),
+              data: bytesToBase64(base64ToBytes(dataUrlPayload(url))),
             },
           });
         } else if (c.type === "image_url") {

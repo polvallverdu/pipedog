@@ -371,6 +371,44 @@ describe("TestEvalsScenarioParser", () => {
     expect(exp.absent).toBe(false);
   });
 
+  test("test_text_matches_parsed", async () => {
+    const s = await _script(
+      _write(
+        `
+                name: matches
+                turns:
+                  - user: "x"
+                    expect:
+                      - event: llm_response
+                        text_matches: "^Hi"
+                      - event: llm_response
+                        text_matches: ["^Hi", "!$"]
+                `,
+      ),
+    );
+    expect(s.turns[0]!.expect[0]!.textMatches).toEqual(["^Hi"]);
+    expect(s.turns[0]!.expect[1]!.textMatches).toEqual(["^Hi", "!$"]);
+  });
+
+  test("test_text_matches_rejects_bad_patterns", async () => {
+    for (const value of ['"(unclosed"', "[1, 2]"]) {
+      await expect(
+        _script(
+          _write(
+            `
+                        name: bad_matches
+                        turns:
+                          - user: "x"
+                            expect:
+                              - event: llm_response
+                                text_matches: ${value}
+                        `,
+          ),
+        ),
+      ).rejects.toThrow();
+    }
+  });
+
   test("test_absent_expectation_parsed", async () => {
     const s = await _script(
       _write(
@@ -397,6 +435,7 @@ describe("TestEvalsScenarioParser", () => {
       'eval: "repeats itself"',
       'text_contains: "again"',
       'text_excludes: "x"',
+      'text_matches: "x"',
     ]) {
       await expect(
         _script(
