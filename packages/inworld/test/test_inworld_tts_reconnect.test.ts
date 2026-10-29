@@ -99,7 +99,10 @@ class _FakeInworld {
       _FakeInworld._send(websocket, contextId, { contextClosed: {} });
       data.closed += 1;
       if (data.index === 0 && data.closed === this.dropAfterTurns) {
-        websocket.terminate();
+        // Abort once the replies above are written, as asyncio's transport.abort()
+        // does after its writes: Bun's terminate() can drop messages still queued,
+        // and the turn's audio with them.
+        setTimeout(() => websocket.terminate(), 50);
       }
     }
   }
