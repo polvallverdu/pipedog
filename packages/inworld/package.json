@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/inworld",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Inworld services (Realtime speech-to-speech, TTS) for pipedog.",
   "keywords": [
     "pipecat",

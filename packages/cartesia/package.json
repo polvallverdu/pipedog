@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/cartesia",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Cartesia services (STT, Ink-2 turn-based STT, WebSocket and HTTP TTS) for pipedog.",
   "keywords": [
     "pipecat",

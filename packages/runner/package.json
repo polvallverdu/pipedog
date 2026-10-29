@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/runner",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Pipecat's development runner for pipedog: createTransport() from runner arguments, and a dev server (main()) with the prebuilt WebRTC client, SmallWebRTC signalling, telephony webhooks and WebSockets for Twilio, Telnyx, Plivo and Exotel. A fetch handler you can serve on Bun, Node and Deno or mount in any framework.",
   "keywords": [
     "pipecat",

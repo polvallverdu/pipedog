@@ -1,5 +1,47 @@
 # @pipedog/cli
 
+## 0.11.0
+
+### Minor Changes
+
+- [#104](https://github.com/polvallverdu/pipedog/pull/104) [`34d7530`](https://github.com/polvallverdu/pipedog/commit/34d7530ae607e20db11114b1a5d981bbeb71fa88) Thanks [@polvallverdu](https://github.com/polvallverdu)! - LLM and other providers brought up to pipecat main after 1.14:
+  
+  - ⚠️ Perplexity: `PerplexityLLMService` (Sonar chat completions) is removed, as upstream deprecates
+    it; use the new `PerplexityAgentHttpLLMService` for Perplexity's Agent API, with `preset`,
+    `webSearch` and `maxSteps` settings ([#5985](https://github.com/polvallverdu/pipedog/issues/5985)).
+  - New `SmallestLLMService` (Smallest's Electron models, OpenAI-compatible, [#6339](https://github.com/polvallverdu/pipedog/issues/6339)).
+  - OpenAI: Responses services report an empty completion and default `gpt-6.1-terra` to no
+    reasoning ([#6348](https://github.com/polvallverdu/pipedog/issues/6348), [#6434](https://github.com/polvallverdu/pipedog/issues/6434)); the realtime client tolerates unknown server events ([#6329](https://github.com/polvallverdu/pipedog/issues/6329)); image
+    generation takes `moderation` ([#6432](https://github.com/polvallverdu/pipedog/issues/6432)).
+  - AWS Bedrock: reasoning is pushed as thought frames and round-trips with its signature, and Nova's
+    `<thinking>` text no longer reaches TTS ([#6229](https://github.com/polvallverdu/pipedog/issues/6229)).
+  - Azure realtime authenticates through the `_authHeaders()` hook ([#6329](https://github.com/polvallverdu/pipedog/issues/6329)).
+  - Together: `reasoningEffort` ([#6437](https://github.com/polvallverdu/pipedog/issues/6437)). Inception defaults to `mercury-3` ([#6397](https://github.com/polvallverdu/pipedog/issues/6397)).
+  - Twilio: `apiKeySid` / `apiKeySecret` as an alternative to `authToken` for auto hang-up; the
+    runner reads `TWILIO_API_KEY`, `TWILIO_API_SECRET`, `TWILIO_REGION` and `TWILIO_EDGE` ([#6270](https://github.com/polvallverdu/pipedog/issues/6270),
+    [#6293](https://github.com/polvallverdu/pipedog/issues/6293)).
+  - Evals: `text_matches` expectations (failure kind `text_unmatched`, [#5991](https://github.com/polvallverdu/pipedog/issues/5991)) and the `expression`
+    event ([#6303](https://github.com/polvallverdu/pipedog/issues/6303)); image requests with no registered image get an error answer ([#6350](https://github.com/polvallverdu/pipedog/issues/6350)).
+  - CLI: the Perplexity entry uses `PerplexityAgentHttpLLMService`.
+
+- [#105](https://github.com/polvallverdu/pipedog/pull/105) [`a25889f`](https://github.com/polvallverdu/pipedog/commit/a25889fdb51beffacee1e5e26404dafad662b7d2) Thanks [@polvallverdu](https://github.com/polvallverdu)! - New providers from pipecat main after 1.14:
+  
+  - `@pipedog/nvidia` (new): `NvidiaLLMService` (NVIDIA NIM, OpenAI-compatible, with reasoning
+    content and `<think>` handling) and `NvidiaOmniLLMService` (Nemotron Omni: audio understanding
+    and the user's turn in one request, `NvidiaOmniLLMAdapter`, `runMultimodalInference()`,
+    pipecat-ai/pipecat#6085). Riva STT/TTS are not ported yet.
+  - `@pipedog/zoom-ai` (new): `ZoomAISTTService`, Zoom's Scribe streaming STT ([#6280](https://github.com/polvallverdu/pipedog/issues/6280)).
+  - `@pipedog/assemblyai`: `AssemblyAITTSService`, streaming TTS with per-word timings ([#6322](https://github.com/polvallverdu/pipedog/issues/6322)).
+  - Pipecat Tone for expressive conversation (alpha): the `PipecatToneReader` and
+    `PipecatToneTagger` processors in `@pipedog/core/processors/tone`, with their ONNX models in the
+    new `@pipedog/tone` (on `@pipedog/onnx`; [#6319](https://github.com/polvallverdu/pipedog/issues/6319), [#6385](https://github.com/polvallverdu/pipedog/issues/6385), [#6407](https://github.com/polvallverdu/pipedog/issues/6407)).
+  - The CLI offers Zoom AI STT, AssemblyAI TTS and the NVIDIA LLM.
+
+### Patch Changes
+
+- Updated dependencies [[`34d7530`](https://github.com/polvallverdu/pipedog/commit/34d7530ae607e20db11114b1a5d981bbeb71fa88)]:
+  - @pipedog/evals@0.11.0
+
 ## 0.10.0
 
 ### Patch Changes

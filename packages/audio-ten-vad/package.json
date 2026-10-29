@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/audio-ten-vad",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "TEN VAD (TenVADAnalyzer) for pipedog: an opt-in alternative to Silero that drives TEN VAD's WebAssembly build, which you obtain from TEN and pass in. Ships none of TEN's code or model.",
   "keywords": [
     "pipecat",
