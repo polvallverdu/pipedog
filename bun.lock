@@ -79,6 +79,7 @@
         "@pipedog/nebius": "workspace:*",
         "@pipedog/neuphonic": "workspace:*",
         "@pipedog/novita": "workspace:*",
+        "@pipedog/nvidia": "workspace:*",
         "@pipedog/ollama": "workspace:*",
         "@pipedog/onnx": "workspace:*",
         "@pipedog/openai": "workspace:*",
@@ -107,6 +108,7 @@
         "@pipedog/speechify": "workspace:*",
         "@pipedog/speechmatics": "workspace:*",
         "@pipedog/together": "workspace:*",
+        "@pipedog/tone": "workspace:*",
         "@pipedog/tracing": "workspace:*",
         "@pipedog/transport-cloudflare-realtime": "workspace:*",
         "@pipedog/transport-heygen": "workspace:*",
@@ -116,6 +118,7 @@
         "@pipedog/ultravox": "workspace:*",
         "@pipedog/whisper": "workspace:*",
         "@pipedog/xai": "workspace:*",
+        "@pipedog/zoom-ai": "workspace:*",
         "@sentry/core": "11.5.0",
         "ai": "7.0.133",
         "cn": "0.4.0",
@@ -906,6 +909,16 @@
         "@pipedog/openai": "workspace:*",
       },
     },
+    "packages/nvidia": {
+      "name": "@pipedog/nvidia",
+      "version": "0.10.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/openai": "workspace:*",
+        "openai": "^6.49.0",
+      },
+    },
     "packages/ollama": {
       "name": "@pipedog/ollama",
       "version": "0.10.0",
@@ -1186,6 +1199,16 @@
         "@pipedog/openai": "workspace:*",
       },
     },
+    "packages/tone": {
+      "name": "@pipedog/tone",
+      "version": "0.10.0",
+      "dependencies": {
+        "@huggingface/tokenizers": "^0.2.0",
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+        "@pipedog/onnx": "workspace:*",
+      },
+    },
     "packages/tracing": {
       "name": "@pipedog/tracing",
       "version": "0.10.0",
@@ -1329,6 +1352,14 @@
         "@pipedog/asyncio": "workspace:*",
         "@pipedog/core": "workspace:*",
         "@pipedog/openai": "workspace:*",
+      },
+    },
+    "packages/zoom-ai": {
+      "name": "@pipedog/zoom-ai",
+      "version": "0.10.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
       },
     },
   },
@@ -1939,6 +1970,8 @@
 
     "@pipedog/novita": ["@pipedog/novita@workspace:packages/novita"],
 
+    "@pipedog/nvidia": ["@pipedog/nvidia@workspace:packages/nvidia"],
+
     "@pipedog/ollama": ["@pipedog/ollama@workspace:packages/ollama"],
 
     "@pipedog/onnx": ["@pipedog/onnx@workspace:packages/onnx"],
@@ -1997,6 +2030,8 @@
 
     "@pipedog/together": ["@pipedog/together@workspace:packages/together"],
 
+    "@pipedog/tone": ["@pipedog/tone@workspace:packages/tone"],
+
     "@pipedog/tracing": ["@pipedog/tracing@workspace:packages/tracing"],
 
     "@pipedog/transport-cloudflare-realtime": ["@pipedog/transport-cloudflare-realtime@workspace:packages/transport-cloudflare-realtime"],
@@ -2018,6 +2053,8 @@
     "@pipedog/whisper": ["@pipedog/whisper@workspace:packages/whisper"],
 
     "@pipedog/xai": ["@pipedog/xai@workspace:packages/xai"],
+
+    "@pipedog/zoom-ai": ["@pipedog/zoom-ai@workspace:packages/zoom-ai"],
 
     "@pnpm/deps.graph-sequencer": ["@pnpm/deps.graph-sequencer@1100.0.1", "", {}, "sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A=="],
 

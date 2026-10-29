@@ -507,9 +507,9 @@
         "openai"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New package @pipedog/nvidia created (package.json, tsconfig.json; deps asyncio/core/openai). to_provider_content_parts -> toProviderContentParts(parts: readonly Record<string, unknown>[]). Python `or` defaults kept as `||` on purpose (falsy semantics). tsc and biome are clean for this file."
     },
     {
       "module": "pipecat.adapters.llm.services.open_ai_adapter",
@@ -7100,9 +7100,9 @@
         "test_pipecat_tone_reader.py",
         "test_pipecat_tone_tagger.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Docstring-only package init; exports nothing."
     },
     {
       "module": "pipecat.processors.tone._models",
@@ -7121,9 +7121,9 @@
         "test_pipecat_tone_reader.py",
         "test_pipecat_tone_tagger.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "load_model -> loadModel. DIVERGENCE: no threads, so threading.Lock + asyncio.to_thread become a shared in-flight promise map keyed by JSON.stringify(key) (Hashable = JSON-value arrays/scalars). Concurrent loads of one key share one load; failed loads are evicted so the next call retries. load may be sync or async."
     },
     {
       "module": "pipecat.processors.tone.reader",
@@ -7141,9 +7141,9 @@
       "tests": [
         "test_pipecat_tone_reader.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Re-exports PipecatToneReader from ./processor.ts (not yet ported by another agent; TS2307 until it exists)."
     },
     {
       "module": "pipecat.processors.tone.reader.model",
@@ -7165,9 +7165,9 @@
       "tests": [
         "test_pipecat_tone_reader.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New package @pipedog/tone created (package.json, tsconfig.json). Inference runs on @pipedog/onnx and tokenization on @huggingface/tokenizers (pure JS). DIVERGENCE: loading is async, so upstream's __init__(model_dir, *, precision, threads) is now static async load(modelDir, options), and download(options) is static async too. The constructor takes an already-loaded (config, tokenizer, session), and tag() returns a Promise. snapshot_download is replaced by downloadModelFile from <endpoint>/pipecat-ai/tone-models/resolve/<rev>/reader/* into modelCacheDir('tone'), with extra options downloadRoot, endpoint, fetch and backend. tokenizers.js has no enable_truncation, so _encode emulates it: right truncation to config.max_len, keeping the special tokens, by re-running the post-processor. The import-time ImportError log is dropped because the dependencies are always installed. round() is emulated Python-style (exact ties go to even). The tag dict keys are unchanged (e.g. is_backchannel). Runtimes are listed as bun/node/deno (unverified, compat not run)."
     },
     {
       "module": "pipecat.processors.tone.reader.processor",
@@ -7187,9 +7187,9 @@
       ],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "The model (reader/model) is assigned to @pipedog/tone, which depends on core, so core can't import it statically. Following the local_smart_turn_v3 pattern, the reader takes a pipedog-only `openModel` option and otherwise dynamically imports '@pipedog/tone/reader/model'. It expects `new PipecatToneReaderModel(dir, {precision, threads})` and `PipecatToneReaderModel.download({revision, precision, threads})`. A local structural interface types the model (`emotions`, `tag(text, previous)`), and `tag` may be async. TONE_REVISION ('reader-rc1') is mirrored locally. asyncio.to_thread becomes a plain await. Python round(x, 2) is reproduced by a local helper. | UNRESOLVED: packages/tone/src/tagger/model.ts (another agent's file, not in this review) imports `./_input.ts` and `./_labels.ts`, which do not exist in packages/tone/src/tagger. The modules are in @pipedog/core at processors/tone/tagger/, so that import needs to point to `@pipedog/core/processors/tone/tagger/_input` and `.../_labels`. | UNRESOLVED: Documented divergence left as it is: offsets into a sentence (encode's prefix length, Span and emphasis offsets in _labels.ts) are UTF-16 code units, where upstream counts code points. They differ only for characters outside the Basic Multilingual Plane. | UNRESOLVED: Small edge left as it is: LabelSpace.soundName returns null where Python's `a or b` would return an empty string when a name maps to \"\". Every caller only tests whether the result is truthy, so behavior is the same."
     },
     {
       "module": "pipecat.processors.tone.tagger",
@@ -7207,9 +7207,9 @@
       "tests": [
         "test_pipecat_tone_tagger.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Re-exports PipecatToneTagger from ./processor.ts (not yet ported by another agent; TS2307 until it exists)."
     },
     {
       "module": "pipecat.processors.tone.tagger._input",
@@ -7229,9 +7229,9 @@
       "tests": [
         "test_pipecat_tone_tagger.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "PRESET_NAMES is keyed by the ExpressionGuidance text (.value), since ExpressionGuidance is a class in TS. The regexes use the u flag with Python's Unicode \\w, \\d and \\b written out. encode's sentence offset is in UTF-16 code units (upstream counts code points). Message, TurnContext and Layout are options-object classes; the Layout fields are camelCase (contextTurns, customGuidance, maxTokens, cutCallFirst, previousTags). | UNRESOLVED: packages/tone/src/tagger/model.ts (another agent's file, not in this review) imports `./_input.ts` and `./_labels.ts`, which do not exist in packages/tone/src/tagger. The modules are in @pipedog/core at processors/tone/tagger/, so that import needs to point to `@pipedog/core/processors/tone/tagger/_input` and `.../_labels`. | UNRESOLVED: Documented divergence left as it is: offsets into a sentence (encode's prefix length, Span and emphasis offsets in _labels.ts) are UTF-16 code units, where upstream counts code points. They differ only for characters outside the Basic Multilingual Plane. | UNRESOLVED: Small edge left as it is: LabelSpace.soundName returns null where Python's `a or b` would return an empty string when a name maps to \"\". Every caller only tests whether the result is truthy, so behavior is the same."
     },
     {
       "module": "pipecat.processors.tone.tagger._labels",
@@ -7251,9 +7251,9 @@
         "test_pipecat_tone_tagger.py",
         "test_universal_names.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Label-to-name dicts are plain Record objects checked with Object.hasOwn. Span offsets are UTF-16 code units. isspace and isalnum come from utils/text/alnum_utils. LabelSpace.resolve takes positional (capabilities, policy, serviceName, vocabulary), as upstream does. A LabelVocabulary type is exported. | UNRESOLVED: packages/tone/src/tagger/model.ts (another agent's file, not in this review) imports `./_input.ts` and `./_labels.ts`, which do not exist in packages/tone/src/tagger. The modules are in @pipedog/core at processors/tone/tagger/, so that import needs to point to `@pipedog/core/processors/tone/tagger/_input` and `.../_labels`. | UNRESOLVED: Documented divergence left as it is: offsets into a sentence (encode's prefix length, Span and emphasis offsets in _labels.ts) are UTF-16 code units, where upstream counts code points. They differ only for characters outside the Basic Multilingual Plane. | UNRESOLVED: Small edge left as it is: LabelSpace.soundName returns null where Python's `a or b` would return an empty string when a name maps to \"\". Every caller only tests whether the result is truthy, so behavior is the same."
     },
     {
       "module": "pipecat.processors.tone.tagger.model",
@@ -7278,9 +7278,9 @@
       "tests": [
         "test_pipecat_tone_tagger.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New file at packages/tone/src/tagger/model.ts, built the same way as reader/model.ts: @pipedog/onnx plus @huggingface/tokenizers. Typecheck: the only errors are the missing ./_input.ts and ./_labels.ts, which other agents have not written yet. biome check is clean. Spot checks run in a scratch copy with stubbed dependencies: upstream's _decode breath tests give the same results, and pair truncation matches Rust tokenizers for only_first, longest_first and the fallback to an empty call. Divergences: (1) Loading is async. Use the static load(modelDir, {threads, backend}) or download({size, revision, threads, downloadRoot, endpoint, fetch, backend}). The constructor takes (config, tokenizerConfig, session), and tag() returns a Promise. (2) download() fetches config.json, tokenizer.json and the ONNX file that config.onnx names. Upstream downloads every file in tagger/<size>/*. (3) tokenizers.js has no truncation, offsets, sequence ids or special-token mask, so _encodePair rebuilds them. Truncation copies Rust tokenizers' left-direction only_first/longest_first with the post-processor's added tokens counted. Where each token goes comes from running the post-processor on placeholder tokens. Token offsets come from matching the token's bytes against the normalized text, handling WordPiece ##, byte-level BPE, Metaspace and byte_fallback. This is a heuristic and has not been checked against the real tagger tokenizer, because the HF download was blocked in this sandbox. (4) Offsets are in UTF-16 code units, not Python code points. (5) The threading.Lock is dropped because encoding is synchronous and stateless. (6) Properties are renamed breathsPerReply and breathKinds. Nothing in this module is deprecated. | UNRESOLVED: packages/core/src/processors/tone/tagger/processor.ts (another agent's file, not changed here) opens the model with `new Model(settings.modelDir, { threads })`. The ported PipecatToneTaggerModel loads asynchronously, so its constructor is `(config, tokenizerConfig, session)`, as the DIVERGENCE note says. The processor should call `await Model.load(settings.modelDir, { threads: settings.threads })`. The reader processor has the same mismatch with packages/tone/src/reader/model.ts."
     },
     {
       "module": "pipecat.processors.tone.tagger.processor",
@@ -7309,9 +7309,9 @@
         "loguru"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "The model is loaded as in the reader: a pipedog-only `openModel` option, or a dynamic import of '@pipedog/tone/tagger/model' (`new PipecatToneTaggerModel(dir, {threads})` and `.download({size, revision, threads})`). A local interface types the model: breathsPerReply, breathKinds and a sync-or-async tag(turn, earlier, sentence). TAGGER_REVISION is mirrored locally. ValueError becomes Error. DIVERGENCE: Python's random.Random (Mersenne Twister, string seed) is replaced by an exported SeededRandom (sfc32 seeded from a cyrb128 string hash). A call still replays alike, but it draws different breath kinds than upstream. time.perf_counter is monotonic() from @pipedog/asyncio. | UNRESOLVED: packages/tone/src/tagger/model.ts (another agent's file, not in this review) imports `./_input.ts` and `./_labels.ts`, which do not exist in packages/tone/src/tagger. The modules are in @pipedog/core at processors/tone/tagger/, so that import needs to point to `@pipedog/core/processors/tone/tagger/_input` and `.../_labels`. | UNRESOLVED: Documented divergence left as it is: offsets into a sentence (encode's prefix length, Span and emphasis offsets in _labels.ts) are UTF-16 code units, where upstream counts code points. They differ only for characters outside the Basic Multilingual Plane. | UNRESOLVED: Small edge left as it is: LabelSpace.soundName returns null where Python's `a or b` would return an empty string when a name maps to \"\". Every caller only tests whether the result is truthy, so behavior is the same."
     },
     {
       "module": "pipecat.registry",
@@ -8043,9 +8043,9 @@
       "tests": [
         "test_assemblyai_tts.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New full port at /home/user/pipedog/packages/assemblyai/src/tts.ts. There was no existing TS file, so it was written from scratch, not as a delta from the 'since' commit. Upstream adds no deprecated APIs here, so nothing was dropped. One divergence: Generate chunks are cut by code point (Array.from), as Python str slicing does, so a surrogate pair is never split across two messages. Wire JSON uses pyJsonDumps/pyJsonLoads, audio is decoded with base64ToBytes, and the socket opens through _websocketConnect with Authorization and User-Agent headers. The URL is built with URLSearchParams, which encodes like urlencode. Also added `export * from \"./tts.ts\"` to packages/assemblyai/src/index.ts. tsc and biome pass on the package. No tests were ported."
     },
     {
       "module": "pipecat.services.asyncai",
@@ -11630,9 +11630,9 @@
         "test_openai_compatible_api_key.py",
         "test_openai_compatible_token_usage.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New port at packages/nvidia/src/llm.ts. Dropped the deprecated `model` constructor option (use settings). Upstream closes the inner stream with close(); the JS SDK stream has none, so _closeInnerStream() calls close() if present and otherwise aborts stream.controller. The _handleReasoningContent wrapper is an async generator returned from getChatCompletions. Added \"openai\": \"^6.49.0\" to the @pipedog/nvidia dependencies, which omni/llm.ts needs for its error classes and client."
     },
     {
       "module": "pipecat.services.nvidia.omni",
@@ -11646,9 +11646,9 @@
       "deps": [],
       "thirdParty": [],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Upstream __init__.py has only a license header. packages/nvidia/src/omni/index.ts has the header and `export {}`."
     },
     {
       "module": "pipecat.services.nvidia.omni.llm",
@@ -11682,9 +11682,9 @@
         "test_nvidia_omni_llm.py",
         "test_openai_compatible_api_key.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New port at packages/nvidia/src/omni/llm.ts. DIVERGENCE: upstream keeps turn parts in a ContextVar; here a per-task WeakMap keyed by currentTask() (_TurnPartsVar) holds them, so child tasks do not inherit them as a copied Python context would. Upstream clears the parts for one-shot inferences anyway. createClient reads options.requestTimeoutSecs because it runs inside the parent constructor; the SDK timeout is in ms. The httpx connection limits are not ported (fetch has no equivalent). The model_extra reasoning lookup is not ported because the JS SDK keeps unknown fields on the object itself. Streaming in runMultimodalInference awaits each chunk with abortable and releases the stream in a finally block. The transcript/response extractor slices by code point, as Python len() does. Tool-result content is compared with a Python-style deep equality helper."
     },
     {
       "module": "pipecat.services.nvidia.sagemaker",
@@ -14078,8 +14078,8 @@
       "tests": [
         "test_zoom_ai_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
       "notes": ""
     },
     {
@@ -14112,9 +14112,9 @@
       "tests": [
         "test_zoom_ai_stt.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New package @pipedog/zoom-ai (package.json, tsconfig.json) with full port at packages/zoom-ai/src/stt.ts. Upstream has no deprecated APIs here, so nothing was dropped. DIVERGENCE: a standard WebSocket hides the handshake's HTTP status and body, so the check for websockets InvalidStatus became describeRefusal(). It duck-types e.response.body (string or bytes, JSON) plus status_code/statusCode/status, the same way @pipedog/deepgram/_errors does. Other changes: uuid4 becomes crypto.randomUUID(); copy.deepcopy becomes structuredClone; pipecat.version() becomes version() from @pipedog/core; the hostname check uses new URL(). tsc --noEmit is clean. Biome formatting is applied, and biome reports 3 useOptionalChain warnings that were left as they are to keep upstream's `or {}` semantics. No tests yet. | UNRESOLVED: describeRefusal duck-types the error's `response.body` because the core websocket client has no InvalidStatus equivalent and a standard WebSocket does not expose the handshake response body. The port already documents this as a DIVERGENCE, and it cannot be fixed inside this module. | UNRESOLVED: RequestView.of checks `isinstance(silence, int)` with Number.isInteger. It cannot tell a JSON float with an integral value (350.0) from an int, and Python's bool counting as an int is not reproduced. Both are edge cases that JS numbers cannot express."
     },
     {
       "module": "pipecat.tests",
@@ -18314,8 +18314,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 140,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "22 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_async_tool_messages.py",
@@ -20992,8 +20992,8 @@
         "pipecat.services.openai.llm"
       ],
       "needsModules": 124,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "3 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_nvidia_omni_llm.py",
@@ -21011,8 +21011,8 @@
         "pipecat.utils.http"
       ],
       "needsModules": 127,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "71 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_nvidia_sagemaker_tts.py",
@@ -21090,8 +21090,8 @@
         "pipecat.services.xai.llm"
       ],
       "needsModules": 159,
-      "status": "todo",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
+      "status": "tested",
+      "notes": "61 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_openai_compatible_extra_body.py",
@@ -21432,8 +21432,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 123,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_pipecat_tone_tagger.py",
@@ -21458,8 +21458,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 134,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "39 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_pipeline.py",
@@ -22263,7 +22263,7 @@
       ],
       "needsModules": 117,
       "status": "ported",
-      "notes": "192 pass, 0 fail, 50 skip, 0 todo"
+      "notes": "200 pass, 0 fail, 50 skip, 0 todo"
     },
     {
       "file": "tests/test_service_language.py",
@@ -23269,8 +23269,8 @@
         "pipecat.processors.tone.tagger._labels"
       ],
       "needsModules": 8,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "23 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_user_bot_latency_observer.py",
@@ -23955,8 +23955,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 123,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "59 pass, 0 fail, 0 skip, 0 todo"
     }
   ]
 }

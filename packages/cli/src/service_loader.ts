@@ -55,12 +55,14 @@ const ENV_DESCRIPTIONS: Record<string, string> = {
   INWORLD_API_KEY: "https://platform.inworld.ai/",
   MISTRAL_API_KEY: "https://console.mistral.ai/api-keys",
   MISTRAL_VOICE_ID: "a voice from your Mistral account",
+  NVIDIA_API_KEY: "https://build.nvidia.com/ (not needed for a local NIM)",
   OPENAI_API_KEY: "https://platform.openai.com/api-keys",
   SONIOX_API_KEY: "https://console.soniox.com/",
   SPEECHMATICS_API_KEY: "https://portal.speechmatics.com/",
   TOGETHER_API_KEY: "https://api.together.ai/settings/api-keys",
   ULTRAVOX_API_KEY: "https://app.ultravox.ai/",
   XAI_API_KEY: "https://console.x.ai/",
+  ZOOM_AI_API_KEY: "https://developers.zoom.us/docs/ai-services/",
 };
 
 /** One `import { A, B } from "module";` line, taken apart. */

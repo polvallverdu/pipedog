@@ -19,7 +19,7 @@
  * - `test_api_key_argument_is_required`: Python raises TypeError for the
  *   missing keyword argument. TypeScript rejects the call at compile time; at
  *   runtime the missing options object raises TypeError too.
- * - NvidiaLLMService is not ported yet; its cases are `test.todo`.
+ * - `@pipedog/nvidia` has no index; its `llm` and `omni/llm` modules are walked.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -51,6 +51,10 @@ import * as nebiusPkg from "../../nebius/src/index.ts";
 import { NebiusLLMService } from "../../nebius/src/llm.ts";
 import * as novitaPkg from "../../novita/src/index.ts";
 import { NovitaLLMService } from "../../novita/src/llm.ts";
+import * as nvidiaLlmMod from "../../nvidia/src/llm.ts";
+import { NvidiaLLMService } from "../../nvidia/src/llm.ts";
+import * as nvidiaOmniLlmMod from "../../nvidia/src/omni/llm.ts";
+import { NvidiaOmniLLMService } from "../../nvidia/src/omni/llm.ts";
 import * as ollamaPkg from "../../ollama/src/index.ts";
 import { OLLamaLLMService } from "../../ollama/src/llm.ts";
 import * as openrouterPkg from "../../openrouter/src/index.ts";
@@ -62,6 +66,8 @@ import * as sambanovaPkg from "../../sambanova/src/index.ts";
 import { SambaNovaLLMService } from "../../sambanova/src/llm.ts";
 import * as sarvamPkg from "../../sarvam/src/index.ts";
 import { SarvamLLMService } from "../../sarvam/src/llm.ts";
+import * as smallestPkg from "../../smallest/src/index.ts";
+import { SmallestLLMService } from "../../smallest/src/llm.ts";
 import * as togetherPkg from "../../together/src/index.ts";
 import { TogetherLLMService } from "../../together/src/llm.ts";
 import * as xaiPkg from "../../xai/src/index.ts";
@@ -89,6 +95,7 @@ const PROVIDER_SERVICES: AnyService[] = [
   QwenLLMService,
   SambaNovaLLMService,
   SarvamLLMService,
+  SmallestLLMService,
   TogetherLLMService,
 ];
 
@@ -98,9 +105,10 @@ const BaseWhisperSTTService = Object.getPrototypeOf(OpenAISTTService) as abstrac
 
 // Services that may take no key: OpenAI's own read OPENAI_API_KEY by design,
 // and the rest never hand the OpenAI client a missing key.
-// (Upstream also lists NvidiaLLMService, not ported yet.)
 const KEY_OPTIONAL_SERVICES = new Set<unknown>([
   AzureLLMService,
+  NvidiaLLMService,
+  NvidiaOmniLLMService,
   OLLamaLLMService,
   OpenAILLMService,
   OpenAISTTService,
@@ -139,12 +147,15 @@ test("test_every_provider_service_requires_api_key", () => {
     mistralPkg,
     nebiusPkg,
     novitaPkg,
+    nvidiaLlmMod,
+    nvidiaOmniLlmMod,
     ollamaPkg,
     openrouterPkg,
     perplexityPkg,
     qwenPkg,
     sambanovaPkg,
     sarvamPkg,
+    smallestPkg,
     togetherPkg,
     xaiPkg,
   ];
@@ -158,7 +169,7 @@ test("test_every_provider_service_requires_api_key", () => {
     }
   }
   // The walk must find the services it is checking.
-  for (const cls of [AzureLLMService, OpenAILLMService, OpenAISTTService, ...PROVIDER_SERVICES]) {
+  for (const cls of [...KEY_OPTIONAL_SERVICES, ...PROVIDER_SERVICES]) {
     expect(services.has(cls)).toBe(true);
   }
 
@@ -192,13 +203,12 @@ describe("test_missing_api_key_raises", () => {
 });
 
 describe("test_explicit_api_key_is_used", () => {
-  for (const cls of PROVIDER_SERVICES) {
+  for (const cls of [...PROVIDER_SERVICES, NvidiaLLMService] as AnyService[]) {
     test(cls.name, () => {
       const service = new cls({ apiKey: "provider-key" }) as WithClient;
       expect(service._client.apiKey).toBe("provider-key");
     });
   }
-  test.todo("NvidiaLLMService (pipecat.services.nvidia.llm)");
 });
 
 test("test_openai_services_read_openai_api_key", () => {
@@ -206,8 +216,14 @@ test("test_openai_services_read_openai_api_key", () => {
   expect((new OpenAISTTService() as unknown as WithClient)._client.apiKey).toBe("openai-key");
 });
 
-test.todo(
-  "test_nvidia_local_nim_without_key_does_not_use_openai_key (needs pipecat.services.nvidia.llm)",
-);
+test("test_nvidia_local_nim_without_key_does_not_use_openai_key", () => {
+  const service = new NvidiaLLMService({
+    baseUrl: "http://localhost:8000/v1",
+  }) as unknown as WithClient;
+  expect(service._client.apiKey).not.toBe("openai-key");
+});
 
-test.todo("test_nvidia_local_nim_without_any_key_constructs (needs pipecat.services.nvidia.llm)");
+test("test_nvidia_local_nim_without_any_key_constructs", () => {
+  delete process.env.OPENAI_API_KEY;
+  new NvidiaLLMService({ baseUrl: "http://localhost:8000/v1" });
+});

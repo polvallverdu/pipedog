@@ -20,12 +20,14 @@ the `@pipedog` scope and released together at one version: upgrade them together
 | `@pipedog/whisper`, `@pipedog/moonshine`, `@pipedog/funasr` | local speech-to-text on ONNX Runtime, no API key: [Whisper](/docs/services/stt/whisper) (also the base for Whisper-compatible APIs), [Moonshine](/docs/services/stt/moonshine), [FunASR SenseVoice](/docs/services/stt/funasr) |
 | `@pipedog/kokoro`, `@pipedog/piper`, `@pipedog/pocket-tts`, `@pipedog/espeak-ng` | local text-to-speech on ONNX Runtime, no API key: [Kokoro](/docs/services/tts/kokoro), [Piper](/docs/services/tts/piper) (also over HTTP), [Pocket TTS](/docs/services/tts/pocket-tts), and the eSpeak NG phonemizer Kokoro and Piper use |
 | `@pipedog/rime`, `@pipedog/fish`, `@pipedog/hume` | text-to-speech |
-| `@pipedog/assemblyai`, `@pipedog/speechmatics`, `@pipedog/gladia`, `@pipedog/soniox` | speech-to-text (Speechmatics and Soniox also text-to-speech) |
+| `@pipedog/assemblyai`, `@pipedog/speechmatics`, `@pipedog/gladia`, `@pipedog/soniox`, `@pipedog/zoom-ai` | speech-to-text (AssemblyAI, Speechmatics and Soniox also text-to-speech) |
 | `@pipedog/neuphonic`, `@pipedog/speechify`, `@pipedog/minimax`, `@pipedog/resembleai`, `@pipedog/camb`, `@pipedog/asyncai`, `@pipedog/bland` | text-to-speech, one package per provider |
 | `@pipedog/ultravox` | Ultravox realtime speech-to-speech |
 | `@pipedog/groq`, `@pipedog/mistral`, `@pipedog/together`, `@pipedog/xai` | OpenAI-compatible LLMs with the provider's STT and TTS (xAI also realtime); `@pipedog/grok` is the deprecated alias of `@pipedog/xai` |
 | `@pipedog/baseten`, `@pipedog/cerebras`, `@pipedog/crusoe`, `@pipedog/deepseek`, `@pipedog/fireworks`, `@pipedog/nebius`, `@pipedog/novita`, `@pipedog/ollama`, `@pipedog/openrouter`, `@pipedog/qwen`, `@pipedog/sambanova` | OpenAI-compatible LLMs, one package per provider |
 | `@pipedog/sarvam`, `@pipedog/smallest`, `@pipedog/gradium`, `@pipedog/meta`, `@pipedog/inception` | Sarvam (LLM, STT, TTS), Smallest AI (LLM, STT, TTS), Gradium (STT, TTS), Meta (STT) and Inception (LLM) |
+| `@pipedog/nvidia` | [NVIDIA](/docs/services/llm/nvidia) NIM LLMs, and Nemotron Omni, an LLM that hears the user's speech |
+| `@pipedog/tone` | the models for [Pipecat Tone](/docs/concepts/tone)'s reader and tagger processors (expressive conversation, alpha) |
 | `@pipedog/perplexity` | [Perplexity](/docs/services/llm/perplexity)'s Agent API: web-search answers over the OpenAI Responses protocol |
 | `@pipedog/langchain` | the LangChain processor |
 | `@pipedog/ai-sdk` | [Vercel AI SDK](/docs/services/llm/ai-sdk): any AI SDK language model as the LLM service |

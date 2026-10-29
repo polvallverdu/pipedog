@@ -1,0 +1,52 @@
+{
+  "name": "@pipedog/zoom-ai",
+  "version": "0.10.0",
+  "description": "Zoom AI services (Scribe Live STT) for pipedog.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "zoom",
+    "scribe",
+    "stt",
+    "speech"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/zoom-ai"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/zoom-ai#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/services/zoom_ai"
+    ]
+  }
+}

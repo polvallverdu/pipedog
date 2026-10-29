@@ -10,6 +10,7 @@
     "turn-events",
     "interruptions-and-cancellation",
     "tts-audio-cache",
+    "tone",
     "typed-tools",
     "metrics-and-tracing",
     "sentry-metrics"

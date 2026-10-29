@@ -305,9 +305,11 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/google`](packages/google) | Google services: Gemini (LLM, Live), Cloud Speech-to-Text, Cloud Text-to-Speech. |
 | [`@pipedog/deepgram`](packages/deepgram) | Deepgram services: STT, TTS, Flux STT and TTS. |
 | [`@pipedog/cloudflare`](packages/cloudflare) | Cloudflare Workers AI services (pipedog-only): Deepgram Flux, Nova-3 and Whisper STT, Aura and MeloTTS TTS, Workers AI LLMs and Smart Turn v2, over the Worker's `AI` binding or the REST API. |
-| [`@pipedog/assemblyai`](packages/assemblyai) | AssemblyAI services: Universal-Streaming STT and sync STT. |
+| [`@pipedog/assemblyai`](packages/assemblyai) | AssemblyAI services: Universal-Streaming STT, sync STT and streaming TTS. |
 | [`@pipedog/speechmatics`](packages/speechmatics) | Speechmatics services: STT and TTS. |
 | [`@pipedog/gladia`](packages/gladia) | Gladia realtime STT. |
+| [`@pipedog/zoom-ai`](packages/zoom-ai) | Zoom AI's Scribe Live streaming STT. |
+| [`@pipedog/nvidia`](packages/nvidia) | NVIDIA services: NIM LLM and Nemotron Omni (an LLM that hears the user's speech). Riva STT and TTS aren't ported yet. |
 | [`@pipedog/soniox`](packages/soniox) | Soniox services: STT and TTS. |
 | [`@pipedog/cartesia`](packages/cartesia) | Cartesia services: STT, Ink-2 turn-based STT, WebSocket and HTTP TTS. |
 | [`@pipedog/elevenlabs`](packages/elevenlabs) | ElevenLabs services: STT, Realtime STT, WebSocket and HTTP TTS, Text to Dialogue. |
@@ -323,6 +325,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/funasr`](packages/funasr) | `FunASRSTTService`: SenseVoiceSmall multilingual speech-to-text (strong on Chinese), run locally on ONNX Runtime. |
 | [`@pipedog/kokoro`](packages/kokoro) | `KokoroTTSService`: the Kokoro-82M text-to-speech model, run locally on ONNX Runtime. |
 | [`@pipedog/piper`](packages/piper) | Piper text-to-speech: `PiperTTSService` runs Piper voices locally on ONNX Runtime, `PiperHttpTTSService` calls a Piper HTTP server. |
+| [`@pipedog/tone`](packages/tone) | Pipecat Tone's reader and tagger models, run locally on ONNX Runtime, for the `PipecatToneReader` and `PipecatToneTagger` processors in `@pipedog/core` (expressive conversation, alpha). |
 | [`@pipedog/pocket-tts`](packages/pocket-tts) | `PocketTTSService`: Kyutai's Pocket TTS, run locally on ONNX Runtime, faster than real time on a CPU. |
 | [`@pipedog/espeak-ng`](packages/espeak-ng) | eSpeak NG phonemization (WebAssembly, GPL-3.0 optional peer) for the local Kokoro and Piper voices. |
 | [`@pipedog/langchain`](packages/langchain) | LangChain integration (`LangchainProcessor`). |
