@@ -47,6 +47,7 @@ for (const t of manifest.tests) {
   if (t.status !== "todo" && changed.has(t.file)) {
     stale.push(t.file);
     t.status = "todo";
+    t.notes = `upstream changed ${pin.commit.slice(0, 10)}..${next.slice(0, 10)}; re-port the diff.`;
   }
 }
 writeFileSync("porting/manifest.json", `${JSON.stringify(manifest, null, 2)}\n`);

@@ -134,7 +134,7 @@ export class GoogleVertexLLMService extends GoogleLLMService {
 
     // 1. Initialize defaultSettings with hardcoded defaults
     const defaultSettings = new GoogleVertexLLMSettings({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       systemInstruction: null,
       maxTokens: 4096,
       temperature: null,

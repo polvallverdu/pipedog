@@ -246,8 +246,10 @@ Report counts from the final run.`,
 }
 
 phase('Record')
-// Statuses come from actually running each test file, not from agents' reports.
-await record(['bun tools/port/status.ts --sync-tests', 'bun tools/port/status.ts'], 'record:tests')
+// Statuses come from actually running each test file, not from agents' reports. Clearing the
+// note first lets --sync-tests record a test whose upstream diff a porter just ported.
+const portedTests = testResults.filter((t) => t.status !== 'todo').map((t) => `bun tools/port/status.ts --set ${t.file.replace(/^.*?(?=packages\/)/, '')} in_progress ""`)
+await record([...portedTests, 'bun tools/port/status.ts --sync-tests', 'bun tools/port/status.ts'], 'record:tests')
 
 return {
   modules: portResults.flatMap((r) => r.modules),

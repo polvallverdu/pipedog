@@ -20,7 +20,7 @@ import { SpeechifyHttpTTSService } from "@pipedog/speechify/tts";
 
 const tts = new SpeechifyHttpTTSService({
   apiKey: process.env.SPEECHIFY_API_KEY ?? "",
-  settings: new SpeechifyHttpTTSService.Settings({ model: "simba-3.2", voice: "geffen_32" }),
+  settings: new SpeechifyHttpTTSService.Settings({ model: "simba-3.5", voice: "geffen_32" }),
 });
 // new Pipeline([transport.input(), stt, userAggregator, llm, tts, transport.output(), ...])
 ```

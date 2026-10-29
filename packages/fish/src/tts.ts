@@ -30,6 +30,7 @@
 
 import { decode, encode } from "@msgpack/msgpack";
 import { rethrowIfCancelled, type Task } from "@pipedog/asyncio";
+import type { BaseExpressionAdapter } from "@pipedog/core/adapters/tts/base_expression_adapter";
 import {
   type CancelFrame,
   type EndFrame,
@@ -52,6 +53,7 @@ import { State, type WebsocketClientConnection } from "@pipedog/core/services/we
 import { logger } from "@pipedog/core/utils/logger";
 import { installTracedTts } from "@pipedog/core/utils/tracing/service_decorators";
 import { assertGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
+import { FishAudioS2ExpressionAdapter } from "./fish_adapter.ts";
 
 type Dict = Record<string, any>;
 
@@ -182,6 +184,7 @@ export class FishAudioTTSService extends InterruptibleTTSService {
 
   protected _apiKey: string;
   protected _baseUrl: string;
+  protected _s2ExpressionAdapter: FishAudioS2ExpressionAdapter;
   protected _receiveTask: Task<unknown> | null;
   protected _fishSampleRate: number;
   protected _outputFormat: FishAudioOutputFormat;
@@ -229,6 +232,7 @@ export class FishAudioTTSService extends InterruptibleTTSService {
 
     this._apiKey = options.apiKey;
     this._baseUrl = "wss://api.fish.audio/v1/tts/live";
+    this._s2ExpressionAdapter = new FishAudioS2ExpressionAdapter();
     this._websocket = null;
     this._receiveTask = null;
 
@@ -244,6 +248,19 @@ export class FishAudioTTSService extends InterruptibleTTSService {
    */
   override canGenerateMetrics(): boolean {
     return true;
+  }
+
+  /**
+   * The adapter for the model: S2 tags on S2 models, otherwise none.
+   *
+   * @returns The expression adapter for the current model.
+   */
+  override getExpressionAdapter(): BaseExpressionAdapter {
+    const model = this._settings.model;
+    if (typeof model === "string" && model.startsWith("s2")) {
+      return this._s2ExpressionAdapter;
+    }
+    return super.getExpressionAdapter();
   }
 
   /**
@@ -444,7 +461,8 @@ export class FishAudioTTSService extends InterruptibleTTSService {
                 await this.stopTtfbMetrics();
               }
             } else if (event === "finish") {
-              const reason = m.reason ?? "unknown";
+              // dict.get(key, default): only a missing key takes the default.
+              const reason = "reason" in m ? m.reason : "unknown";
               if (reason === "error") {
                 await this.pushError("Fish Audio server error during synthesis");
               } else {

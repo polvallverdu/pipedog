@@ -58,7 +58,7 @@ import { State, type WebsocketClientConnection } from "@pipedog/core/services/we
 import { Language, resolveLanguage } from "@pipedog/core/transcriptions/language";
 import { base64ToBytes } from "@pipedog/core/utils/base64";
 import { logger } from "@pipedog/core/utils/logger";
-import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
+import { pyJsonDumps, pyJsonLoads, pyNumberRepr } from "@pipedog/core/utils/py_json";
 import { normalizeIpa } from "@pipedog/core/utils/text/phonemes";
 import { installTracedTts } from "@pipedog/core/utils/tracing/service_decorators";
 import { assertGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
@@ -72,8 +72,36 @@ function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-function snakeToCamel(key: string): string {
-  return key.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+/** Python's `repr()` of a JSON value (a list or dict in an f-string), for log lines. */
+function pyRepr(value: unknown): string {
+  if (value === null || value === undefined) return "None";
+  if (value === true) return "True";
+  if (value === false) return "False";
+  if (typeof value === "number") return pyNumberRepr(value);
+  if (typeof value === "string") {
+    const quote = value.includes("'") && !value.includes('"') ? '"' : "'";
+    let out = "";
+    for (const ch of value) {
+      if (ch === "\\") out += "\\\\";
+      else if (ch === quote) out += `\\${ch}`;
+      else if (ch === "\n") out += "\\n";
+      else if (ch === "\r") out += "\\r";
+      else if (ch === "\t") out += "\\t";
+      else out += ch;
+    }
+    return `${quote}${out}${quote}`;
+  }
+  if (Array.isArray(value)) return `[${value.map(pyRepr).join(", ")}]`;
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Dict).map(([k, v]) => `${pyRepr(k)}: ${pyRepr(v)}`);
+    return `{${entries.join(", ")}}`;
+  }
+  return String(value);
+}
+
+/** Python's `dict.get(key, default)` on a JSON object. */
+function dictGet(obj: Dict, key: string, fallback: unknown): any {
+  return Object.hasOwn(obj, key) ? obj[key] : fallback;
 }
 
 /** Python's `dict.get(key, {})` on a JSON object. */
@@ -203,26 +231,8 @@ export class InworldTTSSettings extends TTSSettings {
         flat.speaking_rate = (nested as Dict).speakingRate ?? null;
       }
     }
-    // Upstream's `super().from_mapping(flat)`, building an instance of this
-    // class (`cls`): key resolution as in `ServiceSettings.fromMapping`.
-    // biome-ignore lint/complexity/noThisInStatic: polymorphic classmethod.
-    const cls = this as unknown as typeof InworldTTSSettings & (new (options?: object) => T);
-    const fieldNames = new Set(new cls()._fieldNames());
-    const kwargs: Record<string, unknown> = {};
-    const extra: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(flat)) {
-      const canonical = cls._aliases[key] ?? key;
-      if (fieldNames.has(canonical)) {
-        kwargs[canonical] = value;
-      } else if (fieldNames.has(snakeToCamel(canonical))) {
-        kwargs[snakeToCamel(canonical)] = value;
-      } else {
-        extra[key] = value;
-      }
-    }
-    const instance = new cls(kwargs);
-    instance.extra = extra;
-    return instance;
+    // biome-ignore lint/complexity/noThisInStatic: classmethod semantics (`super().from_mapping`).
+    return TTSSettings.fromMapping.call(this, flat) as T;
   }
 }
 
@@ -588,7 +598,8 @@ export class InworldHttpTTSService extends TTSService {
     let buffer = new Uint8Array(0);
     // Track the duration of this utterance based on the last word's end time
     let utteranceDuration = 0.0;
-    const decoder = new TextDecoder("utf-8");
+    // `bytes.decode("utf-8")` raises on invalid UTF-8.
+    const decoder = new TextDecoder("utf-8", { fatal: true });
 
     for await (const chunk of iterAny(response.body)) {
       const merged = new Uint8Array(buffer.length + chunk.length);
@@ -942,7 +953,12 @@ export class InworldTTSService extends WebsocketTTSService {
     const flushId = contextId || this.getActiveAudioContextId();
     if (flushId && this._websocket) {
       logger.trace(`Flushing audio for context ${flushId}`);
-      await this._sendFlush(flushId);
+      try {
+        await this._sendFlush(flushId);
+      } catch (e) {
+        rethrowIfCancelled(e);
+        await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
+      }
     }
   }
 
@@ -997,9 +1013,9 @@ export class InworldTTSService extends WebsocketTTSService {
       }
 
       logger.trace(
-        `${this}: Word timestamps - raw_start_times=${pyJsonDumps(startTimes)}, ` +
+        `${this}: Word timestamps - raw_start_times=${pyRepr(startTimes)}, ` +
           `cumulative_offset=${this._cumulativeTime}, ` +
-          `adjusted_times=${pyJsonDumps(wordTimes.map(([, t]) => t))}, ` +
+          `adjusted_times=${pyRepr(wordTimes.map(([, t]) => t))}, ` +
           `generation_end_time=${this._generationEndTime}`,
       );
     }
@@ -1081,13 +1097,18 @@ export class InworldTTSService extends WebsocketTTSService {
     throw new Error("Websocket not connected");
   }
 
+  /** Whether the receive loop is running, and so owns reconnecting. */
+  protected get _receiveLoopRunning(): boolean {
+    return this._receiveTask !== null && !this._receiveTask.done();
+  }
+
   /** Connect to the Inworld WebSocket TTS service. */
   override async _connect(): Promise<void> {
     await super._connect();
 
     await this._connectWebsocket();
 
-    if (this._websocket && !this._receiveTask) {
+    if (this._websocket && !this._receiveLoopRunning) {
       this._receiveTask = this.createTask(() =>
         this._receiveTaskHandler((error, options) => this._reportError(error, options)),
       );
@@ -1161,11 +1182,16 @@ export class InworldTTSService extends WebsocketTTSService {
 
       if (this._websocket) {
         logger.debug("Disconnecting from Inworld WebSocket TTS");
-        const audioContexts = this.getAudioContexts();
-        if (audioContexts.length > 0) {
-          for (const ctxId of audioContexts) {
+        try {
+          for (const ctxId of this.getAudioContexts()) {
             await this._sendCloseContext(ctxId);
           }
+        } catch (e) {
+          rethrowIfCancelled(e);
+          // The connection is already gone; it still needs closing.
+          logger.debug(
+            `${this}: unable to close contexts before disconnecting: ${errorMessage(e)}`,
+          );
         }
         await this._websocket.close();
         logger.debug("Disconnected from Inworld WebSocket TTS");
@@ -1204,12 +1230,12 @@ export class InworldTTSService extends WebsocketTTSService {
       const msgTypes = ["contextCreated", "audioChunk", "flushCompleted", "contextClosed"].filter(
         (k) => k in result,
       );
-      logger.trace(`${this}: Received message types=${msgTypes}, ctx_id=${ctxId}`);
+      logger.trace(`${this}: Received message types=${pyRepr(msgTypes)}, ctx_id=${ctxId}`);
 
       // Check for errors
       const status = getDict(result, "status");
-      if ((status.code ?? 0) !== 0) {
-        const errorMsg: string = status.message ?? "Unknown error";
+      if (dictGet(status, "code", 0) !== 0) {
+        const errorMsg: string = dictGet(status, "message", "Unknown error");
         const errorCode = status.code;
 
         // Handle benign context errors:
@@ -1236,7 +1262,7 @@ export class InworldTTSService extends WebsocketTTSService {
 
       if (msg && typeof msg === "object" && "error" in msg) {
         const error = msg.error;
-        await this.pushError(typeof error === "string" ? error : pyJsonDumps(error));
+        await this.pushError(typeof error === "string" ? error : pyRepr(error));
         continue;
       }
 
@@ -1328,7 +1354,6 @@ export class InworldTTSService extends WebsocketTTSService {
     if (this._sentContextIds.has(contextId)) {
       return;
     }
-    this._sentContextIds.add(contextId);
 
     const audioConfig: Dict = {
       audioEncoding: this._audioEncoding,
@@ -1376,10 +1401,9 @@ export class InworldTTSService extends WebsocketTTSService {
     createConfig.timestampType = this._timestampType;
 
     const msg = { create: createConfig, contextId };
-    logger.trace(`${this}: Sending context create: ${pyJsonDumps(createConfig)}`);
-    await this.sendWithRetry(pyJsonDumps(msg), (error, options) =>
-      this._reportError(error, options),
-    );
+    logger.trace(`${this}: Sending context create: ${pyRepr(createConfig)}`);
+    await this._getWebsocket().send(pyJsonDumps(msg));
+    this._sentContextIds.add(contextId);
   }
 
   /**
@@ -1390,9 +1414,7 @@ export class InworldTTSService extends WebsocketTTSService {
    */
   protected async _sendText(contextId: string, text: string): Promise<void> {
     const msg = { send_text: { text }, contextId };
-    await this.sendWithRetry(pyJsonDumps(msg), (error, options) =>
-      this._reportError(error, options),
-    );
+    await this._getWebsocket().send(pyJsonDumps(msg));
   }
 
   /**
@@ -1402,9 +1424,7 @@ export class InworldTTSService extends WebsocketTTSService {
    */
   protected async _sendFlush(contextId: string): Promise<void> {
     const msg = { flush_context: {}, contextId };
-    await this.sendWithRetry(pyJsonDumps(msg), (error, options) =>
-      this._reportError(error, options),
-    );
+    await this._getWebsocket().send(pyJsonDumps(msg));
   }
 
   /**
@@ -1414,9 +1434,7 @@ export class InworldTTSService extends WebsocketTTSService {
    */
   protected async _sendCloseContext(contextId: string): Promise<void> {
     const msg = { close_context: {}, contextId };
-    await this.sendWithRetry(pyJsonDumps(msg), (error, options) =>
-      this._reportError(error, options),
-    );
+    await this._getWebsocket().send(pyJsonDumps(msg));
   }
 
   /**
@@ -1431,7 +1449,15 @@ export class InworldTTSService extends WebsocketTTSService {
     logger.debug(`${this}: Generating WebSocket TTS [${text}, for context: ${contextId}]`);
 
     try {
-      if (!this._websocket || this._websocket.state === State.CLOSED) {
+      if (!this._websocket || this._websocket.state !== State.OPEN) {
+        if (this._receiveLoopRunning) {
+          // The receive loop reconnects. A connection opened here
+          // would race it, leaving this turn's audio on a connection
+          // nothing reads. Pushed rather than yielded: this turn has
+          // no audio context to carry the error.
+          await this.pushError(`${this}: websocket reconnecting, skipping TTS`);
+          return;
+        }
         await this._connect();
       }
 

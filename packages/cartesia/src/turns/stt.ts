@@ -59,6 +59,11 @@ function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** Python's `dict.get(key, default)`: the default only when the key is missing. */
+function dictGet(data: Dict, key: string, dflt: unknown = null): any {
+  return Object.hasOwn(data, key) ? data[key] : dflt;
+}
+
 // Connection-bound turn detection query parameters, named as Cartesia
 // documents them, with the settings field that holds each. A change to any of
 // them is applied by reconnecting.
@@ -68,6 +73,29 @@ const _TURN_DETECTION_FIELDS = [
   ["turn_end_threshold", "turnEndThreshold"],
   ["turn_end_timeout_ms", "turnEndTimeoutMs"],
 ] as const;
+
+/**
+ * Cartesia Ink-2 ASR rejected a connection's settings.
+ *
+ * Carries the HTTP status code the server reports with the error, so the
+ * error is classified like a rejected HTTP request.
+ */
+export class CartesiaTurnsRequestError extends Error {
+  override name = "CartesiaTurnsRequestError";
+  /** The HTTP status code the server reported, if any. */
+  readonly statusCode: number | null;
+
+  /**
+   * Initialize the error.
+   *
+   * @param message The error message.
+   * @param statusCode The HTTP status code the server reported, if any.
+   */
+  constructor(message: string, statusCode: number | null = null) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
 
 export interface CartesiaTurnsSTTSettingsOptions extends STTSettingsOptions {
   /**
@@ -202,9 +230,8 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
   }
 
   /**
-   * How long to wait for the server's `connected` frame after the handshake.
-   * Reconnects run while sending audio, so an unbounded wait would stall the
-   * audio path.
+   * How long to wait for the server's `connected` frame after the handshake
+   * before treating the connection as failed.
    */
   static _CONNECTION_TIMEOUT = 10.0;
 
@@ -225,6 +252,9 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
   protected _watchdogTask: Task<unknown> | null = null;
   protected _userIsSpeaking = false;
   protected _lastAudioChunkDuration = 0.0;
+  // The transcript of the turn in progress, pushed if its connection closes
+  // before turn.end.
+  protected _turnTranscript = "";
 
   /**
    * Initialize the Cartesia Ink-2 STT service.
@@ -273,14 +303,10 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
       defaultSettings.applyUpdate(options.settings);
     }
 
-    // reconnectOnError=false: we want the server's "connected" frame before
-    // declaring the socket ready; sendWithRetry handles reconnection on
-    // demand.
     // The mixin reads enableEagerEndOfTurn from the same options object.
     const superOptions: CartesiaTurnsSTTServiceOptions = {
       ...options,
       sampleRate: options.sampleRate ?? null,
-      reconnectOnError: false,
       enableEagerEndOfTurn: options.enableEagerEndOfTurn ?? false,
       settings: defaultSettings,
     };
@@ -399,21 +425,74 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
   // Connection management
   // ------------------------------------------------------------------
 
+  /**
+   * Connect to the WebSocket and start the receive loop.
+   *
+   * The receive loop starts even when the connection fails: with no socket it
+   * goes straight to its reconnect path, which retries the connect. It owns
+   * reconnection for the session, so audio is never held up waiting on a
+   * connection.
+   */
   override async _connect(): Promise<void> {
     await super._connect();
     await this._connectWebsocket();
+    if (!this._receiveTask) {
+      this._receiveTask = this.createTask(() =>
+        this._receiveTaskHandler((error, options) => this._reportError(error, options)),
+      );
+    }
   }
 
+  /** Close the session, letting the server flush pending turn responses first. */
   override async _disconnect(): Promise<void> {
+    // Marks the disconnect as intentional, so the receive loop doesn't
+    // reconnect as it winds down.
     await super._disconnect();
     try {
-      await this._disconnectWebsocket();
+      // Cancel the watchdog before sending close so it doesn't keep
+      // injecting silence during the drain.
+      if (this._watchdogTask) {
+        await this.cancelTask(this._watchdogTask, 1.0);
+        this._watchdogTask = null;
+      }
+
+      // Send close so the server can flush any pending turn responses
+      // before it tears the socket down from its side.
+      if (this._websocket && this._websocket.state === State.OPEN) {
+        logger.debug("Sending close command to Cartesia Ink-2 ASR");
+        try {
+          await this._websocket.send(pyJsonDumps({ type: "close" }));
+        } catch (e) {
+          rethrowIfCancelled(e);
+          logger.warning(`Failed to send close command: ${errorMessage(e)}`);
+        }
+      }
+
+      // Wait for the receive loop to exit as the server drains responses
+      // and closes the socket. Fall back to cancellation if it doesn't
+      // complete in time.
+      if (this._receiveTask) {
+        const receiveTask = this._receiveTask;
+        try {
+          await waitFor(() => shield(receiveTask), 2.0);
+        } catch (e) {
+          if (e instanceof TimeoutError) {
+            logger.debug("Timed out waiting for server to close; cancelling receive task");
+            await this.cancelTask(receiveTask, 1.0);
+          } else {
+            rethrowIfCancelled(e);
+            // Receive task already errored; cancelTask is a no-op on done tasks.
+            await this.cancelTask(receiveTask, 1.0);
+          }
+        }
+        this._receiveTask = null;
+      }
     } catch (e) {
       rethrowIfCancelled(e);
       await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
-    } finally {
-      this._websocket = null;
     }
+
+    await this._disconnectWebsocket();
   }
 
   protected _websocketUrl(): string {
@@ -438,7 +517,12 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
     return `${this._url}?${_urlencode(params)}`;
   }
 
-  /** Connect to the v2 WebSocket and wait for the server's `connected` frame. */
+  /**
+   * Open the v2 WebSocket.
+   *
+   * The server confirms the connection with a `connected` frame, which the
+   * receive loop waits for (see `_receiveMessages`).
+   */
   override async _connectWebsocket(): Promise<void> {
     try {
       if (this._websocket && this._websocket.state === State.OPEN) {
@@ -459,31 +543,6 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
       this._websocket = await this._websocketConnect(this._websocketUrl(), {
         additionalHeaders: headers,
       });
-
-      if (!this._receiveTask) {
-        this._receiveTask = this.createTask(() =>
-          this._receiveTaskHandler((error, options) => this._reportError(error, options)),
-        );
-      }
-
-      if (!this._watchdogTask) {
-        this._watchdogTask = this.createTask(() => this._watchdogTaskHandler());
-      }
-
-      logger.debug("WebSocket connected, waiting for server confirmation...");
-      const timeout = (this.constructor as typeof CartesiaTurnsSTTService)._CONNECTION_TIMEOUT;
-      try {
-        await waitFor(() => this._connectionEstablishedEvent.wait(), timeout);
-      } catch (e) {
-        if (e instanceof TimeoutError) {
-          // Python formats the float timeout as e.g. "10.0".
-          const shown = Number.isInteger(timeout) ? timeout.toFixed(1) : String(timeout);
-          throw new TimeoutError(`Cartesia did not confirm the connection within ${shown}s`);
-        }
-        throw e;
-      }
-      logger.debug(`Connected to Cartesia Ink-2 ASR (request_id=${this._requestId ?? "None"})`);
-      await this._callEventHandler("on_connected");
     } catch (e) {
       rethrowIfCancelled(e);
       await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
@@ -492,48 +551,14 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
     }
   }
 
-  /** Send a `close` command, drain pending responses, then close the WebSocket. */
+  /**
+   * Close the WebSocket and reset connection state.
+   *
+   * Called on its own by the receive loop when it reconnects, so it leaves
+   * the receive loop and watchdog running.
+   */
   override async _disconnectWebsocket(): Promise<void> {
     try {
-      // Cancel the watchdog before sending close so it doesn't keep
-      // injecting silence during the drain.
-      if (this._watchdogTask) {
-        await this.cancelTask(this._watchdogTask, 1.0);
-        this._watchdogTask = null;
-      }
-
-      // Send close so the server can flush any pending turn responses
-      // before it tears the socket down from its side.
-      if (this._websocket && this._websocket.state === State.OPEN) {
-        logger.debug("Sending close command to Cartesia Ink-2 ASR");
-        try {
-          await this._websocket.send(pyJsonDumps({ type: "close" }));
-        } catch (e) {
-          rethrowIfCancelled(e);
-          logger.warning(`Failed to send close command: ${errorMessage(e)}`);
-        }
-      }
-
-      // Wait for the receive task to exit naturally as the server drains
-      // responses and closes the socket. Fall back to cancellation if it
-      // doesn't complete in time.
-      if (this._receiveTask) {
-        const receiveTask = this._receiveTask;
-        try {
-          await waitFor(() => shield(receiveTask), 2.0);
-        } catch (e) {
-          if (e instanceof TimeoutError) {
-            logger.debug("Timed out waiting for server to close; cancelling receive task");
-            await this.cancelTask(receiveTask, 1.0);
-          } else {
-            rethrowIfCancelled(e);
-            // Receive task already errored; cancelTask is a no-op on done tasks.
-            await this.cancelTask(receiveTask, 1.0);
-          }
-        }
-        this._receiveTask = null;
-      }
-
       this._connectionEstablishedEvent.clear();
       await this.stopAllMetrics();
 
@@ -567,20 +592,25 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
    * Transcription results are delivered asynchronously via the receive task
    * and are not yielded from this method.
    *
+   * Audio that arrives while the connection is down is dropped; the receive
+   * loop reconnects in the background. The server takes audio as soon as the
+   * socket opens, ahead of its `connected` frame.
+   *
    * @param audio Raw 16-bit signed little-endian PCM audio bytes.
    * @returns null (transcription results are pushed by the receive task), or
    *   an ErrorFrame on send failure.
    */
   override async *runStt(audio: Uint8Array): AsyncGenerator<Frame | null, void, unknown> {
-    // With no socket (the first connect failed), sendWithRetry reconnects.
-    try {
-      this._lastSttTime = monotonic();
-      this._lastAudioChunkDuration = audio.length / (this.sampleRate * 2);
-      await this.sendWithRetry(audio, (error, options) => this._reportError(error, options));
-    } catch (e) {
-      rethrowIfCancelled(e);
-      yield new ErrorFrame({ error: `Cartesia Ink-2 ASR send error: ${errorMessage(e)}` });
-      return;
+    if (this._websocket && this._websocket.state === State.OPEN) {
+      try {
+        this._lastSttTime = monotonic();
+        this._lastAudioChunkDuration = audio.length / (this.sampleRate * 2);
+        await this._websocket.send(audio);
+      } catch (e) {
+        rethrowIfCancelled(e);
+        yield new ErrorFrame({ error: `Cartesia Ink-2 ASR send error: ${errorMessage(e)}` });
+        return;
+      }
     }
     yield null;
   }
@@ -591,7 +621,7 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
     const numChannels = 1; // mono
     const numSamples = Math.trunc(this.sampleRate * durationSecs);
     const silence = new Uint8Array(numSamples * sampleWidth * numChannels);
-    await this.sendWithRetry(silence, (error, options) => this._reportError(error, options));
+    await this._getWebsocket().send(silence);
     // Watchdog silence is real audio submitted to the service, so it counts
     // toward usage.
     this._recordSttAudioUsage(silence);
@@ -629,32 +659,108 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
     }
   }
 
-  /** Receive and process messages from the WebSocket. */
+  /**
+   * Receive and process messages from the WebSocket.
+   *
+   * Waits for the server to confirm the connection with `connected`, then
+   * processes turn events and errors.
+   *
+   * @throws Error (Python's `ConnectionError`) if `connected` doesn't arrive
+   *   within `_CONNECTION_TIMEOUT`.
+   * @throws CartesiaTurnsRequestError if the server rejects the connection's
+   *   settings.
+   */
   override async _receiveMessages(): Promise<void> {
-    for await (const message of this._getWebsocket()) {
-      if (typeof message !== "string") {
-        logger.warning(`Received non-text message: ${message.constructor.name}`);
-        continue;
+    const messages = this._getWebsocket()[Symbol.asyncIterator]();
+    if (
+      !(await this._receiveUntilConfirmed(
+        messages,
+        this._connectionEstablishedEvent,
+        (message) => this._processMessage(message),
+        (this.constructor as typeof CartesiaTurnsSTTService)._CONNECTION_TIMEOUT,
+      ))
+    ) {
+      // Closed before confirming; the receive loop treats it as a drop.
+      return;
+    }
+
+    await this._callEventHandler("on_connected");
+    // The watchdog stops when its connection closes, so each confirmed
+    // connection gets a new one.
+    if (!this._watchdogTask || this._watchdogTask.done()) {
+      this._watchdogTask = this.createTask(() => this._watchdogTaskHandler());
+    }
+
+    try {
+      while (true) {
+        const next = await messages.next();
+        if (next.done) break;
+        await this._processMessage(next.value);
       }
-      let data: unknown;
-      try {
-        data = pyJsonLoads(message);
-      } catch (e) {
-        rethrowIfCancelled(e);
-        logger.exception("Failed to decode JSON message", e);
-        continue;
-      }
-      try {
-        await this._handleMessage(data);
-      } catch (e) {
-        rethrowIfCancelled(e);
-        await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
-        // Re-raise so WebsocketService._receiveTaskHandler tears down the
-        // receive loop. With reconnectOnError=false, it reports the error and
-        // exits — no reconnect happens here.
-        throw e;
+    } finally {
+      // A turn lives in one connection, so it ends when the connection does,
+      // unless the service is stopping.
+      if (!this._disconnecting) {
+        await this._endTurnCutShort();
       }
     }
+  }
+
+  /** Decode and handle one message from the WebSocket. */
+  protected async _processMessage(message: string | Uint8Array): Promise<void> {
+    if (typeof message !== "string") {
+      logger.warning(`Received non-text message: ${message.constructor.name}`);
+      return;
+    }
+    let data: unknown;
+    try {
+      data = pyJsonLoads(message);
+    } catch (e) {
+      rethrowIfCancelled(e);
+      logger.exception("Failed to decode JSON message", e);
+      return;
+    }
+    try {
+      await this._handleMessage(data);
+    } catch (e) {
+      rethrowIfCancelled(e);
+      await this.pushError(`Unknown error occurred: ${errorMessage(e)}`, { exception: e });
+      // Re-raise so the receive loop handles it: it reconnects, unless the
+      // error left the service unusable.
+      throw e;
+    }
+  }
+
+  /**
+   * End a turn whose connection closed before the server sent turn.end.
+   *
+   * A turn lives in one connection, so a new connection never ends the old
+   * one's turn. The transcript received so far is pushed as the turn's
+   * transcription, unfinalized since the server never committed it, and the
+   * turn stop is proposed. If the user keeps talking on a new connection, the
+   * rest is transcribed as a new turn.
+   */
+  protected async _endTurnCutShort(): Promise<void> {
+    if (!this._userIsSpeaking) {
+      return;
+    }
+    logger.debug(`${this}: connection closed mid-turn, ending the turn`);
+    this._userIsSpeaking = false;
+    this._clearEagerEndOfTurn();
+    const transcript = this._turnTranscript;
+    this._turnTranscript = "";
+    if (transcript) {
+      await this.emitSttUsageMetrics();
+      await this.pushFrame(
+        new TranscriptionFrame({
+          text: transcript,
+          userId: this._userId,
+          timestamp: timeNowIso8601(),
+          language: this._language,
+        }),
+      );
+    }
+    await this.broadcastFrame(ProposedUserStoppedSpeakingFrame);
   }
 
   /** Handle a transcription result with tracing. */
@@ -675,7 +781,7 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
     }
     const msg = data as Dict;
 
-    const messageType = msg.type;
+    const messageType = dictGet(msg, "type");
     if (!messageType) {
       logger.warning("Message missing 'type' field");
       return;
@@ -701,23 +807,25 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
   }
 
   protected async _handleConnected(data: Dict): Promise<void> {
-    this._requestId = data.request_id ?? null;
+    this._requestId = dictGet(data, "request_id");
     logger.info(`Cartesia Ink-2 ASR connected (request_id=${this._requestId ?? "None"})`);
     this._connectionEstablishedEvent.set();
   }
 
   protected async _handleTurnStart(data: Dict): Promise<void> {
-    const transcript: string = data.transcript ?? "";
+    const transcript: string = dictGet(data, "transcript", "");
     logger.debug("Cartesia Ink-2 ASR turn.start");
     this._userIsSpeaking = true;
+    this._turnTranscript = transcript;
     await this.broadcastFrame(ProposedUserStartedSpeakingFrame);
     await this._callEventHandler("on_turn_start", transcript);
   }
 
   protected async _handleTurnUpdate(data: Dict): Promise<void> {
-    const transcript: string = data.transcript ?? "";
+    const transcript: string = dictGet(data, "transcript", "");
     if (transcript) {
       logger.trace(`Cartesia Ink-2 ASR turn.update: ${transcript}`);
+      this._turnTranscript = transcript;
       await this.pushFrame(
         new InterimTranscriptionFrame({
           text: transcript,
@@ -740,7 +848,7 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
    * discarded if either happens.
    */
   protected async _handleTurnEagerEnd(data: Dict): Promise<void> {
-    const transcript: string = data.transcript ?? "";
+    const transcript: string = dictGet(data, "transcript", "");
     await this._pushEagerEndOfTurn(transcript, {
       userId: this._userId,
       language: this._language,
@@ -757,9 +865,10 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
   }
 
   protected async _handleTurnEnd(data: Dict): Promise<void> {
-    const transcript: string = data.transcript ?? "";
+    const transcript: string = dictGet(data, "transcript", "");
     logger.debug(`Cartesia Ink-2 ASR turn.end: ${transcript}`);
     this._userIsSpeaking = false;
+    this._turnTranscript = "";
     // The turn is committed, so any eager prediction it followed is resolved.
     this._clearEagerEndOfTurn();
     // The watchdog injects silence to force turn.end when audio stops
@@ -788,8 +897,15 @@ export class CartesiaTurnsSTTService extends EagerEndOfTurnSTTServiceMixin(Webso
   }
 
   protected async _handleServerError(data: Dict): Promise<void> {
-    const message = data.message ?? "Unknown error";
-    const errorCode = data.error_code ?? "unknown";
-    await this.pushError(`Cartesia Ink-2 ASR error [${errorCode}]: ${message}`);
+    const message = dictGet(data, "message", "Unknown error");
+    const errorCode = dictGet(data, "error_code", "unknown");
+    const errorMsg = `Cartesia Ink-2 ASR error [${errorCode ?? "None"}]: ${message ?? "None"}`;
+    if (!this._connectionEstablishedEvent.isSet()) {
+      // The server validates a connection's settings after the handshake,
+      // sending this error in place of `connected` and then closing the
+      // connection.
+      throw new CartesiaTurnsRequestError(errorMsg, dictGet(data, "status_code"));
+    }
+    await this.pushError(errorMsg);
   }
 }

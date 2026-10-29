@@ -438,6 +438,11 @@ export function _selectAlignment(
   return (pyTruthy(alignment) ? alignment : normalized) ?? null;
 }
 
+/** Whether a word ends inside a bracketed audio tag, as one cut off between chunks does. */
+export function _endsInAudioTag(word: string): boolean {
+  return word.lastIndexOf("[") > word.lastIndexOf("]");
+}
+
 /**
  * Return alignment with utterance-leading space chars removed, if requested.
  *
@@ -483,6 +488,10 @@ export function _stripUtteranceLeadingSpaces(
  * @param cumulativeTime Base time offset for this chunk.
  * @param partialWord Partial word carried over from previous chunk.
  * @param partialWordStartTime Start time of the partial word.
+ * @param options.audioTags Whether a bracketed audio tag, such as `[short pause]`,
+ *   is one word, spaces and all. Eleven v3 and v4 return the tags they
+ *   perform in the alignment, and a tag reported whole matches the text
+ *   it was sent in.
  * @returns Tuple of [wordTimes, newPartialWord, newPartialWordStartTime]:
  *   - wordTimes: List of [word, timestamp] tuples for complete words
  *   - newPartialWord: Incomplete word at end of chunk (empty if chunk ends
@@ -494,7 +503,9 @@ export function calculateWordTimes(
   cumulativeTime: number,
   partialWord = "",
   partialWordStartTime = 0.0,
+  options: { audioTags?: boolean } = {},
 ): [[string, number][], string, number] {
+  const audioTags = options.audioTags ?? false;
   const chars: string[] = alignmentInfo.chars;
   const charStartTimesMs: number[] = alignmentInfo.charStartTimesMs;
 
@@ -510,10 +521,14 @@ export function calculateWordTimes(
   const wordStartTimes: number[] = [];
   let currentWord = partialWord; // Start with any partial word from previous chunk
   let wordStartTime: number | null = partialWord ? partialWordStartTime : null;
+  let inTag = audioTags && _endsInAudioTag(currentWord);
 
   for (let i = 0; i < chars.length; i++) {
     const char = chars[i]!;
-    if (char === " ") {
+    if (audioTags && (char === "[" || char === "]")) {
+      inTag = char === "[";
+    }
+    if (char === " " && !inTag) {
       // End of current word
       if (currentWord) {
         // Only add non-empty words

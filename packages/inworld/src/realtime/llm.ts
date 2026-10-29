@@ -919,7 +919,7 @@ export class InworldRealtimeLLMService extends LLMService<RealtimeAdapter> {
         if (lastMsg instanceof LLMSpecificMessage) {
           return;
         }
-        const last = lastMsg as unknown as Record<string, unknown>;
+        const last = lastMsg;
 
         if (last.role !== "user") {
           // A tool result or any other message the aggregator wrote.
@@ -934,9 +934,7 @@ export class InworldRealtimeLLMService extends LLMService<RealtimeAdapter> {
         // for assistant/tool updates that can arrive before the deferred
         // realtime transcript.
         const serverUserMessageAdded = newMessages.some(
-          (message) =>
-            !(message instanceof LLMSpecificMessage) &&
-            (message as unknown as Record<string, unknown>).role === "user",
+          (message) => !(message instanceof LLMSpecificMessage) && message.role === "user",
         );
         if (this._serverVadHandledTurn && serverUserMessageAdded) {
           this._serverVadHandledTurn = false;
