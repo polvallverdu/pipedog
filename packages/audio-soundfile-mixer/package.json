@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/audio-soundfile-mixer",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Soundfile mixer for pipedog: a port of Pipecat's SoundfileMixer that mixes WAV background sound (from bytes, a URL or a path) into outgoing audio, in pure TypeScript on Bun, Node, Deno and Cloudflare Workers.",
   "keywords": [
     "pipecat",

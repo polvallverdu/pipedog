@@ -1,5 +1,83 @@
 # @pipedog/cartesia
 
+## 0.11.0
+
+### Minor Changes
+
+- [#103](https://github.com/polvallverdu/pipedog/pull/103) [`3fe7566`](https://github.com/polvallverdu/pipedog/commit/3fe756637d4a7364c095d40c877d89ba456fd44e) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Speech providers brought up to pipecat main after 1.14:
+  
+  - Expression adapters for expressive conversation (alpha): `CartesiaExpressionAdapter`
+    (`@pipedog/cartesia/cartesia_adapter`, `CartesiaEmotion` now lives there),
+    `ElevenLabsAudioTagExpressionAdapter`, Fish Audio S2 and MiniMax adapters. With
+    `enableExpressiveConversation`, the TTS services perform the tags the LLM writes.
+  - Cartesia: `accent` setting ([#6429](https://github.com/polvallverdu/pipedog/issues/6429)), regional locales and CJK punctuation tokens; the turns STT
+    reconnects from its receive loop and ends a turn cut short by a dropped connection with the
+    transcript so far ([#6242](https://github.com/polvallverdu/pipedog/issues/6242)).
+  - ElevenLabs: audio tags reported as words, and the word clock advances on wordless alignment
+    ([#6297](https://github.com/polvallverdu/pipedog/issues/6297)).
+  - Deepgram: the TTS and Flux services report the `dg-error` reason of a refused connection, and
+    Flux STT waits for `Connected` through the core `_receiveUntilConfirmed`.
+  - Inworld TTS reconnects from its receive loop ([#6300](https://github.com/polvallverdu/pipedog/issues/6300)); Sarvam STT reconnects ([#6342](https://github.com/polvallverdu/pipedog/issues/6342)).
+  - Smallest: `dateFormat` and the `"redact"` content filter ([#6431](https://github.com/polvallverdu/pipedog/issues/6431)). Speechify: `pronunciations`
+    ([#6436](https://github.com/polvallverdu/pipedog/issues/6436)) and `simba-3.5` as the default model. Google Vertex defaults to `gemini-3.8-flash`.
+
+- [#101](https://github.com/polvallverdu/pipedog/pull/101) [`f57c63e`](https://github.com/polvallverdu/pipedog/commit/f57c63e8b670789bb15574e4ebe3a4ede1eb61c8) Thanks [@polvallverdu](https://github.com/polvallverdu)! - User turn strategies redesign, as in pipecat-ai/pipecat#6346:
+  
+  - Added `UserTurnStrategiesParams` (`@pipedog/core/turns/user_turn_strategies`), passed as
+    `userTurnStrategiesParams` to `LLMUserAggregatorParams`, `UserTurnProcessor` or
+    `UserTurnController`. `startMode` and `stopMode` take a `StrategyMode`: with `FIRST` the first
+    strategy to decide wins, with `ALL` every strategy has to agree (`startMode` defaults to `FIRST`,
+    `stopMode` to `ALL`). `startMergeMode` and `stopMergeMode` take a `MergeMode`: `REPLACE`, the
+    default, uses your strategies instead of the ones a service recommends, and `EXTEND` adds them to
+    the service's, e.g. `new FilterIncompleteUserTurnStrategies()` with
+    `new UserTurnStrategiesParams({ stopMergeMode: MergeMode.EXTEND })` filters incomplete turns on
+    top of an STT service's turn detection.
+  - ⚠️ Several stop strategies in one `UserTurnStrategies.stop` list now all have to agree before a
+    turn ends (`stopMode` defaults to `StrategyMode.ALL`). Pass
+    `new UserTurnStrategiesParams({ stopMode: StrategyMode.FIRST })` to end the turn on the first
+    stop strategy that decides, as before. A list with a single stop strategy behaves as before.
+  - ⚠️ Strategies report decisions and the turn controller decides when the turn starts and ends:
+    `triggerUserTurnStarted()` is now `reportUserTurnStarted()`, `triggerUserTurnStopped()` is now
+    `reportUserTurnStopped()` (it fires `on_user_turn_stopped` only; the controller runs the turn's
+    inference itself), and a stop strategy starts and withdraws a speculation with
+    `startUserTurnSpeculation()` and `cancelUserTurnSpeculation()`. `triggerUserTurnFinalized()`,
+    `triggerUserTurnInferenceTriggered()` and `triggerUserTurnSpeculationCancelled()` are removed.
+  - ⚠️ `processFrame()` of a user turn strategy returns nothing, and every strategy sees every frame.
+    `ProcessFrameResult` is removed (upstream deprecates it); use `StrategyMode` instead.
+  - ⚠️ `deferred()`, `DeferredUserTurnStopStrategy` and `ExternalUserTurnCompletionStopStrategy` are
+    removed (upstream deprecates them). Pass the wrapped strategy itself; use
+    `ExternalUserTurnStopStrategy` with a `ProposedUserStoppedSpeakingFrame`, or
+    `LLMTurnCompletionUserTurnStopStrategy` for the LLM's markers.
+  - ⚠️ `EagerEndOfTurnCancelFrame` is renamed `UserTurnResponseCancelFrame` (the deprecated alias is
+    not ported). `CartesiaTurnsSTTService` pushes it on `turn.resume`.
+  - Added `BaseUserTurnStopStrategy.waitsForInference` and `decisionScheduled`. A stop strategy that
+    decides from the turn's inference rather than from the user returns `true` from
+    `waitsForInference` (⚠️ a custom one that relied on `deferred()` strategies must now do so), and
+    the stop timeout waits while a strategy reports `decisionScheduled`.
+  - Added `UserTurnCompletionFrame`, which an LLM service using turn-completion markers pushes upstream
+    once per inference (`kind` is `"complete"`, `"short"`, `"long"` or `null`, with the
+    `contextFrameId` of the `LLMContextFrame` that started it). `LLMTurnCompletionUserTurnStopStrategy`
+    decides on it, and now owns the re-prompt after ◐ or ○: a turn the LLM marks incomplete stays open
+    until the user is re-prompted, instead of being ended by `userTurnStopTimeout`.
+  - `FilterIncompleteUserTurnStrategies` works with an eager end of turn and, with
+    `stopMergeMode: MergeMode.EXTEND`, with the stop strategies a service recommends.
+  - When the user speaks again after a turn's answer has started but before the turn ended, that
+    answer is cancelled: the user aggregator interrupts the bot, or broadcasts a
+    `UserTurnResponseCancelFrame` when the turn doesn't interrupt the bot. `UserTurnController` and
+    `UserTurnProcessor` have a new `on_user_turn_resumed` event (`UserTurnResumedParams`).
+  - ⚠️ `WakePhraseUserTurnStartStrategy` starts turns on its own once awake (when the user speaks or a
+    final transcript arrives). Use it as the only start strategy, or combine it with others such as
+    `MinWordsUserTurnStartStrategy` with `startMode: StrategyMode.ALL`. It no longer holds back the
+    strategies after it in a `FIRST` list.
+  - `ExternalUserTurnStopStrategy` decides once per round, with a one-shot transcription timer instead
+    of a loop polling every 0.5 s.
+
+### Patch Changes
+
+- Updated dependencies [[`96b2e45`](https://github.com/polvallverdu/pipedog/commit/96b2e4550f18d47a683ea635c33db458b0acb5dd), [`c23ef57`](https://github.com/polvallverdu/pipedog/commit/c23ef572ea1dd9c8a1ac81a83bf6337df7e1c191), [`c23ef57`](https://github.com/polvallverdu/pipedog/commit/c23ef572ea1dd9c8a1ac81a83bf6337df7e1c191), [`bddb1c5`](https://github.com/polvallverdu/pipedog/commit/bddb1c568cfd5b0e9818bc19538b73d5fc83cd40), [`a25889f`](https://github.com/polvallverdu/pipedog/commit/a25889fdb51beffacee1e5e26404dafad662b7d2), [`f57c63e`](https://github.com/polvallverdu/pipedog/commit/f57c63e8b670789bb15574e4ebe3a4ede1eb61c8), [`c23ef57`](https://github.com/polvallverdu/pipedog/commit/c23ef572ea1dd9c8a1ac81a83bf6337df7e1c191)]:
+  - @pipedog/core@0.11.0
+  - @pipedog/asyncio@0.11.0
+
 ## 0.10.0
 
 ### Patch Changes

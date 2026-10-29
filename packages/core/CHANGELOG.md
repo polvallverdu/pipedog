@@ -1,5 +1,124 @@
 # @pipedog/core
 
+## 0.11.0
+
+### Minor Changes
+
+- [#100](https://github.com/polvallverdu/pipedog/pull/100) [`96b2e45`](https://github.com/polvallverdu/pipedog/commit/96b2e4550f18d47a683ea635c33db458b0acb5dd) Thanks [@polvallverdu](https://github.com/polvallverdu)! - The LLM adapters moved to `adapters/llm`, as in pipecat 1.14 (pipecat-ai/pipecat#6331):
+  `@pipedog/core/adapters/base_llm_adapter` is now `@pipedog/core/adapters/llm/base_llm_adapter`,
+  `adapters/schemas/*` is `adapters/llm/schemas/*` (including `standard_tool`), and
+  `adapters/services/open_ai_adapter` is `adapters/llm/services/open_ai_adapter`. Upstream keeps the
+  old paths as deprecated shims; pipedog doesn't port deprecated APIs, so update the imports. Provider
+  adapters (`@pipedog/anthropic/anthropic_adapter`, ...) keep their paths.
+
+- [#97](https://github.com/polvallverdu/pipedog/pull/97) [`c23ef57`](https://github.com/polvallverdu/pipedog/commit/c23ef572ea1dd9c8a1ac81a83bf6337df7e1c191) Thanks [@polvallverdu](https://github.com/polvallverdu)! - `MinWordsUserTurnStartStrategy` takes two opt-in options for interruptions over the bot ([#95](https://github.com/polvallverdu/pipedog/issues/95)):
+  `isBackchannel` keeps acknowledgements such as "yes, okay" or "mm-hm" from starting a turn
+  (`createBackchannelMatcher()` builds one from the per-language `BACKCHANNEL_PHRASES`), and
+  `requireVadWithinSeconds` counts words only if the VAD heard the user within that many seconds.
+
+- [#102](https://github.com/polvallverdu/pipedog/pull/102) [`bddb1c5`](https://github.com/polvallverdu/pipedog/commit/bddb1c568cfd5b0e9818bc19538b73d5fc83cd40) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Core brought up to pipecat main after 1.14 (see `porting/UPSTREAM_BUMP.md`):
+  
+  - Expressive conversation (alpha, pipecat-ai/pipecat#6303, [#6315](https://github.com/polvallverdu/pipedog/issues/6315), [#6319](https://github.com/polvallverdu/pipedog/issues/6319), [#6385](https://github.com/polvallverdu/pipedog/issues/6385), [#6439](https://github.com/polvallverdu/pipedog/issues/6439), [#6442](https://github.com/polvallverdu/pipedog/issues/6442)): the
+    new `expressive/*` modules (`ExpressionDelivery`, `ExpressionSound`, `ExpressionPolicy`,
+    `ExpressionGuidance`, the formatter, perception, instructions) and `adapters/tts/base_expression_adapter`,
+    turned on with `new PipelineParams({ enableExpressiveConversation: true })`. TTS services perform
+    the expression tags the LLM writes; `TTSTextFrame.delivery`, perception on transcription frames,
+    and the new `TTSMetadataFrame`, `PerceptionMetadataFrame` and `ExpressionMetadataFrame`. Provider
+    expression adapters come with their packages.
+  - ⚠️ `pipeline/llm_with_backend` is now a package, as upstream ([#6435](https://github.com/polvallverdu/pipedog/issues/6435)): `LLMWithBackend`,
+    `BackendConnector`, `PredictiveDelegation` (new, [#6174](https://github.com/polvallverdu/pipedog/issues/6174)) and the request strategies are exported
+    from it; prompts and connector internals live in `llm_with_backend/prompts`, `.../connector`.
+    `RELAY_NOTE` is now `BACKEND_MESSAGE_RELAY_INSTRUCTION` and `STRATEGY_PLACEHOLDER` is
+    `PAIRING_INSTRUCTION_STRATEGY_PLACEHOLDER`. Shorter delegation acknowledgements ([#6267](https://github.com/polvallverdu/pipedog/issues/6267), [#6314](https://github.com/polvallverdu/pipedog/issues/6314)).
+  - ⚠️ TTS text filters are removed (deprecated upstream in 1.14): the `textFilters` option of
+    `TTSService` and `MarkdownTextFilter`. Use text transforms instead (`LLMTextProcessor` takes
+    `textTransforms`; `stripMarkdown` / `new StripMarkdown({ stripUrls })`).
+  - ⚠️ `WebsocketService` bounds each send by `wsSendTimeout` and adds `_receiveUntilConfirmed`;
+    `sendWithRetry` is deprecated upstream and kept only until the Cartesia turns STT and Inworld TTS
+    ports drop it.
+  - `ServiceSwitcher` hands metadata from a service outside it to its inactive members ([#6365](https://github.com/polvallverdu/pipedog/issues/6365)).
+  - Fixed: TTS services without word timestamps joining streamed sentences with two spaces ([#6366](https://github.com/polvallverdu/pipedog/issues/6366));
+    closing tags written against a word ([#6368](https://github.com/polvallverdu/pipedog/issues/6368)); `SkipTagsAggregator` with several tag pairs or
+    identical start/end tags ([#6367](https://github.com/polvallverdu/pipedog/issues/6367)); classifier clients surfacing a broken TLS connection as a
+    `ClassifierError` ([#6409](https://github.com/polvallverdu/pipedog/issues/6409)); `nanosecondsToStr` dropping a microsecond ([#6411](https://github.com/polvallverdu/pipedog/issues/6411)); secret redaction of
+    chained pairs ([#6308](https://github.com/polvallverdu/pipedog/issues/6308)).
+  - Pipeline flush probes are tracked per leg (`PipelineFlushFrame.flushId`, [#6268](https://github.com/polvallverdu/pipedog/issues/6268)).
+  - `LLMService` logs the context in Python's repr format, as upstream does.
+
+- [#105](https://github.com/polvallverdu/pipedog/pull/105) [`a25889f`](https://github.com/polvallverdu/pipedog/commit/a25889fdb51beffacee1e5e26404dafad662b7d2) Thanks [@polvallverdu](https://github.com/polvallverdu)! - New providers from pipecat main after 1.14:
+  
+  - `@pipedog/nvidia` (new): `NvidiaLLMService` (NVIDIA NIM, OpenAI-compatible, with reasoning
+    content and `<think>` handling) and `NvidiaOmniLLMService` (Nemotron Omni: audio understanding
+    and the user's turn in one request, `NvidiaOmniLLMAdapter`, `runMultimodalInference()`,
+    pipecat-ai/pipecat#6085). Riva STT/TTS are not ported yet.
+  - `@pipedog/zoom-ai` (new): `ZoomAISTTService`, Zoom's Scribe streaming STT ([#6280](https://github.com/polvallverdu/pipedog/issues/6280)).
+  - `@pipedog/assemblyai`: `AssemblyAITTSService`, streaming TTS with per-word timings ([#6322](https://github.com/polvallverdu/pipedog/issues/6322)).
+  - Pipecat Tone for expressive conversation (alpha): the `PipecatToneReader` and
+    `PipecatToneTagger` processors in `@pipedog/core/processors/tone`, with their ONNX models in the
+    new `@pipedog/tone` (on `@pipedog/onnx`; [#6319](https://github.com/polvallverdu/pipedog/issues/6319), [#6385](https://github.com/polvallverdu/pipedog/issues/6385), [#6407](https://github.com/polvallverdu/pipedog/issues/6407)).
+  - The CLI offers Zoom AI STT, AssemblyAI TTS and the NVIDIA LLM.
+
+- [#101](https://github.com/polvallverdu/pipedog/pull/101) [`f57c63e`](https://github.com/polvallverdu/pipedog/commit/f57c63e8b670789bb15574e4ebe3a4ede1eb61c8) Thanks [@polvallverdu](https://github.com/polvallverdu)! - User turn strategies redesign, as in pipecat-ai/pipecat#6346:
+  
+  - Added `UserTurnStrategiesParams` (`@pipedog/core/turns/user_turn_strategies`), passed as
+    `userTurnStrategiesParams` to `LLMUserAggregatorParams`, `UserTurnProcessor` or
+    `UserTurnController`. `startMode` and `stopMode` take a `StrategyMode`: with `FIRST` the first
+    strategy to decide wins, with `ALL` every strategy has to agree (`startMode` defaults to `FIRST`,
+    `stopMode` to `ALL`). `startMergeMode` and `stopMergeMode` take a `MergeMode`: `REPLACE`, the
+    default, uses your strategies instead of the ones a service recommends, and `EXTEND` adds them to
+    the service's, e.g. `new FilterIncompleteUserTurnStrategies()` with
+    `new UserTurnStrategiesParams({ stopMergeMode: MergeMode.EXTEND })` filters incomplete turns on
+    top of an STT service's turn detection.
+  - ⚠️ Several stop strategies in one `UserTurnStrategies.stop` list now all have to agree before a
+    turn ends (`stopMode` defaults to `StrategyMode.ALL`). Pass
+    `new UserTurnStrategiesParams({ stopMode: StrategyMode.FIRST })` to end the turn on the first
+    stop strategy that decides, as before. A list with a single stop strategy behaves as before.
+  - ⚠️ Strategies report decisions and the turn controller decides when the turn starts and ends:
+    `triggerUserTurnStarted()` is now `reportUserTurnStarted()`, `triggerUserTurnStopped()` is now
+    `reportUserTurnStopped()` (it fires `on_user_turn_stopped` only; the controller runs the turn's
+    inference itself), and a stop strategy starts and withdraws a speculation with
+    `startUserTurnSpeculation()` and `cancelUserTurnSpeculation()`. `triggerUserTurnFinalized()`,
+    `triggerUserTurnInferenceTriggered()` and `triggerUserTurnSpeculationCancelled()` are removed.
+  - ⚠️ `processFrame()` of a user turn strategy returns nothing, and every strategy sees every frame.
+    `ProcessFrameResult` is removed (upstream deprecates it); use `StrategyMode` instead.
+  - ⚠️ `deferred()`, `DeferredUserTurnStopStrategy` and `ExternalUserTurnCompletionStopStrategy` are
+    removed (upstream deprecates them). Pass the wrapped strategy itself; use
+    `ExternalUserTurnStopStrategy` with a `ProposedUserStoppedSpeakingFrame`, or
+    `LLMTurnCompletionUserTurnStopStrategy` for the LLM's markers.
+  - ⚠️ `EagerEndOfTurnCancelFrame` is renamed `UserTurnResponseCancelFrame` (the deprecated alias is
+    not ported). `CartesiaTurnsSTTService` pushes it on `turn.resume`.
+  - Added `BaseUserTurnStopStrategy.waitsForInference` and `decisionScheduled`. A stop strategy that
+    decides from the turn's inference rather than from the user returns `true` from
+    `waitsForInference` (⚠️ a custom one that relied on `deferred()` strategies must now do so), and
+    the stop timeout waits while a strategy reports `decisionScheduled`.
+  - Added `UserTurnCompletionFrame`, which an LLM service using turn-completion markers pushes upstream
+    once per inference (`kind` is `"complete"`, `"short"`, `"long"` or `null`, with the
+    `contextFrameId` of the `LLMContextFrame` that started it). `LLMTurnCompletionUserTurnStopStrategy`
+    decides on it, and now owns the re-prompt after ◐ or ○: a turn the LLM marks incomplete stays open
+    until the user is re-prompted, instead of being ended by `userTurnStopTimeout`.
+  - `FilterIncompleteUserTurnStrategies` works with an eager end of turn and, with
+    `stopMergeMode: MergeMode.EXTEND`, with the stop strategies a service recommends.
+  - When the user speaks again after a turn's answer has started but before the turn ended, that
+    answer is cancelled: the user aggregator interrupts the bot, or broadcasts a
+    `UserTurnResponseCancelFrame` when the turn doesn't interrupt the bot. `UserTurnController` and
+    `UserTurnProcessor` have a new `on_user_turn_resumed` event (`UserTurnResumedParams`).
+  - ⚠️ `WakePhraseUserTurnStartStrategy` starts turns on its own once awake (when the user speaks or a
+    final transcript arrives). Use it as the only start strategy, or combine it with others such as
+    `MinWordsUserTurnStartStrategy` with `startMode: StrategyMode.ALL`. It no longer holds back the
+    strategies after it in a `FIRST` list.
+  - `ExternalUserTurnStopStrategy` decides once per round, with a one-shot transcription timer instead
+    of a loop polling every 0.5 s.
+
+- [#97](https://github.com/polvallverdu/pipedog/pull/97) [`c23ef57`](https://github.com/polvallverdu/pipedog/commit/c23ef572ea1dd9c8a1ac81a83bf6337df7e1c191) Thanks [@polvallverdu](https://github.com/polvallverdu)! - `VADParams` takes `minVolumeDb`, the volume gate as a loudness in LUFS (e.g. `-35`), as an
+  alternative to the 0–1 `minVolume`; `volumeFromDb()` and `volumeToDb()` convert between them ([#94](https://github.com/polvallverdu/pipedog/issues/94)).
+
+### Patch Changes
+
+- Updated dependencies [[`c23ef57`](https://github.com/polvallverdu/pipedog/commit/c23ef572ea1dd9c8a1ac81a83bf6337df7e1c191)]:
+  - @pipedog/asyncio@0.11.0
+  - @pipedog/resampler-wasm@0.11.0
+  - @pipedog/sentencex-wasm@0.11.0
+
 ## 0.10.0
 
 ### Minor Changes

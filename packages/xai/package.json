@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/xai",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "xAI services (Grok LLM, STT, TTS, Voice Agent realtime) for pipedog.",
   "keywords": [
     "pipecat",

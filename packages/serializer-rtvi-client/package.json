@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/serializer-rtvi-client",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "RTVIClientSerializer for pipedog: lets a pipeline act as an RTVI client of a bot running an RTVI server transport.",
   "keywords": [
     "pipecat",
