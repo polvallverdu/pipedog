@@ -1,0 +1,56 @@
+{
+  "name": "@pipedog/audio-ten-vad",
+  "version": "0.10.0",
+  "description": "TEN VAD (TenVADAnalyzer) for pipedog: an opt-in alternative to Silero that drives TEN VAD's WebAssembly build, which you obtain from TEN and pass in. Ships none of TEN's code or model.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "vad",
+    "ten-vad",
+    "webassembly",
+    "voice-activity-detection"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/audio-ten-vad"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/audio-ten-vad#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "workerd"
+    ],
+    "compat": {
+      "needs": {
+        "all": "TEN VAD's WebAssembly build (ten_vad.js and ten_vad.wasm from TEN's lib/Web), obtained from TEN under TEN's license and passed in at runtime. pipedog ships none of it.",
+        "workerd": "Import ten_vad.wasm as a module and pass it as wasmModule (Workers can't compile WebAssembly from bytes)."
+      }
+    }
+  }
+}

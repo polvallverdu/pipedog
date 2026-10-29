@@ -1228,6 +1228,13 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["AudioDuckingFilter", "AudioDuckingObserver"],
       status: "pipedog only",
     },
+    {
+      slug: "ten-vad",
+      name: "TEN VAD",
+      pkg: "@pipedog/audio-ten-vad",
+      classes: ["TenVADAnalyzer"],
+      status: "pipedog only",
+    },
   ],
   serializers: [
     {

@@ -5,6 +5,7 @@
     "rnnoise-filter",
     "soundfile-mixer",
     "ducking",
+    "ten-vad",
     "---Coming soon---",
     "aic-filter",
     "koala-filter",

@@ -41,6 +41,7 @@
         "@pipedog/audio-rnnoise-filter": "workspace:*",
         "@pipedog/audio-silero": "workspace:*",
         "@pipedog/audio-smart-turn": "workspace:*",
+        "@pipedog/audio-ten-vad": "workspace:*",
         "@pipedog/aws": "workspace:*",
         "@pipedog/azure": "workspace:*",
         "@pipedog/baseten": "workspace:*",
@@ -417,6 +418,14 @@
     },
     "packages/audio-soundfile-mixer": {
       "name": "@pipedog/audio-soundfile-mixer",
+      "version": "0.10.0",
+      "dependencies": {
+        "@pipedog/asyncio": "workspace:*",
+        "@pipedog/core": "workspace:*",
+      },
+    },
+    "packages/audio-ten-vad": {
+      "name": "@pipedog/audio-ten-vad",
       "version": "0.10.0",
       "dependencies": {
         "@pipedog/asyncio": "workspace:*",
@@ -1863,6 +1872,8 @@
     "@pipedog/audio-smart-turn": ["@pipedog/audio-smart-turn@workspace:packages/audio-smart-turn"],
 
     "@pipedog/audio-soundfile-mixer": ["@pipedog/audio-soundfile-mixer@workspace:packages/audio-soundfile-mixer"],
+
+    "@pipedog/audio-ten-vad": ["@pipedog/audio-ten-vad@workspace:packages/audio-ten-vad"],
 
     "@pipedog/aws": ["@pipedog/aws@workspace:packages/aws"],
 
