@@ -15,19 +15,31 @@ import { SpeechTimeoutUserTurnStopStrategy /* , ... */ } from "@pipedog/core/tur
 
 ## How a turn works
 
-**Turn start.** Every frame the user aggregator sees goes through the start strategies in order. The
-first one that fires starts the turn: the aggregator broadcasts a `UserStartedSpeakingFrame`,
-broadcasts an `InterruptionFrame` if the strategy has interruptions enabled (the default), and emits
-`on_user_turn_started`. A strategy returns `ProcessFrameResult.STOP` to keep later strategies from
-seeing the frame, or `CONTINUE` to pass it on.
+Every frame the user aggregator sees goes to every start and stop strategy. A strategy doesn't start
+or end the turn itself: it **reports a decision** (the user started, the user is done), and the turn
+controller combines the decisions of its list, following the list's `StrategyMode`.
 
-**Turn stop.** The stop strategies then see the same frames. When one decides the user is done, the
-aggregator broadcasts a `UserStoppedSpeakingFrame`, writes the user's transcript to the context,
-which runs the LLM, and emits `on_user_turn_stopped`.
+**Turn start.** By default (`startMode: StrategyMode.FIRST`) the first start strategy that decides
+starts the turn: the aggregator broadcasts a `UserStartedSpeakingFrame`, broadcasts an
+`InterruptionFrame` if the strategy has interruptions enabled (the default), and emits
+`on_user_turn_started`. With `StrategyMode.ALL` the turn starts once every start strategy has
+decided.
+
+**Turn stop.** By default (`stopMode: StrategyMode.ALL`) the turn ends once every stop strategy has
+decided the user is done; with `StrategyMode.FIRST`, on the first one. Then the aggregator broadcasts
+a `UserStoppedSpeakingFrame`, writes the user's transcript to the context, which runs the LLM, and
+emits `on_user_turn_stopped`. A list with one stop strategy behaves the same in either mode. The turn
+never ends while the user is audibly speaking: decisions made meanwhile wait until they stop.
+
+**Speaking again.** When the user starts speaking again in an open turn, the stop decisions made so
+far are cleared. If the turn's answer had already started, it is voided: the aggregator interrupts
+it, or, for a turn that doesn't interrupt the bot, broadcasts a `UserTurnResponseCancelFrame`.
 
 **Stop timeout.** A turn that sees no speech, transcript or other turn activity for
-`userTurnStopTimeout` seconds (default 5) ends anyway, after `on_user_turn_stop_timeout`. It is a
-safety net for a turn that never finalizes, not a way to tune responsiveness.
+`userTurnStopTimeout` seconds (default 5) ends anyway, after `on_user_turn_stop_timeout`, with what
+the decisions made so far said about it. It waits while a stop strategy has a decision of its own
+scheduled (`decisionScheduled`, such as the LLM's re-prompt timer). It is a safety net for a turn
+that never finalizes, not a way to tune responsiveness.
 
 To end a turn, a stop strategy needs two things:
 
@@ -82,6 +94,23 @@ These are the defaults, spelled out:
 (Smart Turn). Both functions are exported, so you can extend the defaults instead of repeating them.
 
 <auto-type-table cwd path="../../packages/core/src/turns/user_turn_strategies.ts" name="UserTurnStrategiesOptions" />
+
+### How strategies combine
+
+`userTurnStrategiesParams` on `LLMUserAggregatorParams` (also an option of `UserTurnProcessor` and
+`UserTurnController`) takes a `UserTurnStrategiesParams`:
+
+<auto-type-table cwd path="../../packages/core/src/turns/user_turn_strategies.ts" name="UserTurnStrategiesParamsOptions" />
+
+- `startMode` and `stopMode` take a `StrategyMode`: `FIRST`, the first strategy to decide wins, or
+  `ALL`, every strategy has to agree. In an `ALL` list every strategy is a condition the turn needs,
+  so a fallback such as `TranscriptionUserTurnStartStrategy` belongs in a `FIRST` list.
+- `startMergeMode` and `stopMergeMode` take a `MergeMode`. A service with its own turn detection
+  (an STT service, say) recommends strategies to the aggregator. With `REPLACE`, the default, your
+  list is used on its own; with `EXTEND`, the strategies you gave are added to the service's (or to
+  the defaults, when no service recommends any).
+
+<include cwd>snippets/turn_strategies.ts#stop-mode</include>
 
 The other turn options on `LLMUserAggregatorParams`:
 
@@ -158,13 +187,19 @@ new MinWordsUserTurnStartStrategy({
 ### WakePhraseUserTurnStartStrategy
 
 Ignores the user until they say a wake phrase, then lets the conversation run until `timeout`
-seconds pass with no activity. While asleep it returns `STOP` for every frame, so the strategies after
-it never see anything, and transcripts that don't contain the phrase are dropped from the
+seconds pass with no activity. It starts turns on its own: on the wake phrase, and, while awake,
+whenever the user starts speaking or a final transcript arrives (which covers speech the VAD
+missed). Transcripts that don't contain the phrase while it is asleep are dropped from the
 aggregation. Matching ignores case and punctuation ("Hey, pipedog!" matches "hey pipedog").
 
-Put it first, ahead of the strategies it gates:
+Use it as the only start strategy:
 
 <include cwd>snippets/turn_strategies.ts#wake-phrase</include>
+
+To combine it with other start conditions, such as `MinWordsUserTurnStartStrategy`, use
+`startMode: StrategyMode.ALL`, where it is one more condition a turn needs:
+
+<include cwd>snippets/turn_strategies.ts#wake-phrase-all</include>
 
 <auto-type-table cwd path="../../packages/core/src/turns/user_start/wake_phrase_user_turn_start_strategy.ts" name="WakePhraseUserTurnStartStrategyOptions" />
 
@@ -255,8 +290,12 @@ the silence since the last transcript instead.
 The stop-side counterpart of `ExternalUserTurnStartStrategy`. On a `ProposedUserStoppedSpeakingFrame`
 it decides, and pushes the `UserStoppedSpeakingFrame` itself, holding the turn open until the
 transcript arrives if `waitForTranscript`. On a `UserStoppedSpeakingFrame` decided elsewhere it adopts
-the decision and emits nothing. To shift the timing, subclass it and override
-`triggerUserTurnStopped()`.
+the decision and emits nothing. It decides once per round: again only after new text, new speech
+from the service, or speech the VAD heard. To shift the timing, subclass it and override
+`reportUserTurnStopped()`, which both paths reach once they decide; pass its options through when
+the override reports:
+
+<include cwd>snippets/turn_strategies.ts#custom-stop</include>
 
 <auto-type-table cwd path="../../packages/core/src/turns/user_stop/external_user_turn_stop_strategy.ts" name="ExternalUserTurnStopStrategyOptions" />
 
@@ -278,31 +317,31 @@ It extends `ExternalUserTurnStopStrategy`. Install it with
 `matchPolicy` is a `NormalizedMatch` by default, which ignores case, punctuation and apostrophes, or
 an `ExactMatch`; subclass `EagerMatchPolicy` and implement `matches(eager, final)` for your own rule.
 
-### ExternalUserTurnCompletionStopStrategy
-
-Ends the turn whenever a `UserTurnInferenceCompletedFrame` arrives, whoever sends it: an LLM with
-completion markers, an STT service, your own classifier. Pair it with detectors wrapped in
-`deferred(...)`, which still trigger inference but leave the end of the turn to this strategy. A
-completion that arrives while the user is speaking again is ignored, so a late verdict can't end the
-turn and talk over them. If nothing ever sends the frame, `userTurnStopTimeout` ends the turn; raise
-it if your producer is slow.
-
 ### LLMTurnCompletionUserTurnStopStrategy
 
-A completion strategy that asks the LLM to judge. At start it enables `filterIncompleteUserTurns` on
-the LLM (on every LLM behind an `LLMSwitcher`, too), which makes the LLM begin each response with a
-marker: `●` complete, `◐` cut off mid-thought, `○` needs more time. Only `●` ends the turn; on the
-other two the LLM service waits and re-prompts on its own. This is what
-[`FilterIncompleteUserTurnStrategies`](#filterincompleteuserturnstrategies) installs.
+Decides the user is done only when the LLM says so. At start it enables `filterIncompleteUserTurns`
+on the LLM (on every LLM behind an `LLMSwitcher`, too), which makes the LLM begin each response with
+a marker: `●` complete, `◐` cut off mid-thought, `○` needs more time. The LLM service reports each
+marker upstream as a `UserTurnCompletionFrame`.
+
+It **waits for the turn's inference** (`waitsForInference`) instead of listening to the user, so it
+needs other stop strategies next to it: once the strategies that listen to the user have decided,
+the controller runs the inference, and this strategy decides on its marker. `●`, a tool call, or a
+response with no marker end the turn. On `◐` or `○` the turn stays open; if the user then stays
+quiet for `incompleteShortTimeout` or `incompleteLongTimeout`, it ends the turn and asks the LLM to
+re-engage them. This is what [`FilterIncompleteUserTurnStrategies`](#filterincompleteuserturnstrategies)
+installs.
 
 <auto-type-table cwd path="../../packages/core/src/turns/user_stop/llm_turn_completion_user_turn_stop_strategy.ts" name="LLMTurnCompletionUserTurnStopStrategyOptions" />
 
-### Deferring the end of a turn
+### Strategies that wait for the inference
 
-`deferred(strategy)` wraps a stop strategy so that it still triggers inference
-(`on_user_turn_inference_triggered`) but never ends the turn (`on_user_turn_stopped`); another
-strategy in the list ends it. The usual pairing is a deferred detector followed by a completion
-strategy:
+The controller runs the turn's inference itself. In a `StrategyMode.ALL` list it runs it once every
+stop strategy that listens to the user has decided; a stop strategy whose `waitsForInference` is
+`true` then decides on that inference, and the turn ends. In a `StrategyMode.FIRST` list the first
+decision runs the inference, and the turn ends on the decision of the strategy that waits for it. A
+list where every stop strategy waits for the inference has nothing to run it but the stop timeout,
+and logs a warning.
 
 <include cwd>snippets/turn_strategies.ts#filter-incomplete</include>
 
@@ -342,9 +381,13 @@ themselves.
 
 ### FilterIncompleteUserTurnStrategies
 
-Keeps the start strategies and the stop detectors (the defaults, or yours), wraps each detector in
-`deferred(...)`, and appends an `LLMTurnCompletionUserTurnStopStrategy` as the one that ends the
-turn. `on_user_turn_stopped` fires only once the LLM answers `●`.
+Keeps the start strategies and the stop strategies (the defaults, or yours), and adds an
+`LLMTurnCompletionUserTurnStopStrategy`. Once the other stop strategies decide the user stopped, the
+inference runs, and `on_user_turn_stopped` fires once the LLM marks the turn complete. It works with
+either `stopMode`, and with an eager end of turn: the speculative answer goes out once the transcript
+commits and the LLM marks the turn complete, in either order, and `◐` or `○` withdraws it. With
+`stopMergeMode: MergeMode.EXTEND`, the LLM gate (and any stop strategies you gave) joins the ones a
+service recommends instead.
 
 <auto-type-table cwd path="../../packages/core/src/turns/user_turn_strategies.ts" name="FilterIncompleteUserTurnStrategiesOptions" />
 
@@ -371,16 +414,20 @@ service, which hears the audio itself.
 ## Writing a strategy
 
 Subclass `BaseUserTurnStartStrategy` or `BaseUserTurnStopStrategy` and override `processFrame()`.
-It sees every frame that reaches the user aggregator and returns a `ProcessFrameResult`
-(`@pipedog/core/turns/types`): `STOP` to keep the strategies after it from seeing the frame,
-`CONTINUE` to let them. When the strategy decides, it calls:
+It sees every frame that reaches the user aggregator and returns nothing. When the strategy decides,
+it reports the decision, and the turn controller decides when the turn starts or ends:
 
-- start strategies: `triggerUserTurnStarted()`, or `triggerResetAggregation()` to drop the text
+- start strategies: `reportUserTurnStarted()`, or `triggerResetAggregation()` to drop the text
   gathered so far (what `MinWordsUserTurnStartStrategy` does with a too-short transcript);
-- stop strategies: `triggerUserTurnStopped()`, which triggers inference and ends the turn, or
-  `triggerUserTurnInferenceTriggered()` and `triggerUserTurnFinalized()` separately.
+- stop strategies: `reportUserTurnStopped()` when the user is done. The controller runs the turn's
+  inference itself. A strategy starts one only to answer ahead of the turn end, with
+  `startUserTurnSpeculation()`, and withdraws it with `cancelUserTurnSpeculation()`.
 
 <include cwd>snippets/turn_strategies.ts#custom-start</include>
+
+A stop strategy that decides from the turn's answer rather than from the user returns `true` from
+`waitsForInference`, and one that is sure to decide soon on its own (a timer of its own) returns
+`true` from `decisionScheduled` meanwhile, so the stop timeout waits for it.
 
 Override `handleUserTurnStarted()` and `handleUserTurnStopped()` to reset per-turn state; the
 controller calls them on every strategy at each turn boundary, whichever strategy caused it.

@@ -56,6 +56,7 @@ import {
   UserStartedSpeakingFrame,
   UserStoppedSpeakingFrame,
   UserTurnInferenceCompletedFrame,
+  UserTurnResponseCancelFrame,
   VADUserStartedSpeakingFrame,
   VADUserStoppedSpeakingFrame,
 } from "../src/frames/frames.ts";
@@ -92,10 +93,11 @@ import {
   VADUserTurnStartStrategy,
 } from "../src/turns/user_start/index.ts";
 import {
-  deferred,
+  BaseUserTurnStopStrategy,
   ExternalUserTurnStopStrategy,
   LLMTurnCompletionUserTurnStopStrategy,
   SpeechTimeoutUserTurnStopStrategy,
+  TurnAnalyzerUserTurnStopStrategy,
 } from "../src/turns/user_stop/index.ts";
 import {
   USER_TURN_COMPLETE_MARKER,
@@ -104,13 +106,28 @@ import {
 import {
   ExternalUserTurnStrategies,
   FilterIncompleteUserTurnStrategies,
+  MergeMode,
   UserTurnStrategies,
+  UserTurnStrategiesParams,
 } from "../src/turns/user_turn_strategies.ts";
 import { type LogRecord, logger } from "../src/utils/logger.ts";
 import { TextType } from "../src/utils/text/base_text_aggregator.ts";
 
 const USER_TURN_STOP_TIMEOUT = 0.2;
 const TRANSCRIPTION_TIMEOUT = 0.1;
+
+/** Decides the user is done when a `UserTurnInferenceCompletedFrame` arrives. */
+class CompletionStopStrategy extends BaseUserTurnStopStrategy {
+  override get waitsForInference(): boolean {
+    return true;
+  }
+
+  override async processFrame(frame: Frame): Promise<void> {
+    if (frame instanceof UserTurnInferenceCompletedFrame) {
+      await this.reportUserTurnStopped();
+    }
+  }
+}
 
 /** Reach into protected state, as the upstream tests do with `_attr`. */
 const internals = (x: unknown): any => x;
@@ -370,6 +387,132 @@ describe("TestLLMUserAggregator", () => {
     expect(strategies.stop.some((s: unknown) => s instanceof ExternalUserTurnStopStrategy)).toBe(
       false,
     );
+  });
+
+  test("test_an_extending_list_joins_the_service_request", async () => {
+    // An extending stop list is added to the service's.
+    const existingStop = new SpeechTimeoutUserTurnStopStrategy({
+      userSpeechTimeout: TRANSCRIPTION_TIMEOUT,
+    });
+    const userAggregator = new LLMUserAggregator(new LLMContext(), {
+      params: new LLMUserAggregatorParams({
+        userTurnStrategies: new UserTurnStrategies({ stop: [existingStop] }),
+        userTurnStrategiesParams: new UserTurnStrategiesParams({
+          stopMergeMode: MergeMode.EXTEND,
+        }),
+      }),
+    });
+
+    const frame = new STTMetadataFrame({
+      serviceName: "some-stt",
+      ttfsP99Latency: 0.0,
+      userTurnStrategies: new ExternalUserTurnStrategies(),
+    });
+    await runTest(new Pipeline([userAggregator]), { framesToSend: [frame] });
+
+    const strategies = internals(userAggregator._userTurnController)._userTurnStrategies;
+    expect((strategies.stop ?? []).map((s: object) => s.constructor)).toEqual([
+      ExternalUserTurnStopStrategy,
+      SpeechTimeoutUserTurnStopStrategy,
+    ]);
+    expect((strategies.stop ?? []).at(-1)).toBe(existingStop);
+  });
+
+  test("test_an_extending_list_joins_the_defaults_without_a_service", async () => {
+    // With no service recommending strategies, an extending stop list joins the defaults.
+    const existingStop = new SpeechTimeoutUserTurnStopStrategy({
+      userSpeechTimeout: TRANSCRIPTION_TIMEOUT,
+    });
+    const userAggregator = new LLMUserAggregator(new LLMContext(), {
+      params: new LLMUserAggregatorParams({
+        userTurnStrategies: new UserTurnStrategies({ stop: [existingStop] }),
+        userTurnStrategiesParams: new UserTurnStrategiesParams({
+          stopMergeMode: MergeMode.EXTEND,
+        }),
+      }),
+    });
+
+    const strategies = internals(userAggregator._userTurnController)._userTurnStrategies;
+    expect((strategies.stop ?? []).map((s: object) => s.constructor)).toEqual([
+      TurnAnalyzerUserTurnStopStrategy,
+      SpeechTimeoutUserTurnStopStrategy,
+    ]);
+  });
+
+  /** Run a turn whose inference starts, then have the user speak again. */
+  async function resumeAfterTheAnswerStarted(start: UserTurnStrategies): Promise<Frame[]> {
+    const userAggregator = new LLMUserAggregator(new LLMContext(), {
+      params: new LLMUserAggregatorParams({ userTurnStrategies: start }),
+    });
+    const [down] = await runTest(userAggregator, {
+      framesToSend: [
+        new VADUserStartedSpeakingFrame(),
+        new TranscriptionFrame({ text: "Hi", userId: "", timestamp: "now" }),
+        new SleepFrame(),
+        new VADUserStoppedSpeakingFrame(),
+        new SleepFrame({ sleep: TRANSCRIPTION_TIMEOUT + 0.1 }),
+        new VADUserStartedSpeakingFrame(),
+        new SleepFrame(),
+      ],
+      expectedDownFrames: null,
+    });
+    return down;
+  }
+
+  test("test_new_speech_interrupts_the_turns_answer", async () => {
+    // The user speaking again after the answer started voids it.
+    const down = await resumeAfterTheAnswerStarted(
+      new FilterIncompleteUserTurnStrategies({
+        stop: [new SpeechTimeoutUserTurnStopStrategy({ userSpeechTimeout: TRANSCRIPTION_TIMEOUT })],
+      }),
+    );
+
+    const answer = down.findIndex((f) => f instanceof LLMContextFrame);
+    expect(answer).toBeGreaterThanOrEqual(0);
+    expect(down.slice(answer).some((f) => f instanceof InterruptionFrame)).toBe(true);
+  });
+
+  test("test_a_turn_that_does_not_interrupt_only_cancels_its_answer", async () => {
+    const down = await resumeAfterTheAnswerStarted(
+      new FilterIncompleteUserTurnStrategies({
+        start: [new VADUserTurnStartStrategy({ enableInterruptions: false })],
+        stop: [new SpeechTimeoutUserTurnStopStrategy({ userSpeechTimeout: TRANSCRIPTION_TIMEOUT })],
+      }),
+    );
+
+    const answer = down.findIndex((f) => f instanceof LLMContextFrame);
+    expect(answer).toBeGreaterThanOrEqual(0);
+    expect(down.some((f) => f instanceof InterruptionFrame)).toBe(false);
+    expect(down.slice(answer).some((f) => f instanceof UserTurnResponseCancelFrame)).toBe(true);
+  });
+
+  test("test_speaking_again_before_the_answer_started_interrupts_nothing", async () => {
+    const userAggregator = new LLMUserAggregator(new LLMContext(), {
+      params: new LLMUserAggregatorParams({
+        userTurnStrategies: new FilterIncompleteUserTurnStrategies({
+          stop: [
+            new SpeechTimeoutUserTurnStopStrategy({ userSpeechTimeout: TRANSCRIPTION_TIMEOUT }),
+          ],
+        }),
+      }),
+    });
+    const [down] = await runTest(userAggregator, {
+      framesToSend: [
+        new VADUserStartedSpeakingFrame(),
+        new TranscriptionFrame({ text: "Hi", userId: "", timestamp: "now" }),
+        new VADUserStoppedSpeakingFrame(),
+        new VADUserStartedSpeakingFrame(),
+        new SleepFrame(),
+      ],
+      expectedDownFrames: null,
+    });
+
+    let resumed = -1;
+    down.forEach((f, i) => {
+      if (f instanceof VADUserStartedSpeakingFrame) resumed = i;
+    });
+    expect(resumed).toBeGreaterThanOrEqual(0);
+    expect(down.slice(resumed).some((f) => f instanceof InterruptionFrame)).toBe(false);
   });
 
   test("test_proposed_frames_produce_turn_frames_and_interruption", async () => {
@@ -926,9 +1069,7 @@ describe("TestLLMUserAggregator", () => {
       params: new LLMUserAggregatorParams({
         userTurnStrategies: new UserTurnStrategies({
           stop: [
-            deferred(
-              new SpeechTimeoutUserTurnStopStrategy({ userSpeechTimeout: TRANSCRIPTION_TIMEOUT }),
-            ),
+            new SpeechTimeoutUserTurnStopStrategy({ userSpeechTimeout: TRANSCRIPTION_TIMEOUT }),
             new LLMTurnCompletionUserTurnStopStrategy(),
           ],
         }),
@@ -944,67 +1085,24 @@ describe("TestLLMUserAggregator", () => {
     expect(updates[0]!.reachInactiveServices).toBe(true);
   });
 
-  test("test_llm_completion_strategy_finalizes_on_complete_marker", async () => {
-    // LLMTurnCompletionUserTurnStopStrategy finalizes only on
-    // UserTurnInferenceCompletedFrame(complete).
-    const gating = new LLMTurnCompletionUserTurnStopStrategy();
-    const upstream = deferred(
-      new SpeechTimeoutUserTurnStopStrategy({ userSpeechTimeout: TRANSCRIPTION_TIMEOUT }),
-    );
-    const context = new LLMContext();
-    const userAggregator = new LLMUserAggregator(context, {
-      params: new LLMUserAggregatorParams({
-        userTurnStrategies: new UserTurnStrategies({ stop: [upstream, gating] }),
-      }),
-    });
-
-    const events: string[] = [];
-
-    userAggregator.eventHandler("on_user_turn_inference_triggered", async (_aggregator, _s) => {
-      events.push("inference_triggered");
-    });
-
-    userAggregator.eventHandler("on_user_turn_stopped", async (_aggregator, _s, _message) => {
-      events.push("stopped");
-    });
-
-    const pipeline = new Pipeline([userAggregator]);
-
-    // Drive the pipeline. Inference fires after the upstream strategy's timeout.
-    // Stop fires only when UserTurnInferenceCompletedFrame arrives (producer
-    // absence == "not yet complete").
-    const framesToSend = [
-      new VADUserStartedSpeakingFrame(),
-      transcription("Hi"),
-      new SleepFrame(),
-      new VADUserStoppedSpeakingFrame(),
-      new SleepFrame({ sleep: TRANSCRIPTION_TIMEOUT + 0.1 }),
-      // At this point inference_triggered should have fired but NOT stopped.
-      new UserTurnInferenceCompletedFrame(),
-      new SleepFrame(),
-    ];
-    await runTest(pipeline, { framesToSend });
-
-    expect(events).toEqual(["inference_triggered", "stopped"]);
-  });
-
   test("test_multiple_inferences_in_one_turn_preserve_aggregation", async () => {
     // Two inference triggers before finalization should preserve the full user
     // transcript.
     //
-    // When the LLM marks the first inference incomplete (◐ / ○) and the user
-    // keeps speaking, the deferred upstream strategy fires a second inference.
+    // When nothing has decided on the first inference and the user keeps
+    // speaking, the stop strategies' next decisions run a second inference.
     // Both the public `on_user_turn_stopped` event and the conversation context
     // should reflect the full user utterance, not just the segment from the last
     // inference.
-    const gating = new LLMTurnCompletionUserTurnStopStrategy();
-    const upstream = deferred(
-      new SpeechTimeoutUserTurnStopStrategy({ userSpeechTimeout: TRANSCRIPTION_TIMEOUT }),
-    );
+    const speechTimeout = new SpeechTimeoutUserTurnStopStrategy({
+      userSpeechTimeout: TRANSCRIPTION_TIMEOUT,
+    });
     const context = new LLMContext();
     const userAggregator = new LLMUserAggregator(context, {
       params: new LLMUserAggregatorParams({
-        userTurnStrategies: new UserTurnStrategies({ stop: [upstream, gating] }),
+        userTurnStrategies: new UserTurnStrategies({
+          stop: [speechTimeout, new CompletionStopStrategy()],
+        }),
       }),
     });
 
@@ -1030,21 +1128,22 @@ describe("TestLLMUserAggregator", () => {
       new SleepFrame(),
       new VADUserStoppedSpeakingFrame(),
       new SleepFrame({ sleep: TRANSCRIPTION_TIMEOUT + 0.1 }),
-      // First inference fired here. Imagine the LLM returned ◐; the turn is not
-      // yet finalized, so the user keeps talking.
+      // First inference fired here. Nothing decided on it, so the turn stays
+      // open and the user keeps talking.
       new VADUserStartedSpeakingFrame(),
       transcription("about pizza"),
       new SleepFrame(),
       new VADUserStoppedSpeakingFrame(),
       new SleepFrame({ sleep: TRANSCRIPTION_TIMEOUT + 0.1 }),
-      // Second inference fired here. Now the LLM returns ● and the turn
-      // finalizes via UserTurnInferenceCompletedFrame.
+      // Second inference fired here, and the decision on it ends the turn.
       new UserTurnInferenceCompletedFrame(),
       new SleepFrame(),
     ];
-    await runTest(pipeline, { framesToSend });
+    const [down] = await runTest(pipeline, { framesToSend });
 
     expect(inferenceCount).toEqual(2);
+    // The decision on the inference ended the turn, not the session ending.
+    expect(down.some((f) => f instanceof UserStoppedSpeakingFrame)).toBe(true);
     expect(stopMessage).not.toBeNull();
     // The public event should report the full transcript, even though each
     // inference push only writes its own segment to the context.

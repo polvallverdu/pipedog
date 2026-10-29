@@ -6,7 +6,7 @@
 
 /** Mixin for STT services that predict the end of a turn before committing to it. */
 
-import { EagerEndOfTurnCancelFrame, EagerTranscriptionFrame } from "../frames/frames.ts";
+import { EagerTranscriptionFrame, UserTurnResponseCancelFrame } from "../frames/frames.ts";
 import type { FrameProcessor } from "../processors/frame_processor.ts";
 import type { Language } from "../transcriptions/language.ts";
 import { logger } from "../utils/logger.ts";
@@ -169,7 +169,7 @@ export const EagerEndOfTurnSTTServiceMixin = defineMixin<
 
       logger.trace(`${this}: eager end of turn withdrawn`);
       this._eagerEndOfTurnPending = false;
-      await this.pushFrame(new EagerEndOfTurnCancelFrame());
+      await this.pushFrame(new UserTurnResponseCancelFrame());
     }
 
     /**

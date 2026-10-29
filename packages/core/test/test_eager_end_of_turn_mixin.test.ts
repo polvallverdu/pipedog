@@ -7,9 +7,9 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  EagerEndOfTurnCancelFrame,
   EagerTranscriptionFrame,
   type Frame,
+  UserTurnResponseCancelFrame,
 } from "../src/frames/frames.ts";
 import {
   FrameDirection,
@@ -58,7 +58,7 @@ describe("TestEagerEndOfTurnMixin", () => {
     expect(prediction).toBeInstanceOf(EagerTranscriptionFrame);
     expect((prediction as EagerTranscriptionFrame).text).toBe("book a flight");
     expect((prediction as EagerTranscriptionFrame).userId).toBe("user");
-    expect(withdrawal).toBeInstanceOf(EagerEndOfTurnCancelFrame);
+    expect(withdrawal).toBeInstanceOf(UserTurnResponseCancelFrame);
     expect(service.eagerEndOfTurnPending).toBe(false);
   });
 
@@ -71,7 +71,7 @@ describe("TestEagerEndOfTurnMixin", () => {
     // afterwards would discard a response the committed transcript may keep.
     await service._cancelEagerEndOfTurn();
 
-    expect(service.pushed.some((f) => f instanceof EagerEndOfTurnCancelFrame)).toBe(false);
+    expect(service.pushed.some((f) => f instanceof UserTurnResponseCancelFrame)).toBe(false);
     expect(service.eagerEndOfTurnPending).toBe(false);
   });
 

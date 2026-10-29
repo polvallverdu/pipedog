@@ -15,7 +15,6 @@ import {
 } from "./user_start/index.ts";
 import {
   type BaseUserTurnStopStrategy,
-  deferred,
   type EagerMatchPolicy,
   EagerUserTurnStopStrategy,
   ExternalUserTurnStopStrategy,
@@ -32,9 +31,13 @@ import type { UserTurnCompletionConfig } from "./user_turn_completion_mixin.ts";
  *
  * @example
  * const startStrategies = [
- *   new WakePhraseUserTurnStartStrategy({ phrases: ["hey pipecat"] }),
+ *   new MinWordsUserTurnStartStrategy({ minWords: 3 }),
  *   ...defaultUserTurnStartStrategies(),
  * ];
+ *
+ * DIVERGENCE: upstream's example puts a `WakePhraseUserTurnStartStrategy` first, which relies on
+ * the deprecated `ProcessFrameResult.STOP` gating of a FIRST list. pipedog doesn't port that: use the
+ * wake phrase alone, or with `startMode: StrategyMode.ALL`.
  */
 export function defaultUserTurnStartStrategies(): BaseUserTurnStartStrategy[] {
   return [new VADUserTurnStartStrategy(), new TranscriptionUserTurnStartStrategy()];
@@ -48,6 +51,99 @@ export function defaultUserTurnStartStrategies(): BaseUserTurnStartStrategy[] {
  */
 export function defaultUserTurnStopStrategies(): BaseUserTurnStopStrategy[] {
   return [new TurnAnalyzerUserTurnStopStrategy({ turnAnalyzer: new LocalSmartTurnAnalyzerV3() })];
+}
+
+/**
+ * How a bot's list of user turn strategies combines with a service's.
+ *
+ * - `EXTEND`: The strategies the bot gave are added to the service's list, or
+ *   to the defaults when no service recommends any.
+ * - `REPLACE`: The bot's list is used on its own.
+ */
+export const MergeMode = {
+  EXTEND: "extend",
+  REPLACE: "replace",
+} as const;
+export type MergeMode = (typeof MergeMode)[keyof typeof MergeMode];
+
+/**
+ * How a list of user turn strategies reaches a decision.
+ *
+ * - `ALL`: Every strategy has to agree, and each one sees every frame.
+ * - `FIRST`: The first strategy to decide wins.
+ */
+export const StrategyMode = {
+  ALL: "all",
+  FIRST: "first",
+} as const;
+export type StrategyMode = (typeof StrategyMode)[keyof typeof StrategyMode];
+
+export interface UserTurnStrategiesParamsOptions {
+  /**
+   * How the bot's start strategies combine with the ones a service
+   * recommends. Defaults to `MergeMode.REPLACE`.
+   */
+  startMergeMode?: MergeMode;
+  /**
+   * How the bot's stop strategies combine with the ones a service recommends.
+   * Defaults to `MergeMode.REPLACE`.
+   */
+  stopMergeMode?: MergeMode;
+  /**
+   * Whether the turn starts on the first start strategy that decides the user
+   * started, or once every start strategy has. Defaults to
+   * `StrategyMode.FIRST`.
+   */
+  startMode?: StrategyMode;
+  /**
+   * Whether the turn ends once every stop strategy has decided the user is
+   * done, or on the first one that does. Defaults to `StrategyMode.ALL`.
+   */
+  stopMode?: StrategyMode;
+}
+
+/**
+ * How the user turn strategies combine with a service's and decide.
+ *
+ * A service with its own turn detection, such as an STT service, can
+ * recommend user turn strategies. Only the bot sets these parameters: a
+ * service's recommendation contributes its lists.
+ *
+ * - `startMergeMode`: How the bot's start strategies combine with the ones a
+ *   service recommends. Defaults to `MergeMode.REPLACE`.
+ * - `stopMergeMode`: How the bot's stop strategies combine with the ones a
+ *   service recommends. Defaults to `MergeMode.REPLACE`.
+ * - `startMode`: Whether the turn starts on the first start strategy that
+ *   decides the user started, or once every start strategy has. Defaults to
+ *   `StrategyMode.FIRST`, so speech or a transcript starts a turn on its own.
+ *   In a `StrategyMode.ALL` list every strategy is a condition the turn
+ *   needs, so a fallback such as `TranscriptionUserTurnStartStrategy`, which
+ *   starts a turn when VAD misses speech, belongs in a `StrategyMode.FIRST`
+ *   list.
+ * - `stopMode`: Whether the turn ends once every stop strategy has decided
+ *   the user is done, or on the first one that does. A stop strategy that
+ *   waits for the turn's inference, such as
+ *   `LLMTurnCompletionUserTurnStopStrategy`, decides on it in either mode.
+ *   The user speaking again clears the decisions made so far. Defaults to
+ *   `StrategyMode.ALL`.
+ */
+export class UserTurnStrategiesParams {
+  startMergeMode: MergeMode;
+  stopMergeMode: MergeMode;
+  startMode: StrategyMode;
+  stopMode: StrategyMode;
+
+  constructor(options: UserTurnStrategiesParamsOptions = {}) {
+    this.startMergeMode = options.startMergeMode ?? MergeMode.REPLACE;
+    this.stopMergeMode = options.stopMergeMode ?? MergeMode.REPLACE;
+    this.startMode = options.startMode ?? StrategyMode.FIRST;
+    this.stopMode = options.stopMode ?? StrategyMode.ALL;
+  }
+
+  /** Whether the bot's strategies replace both of a service's lists. */
+  get replacesServiceStrategies(): boolean {
+    return this.startMergeMode === MergeMode.REPLACE && this.stopMergeMode === MergeMode.REPLACE;
+  }
 }
 
 export interface UserTurnStrategiesOptions {
@@ -86,6 +182,9 @@ function runsPostInit(target: Function, cls: Function): boolean {
  *     start: [VADUserTurnStartStrategy, TranscriptionUserTurnStartStrategy]
  *      stop: [TurnAnalyzerUserTurnStopStrategy(LocalSmartTurnAnalyzerV3)]
  *
+ * A bot's strategies replace the ones a service recommends, unless
+ * `UserTurnStrategiesParams` extends a list.
+ *
  * - `start`: A list of user turn start strategies used to detect when the
  *   user starts speaking.
  * - `stop`: A list of user turn stop strategies used to decide when the user
@@ -94,6 +193,10 @@ function runsPostInit(target: Function, cls: Function): boolean {
 export class UserTurnStrategies {
   start: BaseUserTurnStartStrategy[];
   stop: BaseUserTurnStopStrategy[];
+  // What extending a service's lists adds: the strategies given, without the
+  // defaults filled in for a list left out. null means the whole list.
+  protected _startExtension: BaseUserTurnStartStrategy[] | null = null;
+  protected _stopExtension: BaseUserTurnStopStrategy[] | null = null;
 
   constructor(options: UserTurnStrategiesOptions = {}) {
     this.start = options.start ?? [];
@@ -102,12 +205,59 @@ export class UserTurnStrategies {
   }
 
   protected _postInit(): void {
+    this._startExtension = [...(this.start ?? [])];
+    this._stopExtension = [...(this.stop ?? [])];
     if (!this.start || this.start.length === 0) {
       this.start = defaultUserTurnStartStrategies();
     }
     if (!this.stop || this.stop.length === 0) {
       this.stop = defaultUserTurnStopStrategies();
     }
+  }
+
+  /**
+   * Combine these strategies with the ones a service recommends.
+   *
+   * @param recommended The strategies a service recommends, or null when no
+   *   service recommends any, in which case the defaults stand in.
+   * @param params How each list combines with the service's.
+   * @returns The strategies to run.
+   */
+  mergeWith(
+    recommended: UserTurnStrategies | null,
+    params: UserTurnStrategiesParams,
+  ): UserTurnStrategies {
+    return new UserTurnStrategies({
+      start: UserTurnStrategies._mergeList(
+        this.start ?? [],
+        this._startExtension,
+        params.startMergeMode,
+        recommended ? recommended.start : null,
+        defaultUserTurnStartStrategies,
+      ),
+      stop: UserTurnStrategies._mergeList(
+        this.stop ?? [],
+        this._stopExtension,
+        params.stopMergeMode,
+        recommended ? recommended.stop : null,
+        defaultUserTurnStopStrategies,
+      ),
+    });
+  }
+
+  /** Merge one list with the service's, the defaults standing in for none. */
+  protected static _mergeList<S>(
+    own: S[],
+    extension: S[] | null,
+    mode: MergeMode,
+    recommended: S[] | null,
+    defaults: () => S[],
+  ): S[] {
+    if (mode === MergeMode.REPLACE) {
+      return own;
+    }
+    const added = extension === null ? own : extension;
+    return [...(recommended !== null ? recommended : defaults()), ...added];
   }
 }
 
@@ -171,11 +321,15 @@ export interface FilterIncompleteUserTurnStrategiesOptions extends UserTurnStrat
  * the user turn; ◐ / ○ keep the turn open so the user can continue speaking
  * and the LLM can re-evaluate later.
  *
- * Configuring strategies this way preserves the existing detector chain
- * (defaults or user-supplied) for inference triggering and appends
- * LLMTurnCompletionUserTurnStopStrategy as the finalizer. The detector
- * strategies are wrapped with `deferred()` automatically so they fire only
- * `on_user_turn_inference_triggered` and leave finalization to the LLM gate.
+ * Configuring strategies this way keeps the stop strategies (defaults or
+ * user-supplied) and adds LLMTurnCompletionUserTurnStopStrategy, which waits
+ * for the turn's inference. Once the other stop strategies decide the user
+ * stopped, the inference runs, and the turn ends once the LLM marks it
+ * complete. This works with either `stopMode`.
+ *
+ * With `new UserTurnStrategiesParams({ stopMergeMode: MergeMode.EXTEND })`,
+ * the LLM gate and any stop strategies given join the ones a service
+ * recommends instead, such as an STT service's own turn detection.
  *
  * - `config`: Optional configuration applied to the LLM via the
  *   `filter_incomplete_user_turns` setting. Customizes the turn-completion
@@ -185,10 +339,16 @@ export interface FilterIncompleteUserTurnStrategiesOptions extends UserTurnStrat
  * @example
  * userTurnStrategies: new FilterIncompleteUserTurnStrategies()
  *
- * // Custom detector chain:
+ * // Custom stop strategies:
  * userTurnStrategies: new FilterIncompleteUserTurnStrategies({
  *   stop: [new SpeechTimeoutUserTurnStopStrategy({ ... })],
  * })
+ *
+ * // On top of the turn detection a service recommends:
+ * userTurnStrategies: new FilterIncompleteUserTurnStrategies(),
+ * userTurnStrategiesParams: new UserTurnStrategiesParams({
+ *   stopMergeMode: MergeMode.EXTEND,
+ * }),
  *
  * // Custom completion config:
  * userTurnStrategies: new FilterIncompleteUserTurnStrategies({
@@ -209,11 +369,11 @@ export class FilterIncompleteUserTurnStrategies extends UserTurnStrategies {
 
   protected override _postInit(): void {
     super._postInit();
-    // Defer the detector chain so it only fires inference-triggered, then
-    // append the LLM gate as the sole finalizer.
-    const gated: BaseUserTurnStopStrategy[] = (this.stop ?? []).map((s) => deferred(s));
-    gated.push(new LLMTurnCompletionUserTurnStopStrategy({ config: this.config }));
-    this.stop = gated;
+    const gate = new LLMTurnCompletionUserTurnStopStrategy({ config: this.config });
+    this.stop = [...(this.stop ?? []), gate];
+    // Extending a service's stop strategies adds the LLM gate and the stop
+    // strategies given, never the default ones.
+    this._stopExtension = [...(this._stopExtension ?? []), gate];
   }
 }
 

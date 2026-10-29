@@ -751,7 +751,7 @@ export interface EagerTranscriptionFrameOptions extends TextFrameOptions {
  *
  * Some STT services emit a provisional end of turn ahead of the real one, so a
  * response can be generated during the gap. The prediction may be withdrawn
- * (`EagerEndOfTurnCancelFrame`) and the committed transcript may differ from
+ * (`UserTurnResponseCancelFrame`) and the committed transcript may differ from
  * this one, so nothing produced from it may reach the user or the context
  * until it is confirmed. See `EagerUserTurnStopStrategy`.
  *
@@ -1640,17 +1640,21 @@ export class UserStartedSpeakingFrame extends SystemFrame {}
 export class UserStoppedSpeakingFrame extends SystemFrame {}
 
 /**
- * Frame withdrawing an eager end of turn.
+ * Frame cancelling the speculative response for the current user turn.
  *
- * Emitted when a service reports the user resumed speaking after an eager end
- * of turn, or when the committed transcript doesn't match the eager one. The
- * LLM service stops generating, and its `SpeculationGate` discards what it was
- * holding — which is everything the response produced, so nothing further
- * down the pipeline has anything to undo.
+ * Emitted when an eager end of turn is withdrawn (the user resumed speaking,
+ * or the committed transcript doesn't match the eager one). The LLM service
+ * stops generating, and its `SpeculationGate` discards what it was holding —
+ * which is everything the response produced, so nothing further down the
+ * pipeline has anything to undo. A response the gate has already released is
+ * left alone; stopping it is what `InterruptionFrame` does.
  *
  * A system frame so it overtakes the speculative output it cancels.
+ *
+ * Porting note: upstream's deprecated `EagerEndOfTurnCancelFrame` alias is not
+ * ported.
  */
-export class EagerEndOfTurnCancelFrame extends SystemFrame {}
+export class UserTurnResponseCancelFrame extends SystemFrame {}
 
 /**
  * Frame indicating that the user has been muted.
@@ -1688,6 +1692,50 @@ export class UserSpeakingFrame extends SystemFrame {}
  * complete.
  */
 export class UserTurnInferenceCompletedFrame extends SystemFrame {}
+
+export interface UserTurnCompletionFrameOptions {
+  /**
+   * `"complete"`, `"short"` (the user will continue shortly) or `"long"` (the
+   * user needs more time), or null when the response carried no marker.
+   */
+  kind: string | null;
+  /** The marker read, or null for a tool call or no marker. */
+  marker?: string | null;
+  /**
+   * The id of the `LLMContextFrame` that started the inference, or null when
+   * it isn't known.
+   */
+  contextFrameId?: number | null;
+}
+
+/**
+ * The LLM's judgment of whether the user's turn is complete.
+ *
+ * Pushed upstream by an LLM service that uses turn-completion markers, once
+ * per inference and as soon as the judgment is known: when the response's
+ * marker is read, when the response calls a tool before writing a marker
+ * (`"complete"`), or when the response ends without one (null). The marker
+ * itself reaches the context as an `LLMMarkerFrame`.
+ *
+ * - `kind`: `"complete"`, `"short"` (the user will continue shortly) or
+ *   `"long"` (the user needs more time), or null when the response carried
+ *   no marker.
+ * - `marker`: The marker read, or null for a tool call or no marker.
+ * - `contextFrameId`: The id of the `LLMContextFrame` that started the
+ *   inference, or null when it isn't known.
+ */
+export class UserTurnCompletionFrame extends SystemFrame {
+  kind: string | null;
+  marker: string | null;
+  contextFrameId: number | null;
+
+  constructor(options: UserTurnCompletionFrameOptions) {
+    super(options);
+    this.kind = options.kind;
+    this.marker = options.marker ?? null;
+    this.contextFrameId = options.contextFrameId ?? null;
+  }
+}
 
 export interface VADUserStartedSpeakingFrameOptions {
   /** The VAD start_secs duration that was used to confirm the user started speaking. */

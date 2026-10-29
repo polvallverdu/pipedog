@@ -6,7 +6,6 @@
 
 import { describe, expect, mock, test } from "bun:test";
 import {
-  EagerEndOfTurnCancelFrame,
   EagerTranscriptionFrame,
   EndFrame,
   type Frame,
@@ -21,6 +20,7 @@ import {
   TranscriptionFrame,
   TTSAudioRawFrame,
   UserStoppedSpeakingFrame,
+  UserTurnResponseCancelFrame,
 } from "../src/frames/frames.ts";
 import { Pipeline } from "../src/pipeline/pipeline.ts";
 import { LLMContext } from "../src/processors/aggregators/llm_context.ts";
@@ -131,7 +131,9 @@ describe("TestSpeculationGate", () => {
     const gate = new SpeculationGate();
 
     expect(speculate(gate, true, ["Cancelling ", "your booking."], { end: false })).toEqual([]);
-    expect(types(emit(gate, new EagerEndOfTurnCancelFrame()))).toEqual([EagerEndOfTurnCancelFrame]);
+    expect(types(emit(gate, new UserTurnResponseCancelFrame()))).toEqual([
+      UserTurnResponseCancelFrame,
+    ]);
 
     // Straggling frames of the withdrawn response, still queued behind the
     // cancellation, which overtook them.
@@ -148,7 +150,9 @@ describe("TestSpeculationGate", () => {
     // frames it withdraws.
     const gate = new SpeculationGate();
 
-    expect(types(emit(gate, new EagerEndOfTurnCancelFrame()))).toEqual([EagerEndOfTurnCancelFrame]);
+    expect(types(emit(gate, new UserTurnResponseCancelFrame()))).toEqual([
+      UserTurnResponseCancelFrame,
+    ]);
     expect(speculate(gate, true, ["Cancelling."])).toEqual([]);
     expect(types(speculate(gate, false, ["Rescheduling instead."]))).toEqual([
       LLMFullResponseStartFrame,
@@ -167,7 +171,9 @@ describe("TestSpeculationGate", () => {
     });
 
     expect(speculate(gate, true, ["Hi."], { end: false, thenFrames: [audio] })).toEqual([]);
-    expect(types(emit(gate, new EagerEndOfTurnCancelFrame()))).toEqual([EagerEndOfTurnCancelFrame]);
+    expect(types(emit(gate, new UserTurnResponseCancelFrame()))).toEqual([
+      UserTurnResponseCancelFrame,
+    ]);
   });
 
   test("test_interruption_discards_the_speculation", async () => {
@@ -257,7 +263,7 @@ describe("TestPendingSpeculation", () => {
     const gate = new SpeculationGate();
 
     speculate(gate, true, ["Booking."], { end: false });
-    emit(gate, new EagerEndOfTurnCancelFrame());
+    emit(gate, new UserTurnResponseCancelFrame());
 
     expect(gate.isSpeculating).toBeFalsy();
   });
@@ -309,7 +315,9 @@ describe("TestSpeculationGateOrdering", () => {
     const gate = new SpeculationGate();
 
     speculate(gate, true, ["Cancelling."], { end: false });
-    expect(types(emit(gate, new EagerEndOfTurnCancelFrame()))).toEqual([EagerEndOfTurnCancelFrame]);
+    expect(types(emit(gate, new UserTurnResponseCancelFrame()))).toEqual([
+      UserTurnResponseCancelFrame,
+    ]);
     expect(types(emit(gate, new UserStoppedSpeakingFrame()))).toEqual([UserStoppedSpeakingFrame]);
   });
 
@@ -332,7 +340,7 @@ describe("TestSupersededSpeculation", () => {
     // turn instead supersedes it.
     const gate = new SpeculationGate();
 
-    emit(gate, new EagerEndOfTurnCancelFrame());
+    emit(gate, new UserTurnResponseCancelFrame());
     expect(speculate(gate, true, ["Cancelling."], { end: false })).toEqual([]);
     expect(types(speculate(gate, false, ["Rescheduling instead."]))).toEqual([
       LLMFullResponseStartFrame,
@@ -370,9 +378,9 @@ describe("TestUninterruptibleFrames", () => {
     const gate = new SpeculationGate();
 
     speculate(gate, true, ["Booking."], { end: false, thenFrames: [toolResult()] });
-    const emitted = emit(gate, new EagerEndOfTurnCancelFrame());
+    const emitted = emit(gate, new UserTurnResponseCancelFrame());
 
-    expect(types(emitted)).toEqual([EagerEndOfTurnCancelFrame, FunctionCallResultFrame]);
+    expect(types(emitted)).toEqual([UserTurnResponseCancelFrame, FunctionCallResultFrame]);
     expect(
       emitted
         .filter((f) => f instanceof FunctionCallResultFrame)
@@ -400,7 +408,9 @@ describe("TestUninterruptibleFrames", () => {
     const gate = new SpeculationGate();
 
     speculate(gate, true, ["Booking."], { end: false });
-    expect(types(emit(gate, new EagerEndOfTurnCancelFrame()))).toEqual([EagerEndOfTurnCancelFrame]);
+    expect(types(emit(gate, new UserTurnResponseCancelFrame()))).toEqual([
+      UserTurnResponseCancelFrame,
+    ]);
     // Still queued behind the withdrawal, which overtook it.
     expect(types(emit(gate, new LLMTextFrame({ text: " Done." }), toolResult()))).toEqual([
       FunctionCallResultFrame,

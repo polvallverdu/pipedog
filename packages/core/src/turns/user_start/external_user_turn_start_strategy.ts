@@ -12,7 +12,6 @@ import {
   UserStartedSpeakingFrame,
 } from "../../frames/frames.ts";
 import { logger } from "../../utils/logger.ts";
-import { ProcessFrameResult } from "../types.ts";
 import {
   BaseUserTurnStartStrategy,
   type BaseUserTurnStartStrategyOptions,
@@ -61,25 +60,18 @@ export class ExternalUserTurnStartStrategy extends BaseUserTurnStartStrategy {
    * Process an incoming frame to detect user turn start.
    *
    * @param frame The frame to be analyzed.
-   * @returns STOP if the turn started, CONTINUE otherwise.
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     if (frame instanceof ProposedUserStartedSpeakingFrame) {
       logger.debug(`${this}: resolving a proposed user turn start`);
-      await this.triggerUserTurnStarted();
-      return ProcessFrameResult.STOP;
-    }
-
-    if (frame instanceof UserStartedSpeakingFrame) {
+      await this.reportUserTurnStarted();
+    } else if (frame instanceof UserStartedSpeakingFrame) {
       // Already announced elsewhere — adopt the decision without repeating it.
       logger.debug(`${this}: adopting a user turn start decided elsewhere`);
-      await this.triggerUserTurnStarted({
+      await this.reportUserTurnStarted({
         enableInterruptions: false,
         enableUserSpeakingFrames: false,
       });
-      return ProcessFrameResult.STOP;
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 }

@@ -9,7 +9,6 @@
 import type { Frame } from "../../frames/frames.ts";
 import { FrameDirection, type FrameProcessorSetup } from "../../processors/frame_processor.ts";
 import { BaseObject, type BaseObjectOptions } from "../../utils/base_object.ts";
-import type { ProcessFrameResult } from "../types.ts";
 
 export interface UserTurnStartedParamsOptions {
   /** Whether the user aggregator should broadcast an interruption for this turn. */
@@ -52,7 +51,7 @@ export interface BaseUserTurnStartStrategyOptions extends BaseObjectOptions {
   enableInterruptions?: boolean;
 }
 
-export interface TriggerUserTurnStartedOptions {
+export interface ReportUserTurnStartedOptions {
   /**
    * Whether to broadcast an interruption for this turn, overriding the
    * strategy's configured setting. Pass false when something else in the
@@ -77,10 +76,17 @@ export interface TriggerUserTurnStartedOptions {
  *
  *   - `on_push_frame`: Indicates the strategy wants to push a frame.
  *   - `on_broadcast_frame`: Indicates the strategy wants to broadcast a frame.
- *   - `on_user_turn_started`: Signals that a user turn has started.
+ *   - `on_user_turn_started`: Reports the strategy's decision that the
+ *     user started, from `reportUserTurnStarted()`. The turn controller starts
+ *     the turn on the first decision, or once every start strategy has
+ *     decided in a `StrategyMode.ALL` list.
+ *   - `on_reset_aggregation`: Asks the user aggregator to drop the text
+ *     aggregated so far, from `triggerResetAggregation()`.
  *
  * Porting note: the deprecated `enable_user_speaking_frames` constructor
- * argument and the deprecated `reset()` hook are not ported.
+ * argument, the deprecated `reset()` hook, the deprecated
+ * `trigger_user_turn_started()` (and its override compatibility) and the
+ * deprecated `ProcessFrameResult` return value are not ported.
  */
 export class BaseUserTurnStartStrategy extends BaseObject {
   protected _enableInterruptions: boolean;
@@ -143,12 +149,8 @@ export class BaseUserTurnStartStrategy extends BaseObject {
    * the user turn has started.
    *
    * @param frame The frame to be processed.
-   * @returns A ProcessFrameResult indicating the outcome, or null (treated as
-   *   CONTINUE for backward compatibility).
    */
-  async processFrame(_frame: Frame): Promise<ProcessFrameResult | null> {
-    return null;
-  }
+  async processFrame(_frame: Frame): Promise<void> {}
 
   /**
    * Emit on_push_frame to push a frame using the user aggregator.
@@ -173,8 +175,14 @@ export class BaseUserTurnStartStrategy extends BaseObject {
     await this._callEventHandler("on_broadcast_frame", frameCls, options);
   }
 
-  /** Trigger the `on_user_turn_started` event. */
-  async triggerUserTurnStarted(options: TriggerUserTurnStartedOptions = {}): Promise<void> {
+  /**
+   * Report that the user started, by firing `on_user_turn_started`.
+   *
+   * A strategy calls this when it decides the user's turn has started. The
+   * turn controller starts the turn on the first decision, or once every
+   * start strategy has decided in a `StrategyMode.ALL` list.
+   */
+  async reportUserTurnStarted(options: ReportUserTurnStartedOptions = {}): Promise<void> {
     await this._callEventHandler(
       "on_user_turn_started",
       new UserTurnStartedParams({
