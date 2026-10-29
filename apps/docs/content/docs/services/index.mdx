@@ -7,7 +7,7 @@ description: "Every pipedog service by category: ported, and coming soon from Pi
 
 Services are frame processors that call an AI provider. pipedog ports them from Pipecat with the same
 class names and options (in camelCase), one package per provider: `@pipedog/openai`,
-`@pipedog/deepgram` and so on. 99 service pages are ported so far. The "coming soon"
+`@pipedog/deepgram` and so on. 102 service pages are ported so far. The "coming soon"
 pages link to Pipecat's docs and to a port request.
 
 Each service page follows the same layout as Pipecat's: overview, installation, configuration
@@ -31,6 +31,7 @@ Chat models that turn the conversation context into a response. [All llm service
 | [Vercel AI SDK](/docs/services/llm/ai-sdk) | `AISDKLLMService` | `@pipedog/ai-sdk` | Ported |
 | [Cloudflare Workers AI](/docs/services/llm/cloudflare) | `WorkersAILLMService` | `@pipedog/cloudflare` | Ported |
 | [Perplexity](/docs/services/llm/perplexity) | `PerplexityAgentHttpLLMService` | `@pipedog/perplexity` | Ported |
+| [NVIDIA](/docs/services/llm/nvidia) | `NvidiaLLMService`, `NvidiaOmniLLMService` | `@pipedog/nvidia` | Ported |
 | [Baseten](/docs/services/llm/baseten) | `BasetenLLMService` | `@pipedog/baseten` | Ported |
 | [Cerebras](/docs/services/llm/cerebras) | `CerebrasLLMService` | `@pipedog/cerebras` | Ported |
 | [Crusoe](/docs/services/llm/crusoe) | `CrusoeLLMService` | `@pipedog/crusoe` | Ported |
@@ -49,7 +50,6 @@ Chat models that turn the conversation context into a response. [All llm service
 | [Smallest AI](/docs/services/llm/smallest) | `SmallestLLMService` | `@pipedog/smallest` | Ported |
 | [Together AI](/docs/services/llm/together) | `TogetherLLMService` | `@pipedog/together` | Ported |
 | [xAI Grok](/docs/services/llm/grok) | `GrokLLMService` | `@pipedog/xai` | Ported |
-| [NVIDIA](/docs/services/llm/nvidia) | `NvidiaLLMService` | | Coming soon |
 
 ## Speech-to-text
 
@@ -81,6 +81,7 @@ Transcribe the user's speech into TranscriptionFrames. [All speech-to-text servi
 | [Smallest AI](/docs/services/stt/smallest) | `SmallestSTTService` | `@pipedog/smallest` | Ported |
 | [Gradium](/docs/services/stt/gradium) | `GradiumSTTService` | `@pipedog/gradium` | Ported |
 | [Meta](/docs/services/stt/meta) | `MetaSTTService` | `@pipedog/meta` | Ported |
+| [Zoom AI](/docs/services/stt/zoom-ai) | `ZoomAISTTService` | `@pipedog/zoom-ai` | Ported |
 | [NVIDIA Riva](/docs/services/stt/nvidia) | `NvidiaSTTService`, `NvidiaSegmentedSTTService` | | Coming soon |
 
 ## Text-to-speech
@@ -120,6 +121,7 @@ Turn the bot's text into audio frames. [All text-to-speech services](/docs/servi
 | [Camb.ai](/docs/services/tts/camb) | `CambTTSService` | `@pipedog/camb` | Ported |
 | [Async](/docs/services/tts/asyncai) | `AsyncAITTSService`, `AsyncAIHttpTTSService` | `@pipedog/asyncai` | Ported |
 | [Bland](/docs/services/tts/bland) | `BlandTTSService`, `BlandHttpTTSService` | `@pipedog/bland` | Ported |
+| [AssemblyAI](/docs/services/tts/assemblyai) | `AssemblyAITTSService` | `@pipedog/assemblyai` | Ported |
 | [NVIDIA Riva](/docs/services/tts/nvidia) | `NvidiaTTSService` | | Coming soon |
 
 ## Speech-to-speech

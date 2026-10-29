@@ -1,0 +1,107 @@
+---
+title: Pipecat Tone
+description: Read how the user meant each turn, and voice the bot's plain replies with expression tags, using Pipecat Tone's small local models.
+---
+
+Pipecat Tone is a pair of small models for expressive conversation (alpha): a **reader** for how
+the user spoke and a **tagger** for how the bot speaks. Both run on the CPU, through ONNX Runtime,
+in milliseconds. pipedog ports them as two processors in `@pipedog/core`, with the models in
+`@pipedog/tone`:
+
+- **`PipecatToneReader`** goes between the STT service and the user aggregator. It reads each final
+  transcription, together with the bot's reply before it, and sets the reading as the
+  transcription's `perception`: the user's two likeliest `emotion`s with their confidences, and
+  `sarcasm`, the chance the turn is sarcastic.
+- **`PipecatToneTagger`** goes between the LLM and the TTS service. The LLM writes plain words, and
+  the tagger labels each sentence as it streams in: a delivery, slow spans for details, stressed
+  words, a sound before or after, and with `ExpressionGuidance.BREATHE` an occasional breath. It
+  writes the labels as the expression tags the TTS service performs.
+
+<Callout type="warn" title="Alpha">
+  Expressive conversation is alpha upstream, and these types are likely to change between
+  releases.
+</Callout>
+
+<Cards>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/core/src/processors/tone">
+    `packages/core/src/processors/tone` and `packages/tone/src`.
+  </Card>
+  <Card title="Models" href="https://huggingface.co/pipecat-ai/tone-models">
+    `pipecat-ai/tone-models` on Hugging Face.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/core @pipedog/tone onnxruntime-node
+```
+
+The processors are in `@pipedog/core`, which loads the models from `@pipedog/tone` when it is
+installed. `@pipedog/tone` runs them on [`@pipedog/onnx`](/docs/deployment/bundling), with
+`onnxruntime-node` or `onnxruntime-web` as an optional peer.
+
+```ts
+import { PipecatToneReader } from "@pipedog/core/processors/tone/reader/index";
+import { PipecatToneTagger } from "@pipedog/core/processors/tone/tagger/index";
+```
+
+## Usage
+
+Turn on expressive conversation in the `PipelineParams`, and place the reader after the STT
+service and the tagger after the LLM. The `ExpressionPolicy`'s presets steer the tagger, and your
+own guidance lines tell the LLM what to do with a reading:
+
+<include cwd meta='title="bot.ts"'>snippets/tone.ts#pipeline</include>
+
+With a tagger in the pipeline, the LLM is taught to read the user's tone but no tags, and the
+context keeps its replies plain. The user aggregator writes each turn's reading at the head of the
+user's message, such as
+`([emotion frustrated=0.86, neutral=0.10],[sarcasm value=0.03]) Where is my order?`, and `on_user_turn_stopped` gets it in `UserTurnStoppedMessage.perception`.
+
+Each processor works without the other: with the reader alone, the LLM writes the tags itself
+(when the TTS service performs them), and the tagger alone voices replies without knowing how the
+user sounded.
+
+## Options
+
+| Processor | Option | Default | Description |
+|---|---|---|---|
+| `PipecatToneReader` | `revision` | `"reader-rc1"` | The model's release on Hugging Face. |
+| | `modelDir` | `null` | A folder (or an `http(s):` or `file:` URL) to load the model from instead of downloading it. |
+| | `precision` | `"fp16"` | `"fp16"` gives the same readings at half the size; or `"fp32"`. |
+| | `threads` | `4` | CPU threads for one read. |
+| `PipecatToneTagger` | `size` | `"17m"` | `"17m"`, or `"32m"`, which agrees with its teacher a little more often and takes nearly three times as long a sentence. |
+| | `revision` | `"tagger-rc1"` | The model's release on Hugging Face. |
+| | `modelDir` | `null` | A folder to load the model from, laid out as a release's `tagger/17m`. |
+| | `threads` | `1` | CPU threads for one sentence. |
+| | `vocabulary` | `null` | Names to write first for a delivery, sound or kind of breath, such as `{ [ExpressionDelivery.WARM]: ["cheerful"] }`, where the TTS service performs them. |
+
+Both also take `openModel`, a function that opens the model your own way.
+
+<include cwd>snippets/tone.ts#options</include>
+
+## Notes
+
+- The model loads while the pipeline is set up, once a process, and every reader (or tagger)
+  shares it. The first load downloads it from Hugging Face into `~/.cache/pipedog/tone` (or
+  `$PIPEDOG_CACHE_DIR/tone`), which
+  holds the pipeline's start, so download it ahead, such as when building the image.
+- A model that can't be loaded is reported as an error that leaves the processor unusable:
+  transcriptions pass through unread, and replies pass through as the LLM wrote them, with the
+  LLM writing the tags itself. Set the worker's `processorUnusablePolicy` to end the pipeline
+  instead.
+- The tagger was trained with the Cartesia, ElevenLabs, Fish Audio and MiniMax TTS services, and
+  reads any other as a generic one. It only tags with expressive conversation on.
+- Each read or sentence waits for the model: a few milliseconds a turn for the reader, about 15
+  milliseconds a sentence for the 17m tagger.
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/tone" />
+
+The download cache needs a file system. On Cloudflare Workers, host the model files and pass their
+`https:` URL as `modelDir`.
+
+Upstream runs the models off the event loop in a thread. Here the ONNX runtime runs them
+asynchronously, and the model's `tag()` returns a promise.

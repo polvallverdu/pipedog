@@ -108,6 +108,7 @@ export const IMPORTS: Record<string, readonly string[]> = {
   together_stt: ['import { TogetherSTTService } from "@pipedog/together/stt";'],
   whisper_stt: ['import { WhisperSTTService } from "@pipedog/whisper/stt";'],
   xai_stt: ['import { XAISTTService } from "@pipedog/xai/stt";'],
+  zoom_ai_stt: ['import { ZoomAISTTService } from "@pipedog/zoom-ai/stt";'],
 
   // LLM services
   anthropic_llm: ['import { AnthropicLLMService } from "@pipedog/anthropic/llm";'],
@@ -117,6 +118,7 @@ export const IMPORTS: Record<string, readonly string[]> = {
   cloudflare_llm: ['import { WorkersAILLMService } from "@pipedog/cloudflare/llm";'],
   google_gemini_llm: ['import { GoogleLLMService } from "@pipedog/google/llm";'],
   google_vertex_llm: ['import { GoogleVertexLLMService } from "@pipedog/google/vertex/llm";'],
+  nvidia_llm: ['import { NvidiaLLMService } from "@pipedog/nvidia/llm";'],
   openai_llm: ['import { OpenAILLMService } from "@pipedog/openai/llm";'],
   openai_responses_llm: [
     'import { OpenAIResponsesLLMService } from "@pipedog/openai/responses/llm";',
@@ -125,6 +127,7 @@ export const IMPORTS: Record<string, readonly string[]> = {
   ...compatibleLlmImports,
 
   // TTS services
+  assemblyai_tts: ['import { AssemblyAITTSService } from "@pipedog/assemblyai/tts";'],
   asyncai_tts: ['import { AsyncAITTSService } from "@pipedog/asyncai/tts";'],
   aws_polly_tts: ['import { AWSPollyTTSService } from "@pipedog/aws/tts";'],
   azure_tts: ['import { AzureTTSService } from "@pipedog/azure/tts";'],

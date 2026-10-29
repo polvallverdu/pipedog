@@ -1,0 +1,93 @@
+---
+title: Zoom AI
+description: Streaming speech-to-text with Zoom's Scribe Live, which ends each turn with its own voice activity detection.
+---
+
+## Overview
+
+`ZoomAISTTService` streams 16 kHz PCM audio to Zoom's Scribe Live over a WebSocket. Scribe's own
+voice activity detection decides when the user starts and stops speaking, and each completed turn
+comes back as one final transcript. It is a port of Pipecat's `ZoomAISTTService`.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/stt/zoom-ai">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/zoom-ai/src">
+    `packages/zoom-ai/src/stt.ts`.
+  </Card>
+  <Card title="Zoom Scribe" href="https://developers.zoom.us/docs/ai-services/scribe/">
+    The Scribe API: features, availability and enablement.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/zoom-ai
+```
+
+## Prerequisites
+
+- A Zoom AI Services API key or JWT, passed as `apiKey` (the examples read `ZOOM_AI_API_KEY`).
+  It is sent on every connect and reconnect, so it must stay valid for as long as the service
+  runs.
+
+## ZoomAISTTService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/zoom-ai/src/stt.ts" name="ZoomAISTTServiceOptions" />
+
+The default URL is `wss://api.zoom.us/v2/aiservices/scribe/live`. A plaintext `ws://` URL to a
+host other than localhost logs a warning.
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new ZoomAISTTService.Settings({...})`
+(`ZoomAISTTSettings`). Settings you leave out keep their defaults. Changing a setting reconnects
+with a new Scribe session.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `language` | `Language` | `Language.EN_US` | The Scribe locale. Regional variants Scribe doesn't list resolve to their base language's locale. |
+| `silenceDurationMs` | `number \| null` | `350` | Silence that ends a turn, tuned for voice agents. For transcription without an agent, a longer value such as 600 can improve accuracy. `null` uses Scribe's default. |
+| `diarization` | `boolean` | `false` | Label each transcript with a speaker. The labels are in the Scribe event attached as `TranscriptionFrame.result`, and the speaker tags are removed from the text. |
+| `languageDetection` | `string \| null` | `null` | Scribe's language detection mode (`config.language_detection.mode`). `null` turns it off. |
+| `vocabulary` | `string[] \| null` | `null` | Words and phrases that customize recognition. |
+| `textPolishing` | `boolean` | `false` | Scribe's text polishing. The polished text is the transcript, and the recognized text stays in `TranscriptionFrame.result`. |
+| `extra` | `object` | `{}` | Scribe request fields with no setting, shaped like the request. Merged into the `session.update` over the settings above. |
+
+### Usage
+
+<include cwd meta='title="stt.ts"'>snippets/services/stt-zoom-ai.ts#usage</include>
+
+Turn on Scribe's other features:
+
+<include cwd>snippets/services/stt-zoom-ai.ts#features</include>
+
+Change settings mid-call with an `STTUpdateSettingsFrame`:
+
+<include cwd>snippets/services/stt-zoom-ai.ts#update</include>
+
+### Notes
+
+- Scribe's `speech_started` event broadcasts a `ProposedUserStartedSpeakingFrame`, and each
+  completed transcript is pushed as a `TranscriptionFrame` followed by a
+  `ProposedUserStoppedSpeakingFrame`. The service recommends `ExternalUserTurnStrategies`, so the
+  user aggregator follows Scribe's turns instead of running a local VAD.
+- Only final transcripts are pushed. There are no interim transcriptions, and no time to final
+  segment (TTFS) metric, since Scribe sets the turn boundary.
+- `shouldInterrupt` (default `true`) decides whether a user turn started by Scribe interrupts the
+  bot.
+- Audio at another sample rate is resampled to 16 kHz. When input stops mid-turn (the user
+  muted, say), the service sends enough silence after a second to end the turn.
+- When Zoom refuses the connection, the error carries Zoom's reason when the WebSocket error
+  exposes the handshake response. A standard `WebSocket` doesn't, so the reason may be missing.
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/zoom-ai" />
+
+The service uses the global `WebSocket` (through core's `websocketConnect`, which sends the auth
+headers on the handshake on Cloudflare Workers too). No Zoom SDK is needed.

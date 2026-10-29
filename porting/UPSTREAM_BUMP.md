@@ -599,7 +599,36 @@ Notes from the triage for each b/c/d entry, for whoever ports it.
 
 ## Progress
 
-| Step | Branch | PR | State |
-|---|---|---|---|
-| Bump + triage | `upstream-bump/triage` | | open |
+Each PR is stacked on the one before it; review and merge them in this order.
 
+| # | Step | Branch | PR |
+|---|---|---|---|
+| 1 | Bump + triage (this file, tooling) | `upstream-bump/triage` | #99 |
+| 2 | Refactor 1: LLM adapters move to `adapters/llm` | `upstream-bump/adapters-llm` | #100 |
+| 3 | Refactor 2: user turn strategies redesign (#6346) | `upstream-bump/user-turn-strategies` | #101 |
+| 4 | `@pipedog/core` modules (expressive conversation first, `llm_with_backend`, text/TTS) | `upstream-bump/core` | #102 |
+| 5 | Speech providers (Cartesia, ElevenLabs, Fish, MiniMax, Deepgram, Inworld, Smallest, Speechify, Sarvam, Google) | `upstream-bump/providers-speech` | #103 |
+| 6 | LLM and other providers (OpenAI, AWS, Azure, Perplexity, Smallest LLM, Together, Inception, evals, CLI, runner, Twilio) | `upstream-bump/providers-llm` | #104 |
+| 7 | New providers: NVIDIA LLM + Omni, Zoom AI STT, AssemblyAI TTS, Pipecat Tone | `upstream-bump/new-providers` | #105 |
+
+Tooling fixed along the way: `--sync-tests` no longer marks a stale test as done (#103), and the
+port workflow single-quotes the notes it records (#104).
+
+## What's left
+
+Every module and test that this bump changed and that pipedog had ported is ported again at
+`8c3558bd69`. What remains:
+
+- **New upstream, not ported:** `pipecat.observers.aic_tyto_observer` and its test. It needs
+  ai-coustics' native `aic-sdk` (Tyto model), like the AIC filter and Quail VAD, which are unported
+  for the same reason.
+- **Changed upstream, blocked on transports pipedog hasn't ported:** `tests/test_runner_utils.py`
+  and `tests/test_moq_transport.py` (they import the Daily, MoQ and Vonage transports).
+- **Changed upstream, never ported** (they stay `todo` and get ported from scratch at the current
+  pin): the AIC filter and Quail VAD, Fal STT, Keenable search, NVIDIA Riva TTS (and STT), Tavus
+  video and transport (now with replica emotions, #6291), the Daily, LemonSlice and MoQ transports,
+  and their tests (`test_aic_filter`, `test_krisp_viva_filter`, `test_daily_transport`,
+  `test_tavus_transport`, `test_fal_stt`, `test_tavus_video`).
+- **Follow-ups noted in the PRs:** a docs page for expressive conversation (alpha); a Deno run of
+  the compat harness for the new packages (`@pipedog/nvidia`, `@pipedog/zoom-ai`, `@pipedog/tone`
+  list bun, node and workerd only because Deno wasn't available); `@pipedog/perplexity` keywords.

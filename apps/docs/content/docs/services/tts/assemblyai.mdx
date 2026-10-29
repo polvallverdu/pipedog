@@ -1,0 +1,84 @@
+---
+title: AssemblyAI
+description: Streaming text-to-speech with per-word timings over AssemblyAI's Streaming TTS WebSocket API.
+---
+
+## Overview
+
+`AssemblyAITTSService` streams text to AssemblyAI's Streaming TTS WebSocket API over one session
+and plays the audio as it arrives, with per-word timings for word-level `TTSTextFrame`s. It is a
+port of Pipecat's `AssemblyAITTSService`. AssemblyAI's speech-to-text services, in the same
+package, are on the [AssemblyAI speech-to-text](/docs/services/stt/assemblyai) page.
+
+<Cards>
+  <Card title="Upstream page" href="https://docs.pipecat.ai/api-reference/server/services/tts/assemblyai">
+    Pipecat's documentation for the same service.
+  </Card>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/assemblyai/src">
+    `packages/assemblyai/src/tts.ts`.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/assemblyai
+```
+
+## Prerequisites
+
+- An [AssemblyAI](https://www.assemblyai.com) account and API key, passed as `apiKey` (the
+  examples read `ASSEMBLYAI_API_KEY`). A temporary token opens a single session, so it can't carry
+  the service's reconnects and session renewals.
+
+## AssemblyAITTSService
+
+### Configuration
+
+<auto-type-table cwd path="../../packages/assemblyai/src/tts.ts" name="AssemblyAITTSServiceOptions" />
+
+The default URL is `wss://tts.us.assemblyai.com/v1/ws`. Use `wss://tts.eu.assemblyai.com/v1/ws`
+to process text and audio in the EU. A cloned voice works only on the host of the zone it was
+created in.
+
+### Settings
+
+Runtime-updatable settings, passed as `settings: new AssemblyAITTSService.Settings({...})`
+(`AssemblyAITTSSettings`). Settings you leave out keep their defaults. The session is configured
+when it connects, so changing any of them reconnects.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `voice` | `string \| null` | `"49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"` (Audrey) | Sent as `voice_id`: any voice by its ID, an AssemblyAI voice by its library slug such as `aai-jane`, or a cloned voice by the slug the dashboard shows. `null` leaves the voice to the server. |
+| `language` | `Language \| null` | `null` | The language the session speaks: German, English, Spanish, French, Italian or Portuguese. Unset, the voice's own language. |
+| `model` | `string \| null` | `null` | The model, such as `assemblyai-tts-1`. Unset, the language's default model. |
+
+### Usage
+
+<include cwd meta='title="tts.ts"'>snippets/services/tts-assemblyai.ts#usage</include>
+
+Pick a voice and a region:
+
+<include cwd>snippets/services/tts-assemblyai.ts#voice</include>
+
+Change settings mid-call with a `TTSUpdateSettingsFrame`:
+
+<include cwd>snippets/services/tts-assemblyai.ts#update</include>
+
+### Notes
+
+- Each sentence is sent as its own request (a `Generate`, then a `Flush`). With
+  `TextAggregationMode.TOKEN`, the turn's text streams as it is generated and is flushed when the
+  turn ends. Text longer than the session's limit is split across `Generate` messages.
+- Interruptions send `Cancel`, which stops synthesis in flight and keeps the session open.
+- The service keeps an idle session open with a `KeepAlive` every 30 seconds, replaces a session
+  between requests before its one-hour limit, and waits as long as an error asks before
+  reconnecting.
+- `sampleRate` left out uses the pipeline's output rate.
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/assemblyai" />
+
+The service uses the global `WebSocket` (through core's `websocketConnect`, which sends the
+`Authorization` header on the handshake on Cloudflare Workers too). No AssemblyAI SDK is needed.

@@ -770,6 +770,12 @@ export const ported: Record<Section, PortedPage[]> = {
       pkg: "@pipedog/perplexity",
       classes: ["PerplexityAgentHttpLLMService"],
     },
+    {
+      slug: "nvidia",
+      name: "NVIDIA",
+      pkg: "@pipedog/nvidia",
+      classes: ["NvidiaLLMService", "NvidiaOmniLLMService"],
+    },
     ...[...compatibleLlm]
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((page) => ({
@@ -908,6 +914,12 @@ export const ported: Record<Section, PortedPage[]> = {
       classes: ["GradiumSTTService"],
     },
     { slug: "meta", name: "Meta", pkg: "@pipedog/meta", classes: ["MetaSTTService"] },
+    {
+      slug: "zoom-ai",
+      name: "Zoom AI",
+      pkg: "@pipedog/zoom-ai",
+      classes: ["ZoomAISTTService"],
+    },
   ],
   tts: [
     { slug: "openai", name: "OpenAI", pkg: "@pipedog/openai", classes: ["OpenAITTSService"] },
@@ -1064,6 +1076,12 @@ export const ported: Record<Section, PortedPage[]> = {
       name: "Bland",
       pkg: "@pipedog/bland",
       classes: ["BlandTTSService", "BlandHttpTTSService"],
+    },
+    {
+      slug: "assemblyai",
+      name: "AssemblyAI",
+      pkg: "@pipedog/assemblyai",
+      classes: ["AssemblyAITTSService"],
     },
   ],
   s2s: [
@@ -1293,14 +1311,6 @@ export interface UpcomingPage {
 /** Popular upstream providers that aren't ported yet: one short page each. */
 export const upcoming: UpcomingPage[] = [
   // LLM
-  {
-    section: "llm",
-    slug: "nvidia",
-    name: "NVIDIA",
-    about: "Models served by NVIDIA NIM.",
-    classes: ["NvidiaLLMService"],
-    modules: ["services/nvidia/llm.py"],
-  },
   // STT
   {
     section: "stt",

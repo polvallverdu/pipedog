@@ -269,6 +269,7 @@ ${CLOUDFLARE_CREDENTIALS}
   }),
 })`,
   xai_stt: keyed("XAISTTService", "XAI_API_KEY"),
+  zoom_ai_stt: keyed("ZoomAISTTService", "ZOOM_AI_API_KEY"),
 
   // LLM services
   // A model ID string goes through the AI Gateway. Any AI SDK model works in its place, e.g.
@@ -329,6 +330,13 @@ ${CLOUDFLARE_CREDENTIALS}
     systemInstruction: SYSTEM_INSTRUCTION,
   }),
 })`,
+  // NVIDIA NIM. For a local NIM deployment, pass `baseUrl` (e.g. http://localhost:8000/v1).
+  nvidia_llm: keyed(
+    "NvidiaLLMService",
+    "NVIDIA_API_KEY",
+    `    model: process.env.NVIDIA_MODEL ?? "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    systemInstruction: SYSTEM_INSTRUCTION,`,
+  ),
   openai_llm: keyed(
     "OpenAILLMService",
     "OPENAI_API_KEY",
@@ -351,6 +359,11 @@ ${CLOUDFLARE_CREDENTIALS}
   ...Object.fromEntries(COMPATIBLE_LLMS.map((llm) => [llm.value, compatibleLlmConfig(llm)])),
 
   // TTS services
+  assemblyai_tts: keyed(
+    "AssemblyAITTSService",
+    "ASSEMBLYAI_API_KEY",
+    `    voice: process.env.ASSEMBLYAI_VOICE_ID ?? "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3",`,
+  ),
   aws_polly_tts: `new AWSPollyTTSService({
 ${AWS_CREDENTIALS}
   awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,

@@ -14,6 +14,7 @@
     "ai-sdk",
     "cloudflare",
     "perplexity",
+    "nvidia",
     "baseten",
     "cerebras",
     "crusoe",
@@ -31,8 +32,6 @@
     "sarvam",
     "smallest",
     "together",
-    "grok",
-    "---Coming soon---",
-    "nvidia"
+    "grok"
   ]
 }
