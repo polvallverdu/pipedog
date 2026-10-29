@@ -22,6 +22,7 @@
     "@pipedog/audio-rnnoise-filter": "workspace:*",
     "@pipedog/audio-silero": "workspace:*",
     "@pipedog/audio-smart-turn": "workspace:*",
+    "@pipedog/audio-ten-vad": "workspace:*",
     "@pipedog/aws": "workspace:*",
     "@pipedog/azure": "workspace:*",
     "@pipedog/baseten": "workspace:*",

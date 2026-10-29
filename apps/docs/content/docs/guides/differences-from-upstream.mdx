@@ -383,6 +383,9 @@ main ones, in short:
   [soundfile mixer](/docs/audio/soundfile-mixer#differences-from-upstream).
 - **Ducking** (`@pipedog/audio-ducking`) is pipedog only: an output audio filter that lowers the
   bot's voice while the user talks over it. See [Ducking](/docs/audio/ducking).
+- **TEN VAD** (`@pipedog/audio-ten-vad`) is pipedog only: `TenVADAnalyzer`, an opt-in alternative
+  to Silero that drives TEN VAD's WebAssembly build. pipedog ships none of TEN's files; you obtain
+  them from TEN, under TEN's license, and pass them in. See [TEN VAD](/docs/audio/ten-vad).
 - **Local speech models** (Whisper, Moonshine, FunASR, Kokoro, Piper, Pocket TTS) run on ONNX
   Runtime instead of the Python libraries. Each page has a Differences section, for example
   [Kokoro](/docs/services/tts/kokoro#differences-from-upstream).

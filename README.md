@@ -350,6 +350,7 @@ All packages are published under the `@pipedog` scope and released together at o
 | [`@pipedog/evals`](packages/evals) | Pipecat's evals: test a bot end to end with scripted or LLM-simulated users, matchers and an LLM judge, from YAML scenarios, with the `pipedog-eval` CLI and multi-bot suites. |
 | [`@pipedog/cli`](packages/cli) | The `pipedog` command, Pipecat's CLI: `pipedog init` scaffolds a TypeScript bot project (runner, services, client, README, coding-agent guides and the docs MCP server), `pipedog eval` runs evals. `bunx @pipedog/cli init`. |
 | [`@pipedog/audio-silero`](packages/audio-silero) | Silero VAD (`SileroVADAnalyzer`), with the upstream model included. |
+| [`@pipedog/audio-ten-vad`](packages/audio-ten-vad) | `TenVADAnalyzer`: TEN VAD as an opt-in alternative to Silero, driving TEN's WebAssembly build that you obtain from TEN (under TEN's license) and pass in. pipedog only. |
 | [`@pipedog/audio-smart-turn`](packages/audio-smart-turn) | Smart Turn end-of-turn detection: local v3 with the upstream model included, and `HttpSmartTurnAnalyzer` for a remote endpoint (`fetch` only). |
 | [`@pipedog/audio-rnnoise-filter`](packages/audio-rnnoise-filter) | `RNNoiseFilter`: RNNoise noise suppression compiled to WebAssembly, on every runtime. |
 | [`@pipedog/audio-soundfile-mixer`](packages/audio-soundfile-mixer) | `SoundfileMixer`: background sound from WAV files (bytes, URL or path) mixed into the bot's audio, in pure TypeScript. |

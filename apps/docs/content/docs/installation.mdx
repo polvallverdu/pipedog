@@ -13,6 +13,7 @@ the `@pipedog` scope and released together at one version: upgrade them together
 | `@pipedog/tracing` | OpenTelemetry setup (`setupTracing()`, OTLP and console exporters), like `pipecat-ai[tracing]` |
 | `@pipedog/sentry` | [Sentry metrics](/docs/concepts/sentry-metrics): `SentryMetrics` reports TTFB and processing time as Sentry transactions, with the Sentry SDK of your runtime |
 | `@pipedog/audio-silero`, `@pipedog/audio-smart-turn`, `@pipedog/onnx` | Silero VAD and Smart Turn (local v3, and an HTTP analyzer for a remote endpoint), and the ONNX backend they run on |
+| `@pipedog/audio-ten-vad` | [TEN VAD](/docs/audio/ten-vad), an opt-in alternative to Silero on TEN's WebAssembly build, which you obtain from TEN (under TEN's license) and pass in |
 | `@pipedog/audio-rnnoise-filter`, `@pipedog/audio-soundfile-mixer`, `@pipedog/audio-ducking` | RNNoise noise suppression (WebAssembly), background sound from WAV files mixed into the bot's audio, and ducking (the bot's voice drops while the user talks over it) |
 | `@pipedog/openai`, `@pipedog/google`, `@pipedog/anthropic`, `@pipedog/azure`, `@pipedog/aws` | LLM, speech, realtime and image services |
 | `@pipedog/deepgram`, `@pipedog/cartesia`, `@pipedog/elevenlabs`, `@pipedog/inworld` | speech-to-text and text-to-speech (Inworld also realtime) |
