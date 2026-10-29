@@ -55,7 +55,14 @@ PACKAGE_RULES = [
     ("pipecat.processors.gstreamer", "@pipedog/gstreamer", None),
     ("pipecat.processors.frameworks.langchain", "@pipedog/langchain", None),
     ("pipecat.processors.frameworks.strands_agents", "@pipedog/strands-agents", None),
+    # The Tone models run ONNX; the processors that drive them stay in core.
+    ("pipecat.processors.tone.", "@pipedog/tone", lambda parts: parts[-1] == "model"),
 ]
+
+# Provider adapters (LLM and TTS expression) live in their provider's package.
+ADAPTER_PREFIXES = ("pipecat.adapters.services.", "pipecat.adapters.llm.services.",
+                    "pipecat.adapters.tts.services.")
+ADAPTER_PROVIDERS = {"open": "openai", "gemini": "google", "bedrock": "aws", "aws": "aws"}
 
 AUDIO_IMPL_PREFIXES = ("pipecat.audio.filters.", "pipecat.audio.vad.", "pipecat.audio.turn.",
                        "pipecat.audio.resamplers.", "pipecat.audio.mixers.")
@@ -141,9 +148,9 @@ def package_for(mod, core, third):
         heavy = [t for t in third if t not in CORE_OK_THIRD_PARTY]
         if heavy or parts[2] in ("filters", "turn"):
             return f"@pipedog/audio-{parts[3]}".replace("_", "-")
-    if mod.startswith("pipecat.adapters.services.") and parts[-1].endswith("_adapter"):
+    if mod.startswith(ADAPTER_PREFIXES) and parts[-1].endswith("_adapter"):
         provider = parts[-1][: -len("_adapter")].split("_")[0]
-        provider = {"open": "openai", "gemini": "google", "bedrock": "aws"}.get(provider, provider)
+        provider = ADAPTER_PROVIDERS.get(provider, provider)
         return f"@pipedog/{provider}"
     heavy = [t for t in third if t not in CORE_OK_THIRD_PARTY]
     if heavy and not mod.startswith(("pipecat.tests", "pipecat.utils.text.transforms")):
@@ -161,7 +168,10 @@ def ts_path(mod, src, pkg):
     if rel.endswith("__init__.py"):
         rel = rel[: -len("__init__.py")] + "index.py"
     rel = rel[:-3] + ".ts"
-    if pkg != "@pipedog/core":
+    if pkg != "@pipedog/core" and mod.startswith(ADAPTER_PREFIXES):
+        # A provider's adapters sit at its package root (adapters/llm/services/x.py -> x.ts).
+        rel = rel.split("/")[-1]
+    elif pkg != "@pipedog/core":
         # Strip the directory that names the package (services/deepgram/stt.py -> stt.ts).
         parts = rel.split("/")
         for depth in (2, 1):

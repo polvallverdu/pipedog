@@ -1,7 +1,7 @@
 export const meta = {
   name: 'port',
   description: 'Port pending upstream Pipecat modules to TypeScript, review them, integrate, and port their tests',
-  whenToUse: 'Porting the next batch of pipecat modules or tests. args: {select: "--mvp" | "--package @pipedog/x" | "--modules a,b", maxLines, review, tests, testLimit, testsOnly}',
+  whenToUse: 'Porting the next batch of pipecat modules or tests. args: {select: "--mvp" | "--package @pipedog/x" | "--modules a,b", maxLines, review, tests, testLimit, testsOnly, previousPin}',
   phases: [
     { title: 'Plan', detail: 'pack pending modules into work units (tools/port/next.ts)' },
     { title: 'Port', detail: 'one porter per unit, Python -> TS per docs/CONVENTIONS.md' },
@@ -13,7 +13,9 @@ export const meta = {
 }
 
 const opts = Object.assign(
-  { select: '--mvp', maxLines: 4000, review: true, tests: true, testLimit: 1000, testsOnly: false },
+  // previousPin: after an upstream bump, the upstream commit existing ports and tests follow, so
+  // agents re-port the upstream diff into them instead of rewriting them.
+  { select: '--mvp', maxLines: 4000, review: true, tests: true, testLimit: 1000, testsOnly: false, previousPin: null },
   args || {},
 )
 
@@ -89,6 +91,15 @@ const TEST_SCHEMA = {
 
 const packagesTouched = new Set()
 
+// Re-porting after an upstream bump: an existing TS file follows an older upstream revision, so
+// apply the upstream diff to it rather than rewriting it, which would lose pipedog-only code.
+const REPORT = `If a module's TS file already exists without a "PORTING:" marker, it is a finished port of an
+older upstream revision (its "since" commit below). Do NOT rewrite it: run
+\`git -C .upstream/pipecat diff <since> HEAD -- <upstream path>\` and port exactly that delta into the
+existing file, keeping its structure and anything pipedog-only (DIVERGENCE comments, extra options or
+helpers that upstream lacks, unless the diff replaces them). Deprecations the diff adds are not ported:
+drop the deprecated API instead, and say so in notes.`
+
 async function record(commands, label) {
   if (!commands.length) return
   await agent(
@@ -113,7 +124,10 @@ and return its stdout verbatim in the json field. Do nothing else.`,
     units,
     (unit) => {
       const list = unit.modules
-        .map((m) => `- ${m.module}: ${m.upstream} -> ${m.ts} (${m.lines} lines)${m.notes ? ` [note: ${m.notes}]` : ''}`)
+        .map((m) => {
+          const since = m.portedAt || opts.previousPin
+          return `- ${m.module}: ${m.upstream} -> ${m.ts} (${m.lines} lines)${since ? ` [since: ${since}]` : ''}${m.notes ? ` [note: ${m.notes}]` : ''}`
+        })
         .join('\n')
       return agent(
         `${CONTEXT}
@@ -133,6 +147,7 @@ Krisp...), port the interface and leave the implementation as a clearly marked s
 "not ported yet" and mark that module "partial" with a note.
 Then run \`bunx tsc --noEmit -p ${unit.package === '@pipedog/core' ? 'packages/core' : 'packages/' + unit.package.split('/')[1]}/tsconfig.json 2>&1 | grep -F -e "${unit.modules.map((m) => m.ts.split('/src/')[1]).join('" -e "')}"\`
 and fix errors in YOUR files that are not caused by modules other agents have not written yet.
+${REPORT}
 Return one entry per module.`,
         { label: `port:${unit.id}`, phase: 'Port', schema: PORT_SCHEMA },
       )
@@ -216,7 +231,9 @@ and return its stdout verbatim in the json field. Do nothing else.`,
 
 Port the upstream test file .upstream/pipecat/${t.file} (${t.lines} lines) 1:1 to ${t.ts} with bun:test,
 following the "Tests" section of docs/CONVENTIONS.md (keep test names; options objects for frames;
-deprecated-only tests -> test.skip with a reason). Then run \`bun test ${t.ts}\`.
+deprecated-only tests -> test.skip with a reason).${opts.previousPin ? ` If ${t.ts} already exists, it ports
+the upstream file as of ${opts.previousPin}: port only \`git -C .upstream/pipecat diff ${opts.previousPin} HEAD -- ${t.file}\`
+into it and keep everything else.` : ''} Then run \`bun test ${t.ts}\`.
 When a test fails, find out whether the test port or the source port is wrong by comparing with the
 Python. Fix the source only where it diverges from upstream behavior; other agents may be editing source
 files concurrently, so re-read a file right before editing it and keep source edits minimal.
