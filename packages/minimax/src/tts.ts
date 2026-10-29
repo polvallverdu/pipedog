@@ -18,6 +18,7 @@
  */
 
 import { abortable, currentSignal, rethrowIfCancelled } from "@pipedog/asyncio";
+import type { BaseExpressionAdapter } from "@pipedog/core/adapters/tts/base_expression_adapter";
 import {
   ErrorFrame,
   type Frame,
@@ -35,7 +36,9 @@ import { logger } from "@pipedog/core/utils/logger";
 import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { installTracedTts } from "@pipedog/core/utils/tracing/service_decorators";
 import { NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
+import { MiniMaxExpressionAdapter } from "./minimax_adapter.ts";
 
+// Untyped JSON payloads (Python `dict` built from/parsed into arbitrary MiniMax API JSON).
 type Dict = Record<string, any>;
 
 function errorMessage(e: unknown): string {
@@ -107,7 +110,8 @@ export interface MiniMaxTTSSettingsOptions extends TTSSettingsOptions {
   pitch?: number | null | NotGiven;
   /**
    * Emotional tone (options: "happy", "sad", "angry", "fearful", "disgusted",
-   * "surprised", "calm", "fluent").
+   * "surprised", "calm", "fluent", "whisper"). "fluent" and "whisper" need a
+   * speech-2.6 model.
    */
   emotion?: string | null | NotGiven;
   /** Enable text normalization (Chinese/English). */
@@ -125,7 +129,8 @@ export interface MiniMaxTTSSettingsOptions extends TTSSettingsOptions {
  * - `volume`: speech volume (range: 0 to 10).
  * - `pitch`: pitch adjustment (range: -12 to 12).
  * - `emotion`: emotional tone (options: "happy", "sad", "angry", "fearful",
- *   "disgusted", "surprised", "calm", "fluent").
+ *   "disgusted", "surprised", "calm", "fluent", "whisper"). "fluent" and
+ *   "whisper" need a speech-2.6 model.
  * - `textNormalization`: enable text normalization (Chinese/English).
  * - `latexRead`: enable LaTeX formula reading.
  * - `languageBoost`: language boost string for multilingual support.
@@ -290,6 +295,8 @@ export class MiniMaxHttpTTSService extends TTSService {
   protected _audioChannel = 1;
   protected _audioSampleRate = 0; // Set in start()
 
+  protected _speech28ExpressionAdapter = new MiniMaxExpressionAdapter();
+
   /**
    * Initialize the MiniMax TTS service.
    *
@@ -333,6 +340,19 @@ export class MiniMaxHttpTTSService extends TTSService {
     this._stream = options.stream ?? true;
     this._baseUrl = `${options.baseUrl ?? "https://api.minimax.io/v1/t2a_v2"}?GroupId=${options.groupId}`;
     this._fetch = options.fetch ?? ((input, init) => fetch(input, init));
+  }
+
+  /**
+   * The adapter for the model: speech-2.8 models perform expression, others none.
+   *
+   * @returns The expression adapter for the current model.
+   */
+  override getExpressionAdapter(): BaseExpressionAdapter {
+    const model = this._settings.model;
+    if (typeof model === "string" && model.startsWith("speech-2.8")) {
+      return this._speech28ExpressionAdapter;
+    }
+    return super.getExpressionAdapter();
   }
 
   /** Check if this service can generate processing metrics. */
@@ -384,6 +404,9 @@ export class MiniMaxHttpTTSService extends TTSService {
     if (this._settings.emotion !== null) {
       voiceSetting.emotion = this._settings.emotion;
     }
+    // In expressive conversation, the request's delivery chooses its emotion and
+    // its speed.
+    Object.assign(voiceSetting, this.expressionSettings);
     if (this._settings.textNormalization !== null) {
       voiceSetting.text_normalization = this._settings.textNormalization;
     }
@@ -423,7 +446,11 @@ export class MiniMaxHttpTTSService extends TTSService {
       if (response.status !== 200) {
         const errorMessageText = `MiniMax TTS error: HTTP ${response.status}`;
         yield new ErrorFrame({ error: errorMessageText });
-        await response.body?.cancel().catch(() => {});
+        try {
+          await response.body?.cancel();
+        } catch (e) {
+          rethrowIfCancelled(e);
+        }
         return;
       }
 
@@ -458,64 +485,63 @@ export class MiniMaxHttpTTSService extends TTSService {
           const dataBlock = buffer.slice(start, nextStart);
           buffer = buffer.slice(nextStart);
 
+          // Upstream only catches `json.JSONDecodeError` here; a UTF-8 decode
+          // error (and anything else) reaches the outer handler.
+          const jsonText = new TextDecoder("utf-8", { fatal: true }).decode(dataBlock.subarray(5));
+          let data: Dict;
           try {
-            const data = pyJsonLoads(
-              new TextDecoder("utf-8", { fatal: true }).decode(dataBlock.subarray(5)),
-            ) as Dict;
-            // Skip data blocks containing extra_info
-            if ("extra_info" in data) {
-              logger.debug("Received final chunk with extra info");
-              continue;
-            }
-
-            const chunkData = data.data ?? {};
-            if (!chunkData || Object.keys(chunkData).length === 0) {
-              continue;
-            }
-
-            const audioData: string | undefined = chunkData.audio;
-            if (!audioData) {
-              continue;
-            }
-
-            // Process audio data in chunks
-            for (let i = 0; i < audioData.length; i += CHUNK_SIZE * 2) {
-              // *2 for hex string
-              // Split hex string
-              const hexChunk = audioData.slice(i, i + CHUNK_SIZE * 2);
-              if (!hexChunk) {
-                continue;
-              }
-
-              let audioChunk: Uint8Array;
-              try {
-                // Convert this chunk of data
-                audioChunk = bytesFromHex(hexChunk);
-              } catch (e) {
-                rethrowIfCancelled(e);
-                logger.error(`Error converting hex to binary: ${errorMessage(e)}`);
-                continue;
-              }
-              if (audioChunk.length > 0) {
-                await this.stopTtfbMetrics();
-                yield new TTSAudioRawFrame({
-                  audio: audioChunk,
-                  sampleRate: this.sampleRate,
-                  numChannels: 1,
-                  contextId,
-                });
-              }
-            }
+            data = pyJsonLoads(jsonText) as Dict;
           } catch (e) {
             rethrowIfCancelled(e);
-            if (e instanceof SyntaxError || e instanceof TypeError) {
-              // JSON decode (or UTF-8 decode) failure.
-              logger.error(
-                `Error decoding JSON: ${errorMessage(e)}, data: ${new TextDecoder().decode(dataBlock.subarray(0, 100))}`,
-              );
+            if (!(e instanceof SyntaxError)) throw e;
+            logger.error(
+              `Error decoding JSON: ${errorMessage(e)}, data: ${new TextDecoder().decode(dataBlock.subarray(0, 100))}`,
+            );
+            continue;
+          }
+          // Skip data blocks containing extra_info
+          if ("extra_info" in data) {
+            logger.debug("Received final chunk with extra info");
+            continue;
+          }
+
+          const chunkData = data.data ?? {};
+          if (!chunkData || Object.keys(chunkData).length === 0) {
+            continue;
+          }
+
+          const audioData: string | undefined = chunkData.audio;
+          if (!audioData) {
+            continue;
+          }
+
+          // Process audio data in chunks
+          for (let i = 0; i < audioData.length; i += CHUNK_SIZE * 2) {
+            // *2 for hex string
+            // Split hex string
+            const hexChunk = audioData.slice(i, i + CHUNK_SIZE * 2);
+            if (!hexChunk) {
               continue;
             }
-            throw e;
+
+            let audioChunk: Uint8Array;
+            try {
+              // Convert this chunk of data
+              audioChunk = bytesFromHex(hexChunk);
+            } catch (e) {
+              rethrowIfCancelled(e);
+              logger.error(`Error converting hex to binary: ${errorMessage(e)}`);
+              continue;
+            }
+            if (audioChunk.length > 0) {
+              await this.stopTtfbMetrics();
+              yield new TTSAudioRawFrame({
+                audio: audioChunk,
+                sampleRate: this.sampleRate,
+                numChannels: 1,
+                contextId,
+              });
+            }
           }
         }
       }

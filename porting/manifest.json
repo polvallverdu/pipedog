@@ -1120,9 +1120,9 @@
         "test_pipecat_tone_tagger.py",
         "test_universal_names.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New file packages/cartesia/src/cartesia_adapter.ts (upstream added the module after the since commit; the diff is the whole file). Ports CARTESIA_SPEEDS, CartesiaEmotion (StrEnum -> as-const object), CartesiaExpressionAdapter and _emotion. Nothing deprecated. Upstream services/cartesia/tts.py now imports CartesiaEmotion from this module, but packages/cartesia/src/tts.ts still defines its own copy. The tts module port should switch to importing it from ./cartesia_adapter.ts. I left tts.ts alone because it is not in this unit. tsc and biome are clean."
     },
     {
       "module": "pipecat.adapters.tts.services.elevenlabs_adapter",
@@ -1145,9 +1145,9 @@
         "test_pipecat_tone_tagger.py",
         "test_universal_names.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New file at packages/elevenlabs/src/elevenlabs_adapter.ts (upstream added the whole module after the since commit, so the full module was ported). The package already existed. Nothing upstream is deprecated, so nothing was dropped. Imports @pipedog/core/adapters/tts/base_expression_adapter and @pipedog/core/expressive/expression. Python's list equality (tags != previous) became an element-wise array comparison. tsc and biome pass on this file, and a quick runtime check confirmed the tag, emphasis and vocabulary output."
     },
     {
       "module": "pipecat.adapters.tts.services.fish_adapter",
@@ -1167,9 +1167,9 @@
         "test_fish_tts.py",
         "test_universal_names.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New file packages/fish/src/fish_adapter.ts. The TS file did not exist yet, so this is a full port of the current upstream, not a delta from the since commit. Python list inequality (tags != previous) is ported as an element-wise array comparison. Module-private constants (_SPEED_TAGS, _NORMAL_PACE_TAG, _S2_SOUNDS, _S2_DELIVERY) are not exported. tsc and biome pass on this file."
     },
     {
       "module": "pipecat.adapters.tts.services.minimax_adapter",
@@ -1190,9 +1190,9 @@
         "test_minimax_tts_expression.py",
         "test_universal_names.py"
       ],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New file packages/minimax/src/minimax_adapter.ts (MINIMAX_SPEEDS, MiniMaxExpressionAdapter). Python's f\"{x:g}\" pause formatting is reproduced by a local _formatG helper. Nothing deprecated upstream. Typecheck and biome are clean."
     },
     {
       "module": "pipecat.audio",
@@ -8877,9 +8877,9 @@
         "test_tts_processing_metrics.py",
         "test_tts_pronunciations.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/cartesia/src/tts.ts. Deprecated APIs dropped: the voice_id, model, params (and both InputParams classes), cartesia_version and aggregate_sentences constructor params, and _resolve_cartesia_version (the version is always the pinned _CARTESIA_API_VERSION). GenerationConfig (pydantic) becomes a class with modelDump({excludeNone}). CartesiaEmotion is an as-const object. CartesiaHttpTTSService: the aiohttp_session option is replaced by an injectable `fetch` (DIVERGENCE). The owned 'session' is the global fetch, set in setup() and cleared in cleanup(). Requests pass currentSignal() and are wrapped in abortable(). Error logs format the message dict with JSON.stringify rather than Python dict repr. A smoke run checked _buildMsg JSON (pyJsonDumps), tag stripping and pronunciation formatting. | UNRESOLVED: packages/cartesia/src/tts.ts: in _processMessages, the error and unknown-type pushError messages format the message with JSON.stringify. Upstream prints the Python dict repr ({'type': 'error', ...}). core has no shared Python-repr helper, so this was left as is; only log text differs. | UNRESOLVED: packages/cartesia/src/tts.ts and turns/stt.ts: numbers that become text (PAUSE_TAG, VOLUME_TAG, SPEED_TAG and the turn_* query params) use String(n). A float with no fractional part, such as 1.0, becomes '1' where Python writes '1.0'. JS cannot tell an int from a float, so this can't be fixed exactly. | UNRESOLVED: packages/cartesia/src/stt.ts: _processResponse uses msg.message ?? 'Unknown error', which also turns an explicit null into 'Unknown error' (Python's .get() would return None). This is an edge case only and was left unchanged."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the upstream delta 5558d26dca..HEAD into packages/cartesia/src/tts.ts:\\n- CartesiaEmotion moved to the adapter. tts.ts imports it, with CartesiaExpressionAdapter, from ./cartesia_adapter.ts (already ported) and re-exports it, just as the Python module brings it in by import. The local copy is removed.\\n- Added the _generationConfig helper: a request's generation config is the settings' config merged with expressionSettings, and is null when empty.\\n- Added the accent setting (CartesiaTTSSettings.accent, default null in both services), sent as msg/payload.accent.\\n- Both services set static expressionAdapterClass = CartesiaExpressionAdapter.\\n- LANGUAGE_MAP extended with the regional codes plus NB/NB_NO/FIL/FIL_PH, and the languageToCartesiaLanguage JSDoc is updated.\\n- Word timestamps pass preMergeTokens: cjk.\\nNo new deprecations in the diff. Pipedog-only items are kept: injectable fetch DIVERGENCE, earlier dropped deprecated params, pinned _CARTESIA_API_VERSION.\\nUNRESOLVED, carried over unchanged:\\n- Error logs format the message with JSON.stringify where upstream prints the Python dict repr.\\n- String(n) for whole-number floats in tags writes '1' where Python writes '1.0'. | UNRESOLVED: packages/cartesia/test/test_stt_send_retry_first_connect.test.ts fails test_a_connection_that_is_never_confirmed_is_given_up_on (expected 4 handshakes, got 3). The failure does not come from my edits. That test file no longer exists upstream: tests/test_stt_send_retry_first_connect.py is gone from the pinned checkout. It was written for the older port, which used reconnectOnError=false and reconnected from sendWithRetry. The current upstream turns/stt.py reconnects from the receive loop instead. The stale test should be removed or replaced by whoever owns the test ports. | UNRESOLVED: Minor, left as is: PAUSE_TAG, VOLUME_TAG and SPEED_TAG, and the turn-threshold query params in _websocketUrl, use String(number). Python prints an integral float as '1.0', but JS cannot tell 1 from 1.0, so this cannot be matched exactly."
     },
     {
       "module": "pipecat.services.cartesia.turns",
@@ -8926,9 +8926,9 @@
         "test_cartesia_turns_stt.py",
         "test_cartesia_turns_stt_reconnect.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "#6346 docstring ported; re-port the rest since 5558d26dca: receive-loop reconnect (#6242)"
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the receive-loop reconnect change (#6242, upstream dc67b9cc5) into packages/cartesia/src/turns/stt.ts:\\n- New CartesiaTurnsRequestError(message, statusCode), which errors.ts classifies by statusCode.\\n- reconnectOnError:false is removed, so the base receive loop now owns reconnection.\\n- _connect starts the receive task even when the connect fails.\\n- The watchdog cancel, close command and receive-task drain moved from _disconnectWebsocket into _disconnect; _disconnectWebsocket only closes the socket and resets state.\\n- _connectWebsocket no longer waits for 'connected'. _receiveMessages uses the core _receiveUntilConfirmed, then emits on_connected, starts a watchdog per connection, and calls _endTurnCutShort in finally unless _disconnecting.\\n- New _processMessage and _endTurnCutShort; a _turnTranscript field is tracked on turn.start, turn.update and turn.end.\\n- runStt drops audio when the socket is not OPEN, and _sendSilence sends on _getWebsocket() directly; neither uses sendWithRetry now.\\n- _handleServerError throws CartesiaTurnsRequestError before the connection is confirmed.\\nThe #6346 docstring was already ported. Mirrors the deepgram/flux/stt.ts pattern.\\nKnown test fallout: packages/cartesia/test/test_stt_send_retry_first_connect.test.ts 'test_a_connection_that_is_never_confirmed_is_given_up_on' now fails (53 pass, 1 fail). It tests the removed sendWithRetry first-connect behaviour, and upstream replaced that test file with tests/test_cartesia_turns_stt_reconnect.py in the same commit, so that test needs re-porting as a test unit.\\nUNRESOLVED, carried over unchanged: turn_* query params use String(n), so 1.0 is written as '1'. | UNRESOLVED: packages/cartesia/test/test_stt_send_retry_first_connect.test.ts fails test_a_connection_that_is_never_confirmed_is_given_up_on (expected 4 handshakes, got 3). The failure does not come from my edits. That test file no longer exists upstream: tests/test_stt_send_retry_first_connect.py is gone from the pinned checkout. It was written for the older port, which used reconnectOnError=false and reconnected from sendWithRetry. The current upstream turns/stt.py reconnects from the receive loop instead. The stale test should be removed or replaced by whoever owns the test ports. | UNRESOLVED: Minor, left as is: PAUSE_TAG, VOLUME_TAG and SPEED_TAG, and the turn-threshold query params in _websocketUrl, use String(number). Python prints an integral float as '1.0', but JS cannot tell 1 from 1.0, so this cannot be matched exactly."
     },
     {
       "module": "pipecat.services.cerebras",
@@ -9039,9 +9039,9 @@
         "websockets"
       ],
       "tests": [],
-      "status": "todo",
-      "portedAt": null,
-      "notes": ""
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "New file, packages/deepgram/src/_errors.ts, exporting describeRefusal(). DIVERGENCE: upstream checks for the websockets InvalidStatus exception. A standard WebSocket gives no handshake status or headers, so this port duck-types `exception.response.headers` for dg-error. Headers can be a Headers-like object with get() or a plain record. The status comes from status_code, statusCode or status. This means it only works when a custom webSocketFactory throws an error that carries a response. The logic moved here from the old _describeRefusal in flux/stt.ts. | UNRESOLVED: packages/deepgram/src/tts.ts: the speed query param uses JS number formatting, so upstream `speed=1.0` is written `speed=1`. A float cannot be told apart from an int in JS. The file header already documents this. | UNRESOLVED: packages/deepgram/src/tts.ts: trace/debug logs print received dicts with pyJsonDumps (`{\"type\": ...}`), while upstream uses a Python dict repr (`{'type': ...}`). There is no pyRepr util in core. This only affects log text. | UNRESOLVED: The dg-* response headers that upstream logs on connect, in all three websocket services, are not available. A standard WebSocket does not expose handshake response headers, and the port documents this. | UNRESOLVED: packages/deepgram/src/flux/stt.ts: upstream calls `WebsocketService.__init__(self)` with no kwargs, so the reconnect options cannot be set there. The TS mixin receives the whole options object, so WebsocketServiceOptions do take effect. This adds API surface and leaves default behavior unchanged, so I left it."
     },
     {
       "module": "pipecat.services.deepgram.flux",
@@ -9155,9 +9155,9 @@
         "test_deepgram_flux_stt.py",
         "test_deepgram_flux_stt_reconnect.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. DeepgramFluxSTTService extends WebsocketService(DeepgramFluxSTTBase). Deprecated code dropped: InputParams and the `model` and `params` init options. _describeRefusal duck-types `response.headers` for dg-error, because standard WebSocket errors carry no response; it only works with a custom webSocketFactory that attaches one. The dg-* handshake headers are not logged. Adds a webSocketFactory option. The Connected wait uses asyncio timeout() over one shared async iterator, as aiter/anext do upstream. | UNRESOLVED: Note: .upstream/pipecat is not checked out in this worktree (/Users/pol/vscode/pipedog-runtime). I reviewed against /Users/pol/vscode/pipedog/.upstream/pipecat, which is at the same pinned commit 5558d26dca636e09b768cfb7f70b87e259f7c188. | UNRESOLVED: flux/stt_base.ts, flux/tts_base.ts, tts.ts: query values use JS number formatting (eot_threshold=1, speed=1 where Python writes 1.0). The files' porting notes already record this; JS cannot tell an integral float from an int. | UNRESOLVED: Logs that print a Python dict repr ({'type': 'Configure', ...}) use pyJsonDumps (double quotes, JSON style) in flux/stt_base.ts, flux/tts_base.ts and tts.ts. Core has no Python repr helper, so I left these as they are. | UNRESOLVED: flux/stt.ts, flux/tts.ts, tts.ts: a standard WebSocket exposes no handshake response headers, so the dg-* header debug log and the InvalidStatus/dg-error refusal text cannot be fully reproduced. The porting notes already document this. | UNRESOLVED: Minor dict.get(key, default) edge cases (a key present with a null value) use ?? and so fall back to the default where Python would print None. They affect log and error text only. Left unchanged."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the upstream diff 5558d26..8c3558b. Removed the local _describeRefusal export; the module now imports describeRefusal from ../_errors.ts and keeps the duck-typing DIVERGENCE. _receiveMessages now waits for Connected through the core WebsocketService._receiveUntilConfirmed, and the inline timeout, TimeoutError and ConnectionError code was removed along with the local ConnectionError class. The timeout error text now comes from core: `${this} did not confirm the connection within Ns`. Core throws a plain Error, not one with the ECONNABORTED code that the removed local ConnectionError had. The diff added no deprecations. | UNRESOLVED: packages/deepgram/src/tts.ts: the speed query param uses JS number formatting, so upstream `speed=1.0` is written `speed=1`. A float cannot be told apart from an int in JS. The file header already documents this. | UNRESOLVED: packages/deepgram/src/tts.ts: trace/debug logs print received dicts with pyJsonDumps (`{\"type\": ...}`), while upstream uses a Python dict repr (`{'type': ...}`). There is no pyRepr util in core. This only affects log text. | UNRESOLVED: The dg-* response headers that upstream logs on connect, in all three websocket services, are not available. A standard WebSocket does not expose handshake response headers, and the port documents this. | UNRESOLVED: packages/deepgram/src/flux/stt.ts: upstream calls `WebsocketService.__init__(self)` with no kwargs, so the reconnect options cannot be set there. The TS mixin receives the whole options object, so WebsocketServiceOptions do take effect. This adds API surface and leaves default behavior unchanged, so I left it."
     },
     {
       "module": "pipecat.services.deepgram.flux.stt_base",
@@ -9213,9 +9213,9 @@
       "tests": [
         "test_deepgram_flux_tts.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. DeepgramFluxTTSService extends WebsocketService(DeepgramFluxTTSBase). Adds a webSocketFactory option. The dg-* response headers are not logged on connect, because a standard WebSocket does not expose them. No deprecated APIs in this module. | UNRESOLVED: Note: .upstream/pipecat is not checked out in this worktree (/Users/pol/vscode/pipedog-runtime). I reviewed against /Users/pol/vscode/pipedog/.upstream/pipecat, which is at the same pinned commit 5558d26dca636e09b768cfb7f70b87e259f7c188. | UNRESOLVED: flux/stt_base.ts, flux/tts_base.ts, tts.ts: query values use JS number formatting (eot_threshold=1, speed=1 where Python writes 1.0). The files' porting notes already record this; JS cannot tell an integral float from an int. | UNRESOLVED: Logs that print a Python dict repr ({'type': 'Configure', ...}) use pyJsonDumps (double quotes, JSON style) in flux/stt_base.ts, flux/tts_base.ts and tts.ts. Core has no Python repr helper, so I left these as they are. | UNRESOLVED: flux/stt.ts, flux/tts.ts, tts.ts: a standard WebSocket exposes no handshake response headers, so the dg-* header debug log and the InvalidStatus/dg-error refusal text cannot be fully reproduced. The porting notes already document this. | UNRESOLVED: Minor dict.get(key, default) edge cases (a key present with a null value) use ?? and so fall back to the default where Python would print None. They affect log and error text only. Left unchanged."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the upstream diff 5558d26..8c3558b. On a connect error, _connectWebsocket uses describeRefusal from ../_errors.ts. The ErrorFrame now carries the exception and the refusal text when there is one, on_connection_error gets the refusal text when there is one, and the logger.error line was removed. The diff added no deprecations. tsc and biome report no errors in these files, and all 48 tests in bun test packages/deepgram pass. | UNRESOLVED: packages/deepgram/src/tts.ts: the speed query param uses JS number formatting, so upstream `speed=1.0` is written `speed=1`. A float cannot be told apart from an int in JS. The file header already documents this. | UNRESOLVED: packages/deepgram/src/tts.ts: trace/debug logs print received dicts with pyJsonDumps (`{\"type\": ...}`), while upstream uses a Python dict repr (`{'type': ...}`). There is no pyRepr util in core. This only affects log text. | UNRESOLVED: The dg-* response headers that upstream logs on connect, in all three websocket services, are not available. A standard WebSocket does not expose handshake response headers, and the port documents this. | UNRESOLVED: packages/deepgram/src/flux/stt.ts: upstream calls `WebsocketService.__init__(self)` with no kwargs, so the reconnect options cannot be set there. The TS mixin receives the whole options object, so WebsocketServiceOptions do take effect. This adds API surface and leaves default behavior unchanged, so I left it."
     },
     {
       "module": "pipecat.services.deepgram.flux.tts_base",
@@ -9390,9 +9390,9 @@
         "test_tts_processing_metrics.py",
         "test_tts_pronunciations.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. DeepgramTTSService and DeepgramHttpTTSService are ported, plus formatDeepgramPronunciation, which gives the same output as the upstream docstring example. Deprecated `voice` init param dropped from both. The HTTP service replaces the required aiohttp_session with an optional `fetch` option (DIVERGENCE). The response body is split into chunks of at most chunkSize, like aiohttp iter_chunked. The WebSocket service adds a webSocketFactory option. The dg-* response headers upstream logs on connect are not available from a standard WebSocket, so they are not logged. Query floats use JS formatting, so speed=1.0 becomes speed=1. | UNRESOLVED: Note: .upstream/pipecat is not checked out in this worktree (/Users/pol/vscode/pipedog-runtime). I reviewed against /Users/pol/vscode/pipedog/.upstream/pipecat, which is at the same pinned commit 5558d26dca636e09b768cfb7f70b87e259f7c188. | UNRESOLVED: flux/stt_base.ts, flux/tts_base.ts, tts.ts: query values use JS number formatting (eot_threshold=1, speed=1 where Python writes 1.0). The files' porting notes already record this; JS cannot tell an integral float from an int. | UNRESOLVED: Logs that print a Python dict repr ({'type': 'Configure', ...}) use pyJsonDumps (double quotes, JSON style) in flux/stt_base.ts, flux/tts_base.ts and tts.ts. Core has no Python repr helper, so I left these as they are. | UNRESOLVED: flux/stt.ts, flux/tts.ts, tts.ts: a standard WebSocket exposes no handshake response headers, so the dg-* header debug log and the InvalidStatus/dg-error refusal text cannot be fully reproduced. The porting notes already document this. | UNRESOLVED: Minor dict.get(key, default) edge cases (a key present with a null value) use ?? and so fall back to the default where Python would print None. They affect log and error text only. Left unchanged."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the upstream diff 5558d26..8c3558b. On a connect error, _connectWebsocket now uses describeRefusal from ./_errors.ts. The ErrorFrame and on_connection_error carry the refusal text when there is one, and the logger.error line was removed, as upstream did. The diff added no deprecations. Unchanged from the existing port: the dg-* header log and dg-error refusals depend on a factory that attaches a response, because a standard WebSocket exposes no handshake headers, and query floats use JS formatting (speed=1). | UNRESOLVED: packages/deepgram/src/tts.ts: the speed query param uses JS number formatting, so upstream `speed=1.0` is written `speed=1`. A float cannot be told apart from an int in JS. The file header already documents this. | UNRESOLVED: packages/deepgram/src/tts.ts: trace/debug logs print received dicts with pyJsonDumps (`{\"type\": ...}`), while upstream uses a Python dict repr (`{'type': ...}`). There is no pyRepr util in core. This only affects log text. | UNRESOLVED: The dg-* response headers that upstream logs on connect, in all three websocket services, are not available. A standard WebSocket does not expose handshake response headers, and the port documents this. | UNRESOLVED: packages/deepgram/src/flux/stt.ts: upstream calls `WebsocketService.__init__(self)` with no kwargs, so the reconnect options cannot be set there. The TS mixin receives the whole options object, so WebsocketServiceOptions do take effect. This adds API surface and leaves default behavior unchanged, so I left it."
     },
     {
       "module": "pipecat.services.deepseek",
@@ -9497,9 +9497,9 @@
         "test_elevenlabs_dialogue_tts.py",
         "test_tts_pronunciations.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/elevenlabs/src/dialogue/tts.ts. Runs on the global WebSocket through ElevenLabsTTSBase (xi-api-key handshake header). Settings are camelCase; the wire (snake_case alignment, voices/inputs/close_context/flush/keep_alive messages) is upstream's. A smoke test (packages/elevenlabs/compat/smoke.ts) runs the service against a fake WebSocket on bun, node, deno and workerd. Untested against the real Text-to-Dialogue endpoint."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the 5558d26..8c3558bd69 diff into packages/elevenlabs/src/dialogue/tts.ts. Added static expressionAdapterClass = ElevenLabsAudioTagExpressionAdapter, imported from ../elevenlabs_adapter.ts (pipedog keeps the adapter inside the elevenlabs package). calculateWordTimes now gets { audioTags: Boolean(this._expressionFormatter) }. Updated the class JSDoc about audio tags. Typecheck is clean. | UNRESOLVED: Log lines that use Python repr (`{msg}` dict repr and `{text!r}` in dialogue/tts.ts) are written with pyJsonDumps, so they show double quotes where Python shows single quotes. Core has no pyRepr helper, so these are left as they are. This affects log text only. | UNRESOLVED: tts_base.ts does not set upstream's 16MB max_size on the WebSocket, because the standard WebSocket has no message size limit. It is marked as a DIVERGENCE in the file but not recorded in the manifest notes; I did not record it because this task does not allow editing porting/manifest.json."
     },
     {
       "module": "pipecat.services.elevenlabs.stt",
@@ -9571,9 +9571,9 @@
         "test_tts_processing_metrics.py",
         "test_tts_pronunciations.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/elevenlabs/src/tts.ts. Deprecated APIs dropped: PronunciationDictionaryLocator, both InputParams classes, and the voiceId, model, params, pronunciationDictionaryLocators and aggregateSentences constructor options. Because of that, _selectAlignment is always called with preferNormalized=false. DIVERGENCE: the HTTP service's required aiohttp_session becomes an optional `fetch` option (global fetch by default). The streamed body is split into lines the way aiohttp does, and reads go through abortable() with currentSignal(). buildElevenlabsVoiceSettings reads a plain dict by its snake_case wire key and falls back to the camelCase field name. html.escape is reimplemented locally. Re-exports calculateWordTimes, ELEVENLABS_MODEL_LANGUAGES, languageToElevenlabsLanguage and outputFormatFromSampleRate from tts_base. | UNRESOLVED: No behavioral divergences found. I compared /Users/pol/vscode/pipedog-runtime/packages/elevenlabs/src/stt.ts, tts.ts and tts_base.ts line by line against the pinned upstream at commit 5558d26 (/Users/pol/vscode/pipedog/.upstream/pipecat; the runtime worktree has no .upstream checkout). Every broad catch calls rethrowIfCancelled first. Defaults use ?? except where upstream's `or` is meant to coalesce falsy values (flushAudio's context id, elevenlabsLanguageCode's model). Python truthiness on alignment dicts is handled by pyTruthy and non-empty checks. Durations are in seconds, timestamps in ms are divided by 1000, and no awaits are missing. The deprecated InputParams, PronunciationDictionaryLocator, voiceId/model/params/aggregateSentences/pronunciationDictionaryLocators are left out as the conventions require. The package typechecks and passes biome. | UNRESOLVED: Minor and left as is: (1) ElevenLabsRealtimeSTTService logs session_started with pyJsonDumps(data), where upstream prints the Python dict repr. Core has no repr helper. (2) VAD query params use JS number formatting, so 1.0 is sent as `1` where Python sends `1.0`. The server accepts both, and in JS an int cannot be told apart from a float. (3) buildElevenlabsVoiceSettings also skips NOT_GIVEN values and, for plain dicts, falls back to camelCase keys. This is harmless, and upstream would crash serializing NOT_GIVEN anyway. (4) Upstream's 16MB websocket max_size has no equivalent with the standard WebSocket. It is already marked as a DIVERGENCE in tts_base.ts."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the 5558d26..8c3558bd69 diff into packages/elevenlabs/src/tts.ts. WS receive loop: the cumulative-time advance now sits outside `if wordTimes`, so it also advances on chunks that complete no word, falls back to the last word time only when there are word times, and the fallback warning log is gone. HTTP service: added _audioTagExpressionAdapter and a getExpressionAdapter() override that returns it for models starting with eleven_v3 or eleven_v4. calculateWordTimes(alignmentInfo, { audioTags }) keeps bracketed tags together as one word, using _endsInAudioTag from tts_base. runTts passes audioTags: Boolean(this._expressionFormatter). Earlier divergences are kept unchanged: deprecated APIs dropped, optional fetch instead of aiohttp_session. Typecheck is clean and the 70 elevenlabs tests pass. | UNRESOLVED: Log lines that use Python repr (`{msg}` dict repr and `{text!r}` in dialogue/tts.ts) are written with pyJsonDumps, so they show double quotes where Python shows single quotes. Core has no pyRepr helper, so these are left as they are. This affects log text only. | UNRESOLVED: tts_base.ts does not set upstream's 16MB max_size on the WebSocket, because the standard WebSocket has no message size limit. It is marked as a DIVERGENCE in the file but not recorded in the manifest notes; I did not record it because this task does not allow editing porting/manifest.json."
     },
     {
       "module": "pipecat.services.elevenlabs.tts_base",
@@ -9599,9 +9599,9 @@
       "tests": [
         "test_elevenlabs_tts.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/elevenlabs/src/tts_base.ts. Created the @pipedog/elevenlabs package (package.json with an empty runtimes list, plus tsconfig.json). The workspace symlinks in packages/elevenlabs/node_modules were made by hand, so run `bun install` to add the package to bun.lock. Uses the global WebSocket and sends the xi-api-key header on the handshake, on Bun, Node, Deno and Workers (where core's websocketConnect goes through fetch with an Upgrade header). websocket.wait_closed() is done by listening for the underlying WebSocket's close event inside waitFor(..., 2.0), because WebsocketClientConnection has no public waitClosed. DIVERGENCE: the 16MB max_size has no equivalent on the standard WebSocket and is dropped. URL_FIELDS / VOICE_SETTINGS_FIELDS are static sets on the Settings class and hold camelCase field names. The traced runTts decorator is installed with installTracedTts. | UNRESOLVED: No behavioral divergences found. I compared /Users/pol/vscode/pipedog-runtime/packages/elevenlabs/src/stt.ts, tts.ts and tts_base.ts line by line against the pinned upstream at commit 5558d26 (/Users/pol/vscode/pipedog/.upstream/pipecat; the runtime worktree has no .upstream checkout). Every broad catch calls rethrowIfCancelled first. Defaults use ?? except where upstream's `or` is meant to coalesce falsy values (flushAudio's context id, elevenlabsLanguageCode's model). Python truthiness on alignment dicts is handled by pyTruthy and non-empty checks. Durations are in seconds, timestamps in ms are divided by 1000, and no awaits are missing. The deprecated InputParams, PronunciationDictionaryLocator, voiceId/model/params/aggregateSentences/pronunciationDictionaryLocators are left out as the conventions require. The package typechecks and passes biome. | UNRESOLVED: Minor and left as is: (1) ElevenLabsRealtimeSTTService logs session_started with pyJsonDumps(data), where upstream prints the Python dict repr. Core has no repr helper. (2) VAD query params use JS number formatting, so 1.0 is sent as `1` where Python sends `1.0`. The server accepts both, and in JS an int cannot be told apart from a float. (3) buildElevenlabsVoiceSettings also skips NOT_GIVEN values and, for plain dicts, falls back to camelCase keys. This is harmless, and upstream would crash serializing NOT_GIVEN anyway. (4) Upstream's 16MB websocket max_size has no equivalent with the standard WebSocket. It is already marked as a DIVERGENCE in tts_base.ts."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the 5558d26..8c3558bd69 diff into packages/elevenlabs/src/tts_base.ts. Added the exported helper _endsInAudioTag(word). calculateWordTimes gets a trailing options object { audioTags?: boolean } in place of the kw-only audio_tags arg; when it is set, bracketed tags are not split on spaces, including a tag left open from the previous chunk. Earlier divergences are kept: the 16MB max_size is dropped, and waitClosed goes through the close event. Typecheck is clean. | UNRESOLVED: Log lines that use Python repr (`{msg}` dict repr and `{text!r}` in dialogue/tts.ts) are written with pyJsonDumps, so they show double quotes where Python shows single quotes. Core has no pyRepr helper, so these are left as they are. This affects log text only. | UNRESOLVED: tts_base.ts does not set upstream's 16MB max_size on the WebSocket, because the standard WebSocket has no message size limit. It is marked as a DIVERGENCE in the file but not recorded in the manifest notes; I did not record it because this task does not allow editing porting/manifest.json."
     },
     {
       "module": "pipecat.services.fal",
@@ -9763,9 +9763,9 @@
       "tests": [
         "test_fish_tts.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/fish/src/tts.ts. ormsgpack is replaced by @msgpack/msgpack 3.1.3 (pure TypeScript). DIVERGENCE: JS cannot tell 1.0 from 1, so whole-number floats (prosody speed 1.0) pack as MessagePack integers. Deprecated InputParams and the reference_id, model_id and params parameters are not ported. Wire format checked against https://docs.fish.audio/api-reference/endpoint/websocket/tts-live. Untested against the real service."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the 5558d26dca..HEAD diff into the existing packages/fish/src/tts.ts. Added the _s2ExpressionAdapter field (a FishAudioS2ExpressionAdapter from ./fish_adapter.ts) and a getExpressionAdapter() override. The override returns the S2 adapter when the settings model is a string starting with \"s2\" and otherwise falls back to super. Everything else is unchanged, including the earlier divergences: @msgpack/msgpack in place of ormsgpack, whole-number floats such as prosody speed 1.0 packing as MessagePack integers, and no deprecated InputParams or reference_id/model_id/params. The diff adds no deprecations. tsc and biome report no errors in tts.ts, and the 9 fish tests pass. Still untested against the real service. | UNRESOLVED: Documented DIVERGENCE kept: @msgpack/msgpack packs whole-number floats (prosody.speed 1.0) as msgpack ints where ormsgpack packs floats; forceIntegerToFloat would wrongly turn sample_rate and the other ints into floats too"
     },
     {
       "module": "pipecat.services.funasr",
@@ -10299,9 +10299,9 @@
       "tests": [
         "test_google_thinking_defaults.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. GoogleVertexLLMService extends GoogleLLMService from ../llm.ts with adapterClass GeminiVertexLLMAdapter. Deprecated model/params/systemInstruction args are left out. Upstream sets GRPC_ENABLE_FORK_SUPPORT, which has nothing to do here (the SDK uses fetch), so it is dropped. Runtime limit, credentials divergence and createClient ordering are the same as the gemini_live Vertex service: Node build of @google/genai only, ADC and key file resolved on the first request, client created at the end of the constructor. | UNRESOLVED: packages/google/src/gemini_live/llm.ts: a few debug logs (_connect 'Setting tools', _toolResult 'tool_result_message', _createSingleResponse 'Creating response') print the objects with pyJsonDumps, so they show as JSON. Upstream f-strings print Python repr ({'k': 'v'}). The core has no Python-repr helper, and these are debug-only log lines that no test compares, so I left them as they are."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the 5558d26dca..HEAD diff: the default model changed from gemini-3.6-flash to gemini-3.8-flash. The other upstream change only moved the adapter import to pipecat.adapters.llm.services.gemini_adapter. Pipedog already imports GeminiVertexLLMAdapter from ../gemini_adapter.ts, so that needed no change. The docstring change sits on the deprecated model arg, which is not ported. tsc shows no errors in vertex/llm.ts. | UNRESOLVED: packages/google/src/vertex/llm.ts: upstream loads credentials and refreshes the token in the constructor, so it raises 'No valid credentials provided.' at construction when ADC is missing. The TS port waits until the first request for key-file and ADC loading and for the token refresh. This is a documented, deliberate DIVERGENCE, because google-auth-library is async in JS. I left it as is."
     },
     {
       "module": "pipecat.services.gradium",
@@ -10942,9 +10942,9 @@
         "test_inworld_tts_reconnect.py",
         "test_tts_pronunciations.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Deprecated voice_id/model/params (InputParams) and aggregate_sentences not ported; websocket buffer settings (maxBufferDelayMs/bufferCharThreshold) always use their defaults since only params set them. DIVERGENCE: InworldHttpTTSService takes an optional fetch instead of a required aiohttp_session. User agent is pipecat/<pipedog version>. InworldTTSSettings.fromMapping resolves keys itself."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the upstream delta 5558d26dca..HEAD into the existing packages/inworld/src/tts.ts. flushAudio now catches send errors and pushes them as errors. Added a _receiveLoopRunning getter, used by _connect and runTts. runTts no longer opens its own connection while the receive loop is reconnecting: if the socket is not OPEN it pushes an error and skips the turn. _disconnectWebsocket ignores close-context send failures, logging them at debug level. The _send* helpers now send directly on _getWebsocket() instead of sendWithRetry. _sendContext marks the context as sent only after the send succeeds. The existing divergences are kept: optional fetch instead of aiohttp_session, the pipecat/<pipedog version> user agent, fromMapping resolving keys itself, and buffer settings always at their defaults. Deprecated voice_id/model/params and aggregate_sentences are still not ported. The diff added no new deprecations. Typecheck shows no tts.ts errors, biome passes, and the inworld tests pass (42 tests)."
     },
     {
       "module": "pipecat.services.keenable",
@@ -11275,9 +11275,9 @@
         "test_minimax_tts_expression.py",
         "test_minimax_tts_language.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/minimax/src/tts.ts: MiniMaxHttpTTSService over fetch. DIVERGENCE: optional fetch instead of a required aiohttp_session. Deprecated InputParams, params, model and voice_id not ported; MiniMaxTTSSettings.fromMapping keeps the legacy voice_setting destructuring."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported delta 5558d26dca..8c3558bd69 into the existing packages/minimax/src/tts.ts: getExpressionAdapter() override (MiniMaxExpressionAdapter from ./minimax_adapter.ts for speech-2.8* models, else super), _speech28ExpressionAdapter field, voice_setting merged with this.expressionSettings, emotion docs now list 'whisper' (fluent/whisper need speech-2.6). The emotion-list change ('calm', 'whisper') sits in the deprecated InputParams/params path, which is not ported. Existing DIVERGENCE kept: optional fetch instead of a required aiohttp_session. Typecheck and biome are clean. | UNRESOLVED: The 'Error decoding JSON' log decodes data_block[:100] as text, while upstream logs Python's bytearray repr (`bytearray(b'...')`). There is no shared bytes-repr helper in core, so this cosmetic difference is left as is."
     },
     {
       "module": "pipecat.services.mistral",
@@ -12888,9 +12888,9 @@
       "tests": [
         "test_sarvam_stt.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Raw WebSocket instead of the sarvamai SDK. Deprecated model/params and Settings.language_code not ported."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "I ported the upstream diff 5558d26dca..HEAD into the existing packages/sarvam/src/stt.ts and kept its structure and the DIVERGENCE notes. What changed: SarvamRealtimeSTTService now waits for session.begin before it counts as connected, using _receiveUntilConfirmed with _connectionEstablishedEvent and a static _CONNECTION_TIMEOUT of 10s. on_connected moved from _connectWebsocket to _receiveMessages, after that confirmation. Message handling is split out into _processMessage. If Sarvam closes the socket with code 4000 (_REJECTED_SETTINGS_CLOSE_CODE), the service reports a permanent INVALID_REQUEST error and then rethrows. A new _pendingPartial and _endUtteranceCutShort close an utterance that a dropped connection cuts short and push the last partial as an unfinalized TranscriptionFrame. That now runs in a finally block in _receiveMessages, so _completeActiveUtterance was removed from _receiveTaskHandler and _reconnectWebsocket. Docstrings are updated to match. tsc shows no errors in stt.ts and biome is clean. The diff adds no deprecations. One existing test now fails: packages/sarvam/test/test_sarvam_stt.test.ts test_reconnect_completes_the_turn. It checks the old behaviour, where _reconnectWebsocket completed the turn, which upstream removed, so it needs re-porting from the upstream tests. The other tests that use the fake server may also need to send session.begin. | UNRESOLVED: packages/sarvam/test/test_sarvam_stt.test.ts test_reconnect_completes_the_turn fails. The test is out of date, not the port: it does not exist upstream at the pinned commit 8c3558bd, where _reconnect_websocket no longer completes the utterance (that now happens in _receive_messages' finally via _end_utterance_cut_short, which stt.ts reproduces). The tests stage should drop it and port test_an_utterance_ends_when_reconnecting_gives_up and the other new tests instead. I left the test file alone because only the module was in scope. | UNRESOLVED: Log formatting differs. The 'Sarvam STT initialized with SDK headers' line uses pyJsonDumps (double quotes), while Python prints the dict repr (single quotes). Core has no Python-repr helper, so I left it. | UNRESOLVED: Known divergences, already documented in the file header (not bugs): SarvamSTTService talks to the WebSocket directly instead of using the sarvamai SDK. As a result, processFrame only sends the flush when the socket is OPEN, a non-JSON message is logged and skipped where the SDK's listener would stop, and the ApiError branch is folded into the generic connection-failure error."
     },
     {
       "module": "pipecat.services.sarvam.tts",
@@ -13116,9 +13116,9 @@
       "tests": [
         "test_smallest_tts.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. Raw WebSocket via websocketConnect."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Delta 5558d26dca..HEAD ported into existing packages/smallest/src/tts.ts: added \"redact\" option to contentFilter (docs updated), new dateFormat setting (\"EU\"|\"US\", default null, sent as date_format in _buildMsg), _updateSettings JSDoc updated. The diff had no deprecations. Typecheck and biome are clean."
     },
     {
       "module": "pipecat.services.soniox",
@@ -13262,9 +13262,9 @@
       "tests": [
         "test_speechify_tts.py"
       ],
-      "status": "todo",
-      "portedAt": "5558d26dca636e09b768cfb7f70b87e259f7c188",
-      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff. packages/speechify/src/tts.ts: SpeechifyHttpTTSService streams SSE over fetch. DIVERGENCE: optional fetch instead of a required aiohttp_session. Speech-mark offsets index the text by code point, as Python indexes a str."
+      "status": "ported",
+      "portedAt": "8c3558bd6955e06a8e95a748569db9c71b1f9ab3",
+      "notes": "Ported the upstream delta 5558d26dca..HEAD into the existing packages/speechify/src/tts.ts. It adds the `pronunciations` setting (Dict[] | null | NotGiven, default null), with JSDoc on both the options interface and the settings class. The setting is sent as `pronunciations` in the payload when it is a non-empty list, matching Python's truthiness check. The default model changes from simba-3.2 to simba-3.5, and the class docstring is updated. Existing divergences are kept: optional fetch instead of the required aiohttp_session, and code-point indexing for speech-mark offsets. The diff adds no deprecations. tsc reports no errors in tts.ts. | UNRESOLVED: packages/speechify/src/tts.ts _processStream speech.error branch: when the error has no `message`, upstream formats `data` with Python's dict str() (`{'type': ...}`), but the TS uses pyJsonDumps (`{\"type\": ...}`). Only the log/error text differs. core has no shared Python-repr helper (there is one only in packages/evals/src/_pyutil.ts), so I left it as it is. | UNRESOLVED: packages/speechify/test/test_speechify_tts.test.ts:359 is stale: it expects default model \"simba-3.2\", but the pinned upstream (and the port) now default to \"simba-3.5\". This makes 1 of 39 tests fail. I did not change it because the test is outside this module-review step, and the tests phase should update it."
     },
     {
       "module": "pipecat.services.speechmatics",
@@ -18861,7 +18861,7 @@
       ],
       "needsModules": 140,
       "status": "tested",
-      "notes": "13 pass, 0 fail, 0 skip, 0 todo"
+      "notes": "74 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_cartesia_turns_stt.py",
@@ -18891,8 +18891,8 @@
         "pipecat.utils.errors"
       ],
       "needsModules": 125,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "11 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_cerebras_llm.py",
@@ -19103,7 +19103,7 @@
       ],
       "needsModules": 141,
       "status": "tested",
-      "notes": "15 pass, 0 fail, 0 skip, 0 todo"
+      "notes": "17 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_deepgram_sagemaker_stt.py",
@@ -19160,7 +19160,7 @@
       ],
       "needsModules": 142,
       "status": "tested",
-      "notes": "3 pass, 0 fail, 0 skip, 0 todo"
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_deprecation_markers.py",
@@ -19277,7 +19277,7 @@
       ],
       "needsModules": 143,
       "status": "tested",
-      "notes": "30 pass, 0 fail, 0 skip, 0 todo"
+      "notes": "44 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_elevenlabs_stt.py",
@@ -19312,7 +19312,7 @@
       ],
       "needsModules": 142,
       "status": "tested",
-      "notes": "25 pass, 0 fail, 0 skip, 0 todo"
+      "notes": "34 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_empty_user_turn.py",
@@ -19419,8 +19419,8 @@
         "pipecat.utils.asyncio.task_manager"
       ],
       "needsModules": 137,
-      "status": "tested",
-      "notes": "2 pass, 0 fail, 0 skip, 0 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_evals_harness_shim.py",
@@ -19479,8 +19479,8 @@
         "pipecat.evals.script"
       ],
       "needsModules": 158,
-      "status": "ported",
-      "notes": "78 pass, 0 fail, 5 skip, 0 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_evals_serializer.py",
@@ -19546,8 +19546,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 198,
-      "status": "ported",
-      "notes": "173 pass, 0 fail, 6 skip, 0 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_evals_simulation.py",
@@ -19614,8 +19614,8 @@
         "pipecat.frames.frames"
       ],
       "needsModules": 125,
-      "status": "ported",
-      "notes": "3 pass, 0 fail, 10 skip, 0 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_exotel_serializer.py",
@@ -19646,8 +19646,8 @@
         "pipecat.utils.text.skip_tags_aggregator"
       ],
       "needsModules": 124,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "69 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_expression_instructions.py",
@@ -19757,7 +19757,7 @@
       ],
       "needsModules": 139,
       "status": "tested",
-      "notes": "9 pass, 0 fail, 0 skip, 0 todo"
+      "notes": "20 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_flows_actions.py",
@@ -20305,8 +20305,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 140,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "4 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_ivr_navigation.py",
@@ -20895,8 +20895,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 140,
-      "status": "todo",
-      "notes": ""
+      "status": "tested",
+      "notes": "7 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_minimax_tts_language.py",
@@ -20908,8 +20908,8 @@
         "pipecat.transcriptions.language"
       ],
       "needsModules": 139,
-      "status": "tested",
-      "notes": "5 pass, 0 fail, 0 skip, 0 todo"
+      "status": "ported",
+      "notes": "5 pass, 0 fail, 4 skip, 0 todo"
     },
     {
       "file": "tests/test_mistral_llm.py",
@@ -20952,7 +20952,7 @@
       ],
       "needsModules": 143,
       "status": "todo",
-      "notes": "Needs the MOQ transport, not ported."
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_nova_sonic_usage_metrics.py",
@@ -21090,8 +21090,8 @@
         "pipecat.services.xai.llm"
       ],
       "needsModules": 159,
-      "status": "ported",
-      "notes": "58 pass, 0 fail, 0 skip, 3 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_openai_compatible_extra_body.py",
@@ -21157,8 +21157,8 @@
         "pipecat.services.openai.image"
       ],
       "needsModules": 119,
-      "status": "tested",
-      "notes": "6 pass, 0 fail, 0 skip, 0 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_openai_live_service.py",
@@ -21260,8 +21260,8 @@
         "pipecat.utils.tracing.service_decorators"
       ],
       "needsModules": 125,
-      "status": "tested",
-      "notes": "5 pass, 0 fail, 0 skip, 0 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_openai_realtime_user_audio.py",
@@ -21292,8 +21292,8 @@
         "pipecat.tests.utils"
       ],
       "needsModules": 124,
-      "status": "tested",
-      "notes": "25 pass, 0 fail, 0 skip, 0 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_openai_responses_logging.py",
@@ -21320,8 +21320,8 @@
         "pipecat.services.openai.responses.llm"
       ],
       "needsModules": 123,
-      "status": "tested",
-      "notes": "72 pass, 0 fail, 0 skip, 0 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_openai_stt.py",
@@ -22093,7 +22093,7 @@
       ],
       "needsModules": 142,
       "status": "todo",
-      "notes": "26 pass, 2 skip (deprecated), 2 todo (Daily dial-in); lives in packages/runner/test/test_runner_utils.test.ts. Includes pipedog createTransport tests (Telnyx handshake, hang-ups, unported transports) and the eval-connect tests."
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_sagemaker_bidi_client.py",
@@ -22171,7 +22171,7 @@
       ],
       "needsModules": 124,
       "status": "ported",
-      "notes": "107 pass, 0 fail, 3 skip, 0 todo"
+      "notes": "117 pass, 0 fail, 3 skip, 0 todo"
     },
     {
       "file": "tests/test_sarvam_tts.py",
@@ -23033,8 +23033,8 @@
         "pipecat.utils.text.phonemes"
       ],
       "needsModules": 149,
-      "status": "todo",
-      "notes": "Partial: Inworld cases (TestInworldPronunciation, TestPronunciationTransforms.test_unusable_words_are_spoken_as_written) ported in packages/inworld/test/test_tts_pronunciations.test.ts: 5 pass, 0 fail. ElevenLabs Dialogue cases (TestElevenLabsPronunciation.test_dialogue_ipa, TestPronunciationTransforms.test_longest_first) ported in packages/elevenlabs/test/test_tts_pronunciations.test.ts: 2 pass, 0 fail. Remaining cases (phonemes, Cartesia, ElevenLabs TTS and HTTP, Deepgram, gating) not ported."
+      "status": "tested",
+      "notes": "39 pass, 0 fail, 0 skip, 0 todo"
     },
     {
       "file": "tests/test_tts_reconnect.py",
@@ -23152,8 +23152,8 @@
         "pipecat.serializers.twilio"
       ],
       "needsModules": 119,
-      "status": "tested",
-      "notes": "3 pass, 0 fail, 0 skip, 0 todo"
+      "status": "todo",
+      "notes": "upstream changed 5558d26dca..8c3558bd69; re-port the diff."
     },
     {
       "file": "tests/test_twilio_serializer_base_url.py",

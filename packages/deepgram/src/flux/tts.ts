@@ -33,6 +33,7 @@ import {
 } from "@pipedog/core/services/websocket_service";
 import { logger } from "@pipedog/core/utils/logger";
 import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
+import { describeRefusal } from "../_errors.ts";
 import {
   DeepgramFluxTTSBase,
   type DeepgramFluxTTSBaseOptions,
@@ -223,10 +224,12 @@ export class DeepgramFluxTTSService extends WebsocketService(DeepgramFluxTTSBase
       await this._callEventHandler("on_connected");
     } catch (e) {
       rethrowIfCancelled(e);
-      logger.error(`${this} exception: ${errorMessage(e)}`);
-      await this.pushErrorFrame(new ErrorFrame({ error: `${this} error: ${errorMessage(e)}` }));
+      const refusal = describeRefusal(e);
+      await this.pushErrorFrame(
+        new ErrorFrame({ error: refusal ?? `${this} error: ${errorMessage(e)}`, exception: e }),
+      );
       this._websocket = null;
-      await this._callEventHandler("on_connection_error", `${errorMessage(e)}`);
+      await this._callEventHandler("on_connection_error", refusal ?? `${errorMessage(e)}`);
     }
   }
 

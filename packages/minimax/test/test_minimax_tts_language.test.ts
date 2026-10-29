@@ -5,7 +5,7 @@
 // Ported from pipecat: tests/test_minimax_tts_language.py
 
 /**
- * Tests for MiniMax TTS language name mapping.
+ * Tests for MiniMax TTS language name mapping and emotions.
  *
  * The tests after the two ported ones are not in upstream: they drive
  * `MiniMaxHttpTTSService` against a local `Bun.serve` fake of the T2A endpoint.
@@ -32,6 +32,15 @@ test("test_minimax_regional_variant_uses_base_language_name", () => {
   expect(languageToMinimaxLanguage(Language.PT_BR)).toBe("Portuguese");
   expect(languageToMinimaxLanguage(Language.EN_US)).toBe("English");
 });
+
+// Skipped: exercises only the deprecated `MiniMaxHttpTTSService.InputParams` / `params`
+// constructor argument (deprecated since 0.0.105 upstream), which is not ported.
+describe.each(["calm", "whisper", "happy", "neutral"])(
+  "test_minimax_input_params_accept_documented_emotions[%s]",
+  (_emotion) => {
+    test.skip("test_minimax_input_params_accept_documented_emotions", () => {});
+  },
+);
 
 function hex(bytes: Uint8Array): string {
   return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");

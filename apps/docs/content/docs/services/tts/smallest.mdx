@@ -54,7 +54,8 @@ Runtime-updatable settings, passed as `settings: new SmallestTTSService.Settings
 | `language` | `Language` | `Language.EN` | Language. |
 | `speed` | `number \| null` | `null` | Speed multiplier, 0.5 to 2.0. `null` uses the API default. |
 | `mathNotation` | `boolean \| null` | `null` | Read operators between digits as words ("2 + 2" as "two plus two"). |
-| `contentFilter` | `"reject" \| "flag" \| string \| null` | `null` | Check the text against a profanity list; `"reject"` fails the request, `"flag"` synthesizes and records the match. |
+| `contentFilter` | `"reject" \| "flag" \| "redact" \| string \| null` | `null` | Check the text against a profanity list; `"reject"` fails the request, `"flag"` synthesizes and records the match, `"redact"` drops the matched term and speaks the rest. |
+| `dateFormat` | `"EU" \| "US" \| string \| null` | `null` | Read all-numeric dates day-first (`"EU"`) or month-first (`"US"`). |
 
 ### Usage
 

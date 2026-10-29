@@ -49,7 +49,7 @@
  *   SDK would raise a validation error out of the receive task.
  */
 
-import { rethrowIfCancelled, type Task } from "@pipedog/asyncio";
+import { Event, rethrowIfCancelled, type Task } from "@pipedog/asyncio";
 import {
   type CancelFrame,
   type EndFrame,
@@ -73,9 +73,11 @@ import {
   type WebsocketSTTServiceOptions,
 } from "@pipedog/core/services/stt_service";
 import {
+  ConnectionClosedError,
   type ReportErrorCallback,
   State,
   type WebsocketClientConnection,
+  type WebsocketData,
   websocketConnect,
 } from "@pipedog/core/services/websocket_service";
 import { isLanguage, Language, resolveLanguage } from "@pipedog/core/transcriptions/language";
@@ -953,6 +955,10 @@ export const SUPPORTED_SAMPLE_RATES: ReadonlySet<number> = new Set([8000, 16000]
 // transcript latency doesn't scale with the chosen profile.
 const _CLIENT_CHUNK_MS = 50;
 
+// Sarvam closes a connection with this code when it rejects a connection
+// parameter (model, language, VAD tuning) or the account isn't enabled for it.
+const _REJECTED_SETTINGS_CLOSE_CODE = 4000;
+
 // Accepted in a `config.update` message, by their wire names. `Settings.language`
 // reaches Sarvam as `language_code`; the rest share their `Settings` names. Of
 // these, `language_code`, `stream_type`, `mode`, and `prompt` are boundary-gated:
@@ -1145,9 +1151,14 @@ export interface SarvamRealtimeSTTServiceOptions extends WebsocketSTTServiceOpti
  * every other STT service reports. Under `manual` those same frames also mark
  * the turn for Sarvam, reaching it as `speech_start` and `speech_end`.
  *
- * A dropped socket is reopened with backoff unless
- * `reconnectOnError: false`. Once the service stops trying it is no longer
- * usable, so a `ServiceSwitcher` can move on.
+ * A dropped socket is reopened with backoff in the background unless
+ * `reconnectOnError: false`; audio that arrives while it is down isn't
+ * transcribed. An utterance lives in one connection, so one cut short by a
+ * drop ends with the transcript received so far, and speech that continues on
+ * the new connection is transcribed as a new utterance. Settings Sarvam
+ * rejects are a permanent invalid-request error rather than retried. Once the
+ * service stops trying it is no longer usable, so a `ServiceSwitcher` can
+ * move on.
  */
 export class SarvamRealtimeSTTService extends WebsocketSTTService {
   static Settings: typeof SarvamRealtimeSTTSettings = SarvamRealtimeSTTSettings;
@@ -1157,6 +1168,12 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
     installTracedStt(SarvamRealtimeSTTService.prototype, "_traceTranscription");
   }
 
+  /**
+   * How long to wait, in seconds, for the server's `session.begin` after the
+   * handshake before treating the connection as failed.
+   */
+  static _CONNECTION_TIMEOUT = 10.0;
+
   protected _apiKey: string;
   protected _baseUrl: string;
   protected _returnTimestamps: boolean;
@@ -1164,8 +1181,12 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
   protected _prefixPaddingMs: number | null;
   protected _shouldInterrupt: boolean;
   protected _receiveTask: Task<unknown> | null = null;
+  protected _connectionEstablishedEvent = new Event();
   _audioBuffer: Uint8Array = new Uint8Array(0);
   protected _requestId: string | null = null;
+  // The latest partial transcript with no final after it yet, pushed if its
+  // connection closes before the final arrives.
+  protected _pendingPartial: Dict | null = null;
   protected _providerSpeechActive = false;
   _speechEndAudioPositionS: number | null = null;
   _audioPositionBytes = 0;
@@ -1412,20 +1433,25 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
     await this._disconnectWebsocket();
   }
 
-  /** Open the Sarvam realtime websocket. */
+  /**
+   * Open the Sarvam realtime websocket.
+   *
+   * The server confirms the session with `session.begin`, which the receive
+   * loop waits for (see `_receiveMessages`).
+   */
   override async _connectWebsocket(): Promise<void> {
     try {
       if (this._websocket && this._websocket.state === State.OPEN) {
         return;
       }
 
+      this._connectionEstablishedEvent.clear();
       const url = this._buildWsUrl();
       // DIVERGENCE: upstream passes the User-Agent as `websockets`'
       // `user_agent_header` keyword; here it is a handshake header.
       const headers = { "API-SUBSCRIPTION-KEY": this._apiKey, ...sdkHeaders() };
       logger.debug(`Connecting to Sarvam realtime STT WebSocket: ${url}`);
       this._websocket = await this._websocketConnect(url, { additionalHeaders: headers });
-      await this._callEventHandler("on_connected");
     } catch (e) {
       rethrowIfCancelled(e);
       this._websocket = null;
@@ -1457,37 +1483,30 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
   }
 
   /**
-   * Close out the active utterance once the receive loop is done.
+   * Mark the service unusable once the receive loop is done.
    *
    * The loop exits for good only when reconnection is off or has given up,
-   * so no further server event can arrive. An utterance still open at that
-   * point would leave downstream turn aggregation waiting on a boundary
-   * that is never coming, and the service has no transcripts left to give,
-   * so it also stops being usable.
+   * so the service has no transcripts left to give.
    *
    * Cancellation is left alone: that only happens during an intentional
    * disconnect, where teardown is already under way.
    */
   override async _receiveTaskHandler(reportError: ReportErrorCallback): Promise<void> {
     await super._receiveTaskHandler(reportError);
-    await this._completeActiveUtterance();
     if (!this._disconnecting) {
       await this.setUsable(false);
     }
   }
 
   /**
-   * Carry the turn in progress across the socket swap.
+   * Carry an open manual turn across the socket swap.
    *
-   * The new session starts with no knowledge of the old one's utterance.
-   * Under `vad` its `vad.speech_end` would never arrive, so the utterance is
-   * closed here. Under `manual` the pipeline's turn is still open, and Sarvam
-   * ignores a `speech_end` without a matching `speech_start`, so the new
-   * session is told the turn has started. Audio positions count from the
-   * start of the new session.
+   * Under `manual` the pipeline's turn is still open, and Sarvam ignores a
+   * `speech_end` without a matching `speech_start`, so the new session is
+   * told the turn has started. Audio positions count from the start of the
+   * new session.
    */
   override async _reconnectWebsocket(attemptNumber: number): Promise<boolean> {
-    await this._completeActiveUtterance();
     const reconnected = await super._reconnectWebsocket(attemptNumber);
     if (reconnected) {
       this._audioPositionBytes = 0;
@@ -1498,29 +1517,114 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
     return reconnected;
   }
 
-  /** Receive Sarvam realtime server events. */
+  /**
+   * Receive Sarvam realtime server events.
+   *
+   * Waits for the server to confirm the session with `session.begin`, then
+   * processes VAD, transcript, and error events.
+   *
+   * @throws Error (Python's `ConnectionError`) if `session.begin` doesn't
+   *   arrive within `_CONNECTION_TIMEOUT`.
+   * @throws ConnectionClosedError if the connection closes with an error. A
+   *   close rejecting the connection's settings is also reported as a
+   *   permanent invalid-request error, so it isn't retried.
+   */
   override async _receiveMessages(): Promise<void> {
     if (!this._websocket) {
       throw new Error("Websocket not connected");
     }
-    for await (const message of this._websocket) {
-      if (typeof message !== "string") {
-        logger.trace(`${this} ignored non-text Sarvam server message`);
-        continue;
+    const messages = this._websocket[Symbol.asyncIterator]();
+    try {
+      if (
+        !(await this._receiveUntilConfirmed(
+          messages,
+          this._connectionEstablishedEvent,
+          (message) => this._processMessage(message),
+          (this.constructor as typeof SarvamRealtimeSTTService)._CONNECTION_TIMEOUT,
+        ))
+      ) {
+        // Closed before confirming; the receive loop treats it as a drop.
+        return;
       }
-      let data: unknown;
-      try {
-        data = pyJsonLoads(message);
-      } catch (e) {
-        rethrowIfCancelled(e);
-        if (e instanceof SyntaxError) {
-          logger.warning(`${this} received non-JSON Sarvam message: ${message}`);
-          continue;
-        }
-        throw e;
+
+      await this._callEventHandler("on_connected");
+
+      while (true) {
+        const next = await messages.next();
+        if (next.done) break;
+        await this._processMessage(next.value);
       }
-      await this._handleMessage(data as Dict);
+    } catch (e) {
+      rethrowIfCancelled(e);
+      if (e instanceof ConnectionClosedError && e.code === _REJECTED_SETTINGS_CLOSE_CODE) {
+        await this.pushError(`Sarvam realtime STT rejected the connection: ${e.reason}`, {
+          exception: e,
+          category: ErrorCategory.INVALID_REQUEST,
+        });
+      }
+      throw e;
+    } finally {
+      // An utterance lives in one connection, so it ends when the connection
+      // does, unless the service is stopping.
+      if (!this._disconnecting) {
+        await this._endUtteranceCutShort();
+      }
     }
+  }
+
+  /** Decode and handle one message from the WebSocket. */
+  protected async _processMessage(message: WebsocketData): Promise<void> {
+    if (typeof message !== "string") {
+      logger.trace(`${this} ignored non-text Sarvam server message`);
+      return;
+    }
+    let data: unknown;
+    try {
+      data = pyJsonLoads(message);
+    } catch (e) {
+      rethrowIfCancelled(e);
+      if (e instanceof SyntaxError) {
+        logger.warning(`${this} received non-JSON Sarvam message: ${message}`);
+        return;
+      }
+      throw e;
+    }
+    await this._handleMessage(data as Dict);
+  }
+
+  /**
+   * End an utterance whose connection closed before its final transcript.
+   *
+   * The new session never sends the old one's `vad.speech_end` or
+   * `transcript.final`, so the utterance is closed here, and the latest
+   * partial transcript is pushed as its transcription, unfinalized since the
+   * server never committed it. Without this, downstream turn aggregation
+   * would wait on a boundary that is never coming, and what the user said
+   * would be lost.
+   */
+  protected async _endUtteranceCutShort(): Promise<void> {
+    await this._completeActiveUtterance();
+    const partial = this._pendingPartial;
+    this._pendingPartial = null;
+    if (!partial) {
+      return;
+    }
+    logger.debug(`${this}: connection closed before the final transcript, using the partial`);
+    await this.emitSttUsageMetrics();
+    const text = String(partial.text || "").trim();
+    const language = this._languageForFrame(partial.language);
+    const result = this._resultPayload(partial);
+    result.speech_end_audio_position_s = this._speechEndAudioPositionS;
+    await this.pushFrame(
+      new TranscriptionFrame({
+        text,
+        userId: this._userId,
+        timestamp: timeNowIso8601(),
+        language,
+        result,
+      }),
+    );
+    await this._traceTranscription(text, true, language);
   }
 
   /** Handle a parsed Sarvam realtime server event. */
@@ -1529,6 +1633,7 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
     if (event === "session.begin") {
       this._requestId = message.request_id ?? null;
       logger.info(`${this} Sarvam realtime session.begin request_id=${this._requestId}`);
+      this._connectionEstablishedEvent.set();
     }
     // Only the endpointer in charge gets to set turn boundaries. Under
     // manual endpointing the pipeline owns them, so server VAD telemetry
@@ -1584,7 +1689,9 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
       stored.language = _languageFromCode(stored.language_code);
       delete stored.language_code;
     }
-    this._settings.applyUpdate(SarvamRealtimeSTTSettings.fromMapping(stored));
+    this._settings.applyUpdate(
+      (this.constructor as typeof SarvamRealtimeSTTService).Settings.fromMapping(stored),
+    );
   }
 
   /** Apply runtime settings and send supported fields via `config.update`. */
@@ -1610,6 +1717,7 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
     for (const wireName of wireNames) {
       const field = _SETTINGS_FIELD_FOR_WIRE_NAME[wireName] as string;
       if (field in changed) {
+        // Upstream reads the field with getattr(self._settings, name): dynamic by name.
         payload[wireName] = (this._settings as unknown as Dict)[field];
       }
     }
@@ -1644,9 +1752,8 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
   /**
    * End the in-flight utterance.
    *
-   * Runs on `vad.speech_end` and on a session ending mid-utterance. Without
-   * the latter, downstream turn aggregation would wait forever for a boundary
-   * the server is never going to send.
+   * Runs on `vad.speech_end`, and on a session or connection ending
+   * mid-utterance, where the server will never send that boundary.
    */
   protected async _completeActiveUtterance(): Promise<void> {
     if (!this._providerSpeechActive) {
@@ -1662,6 +1769,7 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
     if (!text) {
       return;
     }
+    this._pendingPartial = message;
     const result = this._resultPayload(message);
     const language = this._languageForFrame(message.language);
     await this.pushFrame(
@@ -1678,6 +1786,7 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
   protected async _handleFinalTranscript(message: Dict): Promise<void> {
     // Report usage before the transcription frame so tracing can attach it
     // to the STT span the frame closes. A blank final still consumed audio.
+    this._pendingPartial = null;
     await this.emitSttUsageMetrics();
     const text = String(message.text || "").trim();
     if (text) {
@@ -1782,6 +1891,7 @@ export class SarvamRealtimeSTTService extends WebsocketSTTService {
     if (this._endpointing === "vad") {
       optional.push(["prefix_padding_ms", this._prefixPaddingMs]);
       for (const [wireName, field] of _VAD_TUNING_FIELDS) {
+        // Upstream reads the field with getattr(self._settings, name): dynamic by name.
         optional.push([wireName, (s as unknown as Dict)[field]]);
       }
     }

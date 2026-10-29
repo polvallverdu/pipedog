@@ -247,14 +247,5 @@ describe("TestReconnection", () => {
 
   // Skipped: exercises only `WebsocketService.send_with_retry`, deprecated
   // upstream (1.14.0) and not ported.
-  test.skip("test_a_dropped_connection_still_reconnects_on_demand", async () => {
-    const service = new FakeWebsocketService();
-    service._reconnectOnError = false;
-    await service._receiveTaskHandler(service.reportError);
-
-    await service.sendWithRetry("hello", service.reportError);
-
-    expect(service.connectAttempts).toEqual(1);
-    expect((service._websocket as unknown as FakeWebsocket).sent).toEqual(["hello"]);
-  });
+  test.skip("test_a_dropped_connection_still_reconnects_on_demand", () => {});
 });

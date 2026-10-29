@@ -48,6 +48,7 @@ import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { ipaPhones, normalizeIpa, stressBeforeVowels } from "@pipedog/core/utils/text/phonemes";
 import { installTracedTts } from "@pipedog/core/utils/tracing/service_decorators";
 import { NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
+import { describeRefusal } from "./_errors.ts";
 
 type Dict = Record<string, any>;
 
@@ -337,12 +338,12 @@ export class DeepgramTTSService extends WebsocketTTSService {
       await this._callEventHandler("on_connected");
     } catch (e) {
       rethrowIfCancelled(e);
-      logger.error(`${this} exception: ${errorMessage(e)}`);
+      const refusal = describeRefusal(e);
       await this.pushErrorFrame(
-        new ErrorFrame({ error: `${this} error: ${errorMessage(e)}`, exception: e }),
+        new ErrorFrame({ error: refusal ?? `${this} error: ${errorMessage(e)}`, exception: e }),
       );
       this._websocket = null;
-      await this._callEventHandler("on_connection_error", `${errorMessage(e)}`);
+      await this._callEventHandler("on_connection_error", refusal ?? `${errorMessage(e)}`);
     }
   }
 

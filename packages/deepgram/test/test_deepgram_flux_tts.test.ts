@@ -7,7 +7,7 @@
 /** Tests for DeepgramFluxTTSService. */
 
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
-import { waitFor } from "@pipedog/asyncio";
+import { sleep, waitFor } from "@pipedog/asyncio";
 import {
   BotStoppedSpeakingFrame,
   ErrorFrame,
@@ -635,4 +635,74 @@ test("test_flux_tts_unsupported_sample_rate_warns", async () => {
   expect(warningSpy.mock.calls.some((call) => String(call[0]).includes("22050"))).toBe(true);
   const query = _parseQs(captured.request_path);
   expect(query.sample_rate).toEqual(["22050"]);
+});
+
+/**
+ * Stands in for `websockets.exceptions.InvalidStatus`, the exception
+ * `websockets` raises when a handshake is rejected: it carries the HTTP
+ * response with its status code and headers.
+ */
+class InvalidStatus extends Error {
+  response: { status_code: number; headers: Headers };
+
+  constructor(response: { status_code: number; headers: Headers }) {
+    super(`server rejected WebSocket connection: HTTP ${response.status_code}`);
+    this.name = "InvalidStatus";
+    this.response = response;
+  }
+}
+
+/** Build the exception `websockets` raises when a handshake is rejected. */
+function _websocketRejection(statusCode: number, reason: string | null = null): InvalidStatus {
+  const headers = reason ? new Headers({ "dg-error": reason }) : new Headers();
+  return new InvalidStatus({ status_code: statusCode, headers });
+}
+
+/**
+ * Upstream monkeypatches `pipecat.services.websocket_service.websocket_connect`;
+ * here the service's `_websocketConnect` (the mixin's wrapper around it) is
+ * replaced on the instance.
+ */
+function _patchWebsocketConnect(
+  service: DeepgramFluxTTSService,
+  fake: (...args: unknown[]) => Promise<never>,
+): void {
+  (service as unknown as { _websocketConnect: typeof fake })._websocketConnect = fake;
+}
+
+test("test_flux_tts_refused_setting_makes_the_service_unusable", async () => {
+  // A setting Deepgram refuses won't be accepted on a retry, so the service gives up.
+  const reason = "'expressivity' must be between -2 and 2. Got: 99.";
+
+  const fakeWebsocketConnect = async (..._args: unknown[]): Promise<never> => {
+    throw _websocketRejection(400, reason);
+  };
+
+  const service = new DeepgramFluxTTSService({ apiKey: "test-key", sampleRate: 24000 });
+  _patchWebsocketConnect(service, fakeWebsocketConnect);
+  const connectionErrors: unknown[] = [];
+
+  service.eventHandler("on_connection_error", async (_service: unknown, error: unknown) => {
+    connectionErrors.push(error);
+  });
+
+  await service._connectWebsocket();
+  // Event handlers run as background tasks; let it finish.
+  await sleep(0);
+
+  expect(service.isUsable).toBe(false);
+  expect(connectionErrors).toEqual([`Deepgram refused the connection (HTTP 400): ${reason}`]);
+});
+
+test("test_flux_tts_server_error_leaves_the_service_usable", async () => {
+  const fakeWebsocketConnect = async (..._args: unknown[]): Promise<never> => {
+    throw _websocketRejection(503);
+  };
+
+  const service = new DeepgramFluxTTSService({ apiKey: "test-key", sampleRate: 24000 });
+  _patchWebsocketConnect(service, fakeWebsocketConnect);
+
+  await service._connectWebsocket();
+
+  expect(service.isUsable).toBe(true);
 });

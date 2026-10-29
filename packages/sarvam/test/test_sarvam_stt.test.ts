@@ -33,14 +33,19 @@
  *   module function; here the service's `languageToServiceLanguage` is spied.
  * - `test_dropped_connection_is_reopened` gives the reconnect backoff a short
  *   floor so the test does not wait out the default.
+ * - `_FakeSarvamRealtime`: `websocket.transport.abort()` → `terminate()`. A
+ *   Bun server keeps delivering messages while a handler awaits, so a dropped
+ *   connection ignores the audio that arrives during its pre-drop pause.
  */
 
 import { describe, expect, spyOn, test } from "bun:test";
+import { sleep } from "@pipedog/asyncio";
 import { SystemClock } from "@pipedog/core/clocks/system_clock";
 import {
   ErrorFrame,
   type Frame,
   InputAudioRawFrame,
+  InterimTranscriptionFrame,
   MetricsFrame,
   ProposedUserStartedSpeakingFrame,
   ProposedUserStoppedSpeakingFrame,
@@ -60,7 +65,11 @@ import * as RTVI from "@pipedog/core/processors/frameworks/rtvi/models";
 import { RTVIProcessor } from "@pipedog/core/processors/frameworks/rtvi/processor";
 import { STTSettings } from "@pipedog/core/services/settings";
 import { WebsocketSTTService } from "@pipedog/core/services/stt_service";
-import { ConnectionClosedError, State } from "@pipedog/core/services/websocket_service";
+import {
+  ConnectionClosedError,
+  State,
+  type WebsocketData,
+} from "@pipedog/core/services/websocket_service";
 import { runTest, SleepFrame } from "@pipedog/core/tests/utils";
 import { Language } from "@pipedog/core/transcriptions/language";
 import { ExternalUserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
@@ -68,6 +77,7 @@ import { type BaseTaskManager, TaskManager } from "@pipedog/core/utils/asyncio/t
 import { bytesToBase64 } from "@pipedog/core/utils/base64";
 import { ErrorCategory } from "@pipedog/core/utils/errors";
 import { pyJsonDumps } from "@pipedog/core/utils/py_json";
+import type { ServerWebSocket } from "bun";
 import { sdkHeaders } from "../src/_sdk.ts";
 import {
   MODEL_CONFIGS,
@@ -95,9 +105,9 @@ class _FakeWebsocket {
   state: State;
   sent: string[] = [];
   closed = false;
-  readonly #messages: string[];
+  readonly #messages: WebsocketData[];
 
-  constructor(messages: string[] = [], options: { state?: State } = {}) {
+  constructor(messages: WebsocketData[] = [], options: { state?: State } = {}) {
     this.#messages = messages;
     this.state = options.state ?? State.OPEN;
   }
@@ -111,12 +121,14 @@ class _FakeWebsocket {
     this.state = State.CLOSED;
   }
 
-  async *[Symbol.asyncIterator](): AsyncGenerator<string, void, unknown> {
+  async *[Symbol.asyncIterator](): AsyncGenerator<WebsocketData, void, unknown> {
     for (const message of this.#messages) {
       yield message;
     }
   }
 }
+
+const _SESSION_BEGIN = JSON.stringify({ event: "session.begin", request_id: "test-request" });
 
 function _query(
   service: SarvamRealtimeSTTService,
@@ -1098,7 +1110,10 @@ test("test_socket_drop_mid_utterance_completes_the_turn", async () => {
   service.startTtfbMetrics = _noop;
   service.pushError = _noop;
   // The socket dies after speech starts, with no matching `vad.speech_end`.
-  service._websocket = new _FakeWebsocket([JSON.stringify({ event: "vad.speech_start" })]);
+  service._websocket = new _FakeWebsocket([
+    _SESSION_BEGIN,
+    JSON.stringify({ event: "vad.speech_start" }),
+  ]);
 
   await service._receiveTaskHandler(async () => {});
 
@@ -1241,6 +1256,7 @@ test("test_sarvam_error_is_reported_without_reconnect", async () => {
   const pushedErrors: [string, Dict | undefined][] = [];
 
   service._websocket = new _FakeWebsocket([
+    _SESSION_BEGIN,
     JSON.stringify({
       event: "error",
       code: "invalid_subscription_key",
@@ -1285,6 +1301,9 @@ async function _runAgainstLocalSarvam(options: { closeFirst: [number, string] })
       return new Response("upgrade failed", { status: 400 });
     },
     websocket: {
+      open(ws) {
+        ws.send(_SESSION_BEGIN);
+      },
       message(ws, raw) {
         if (JSON.parse(String(raw)).event !== "audio_input") return;
         ws.data.chunks += 1;
@@ -1343,23 +1362,345 @@ test("test_dropped_connection_is_reopened", async () => {
   expect(service.isUsable).toBe(true);
 });
 
-test("test_reconnect_completes_the_turn", async () => {
-  // The new session never sends the old utterance's `vad.speech_end`.
-  const service: any = new SarvamRealtimeSTTService({ apiKey: "test-key" });
-  const broadcasted: unknown[] = [];
-  service.pushFrame = _noop;
-  service.broadcastFrame = _captureClass(broadcasted);
-  const spy = spyOn(WebsocketSTTService.prototype as any, "_reconnectWebsocket").mockImplementation(
-    async () => true,
-  );
-  try {
-    await service._handleMessage({ event: "vad.speech_start" });
-    await service._reconnectWebsocket(1);
-  } finally {
-    spy.mockRestore();
+/** A local stand-in for the realtime endpoint, counting audio per connection. */
+class _FakeSarvamRealtime {
+  // Open an utterance on the first connection just before dropping it.
+  dropMidUtterance = false;
+  // Send the utterance's final before dropping, so nothing is left pending.
+  finalBeforeDrop = false;
+  // Continue speaking on the second connection: a new utterance.
+  resumeUtterance = false;
+  dropFirstAfter: number | null = null;
+  // Reject every handshake after this many.
+  rejectAfter: number | null = null;
+  // Open an utterance on the first connection after this many audio chunks;
+  // it is never finalized.
+  openUtteranceAfter: number | null = null;
+  // How many connections, from the first, never get session.begin; null for all.
+  unconfirmed: number | null = 0;
+  // Close every connection as Sarvam does for a rejected parameter.
+  rejectSettings = false;
+  handshakes = 0;
+  audioPerConnection: number[] = [];
+
+  constructor(
+    options: Partial<
+      Pick<
+        _FakeSarvamRealtime,
+        | "dropMidUtterance"
+        | "finalBeforeDrop"
+        | "resumeUtterance"
+        | "dropFirstAfter"
+        | "rejectAfter"
+        | "openUtteranceAfter"
+        | "unconfirmed"
+        | "rejectSettings"
+      >
+    > = {},
+  ) {
+    Object.assign(this, options);
   }
 
-  expect(broadcasted).toEqual([ProposedUserStartedSpeakingFrame, ProposedUserStoppedSpeakingFrame]);
+  processRequest(): Response | null {
+    this.handshakes += 1;
+    if (this.rejectAfter !== null && this.handshakes > this.rejectAfter) {
+      return new Response("unavailable\n", { status: 503 });
+    }
+    return null;
+  }
+
+  open(websocket: ServerWebSocket<_FakeConnection>): void {
+    websocket.data.index = this.audioPerConnection.length;
+    this.audioPerConnection.push(0);
+    if (this.rejectSettings) {
+      websocket.data.done = true;
+      websocket.close(4000, "Invalid model");
+      return;
+    }
+    if (this.unconfirmed !== null && websocket.data.index >= this.unconfirmed) {
+      websocket.send(_SESSION_BEGIN);
+    }
+  }
+
+  async message(websocket: ServerWebSocket<_FakeConnection>, raw: string | Buffer): Promise<void> {
+    const data = websocket.data;
+    if (data.done || JSON.parse(String(raw)).event !== "audio_input") {
+      return;
+    }
+    const index = data.index;
+    this.audioPerConnection[index]! += 1;
+    const count = this.audioPerConnection[index];
+    if (index === 0 && count === this.openUtteranceAfter) {
+      _FakeSarvamRealtime._send(websocket, "vad.speech_start");
+      _FakeSarvamRealtime._send(websocket, "transcript.partial", "hello there");
+    }
+    if (index === 1 && this.resumeUtterance && count === 3) {
+      _FakeSarvamRealtime._send(websocket, "vad.speech_start");
+      _FakeSarvamRealtime._send(websocket, "vad.speech_end");
+      _FakeSarvamRealtime._send(websocket, "transcript.final", "how are you");
+    }
+    if (index === 0 && count === this.dropFirstAfter) {
+      data.done = true;
+      if (this.dropMidUtterance) {
+        _FakeSarvamRealtime._send(websocket, "vad.speech_start");
+        _FakeSarvamRealtime._send(websocket, "transcript.partial", "hello");
+        _FakeSarvamRealtime._send(websocket, "transcript.partial", "hello there");
+        if (this.finalBeforeDrop) {
+          _FakeSarvamRealtime._send(websocket, "vad.speech_end");
+          _FakeSarvamRealtime._send(websocket, "transcript.final", "hello there");
+        }
+        await sleep(0.05);
+      }
+      websocket.terminate();
+    }
+  }
+
+  static _send(
+    websocket: ServerWebSocket<_FakeConnection>,
+    event: string,
+    text: string | null = null,
+  ): void {
+    const message: Dict = { event };
+    if (text !== null) {
+      message.text = text;
+    }
+    websocket.send(JSON.stringify(message));
+  }
+}
+
+type _FakeConnection = { index: number; done: boolean };
+
+async function _runFakeSarvam(
+  server: _FakeSarvamRealtime,
+  seconds: number,
+  configure?: (service: any) => void,
+): Promise<[any, Frame[], Frame[]]> {
+  const s = Bun.serve<_FakeConnection>({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, srv) {
+      const rejected = server.processRequest();
+      if (rejected) return rejected;
+      if (srv.upgrade(request, { data: { index: -1, done: false } })) return undefined;
+      return new Response("upgrade failed", { status: 400 });
+    },
+    websocket: {
+      open: (ws) => server.open(ws),
+      message: (ws, raw) => server.message(ws, raw),
+    },
+  });
+  let service: any;
+  let down: Frame[];
+  let up: Frame[];
+  try {
+    service = new SarvamRealtimeSTTService({
+      apiKey: "test-key",
+      baseUrl: `ws://127.0.0.1:${s.port}/ws`,
+      sampleRate: 8000,
+    });
+    if (configure) {
+      configure(service);
+    }
+    const frames: Frame[] = [];
+    for (let i = 0; i < Math.trunc(seconds / 0.02); i++) {
+      frames.push(
+        new InputAudioRawFrame({ audio: new Uint8Array(320), sampleRate: 8000, numChannels: 1 }),
+        new SleepFrame({ sleep: 0.02 }),
+      );
+    }
+    [down, up] = await runTest(service, {
+      framesToSend: frames,
+      pipelineParams: new PipelineParams({ audioInSampleRate: 8000, enableUsageMetrics: true }),
+    });
+    // Give a connection still being served time to record what it received.
+    await sleep(0.1);
+  } finally {
+    s.stop(true);
+  }
+  return [service, down, up];
+}
+
+function _transcripts(down: Frame[]): [string, boolean][] {
+  return down
+    .filter((f): f is TranscriptionFrame => f instanceof TranscriptionFrame)
+    .map((f) => [f.text, f.finalized]);
+}
+
+test("test_an_utterance_cut_short_by_a_drop_ends_with_its_partial_transcript", async () => {
+  const server = new _FakeSarvamRealtime({ dropFirstAfter: 10, dropMidUtterance: true });
+
+  const [, down] = await _runFakeSarvam(server, 1.0);
+
+  expect(_transcripts(down)).toEqual([["hello there", false]]);
+  const stops = down.flatMap((f, i) => (f instanceof ProposedUserStoppedSpeakingFrame ? [i] : []));
+  const transcript = down.findIndex((f) => f instanceof TranscriptionFrame);
+  expect(stops.length).toBe(1);
+  // The same order as a normal utterance: the boundary, then its transcript.
+  expect(stops[0]!).toBeLessThan(transcript);
+  // Usage is reported ahead of the transcript, for the STT span it closes.
+  expect(
+    down
+      .slice(0, transcript)
+      .some(
+        (f) => f instanceof MetricsFrame && f.data.some((d) => d instanceof STTUsageMetricsData),
+      ),
+  ).toBe(true);
+  expect(server.audioPerConnection.length).toBe(2);
+});
+
+test("test_a_finalized_utterance_is_not_repeated_after_a_drop", async () => {
+  const server = new _FakeSarvamRealtime({
+    dropFirstAfter: 10,
+    dropMidUtterance: true,
+    finalBeforeDrop: true,
+  });
+
+  const [, down] = await _runFakeSarvam(server, 1.0);
+
+  expect(_transcripts(down)).toEqual([["hello there", true]]);
+});
+
+test("test_speech_continuing_after_a_drop_becomes_a_new_utterance", async () => {
+  const server = new _FakeSarvamRealtime({
+    dropFirstAfter: 10,
+    dropMidUtterance: true,
+    resumeUtterance: true,
+  });
+
+  const [, down] = await _runFakeSarvam(server, 1.0);
+
+  expect(_transcripts(down)).toEqual([
+    ["hello there", false],
+    ["how are you", true],
+  ]);
+  expect(down.filter((f) => f instanceof ProposedUserStoppedSpeakingFrame).length).toBe(2);
+});
+
+test("test_an_utterance_ends_when_reconnecting_gives_up", async () => {
+  const fastBackoff = (service: any) => {
+    service._reconnectBackoffMinWait = 0.01;
+    service._reconnectBackoffMaxWait = 0.01;
+  };
+
+  const server = new _FakeSarvamRealtime({
+    dropFirstAfter: 10,
+    dropMidUtterance: true,
+    rejectAfter: 1,
+  });
+
+  const [service, down] = await _runFakeSarvam(server, 1.0, fastBackoff);
+
+  expect(_transcripts(down)).toEqual([["hello there", false]]);
+  expect(down.filter((f) => f instanceof ProposedUserStoppedSpeakingFrame).length).toBe(1);
+  expect(service.isUsable).toBe(false);
+});
+
+test("test_stopping_mid_utterance_pushes_no_partial_transcript", async () => {
+  const server = new _FakeSarvamRealtime({ openUtteranceAfter: 5 });
+
+  const [, down] = await _runFakeSarvam(server, 0.4);
+
+  expect(_transcripts(down)).toEqual([]);
+});
+
+test("test_an_unconfirmed_connection_is_retried", async () => {
+  const previous = SarvamRealtimeSTTService._CONNECTION_TIMEOUT;
+  SarvamRealtimeSTTService._CONNECTION_TIMEOUT = 0.1;
+  try {
+    const server = new _FakeSarvamRealtime({ unconfirmed: 1 });
+
+    const [service] = await _runFakeSarvam(server, 0.5);
+
+    expect(server.handshakes).toBe(2);
+    expect(server.audioPerConnection[1]!).toBeGreaterThan(0);
+    expect(service.isUsable).toBe(true);
+  } finally {
+    SarvamRealtimeSTTService._CONNECTION_TIMEOUT = previous;
+  }
+});
+
+test("test_connections_that_never_confirm_are_given_up_after_three", async () => {
+  const previous = SarvamRealtimeSTTService._CONNECTION_TIMEOUT;
+  SarvamRealtimeSTTService._CONNECTION_TIMEOUT = 0.1;
+  try {
+    const server = new _FakeSarvamRealtime({ unconfirmed: null });
+
+    const stableBeforeTimeout = (service: any) => {
+      // As in production, the wait for session.begin outlasts the time after
+      // which a connection counts as stable rather than a quick failure.
+      service._quickFailureTracker.minStableDuration = 0.05;
+    };
+
+    const [service] = await _runFakeSarvam(server, 1.0, stableBeforeTimeout);
+
+    expect(server.handshakes).toBe(3);
+    expect(service.isUsable).toBe(false);
+  } finally {
+    SarvamRealtimeSTTService._CONNECTION_TIMEOUT = previous;
+  }
+});
+
+test("test_rejected_settings_are_not_retried", async () => {
+  const server = new _FakeSarvamRealtime({ rejectSettings: true });
+
+  const [service, , up] = await _runFakeSarvam(server, 0.5);
+
+  expect(server.handshakes).toBe(1);
+  expect(service.isUsable).toBe(false);
+  const errors = up.filter((f): f is ErrorFrame => f instanceof ErrorFrame);
+  expect(errors[0]!.category).toBe(ErrorCategory.INVALID_REQUEST);
+  expect(errors[0]!.error).toContain("Invalid model");
+});
+
+test("test_connected_fires_once_the_session_begins", async () => {
+  const service: any = new SarvamRealtimeSTTService({ apiKey: "test-key" });
+  const events: [string, string | null][] = [];
+
+  service._callEventHandler = async (name: string, ..._args: unknown[]) => {
+    events.push([name, service._requestId]);
+  };
+  service._websocket = new _FakeWebsocket([_SESSION_BEGIN]);
+
+  await service._receiveMessages();
+
+  expect(events).toEqual([["on_connected", "test-request"]]);
+});
+
+test("test_a_connection_closed_before_the_session_begins_is_not_connected", async () => {
+  const service: any = new SarvamRealtimeSTTService({ apiKey: "test-key" });
+  const events: string[] = [];
+
+  service._callEventHandler = async (name: string, ..._args: unknown[]) => {
+    events.push(name);
+  };
+  service._websocket = new _FakeWebsocket([]);
+
+  await service._receiveMessages();
+
+  expect(events).toEqual([]);
+  expect(service._connectionEstablishedEvent.isSet()).toBe(false);
+});
+
+test("test_undecodable_messages_are_skipped", async () => {
+  const service: any = new SarvamRealtimeSTTService({ apiKey: "test-key" });
+  const pushed: unknown[] = [];
+  service.pushFrame = _capture(pushed);
+  service._callEventHandler = _noop;
+  const partial = JSON.stringify({ event: "transcript.partial", text: "hello" });
+  service._websocket = new _FakeWebsocket([
+    _SESSION_BEGIN,
+    new Uint8Array([0x00, 0x01]),
+    "not json",
+    partial,
+  ]);
+
+  await service._receiveMessages();
+
+  expect(
+    pushed
+      .filter((f): f is InterimTranscriptionFrame => f instanceof InterimTranscriptionFrame)
+      .map((f) => f.text),
+  ).toEqual(["hello"]);
 });
 
 test("test_reconnect_restarts_the_audio_position", async () => {

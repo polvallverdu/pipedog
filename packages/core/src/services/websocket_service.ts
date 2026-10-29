@@ -575,7 +575,6 @@ export interface WebsocketService {
     maxRetries?: number;
     reportError?: ReportErrorCallback | null;
   }): Promise<boolean>;
-  sendWithRetry(message: WebsocketData, reportError: ReportErrorCallback): Promise<void>;
   _maybeTryReconnect(
     errorMessage: string,
     reportError: ReportErrorCallback,
@@ -785,36 +784,6 @@ export const WebsocketService = defineMixin<
         return false;
       } finally {
         this._reconnectInProgress = false;
-      }
-    }
-
-    /**
-     * Attempt to send a message, retrying after reconnect if necessary.
-     *
-     * Deprecated upstream (1.14.0, no replacement: send on the websocket directly and leave
-     * reconnecting to the receive loop). Kept only because the Cartesia turns STT and Inworld TTS
-     * ports still call it; remove it once their upstream re-ports land.
-     */
-    async sendWithRetry(message: WebsocketData, reportError: ReportErrorCallback): Promise<void> {
-      try {
-        // If websocket isn't connected/present, treat as a send failure — the
-        // broad catch below will trigger a reconnect attempt.
-        if (this._websocket === null) {
-          throw new Error(`${this} no websocket connected`);
-        }
-        await this._websocket.send(message);
-      } catch (e) {
-        rethrowIfCancelled(e);
-        logger.error(`${this} send failed: ${errorText(e)}, will try to reconnect`);
-        // Try to reconnect before retrying
-        const success = await this._tryReconnect({ reportError });
-        if (success && this._websocket !== null) {
-          logger.info(`${this} reconnected successfully, will retry send the message`);
-          // trying to send the message one more time
-          await this._websocket.send(message);
-        } else {
-          logger.error(`${this} send failed; unable to reconnect`);
-        }
       }
     }
 
