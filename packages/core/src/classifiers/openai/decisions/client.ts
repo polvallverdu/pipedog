@@ -20,7 +20,14 @@ import { Lock, rethrowIfCancelled, sleep } from "@pipedog/asyncio";
 import { logger } from "../../../utils/logger.ts";
 import { exponentialBackoffTime } from "../../../utils/network.ts";
 import { ClassifierError } from "../../base_classifier.ts";
-import { errorRepr, HttpClient, HttpError, type HttpResponse, isDict } from "../../http_client.ts";
+import {
+  errorRepr,
+  HttpClient,
+  HttpError,
+  type HttpResponse,
+  isDict,
+  pyTruthy,
+} from "../../http_client.ts";
 
 /** OpenAI answers a request with this status when the caller is rate limited. */
 const TOO_MANY_REQUESTS = 429;
@@ -143,6 +150,7 @@ export class OpenAIDecisionsClient {
       try {
         response = await this._http.get(`/models/${this._model}`);
       } catch (e) {
+        // A broken TLS connection also comes through as an HttpError.
         if (e instanceof HttpError) {
           throw new ClassifierError(`could not connect to OpenAI Decisions: ${e.message}`, {
             cause: e,
@@ -195,6 +203,8 @@ export class OpenAIDecisionsClient {
       try {
         response = await this._http.post("/decisions", { json: body });
       } catch (e) {
+        // HttpClient wraps every transport failure (a broken TLS connection
+        // included, upstream's OSError) in an HttpError.
         if (e instanceof HttpError) {
           // Some errors, such as a timeout, carry no useful message.
           throw new ClassifierError(`OpenAI Decisions request failed: ${errorRepr(e)}`, {
@@ -276,6 +286,6 @@ export class OpenAIDecisionsClient {
       rethrowIfCancelled(e);
       return status;
     }
-    return message ? `${status}: ${message}` : status;
+    return pyTruthy(message) ? `${status}: ${message}` : status;
   }
 }

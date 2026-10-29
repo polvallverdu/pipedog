@@ -51,6 +51,7 @@ import {
 } from "../bus/ui/messages.ts";
 import type { BaseClock } from "../clocks/base_clock.ts";
 import { SystemClock } from "../clocks/system_clock.ts";
+import type { ExpressionPolicy } from "../expressive/policy.ts";
 import {
   BotSpeakingFrame,
   CancelFrame,
@@ -197,6 +198,8 @@ export type ProcessorUnusablePolicy =
 export interface PipelineParamsOptions {
   audioInSampleRate?: number;
   audioOutSampleRate?: number;
+  enableExpressiveConversation?: boolean;
+  expressionPolicy?: ExpressionPolicy | null;
   enableHeartbeats?: boolean;
   enableMetrics?: boolean;
   enableUsageMetrics?: boolean;
@@ -216,6 +219,13 @@ export interface PipelineParamsOptions {
  *
  * - `audioInSampleRate`: input audio sample rate in Hz.
  * - `audioOutSampleRate`: output audio sample rate in Hz.
+ * - `enableExpressiveConversation`: whether the agent takes part in an
+ *   expressive conversation (alpha). TTS services then read the expression
+ *   tags an LLM writes into its reply instead of speaking them.
+ * - `expressionPolicy`: which expression tags the LLMs are offered and when to
+ *   use them, with expressive conversation on. Defaults to null, which offers
+ *   every tag the TTS service performs, with no guidance. Part of expressive
+ *   conversation (alpha).
  * - `enableHeartbeats`: whether to enable heartbeat monitoring.
  * - `enableMetrics`: whether to enable metrics collection.
  * - `enableUsageMetrics`: whether to enable usage metrics.
@@ -229,6 +239,8 @@ export interface PipelineParamsOptions {
 export class PipelineParams {
   audioInSampleRate: number;
   audioOutSampleRate: number;
+  enableExpressiveConversation: boolean;
+  expressionPolicy: ExpressionPolicy | null;
   enableHeartbeats: boolean;
   enableMetrics: boolean;
   enableUsageMetrics: boolean;
@@ -241,6 +253,8 @@ export class PipelineParams {
   constructor(options: PipelineParamsOptions = {}) {
     this.audioInSampleRate = options.audioInSampleRate ?? 16000;
     this.audioOutSampleRate = options.audioOutSampleRate ?? 24000;
+    this.enableExpressiveConversation = options.enableExpressiveConversation ?? false;
+    this.expressionPolicy = options.expressionPolicy ?? null;
     this.enableHeartbeats = options.enableHeartbeats ?? false;
     this.enableMetrics = options.enableMetrics ?? false;
     this.enableUsageMetrics = options.enableUsageMetrics ?? false;
@@ -451,7 +465,10 @@ export class PipelineWorker extends BaseWorker {
   // and the progress reported back for our own.
   protected _foreignProbes = new Map<number, string>();
   protected _flushProgress = new Map<number, number>();
-  protected _flushProgressSent = 0.0;
+  // Python starts this at 0.0 against a `time.monotonic()` that counts from
+  // boot; ours counts from process start, so -Infinity keeps the first report
+  // from being held back.
+  protected _flushProgressSent = Number.NEGATIVE_INFINITY;
   protected _setupTimeoutSecs: number;
   protected _startTimeoutSecs: number;
   protected _clock: BaseClock;
@@ -537,6 +554,11 @@ export class PipelineWorker extends BaseWorker {
         ? options.handleFlushFrame
         : bridged === null;
     this._params = options.params ?? new PipelineParams();
+    if (this._params.expressionPolicy !== null && !this._params.enableExpressiveConversation) {
+      logger.warning(
+        `${this}: expressionPolicy has no effect without enableExpressiveConversation=true`,
+      );
+    }
     this._capabilitiesOverride = options.capabilities ?? new BotCapabilities();
     this._additionalSpanAttributes = options.additionalSpanAttributes ?? {};
     this._cancelOnIdleTimeout = options.cancelOnIdleTimeout ?? true;
@@ -1042,12 +1064,12 @@ export class PipelineWorker extends BaseWorker {
   /**
    * Flush all in-flight frames from the pipeline and wait for it to drain.
    *
-   * Pushes a `PipelineFlushFrame` downstream; the sink bounces it back
-   * upstream, the source turns it around, and its event is set when it
-   * reaches the sink a second time. By then every frame queued ahead of it
-   * has been processed, along with anything a processor started by pushing
-   * upstream. The probe goes on the worker's push queue, behind whatever is
-   * already waiting there, and bypasses any `queueFrame` override (e.g.
+   * Pushes a `PipelineFlushFrame` downstream to the sink, then a new probe
+   * back up to the source and a third down to the sink again, and waits for
+   * that last one to arrive. By then every frame queued ahead of the flush has
+   * been processed, along with anything a processor started by pushing
+   * upstream. The first probe goes on the worker's push queue, behind whatever
+   * is already waiting there, and bypasses any `queueFrame` override (e.g.
    * tool-call deferral).
    *
    * @param timeout Seconds of no progress before giving up. Progress is a
@@ -1065,18 +1087,18 @@ export class PipelineWorker extends BaseWorker {
 
     logger.debug(`${this}: pushing flush probe downstream`);
 
-    this._flushProgress.set(probe.id, 0);
+    this._flushProgress.set(probe.flushId, 0);
     try {
       await this._pushQueue.put(probe);
       for (;;) {
         const frames = this._framesReachingSink;
-        const reports = this._flushProgress.get(probe.id);
+        const reports = this._flushProgress.get(probe.flushId);
         try {
           await waitFor(() => event.wait(), timeout);
           return true;
         } catch (e) {
           if (!(e instanceof TimeoutError)) throw e;
-          const reported = this._flushProgress.get(probe.id) !== reports;
+          const reported = this._flushProgress.get(probe.flushId) !== reports;
           if (this._framesReachingSink === frames && !reported) {
             logger.warning(`${this}: pipeline flush gave up after ${timeout}s of no progress`);
             return false;
@@ -1087,7 +1109,7 @@ export class PipelineWorker extends BaseWorker {
         }
       }
     } finally {
-      this._flushProgress.delete(probe.id);
+      this._flushProgress.delete(probe.flushId);
     }
   }
 
@@ -1102,7 +1124,7 @@ export class PipelineWorker extends BaseWorker {
    */
   trackFlushProbe(frame: PipelineFlushFrame): void {
     if (this._handleFlushFrame && frame.origin && frame.origin !== this.name) {
-      this._foreignProbes.set(frame.id, frame.origin);
+      this._foreignProbes.set(frame.flushId, frame.origin);
     }
   }
 
@@ -1573,9 +1595,11 @@ export class PipelineWorker extends BaseWorker {
       audioInSampleRate: this._params.audioInSampleRate,
       audioOutSampleRate: this._params.audioOutSampleRate,
       clock: this._clock,
+      enableExpressiveConversation: this._params.enableExpressiveConversation,
       enableMetrics: this._params.enableMetrics,
       enableTracing: this._enableTracing,
       enableUsageMetrics: this._params.enableUsageMetrics,
+      expressionPolicy: this._params.expressionPolicy,
       observer: this._observer,
       pipelineWorker: this,
       reportOnlyInitialTtfb: this._params.reportOnlyInitialTtfb,
@@ -1725,7 +1749,8 @@ export class PipelineWorker extends BaseWorker {
    * upstream: an `LLMContextFrame` pushed up after a function call result,
    * say, whose response only comes back down afterwards. A probe that stopped
    * at the source would return while that response was still being
-   * generated, or still being synthesized.
+   * generated, or still being synthesized. Each leg is pushed as a new probe
+   * with the same `flushId`.
    *
    * @param frame The probe, carrying the event its initiator awaits.
    * @param atSink Whether the probe has arrived at the sink or the source.
@@ -1733,14 +1758,24 @@ export class PipelineWorker extends BaseWorker {
   protected async _advanceFlushProbe(frame: PipelineFlushFrame, atSink: boolean): Promise<void> {
     if (!atSink) {
       logger.debug(`${this}: flush probe reached source — sending it down again`);
-      frame.returning = true;
-      await this._source.pushFrame(frame, FrameDirection.DOWNSTREAM);
+      const probe = new PipelineFlushFrame({
+        event: frame.event,
+        origin: frame.origin,
+        flushId: frame.flushId,
+        returning: true,
+      });
+      await this._source.pushFrame(probe, FrameDirection.DOWNSTREAM);
     } else if (!frame.returning) {
       logger.debug(`${this}: flush probe reached sink — bouncing upstream`);
-      await this._sink.pushFrame(frame, FrameDirection.UPSTREAM);
+      const probe = new PipelineFlushFrame({
+        event: frame.event,
+        origin: frame.origin,
+        flushId: frame.flushId,
+      });
+      await this._sink.pushFrame(probe, FrameDirection.UPSTREAM);
     } else {
       logger.debug(`${this}: flush probe reached sink again — pipeline drained`);
-      this._foreignProbes.delete(frame.id);
+      this._foreignProbes.delete(frame.flushId);
       if (frame.event) {
         frame.event.set();
       }

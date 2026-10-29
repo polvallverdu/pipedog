@@ -29,6 +29,8 @@ import type { ToolsSchema } from "../adapters/llm/schemas/tools_schema.ts";
 import { KeypadEntry } from "../audio/dtmf/types.ts";
 import type { BaseTurnParams } from "../audio/turn/base_turn_analyzer.ts";
 import type { VADParams } from "../audio/vad/vad_analyzer.ts";
+import type { ExpressionCapabilities } from "../expressive/expression.ts";
+import type { PerceptionCapabilities, PerceptionSignal } from "../expressive/perception.ts";
 import type { MetricsData } from "../metrics/metrics.ts";
 import type { LLMContext, LLMContextMessage } from "../processors/aggregators/llm_context.ts";
 import type { FrameProcessor } from "../processors/frame_processor.ts";
@@ -579,6 +581,8 @@ export class VisionTextFrame extends LLMTextFrame {}
 export interface TTSTextFrameOptions extends AggregatedTextFrameOptions {
   /** ID of the AggregatedTextFrame this text is part of. */
   segmentId?: number | null;
+  /** The delivery this text is spoken in. Part of expressive conversation (alpha). */
+  delivery?: string[] | null;
 }
 
 /**
@@ -587,13 +591,20 @@ export interface TTSTextFrameOptions extends AggregatedTextFrameOptions {
  * - `segmentId`: ID of the AggregatedTextFrame this text is part of, when the
  *   TTS service built it from one. A word reported by the TTS carries the ID
  *   of the sentence or other segment it was spoken in.
+ * - `delivery`: the delivery this text is spoken in, such as `["warm"]`, and
+ *   `"emphasis"` for stressed words; empty for the voice's baseline. Null when
+ *   the text carries no delivery. Each name is as written in its tag, so a
+ *   universal name such as `warm` stays universal whatever the service calls
+ *   it. Part of expressive conversation (alpha).
  */
 export class TTSTextFrame extends AggregatedTextFrame {
   segmentId: number | null;
+  delivery: string[] | null;
 
   constructor(options: TTSTextFrameOptions) {
     super(options);
     this.segmentId = options.segmentId ?? null;
+    this.delivery = options.delivery ?? null;
   }
 }
 
@@ -610,6 +621,8 @@ export interface AggregatedTextProgressFrameOptions {
   accumulatedText: string;
   /** Text not yet spoken in this slot. */
   remainingText: string;
+  /** The delivery of the word just spoken. Part of expressive conversation (alpha). */
+  delivery?: string[] | null;
 }
 
 /**
@@ -626,6 +639,8 @@ export interface AggregatedTextProgressFrameOptions {
  * - `textType`: text type of the source AggregatedTextFrame.
  * - `accumulatedText`: text already spoken in this slot (including the current word).
  * - `remainingText`: text not yet spoken in this slot.
+ * - `delivery`: the delivery of the word just spoken, which changes within the
+ *   text where its delivery does. Part of expressive conversation (alpha).
  */
 export class AggregatedTextProgressFrame extends DataFrame {
   segmentId: number;
@@ -634,6 +649,7 @@ export class AggregatedTextProgressFrame extends DataFrame {
   textType: TextType | string;
   accumulatedText: string;
   remainingText: string;
+  delivery: string[] | null;
 
   constructor(options: AggregatedTextProgressFrameOptions) {
     super(options);
@@ -643,6 +659,7 @@ export class AggregatedTextProgressFrame extends DataFrame {
     this.textType = options.textType;
     this.accumulatedText = options.accumulatedText;
     this.remainingText = options.remainingText;
+    this.delivery = options.delivery ?? null;
   }
 }
 
@@ -657,6 +674,8 @@ export interface TranscriptionFrameOptions extends TextFrameOptions {
   result?: unknown;
   /** Whether this is the final transcription for an utterance. */
   finalized?: boolean;
+  /** How the user said these words. Part of expressive conversation (alpha). */
+  perception?: PerceptionSignal[] | null;
 }
 
 /**
@@ -671,6 +690,9 @@ export interface TranscriptionFrameOptions extends TextFrameOptions {
  * - `result`: raw result from the STT service.
  * - `finalized`: whether this is the final transcription for an utterance.
  *   Set by STT services that support commit/finalize signals.
+ * - `perception`: how the user said these words, as a perception producer
+ *   read them, or null. Set by an STT service that perceives, or by a
+ *   processor after it. Part of expressive conversation (alpha).
  */
 export class TranscriptionFrame extends TextFrame {
   userId: string;
@@ -678,6 +700,7 @@ export class TranscriptionFrame extends TextFrame {
   language: Language | null;
   result: unknown;
   finalized: boolean;
+  perception: PerceptionSignal[] | null;
 
   constructor(options: TranscriptionFrameOptions) {
     super(options);
@@ -686,6 +709,7 @@ export class TranscriptionFrame extends TextFrame {
     this.language = options.language ?? null;
     this.result = options.result ?? null;
     this.finalized = options.finalized ?? false;
+    this.perception = options.perception ?? null;
   }
 
   override toString(): string {
@@ -702,6 +726,8 @@ export interface InterimTranscriptionFrameOptions extends TextFrameOptions {
   language?: Language | null;
   /** Raw result from the STT service. */
   result?: unknown;
+  /** A provisional reading of how the user said these words. */
+  perception?: PerceptionSignal[] | null;
 }
 
 /**
@@ -715,12 +741,15 @@ export interface InterimTranscriptionFrameOptions extends TextFrameOptions {
  * - `timestamp`: when the interim transcription occurred.
  * - `language`: detected or specified language of the speech.
  * - `result`: raw result from the STT service.
+ * - `perception`: a provisional reading of how the user said these words, or
+ *   null. Part of expressive conversation (alpha).
  */
 export class InterimTranscriptionFrame extends TextFrame {
   userId: string;
   timestamp: string;
   language: Language | null;
   result: unknown;
+  perception: PerceptionSignal[] | null;
 
   constructor(options: InterimTranscriptionFrameOptions) {
     super(options);
@@ -728,6 +757,7 @@ export class InterimTranscriptionFrame extends TextFrame {
     this.timestamp = options.timestamp;
     this.language = options.language ?? null;
     this.result = options.result ?? null;
+    this.perception = options.perception ?? null;
   }
 
   override toString(): string {
@@ -744,6 +774,8 @@ export interface EagerTranscriptionFrameOptions extends TextFrameOptions {
   language?: Language | null;
   /** Raw result from the STT service. */
   result?: unknown;
+  /** How the user said the turn, read at the predicted end of turn. */
+  perception?: PerceptionSignal[] | null;
 }
 
 /**
@@ -759,12 +791,16 @@ export interface EagerTranscriptionFrameOptions extends TextFrameOptions {
  * - `timestamp`: when the eager end of turn occurred.
  * - `language`: detected or specified language of the speech.
  * - `result`: raw result from the STT service.
+ * - `perception`: how the user said the turn, as a perception producer read
+ *   it at the predicted end of turn, or null. A speculative inference answers
+ *   the turn with it. Part of expressive conversation (alpha).
  */
 export class EagerTranscriptionFrame extends TextFrame {
   userId: string;
   timestamp: string;
   language: Language | null;
   result: unknown;
+  perception: PerceptionSignal[] | null;
 
   constructor(options: EagerTranscriptionFrameOptions) {
     super(options);
@@ -772,6 +808,7 @@ export class EagerTranscriptionFrame extends TextFrame {
     this.timestamp = options.timestamp;
     this.language = options.language ?? null;
     this.result = options.result ?? null;
+    this.perception = options.perception ?? null;
   }
 
   override toString(): string {
@@ -881,9 +918,11 @@ export interface LLMContextAssistantTurnFrameOptions {
  * The aggregated text of a completed assistant turn.
  *
  * Broadcast by the LLM assistant aggregator when a turn ends, carrying the
- * same text that is stored in the LLM context. Processors upstream and
- * downstream (e.g. STT services) can handle this frame to react to each
- * completed bot reply without needing a separate observer.
+ * text stored in the LLM context. With expressive conversation on, it is the
+ * words alone, while the context keeps the expression tags the LLM wrote.
+ * Processors upstream and downstream (e.g. STT services) can handle this
+ * frame to react to each completed bot reply without needing a separate
+ * observer.
  *
  * - `text`: the assistant's aggregated spoken text for this turn.
  * - `timestamp`: ISO-8601 timestamp of when the assistant turn started.
@@ -904,6 +943,10 @@ export interface LLMContextUserTurnFrameOptions {
   text: string;
   /** ISO-8601 timestamp of when the user turn started. */
   timestamp: string;
+  /** The reading of how the user spoke written at the head of the user message. */
+  perception?: PerceptionSignal[] | null;
+  /** Whether this is the turn a speculative inference answers. */
+  speculation?: boolean;
 }
 
 /**
@@ -913,17 +956,34 @@ export interface LLMContextUserTurnFrameOptions {
  * to the context, so it holds what the bot heard: a transcription the
  * aggregator leaves out, such as one while the user is muted, is not in it.
  *
+ * A turn answered from an eager end of turn is also broadcast as a
+ * speculation, ahead of the inference that answers it, so processors after
+ * the LLM learn the turn before its held response is released. A
+ * `UserTurnResponseCancelFrame` withdraws it, and the turn written to the
+ * context once it ends can differ from it.
+ *
  * - `text`: the user's aggregated transcript for this turn.
  * - `timestamp`: ISO-8601 timestamp of when the user turn started.
+ * - `perception`: the reading of how the user spoke that is written at the
+ *   head of the user message, with expressive conversation on and a
+ *   perception producer in the pipeline, or null. Part of expressive
+ *   conversation (alpha).
+ * - `speculation`: whether this is the turn a speculative inference answers,
+ *   written only to a provisional context and not yet part of the
+ *   conversation.
  */
 export class LLMContextUserTurnFrame extends DataFrame {
   text: string;
   timestamp: string;
+  perception: PerceptionSignal[] | null;
+  speculation: boolean;
 
   constructor(options: LLMContextUserTurnFrameOptions) {
     super(options);
     this.text = options.text;
     this.timestamp = options.timestamp;
+    this.perception = options.perception ?? null;
+    this.speculation = options.speculation ?? false;
   }
 }
 
@@ -2658,6 +2718,60 @@ export class LLMServiceMetadataFrame extends ServiceMetadataFrame {
   }
 }
 
+export interface TTSMetadataFrameOptions extends ServiceMetadataFrameOptions {
+  /** The expression tags the service can perform, or null when it performs none. */
+  expression?: ExpressionCapabilities | null;
+}
+
+/**
+ * Metadata broadcast by a TTS service at pipeline start.
+ *
+ * - `expression`: the expression tags the service can perform, or null when
+ *   it performs none. Part of expressive conversation (alpha).
+ */
+export class TTSMetadataFrame extends ServiceMetadataFrame {
+  expression: ExpressionCapabilities | null;
+
+  constructor(options: TTSMetadataFrameOptions) {
+    super(options);
+    this.expression = options.expression ?? null;
+  }
+}
+
+export interface PerceptionMetadataFrameOptions extends ServiceMetadataFrameOptions {
+  /** The signals the processor reports. */
+  perception: PerceptionCapabilities;
+}
+
+/**
+ * Metadata broadcast at start by a processor that perceives how the user spoke.
+ *
+ * The processor may be an STT service or a processor of its own, so the
+ * signals it reports have a frame of their own. Part of expressive
+ * conversation (alpha).
+ *
+ * - `perception`: the signals the processor reports.
+ */
+export class PerceptionMetadataFrame extends ServiceMetadataFrame {
+  perception: PerceptionCapabilities;
+
+  constructor(options: PerceptionMetadataFrameOptions) {
+    super(options);
+    this.perception = options.perception;
+  }
+}
+
+/**
+ * Metadata broadcast by a processor that tags the LLM's replies, once it can.
+ *
+ * A tagger sits between the LLM and the TTS service and writes the
+ * expression tags itself. Upstream, the LLM is then taught no tags, so it
+ * writes plain words; downstream, the assistant aggregator writes each reply
+ * to the context as its words alone, keeping the tags out of what the LLM
+ * reads. Part of expressive conversation (alpha).
+ */
+export class ExpressionMetadataFrame extends ServiceMetadataFrame {}
+
 export interface ServiceSwitcherRequestMetadataFrameOptions {
   /** The target service that should re-emit its metadata. */
   service: FrameProcessor;
@@ -2842,38 +2956,42 @@ export class StopFrame extends ControlFrame {
 }
 
 export interface PipelineFlushFrameOptions {
-  /** Set by the worker when the probe completes its round-trip. */
+  /** Set by the worker when the last probe reaches the sink. */
   event?: Event | null;
-  /** Whether the probe is on its second pass downstream. */
+  /** Whether the probe is on the last leg, back downstream. */
   returning?: boolean;
   /** Name of the worker that started the flush. */
   origin?: string | null;
+  /** Identifies the flush, shared by the probes of all its legs. Defaults to a new id. */
+  flushId?: number;
 }
 
 /**
  * Probe frame used to flush all in-flight frames from the pipeline.
  *
- * Pushed downstream; the pipeline worker's sink bounces it back upstream, the
- * source turns it around, and the worker sets `event` when it reaches the sink
- * a second time. Once that fires, every frame queued ahead of the probe has
- * been processed, along with anything a processor started by pushing
- * upstream. Useful to wait for the pipeline to drain (e.g. after an
- * interruption) before injecting a new frame.
+ * A flush makes three legs, each pushed as a new probe: down to the pipeline
+ * worker's sink, back up to the source, and down to the sink again, where the
+ * worker sets `event`. All three probes carry the same `flushId`. Once
+ * `event` fires, every frame queued ahead of the flush has been processed,
+ * along with anything a processor started by pushing upstream. Useful to wait
+ * for the pipeline to drain (e.g. after an interruption) before injecting a
+ * new frame.
  *
  * This frame is uninterruptible so the probe survives an InterruptionFrame and
- * still completes its trip.
+ * the flush still completes its trip.
  *
- * - `event`: set by the worker when the probe completes its round-trip. The
+ * - `event`: set by the worker when the last probe reaches the sink. The
  *   initiator awaits it to know the pipeline has drained. Carried on the frame
  *   so concurrent flushes stay isolated (each awaits its own).
- * - `returning`: whether the probe is on its second pass downstream, after
- *   having been back up to the source. Work a processor starts by pushing
+ * - `returning`: whether the probe is on the last leg, back downstream after
+ *   the flush has been up to the source. Work a processor starts by pushing
  *   upstream — an LLM run triggered by a function call result, say — only
- *   reaches the sink after that turnaround, so the probe makes the trip twice
- *   and settles on the second arrival.
+ *   reaches the sink after that turnaround, so the flush makes the trip twice
+ *   and settles when the returning probe arrives.
  * - `origin`: name of the worker that started the flush. A probe that crosses
  *   into another pipeline is answered there, out of sight of whoever is
  *   waiting, so the answering worker reports progress back to this name.
+ * - `flushId`: identifies the flush, shared by the probes of all its legs.
  */
 export class PipelineFlushFrame extends ControlFrame {
   override interruptible = false;
@@ -2881,12 +2999,18 @@ export class PipelineFlushFrame extends ControlFrame {
   event: Event | null;
   returning: boolean;
   origin: string | null;
+  flushId: number;
 
   constructor(options: PipelineFlushFrameOptions = {}) {
     super(options);
     this.event = options.event ?? null;
     this.returning = options.returning ?? false;
     this.origin = options.origin ?? null;
+    this.flushId = options.flushId ?? objId();
+  }
+
+  override toString(): string {
+    return `${this.name}(flush_id: ${this.flushId}, returning: ${this.returning})`;
   }
 }
 

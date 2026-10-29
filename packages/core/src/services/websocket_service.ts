@@ -14,9 +14,22 @@
  * `close()`, `state`, and the `ConnectionClosed` / `ConnectionClosedOK` /
  * `ConnectionClosedError` exceptions. Awaiting `recv()` is a cancellation
  * point, so cancelling a receive task stops it right away.
+ *
+ * Deprecated upstream and not ported: `WebsocketService.send_with_retry`
+ * (deprecated since 1.14.0, no replacement). Send on the websocket directly and
+ * leave reconnecting to the receive loop.
  */
 
-import { CancelledError, monotonic, rethrowIfCancelled, sleep, suspend } from "@pipedog/asyncio";
+import {
+  CancelledError,
+  type Event,
+  monotonic,
+  rethrowIfCancelled,
+  sleep,
+  suspend,
+  TimeoutError,
+  timeout,
+} from "@pipedog/asyncio";
 import { ErrorFrame } from "../frames/frames.ts";
 import { logger } from "../utils/logger.ts";
 import { type Ctor, defineMixin } from "../utils/mixin.ts";
@@ -47,6 +60,24 @@ export type ReportErrorCallback = (
  * several websocket services tear down in sequence.
  */
 export const WS_CLOSE_TIMEOUT = 2.0;
+
+/**
+ * Default ceiling, in seconds, on a single websocket send. A send only waits
+ * once the peer has stopped taking data and the write buffers are full, so on
+ * a working connection it returns immediately.
+ */
+export const WS_SEND_TIMEOUT = 5.0;
+
+/**
+ * Bytes buffered on the socket above which a send waits for the buffer to
+ * drain, and the level it waits for (`websockets`' default `write_limit` of
+ * 32 KiB, whose low-water mark is a quarter of it).
+ */
+const WS_WRITE_LIMIT_HIGH = 32 * 1024;
+const WS_WRITE_LIMIT_LOW = WS_WRITE_LIMIT_HIGH / 4;
+
+/** Seconds between checks of a full write buffer while a send waits on it. */
+const WS_DRAIN_POLL_INTERVAL = 0.05;
 
 /** Default time, in seconds, to wait for the opening handshake (as `websockets`). */
 export const WS_OPEN_TIMEOUT = 10.0;
@@ -149,10 +180,21 @@ export class WebsocketClientConnection {
   /** Maximum time, in seconds, to wait for the peer to acknowledge a close. */
   closeTimeout: number | null;
 
-  constructor(ws: WebSocket, options: { closeTimeout?: number | null } = {}) {
+  /**
+   * Maximum time, in seconds, a single send may wait on a peer that has
+   * stopped reading before the connection is dropped (`_BoundedConnection`
+   * upstream). Null waits indefinitely.
+   */
+  sendTimeout: number | null;
+
+  constructor(
+    ws: WebSocket,
+    options: { closeTimeout?: number | null; sendTimeout?: number | null } = {},
+  ) {
     this.#ws = ws;
     this.closeTimeout =
       options.closeTimeout === undefined ? WS_CLOSE_TIMEOUT : options.closeTimeout;
+    this.sendTimeout = options.sendTimeout ?? null;
     ws.binaryType = "arraybuffer";
     ws.addEventListener("message", (event: MessageEvent) => this.#onMessage(event.data));
     ws.addEventListener("close", (event: CloseEvent) => this.#onClose(event.code, event.reason));
@@ -181,9 +223,24 @@ export class WebsocketClientConnection {
   }
 
   /**
-   * Send a text (string) or binary (bytes) message.
+   * Send a text (string) or binary (bytes) message, dropping the connection if
+   * the send stalls.
+   *
+   * A send only waits once the peer has stopped taking data and the socket's
+   * write buffer is full. `sendTimeout` bounds that wait: once it expires the
+   * connection is dropped rather than closed, since a closing handshake writes
+   * to the same full buffer and would wait just as long. The drop releases
+   * anything else waiting on the connection, and the send fails the way any
+   * dropped connection does, so callers' `ConnectionClosed` handling and the
+   * receive loop's reconnect take over.
+   *
+   * DIVERGENCE: the `WebSocket` API never blocks a send; it buffers. Waiting on
+   * a full buffer is emulated by polling `bufferedAmount` until it drains to
+   * the low-water mark. Runtimes that don't report `bufferedAmount` never wait.
    *
    * @throws ConnectionClosed if the connection is closing or closed.
+   * @throws ConnectionClosedError if the send did not complete within
+   *   `sendTimeout`.
    */
   async send(message: WebsocketData | ArrayBuffer): Promise<void> {
     if (this.#closed) throw this.#closed;
@@ -191,6 +248,38 @@ export class WebsocketClientConnection {
       throw new ConnectionClosedError(null, "", "websocket is not open");
     }
     this.#ws.send(message as string | ArrayBufferView<ArrayBuffer> | ArrayBuffer);
+    if (!(this.#ws.bufferedAmount > WS_WRITE_LIMIT_HIGH)) return;
+
+    const deadline = this.sendTimeout === null ? null : monotonic() + this.sendTimeout;
+    while (!this.#closed && this.#ws.bufferedAmount > WS_WRITE_LIMIT_LOW) {
+      if (deadline !== null && monotonic() >= deadline) {
+        logger.warning(
+          `Websocket send to ${this.#peer()} did not complete within ${this.sendTimeout}s; ` +
+            "the peer has stopped reading, dropping the connection",
+        );
+        // Mark the connection closed (code 1006) first, releasing every
+        // waiter, then drop the socket and its unsent data.
+        this.#onClose(1006, "");
+        try {
+          this.#ws.close();
+        } catch {
+          // Already closing; nothing else to release.
+        }
+        throw this.#closed ?? new ConnectionClosedError(null, "");
+      }
+      const remaining = deadline === null ? WS_DRAIN_POLL_INTERVAL : deadline - monotonic();
+      await sleep(Math.max(0, Math.min(WS_DRAIN_POLL_INTERVAL, remaining)));
+    }
+    if (this.#closed) throw this.#closed;
+  }
+
+  /** The peer's address, for logs. */
+  #peer(): string {
+    try {
+      return new URL(this.#ws.url).host;
+    } catch {
+      return this.#ws.url;
+    }
   }
 
   /**
@@ -453,6 +542,14 @@ export interface WebsocketServiceOptions {
    * that need longer to complete a graceful close.
    */
   wsCloseTimeout?: number;
+  /**
+   * Maximum time, in seconds, a single send may wait on a peer that has
+   * stopped reading before the connection is dropped and the send throws
+   * `ConnectionClosedError`. Applied to connections opened through
+   * `_websocketConnect()`. Pass `null` to wait indefinitely. Defaults to
+   * `WS_SEND_TIMEOUT`.
+   */
+  wsSendTimeout?: number | null;
 }
 
 /** Members a class gets from the `WebsocketService` mixin. */
@@ -462,6 +559,7 @@ export interface WebsocketService {
   _reconnectBackoffMaxWait: number;
   _reconnectOnError: boolean;
   _wsCloseTimeout: number;
+  _wsSendTimeout: number | null;
   _reconnectInProgress: boolean;
   _disconnecting: boolean;
   _quickFailureTracker: QuickFailureTracker;
@@ -482,6 +580,12 @@ export interface WebsocketService {
     errorMessage: string,
     reportError: ReportErrorCallback,
     error?: unknown,
+  ): Promise<boolean>;
+  _receiveUntilConfirmed(
+    messages: AsyncIterator<WebsocketData>,
+    confirmed: Event,
+    handleMessage: (message: WebsocketData) => Promise<void>,
+    timeout: number,
   ): Promise<boolean>;
   _receiveTaskHandler(reportError: ReportErrorCallback): Promise<void>;
   _connect(): Promise<void>;
@@ -520,6 +624,7 @@ export const WebsocketService = defineMixin<
     _reconnectBackoffMaxWait: number;
     _reconnectOnError: boolean;
     _wsCloseTimeout: number;
+    _wsSendTimeout: number | null;
     _reconnectInProgress = false;
     _disconnecting = false;
     // Rapid failure detection: when a server accepts the WebSocket handshake
@@ -537,6 +642,8 @@ export const WebsocketService = defineMixin<
       this._reconnectBackoffMaxWait = options.reconnectBackoffMaxWait ?? 10.0;
       this._reconnectOnError = options.reconnectOnError ?? true;
       this._wsCloseTimeout = options.wsCloseTimeout ?? WS_CLOSE_TIMEOUT;
+      this._wsSendTimeout =
+        options.wsSendTimeout === undefined ? WS_SEND_TIMEOUT : options.wsSendTimeout;
     }
 
     /**
@@ -550,11 +657,12 @@ export const WebsocketService = defineMixin<
     }
 
     /**
-     * Open a websocket connection with the service's close timeout applied.
+     * Open a websocket connection with the service's timeouts applied.
      *
      * Wraps `websocketConnect()`, defaulting `closeTimeout` to
-     * `wsCloseTimeout`. Pass `closeTimeout` explicitly to override it for a
-     * service whose peer needs different closing behavior.
+     * `wsCloseTimeout` and bounding each send by `wsSendTimeout`. Pass
+     * `closeTimeout` explicitly to override it for a service whose peer needs
+     * different closing behavior.
      *
      * @param uri The websocket URI to connect to.
      * @param options Additional options passed to `websocketConnect()`.
@@ -564,11 +672,13 @@ export const WebsocketService = defineMixin<
       uri: string,
       options: WebsocketConnectOptions = {},
     ): Promise<WebsocketClientConnection> {
-      return await websocketConnect(uri, {
+      const websocket = await websocketConnect(uri, {
         ...options,
         closeTimeout:
           options.closeTimeout === undefined ? this._wsCloseTimeout : options.closeTimeout,
       });
+      websocket.sendTimeout = this._wsSendTimeout;
+      return websocket;
     }
 
     /**
@@ -678,7 +788,13 @@ export const WebsocketService = defineMixin<
       }
     }
 
-    /** Attempt to send a message, retrying after reconnect if necessary. */
+    /**
+     * Attempt to send a message, retrying after reconnect if necessary.
+     *
+     * Deprecated upstream (1.14.0, no replacement: send on the websocket directly and leave
+     * reconnecting to the receive loop). Kept only because the Cartesia turns STT and Inworld TTS
+     * ports still call it; remove it once their upstream re-ports land.
+     */
     async sendWithRetry(message: WebsocketData, reportError: ReportErrorCallback): Promise<void> {
       try {
         // If websocket isn't connected/present, treat as a send failure — the
@@ -764,6 +880,51 @@ export const WebsocketService = defineMixin<
       // terminal would close that path too.
       await reportError(new ErrorFrame({ error: errorMessage, exception: error }));
       return false;
+    }
+
+    /**
+     * Handle messages until the server confirms the connection.
+     *
+     * For services whose server confirms a connection with a message after
+     * the handshake. `handleMessage` sets `confirmed` when that message
+     * arrives.
+     *
+     * @param messages The connection's message iterator, left positioned
+     *   after the confirmation for the caller to keep reading.
+     * @param confirmed Event set once the server confirms the connection.
+     * @param handleMessage Handles one message.
+     * @param timeoutS Maximum time, in seconds, to wait for the confirmation.
+     * @returns True once confirmed, false if the connection closed first.
+     * @throws Error (Python's `ConnectionError`) if the confirmation doesn't
+     *   arrive within `timeoutS`.
+     */
+    async _receiveUntilConfirmed(
+      messages: AsyncIterator<WebsocketData>,
+      confirmed: Event,
+      handleMessage: (message: WebsocketData) => Promise<void>,
+      timeoutS: number,
+    ): Promise<boolean> {
+      try {
+        const closed = await timeout(timeoutS, async () => {
+          while (!confirmed.isSet()) {
+            const next = await messages.next();
+            if (next.done) return true;
+            await handleMessage(next.value);
+          }
+          return false;
+        });
+        if (closed) return false;
+      } catch (e) {
+        if (e instanceof TimeoutError) {
+          // The connection never carried a session, so it counts as failing
+          // right after connecting, and the receive loop gives up after a
+          // few in a row rather than retrying forever.
+          this._lastConnectTime = monotonic();
+          throw new Error(`${this} did not confirm the connection within ${timeoutS}s`);
+        }
+        throw e;
+      }
+      return true;
     }
 
     /**

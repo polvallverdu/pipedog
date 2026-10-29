@@ -175,7 +175,10 @@ export class EagerUserTurnStopStrategy extends ExternalUserTurnStopStrategy {
   protected async _speculate(frame: EagerTranscriptionFrame): Promise<void> {
     // Segments committed earlier in this turn are part of what the LLM will
     // see, so they're part of what the committed transcript is compared to.
-    const speculation = new UserTurnSpeculation({ text: this._text + frame.text });
+    const speculation = new UserTurnSpeculation({
+      text: this._text + frame.text,
+      perception: frame.perception,
+    });
     this._speculation = speculation;
     this._confirmed = null;
     this._speculationTimeoutTask = this.taskManager.createTask(

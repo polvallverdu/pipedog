@@ -17,7 +17,8 @@
  * - The value of any `name=value` or `name: value` pair, quoted or not,
  *   whose name marks a credential (`api_key`, `Authorization`,
  *   `X-Amz-Signature`, `apiKey`...). This covers query strings, printed
- *   header dicts and plain prose alike.
+ *   header dicts and plain prose alike. An exception class name followed by
+ *   its message (`KeyError: ...`) is not a credential name.
  * - A URL's password (`scheme://user:password@host`).
  * - Tokens recognizable by their format alone: provider key prefixes, AWS
  *   access key IDs and JWTs.
@@ -49,19 +50,27 @@ const CREDENTIAL_WORDS: ReadonlySet<string> = new Set([
   "uploadid",
 ]);
 
-// `name=value` or `name: value` (or `:=`, `=>`), the name optionally quoted as
-// in a printed dict, the value quoted or running to the next delimiter. A
-// quoted value cut short before its closing quote, as a truncated repr leaves
-// it, runs to the next delimiter instead. An auth scheme (`Bearer`, `Basic`...)
-// ahead of the value is kept. A value already redacted is matched whole, so
-// text redacted twice reads the same as text redacted once.
-const PAIR = new RegExp(
+// The start of a `name=value` or `name: value` pair (or `:=`, `=>`), the name
+// optionally quoted as in a printed dict. An auth scheme (`Bearer`, `Basic`...)
+// ahead of the value is kept.
+const PAIR_START = new RegExp(
   String.raw`(?<name>(?<![\w.-])(?<nq>["']?)[A-Za-z][\w.-]*\k<nq>)` +
     String.raw`(?<sep>\s*(?::=|=>|[:=])\s*)` +
-    String.raw`(?<scheme>(?:Bearer|Basic|Token|Api-Token|Key|Digest|AWS4-HMAC-SHA256)\s+)?` +
-    String.raw`(?:(?<vq>["'])(?<quoted>.*?)\k<vq>` +
-    String.raw`|(?<oq>["']?)(?<bare>(?:\[REDACTED\]|[^\s,;&"'}\])\[])+))`,
+    String.raw`(?<scheme>(?:Bearer|Basic|Token|Api-Token|Key|Digest|AWS4-HMAC-SHA256)\s+)?`,
   "g",
+);
+
+// Sticky variant of PAIR_START, for Python's `_PAIR_START.match(text, pos)`.
+const PAIR_START_AT = new RegExp(PAIR_START.source, "y");
+
+// A pair's value, quoted or running to the next delimiter. A quoted value cut
+// short before its closing quote, as a truncated repr leaves it, runs to the
+// next delimiter instead. A value already redacted is matched whole, so text
+// redacted twice reads the same as text redacted once.
+const VALUE = new RegExp(
+  String.raw`(?<vq>["'])(?<quoted>.*?)\k<vq>` +
+    String.raw`|(?<oq>["']?)(?<bare>(?:\[REDACTED\]|[^\s,;&"'}\])\[])+)`,
+  "y",
 );
 
 const URL_PASSWORD = /(?<prefix>\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:)[^\s/@]+(?=@)/gi;
@@ -92,16 +101,10 @@ const KNOWN_TOKENS = new RegExp(
   "g",
 );
 
-interface PairGroups {
-  name: string;
-  nq: string | undefined;
-  sep: string;
-  scheme: string | undefined;
-  vq: string | undefined;
-  quoted: string | undefined;
-  oq: string | undefined;
-  bare: string | undefined;
-}
+// An exception or warning class name, optionally module-qualified (`KeyError`,
+// `jwt.exceptions.InvalidTokenError`). It names what went wrong, so the text
+// after it is the explanation, not a credential.
+const EXCEPTION_NAME = /^(?:[a-z_][a-z0-9_]*\.)*[A-Z][A-Za-z0-9]*(?:Error|Exception|Warning)$/;
 
 function stripQuotes(name: string): string {
   return name.replace(/^["']+/, "").replace(/["']+$/, "");
@@ -115,25 +118,49 @@ function isCredentialName(name: string): boolean {
   return CREDENTIAL_WORDS.has(parts.join("")) || parts.some((p) => CREDENTIAL_WORDS.has(p));
 }
 
-function redactPairs(text: string): string {
-  // String.prototype.replace collects every match before calling the
-  // replacer, so recursing with the same global regex is safe.
-  return text.replace(PAIR, (...args: unknown[]) =>
-    redactPair(args[args.length - 1] as PairGroups),
-  );
+function isExceptionName(match: RegExpExecArray): boolean {
+  const g = match.groups ?? {};
+  return !g.nq && !g.scheme && (g.sep ?? "").trim() === ":" && EXCEPTION_NAME.test(g.name ?? "");
 }
 
-function redactPair(match: PairGroups): string {
-  const quote = match.vq || "";
-  let value: string;
-  if (isCredentialName(match.name)) {
-    value = REDACTED;
-  } else {
-    // The value may itself hold pairs, as `URL: https://...?token=...` does.
-    value = redactPairs(match.quoted || match.bare || "");
+function masksValue(start: RegExpExecArray): boolean {
+  return isCredentialName(start.groups?.name ?? "") && !isExceptionName(start);
+}
+
+function matchAt(re: RegExp, text: string, pos: number): RegExpExecArray | null {
+  re.lastIndex = pos;
+  return re.exec(text);
+}
+
+function matchEnd(m: RegExpExecArray): number {
+  return m.index + m[0].length;
+}
+
+function redactPairs(text: string): string {
+  // Only a credential's value is taken whole. Any other pair's value is read on
+  // as ordinary text, so the pairs it holds (`URL: https://...?token=...`,
+  // `error: Authorization: Bearer ...`) are found in place.
+  const out: string[] = [];
+  let pos = 0;
+  for (;;) {
+    const start = matchAt(PAIR_START, text, pos);
+    if (!start) break;
+    const startEnd = matchEnd(start);
+    const value = masksValue(start) ? matchAt(VALUE, text, startEnd) : null;
+    // A credential's value that is only the next credential's name, as
+    // `token:` is in `api_key: token: abc`, gives way to that credential.
+    const following = value ? matchAt(PAIR_START_AT, text, startEnd) : null;
+    if (!value || (following && masksValue(following) && matchEnd(following) > matchEnd(value))) {
+      out.push(text.slice(pos, startEnd));
+      pos = startEnd;
+      continue;
+    }
+    const quote = value.groups?.vq || "";
+    out.push(`${text.slice(pos, startEnd)}${quote || value.groups?.oq || ""}${REDACTED}${quote}`);
+    pos = matchEnd(value);
   }
-  const opening = match.oq || "";
-  return `${match.name}${match.sep}${match.scheme || ""}${quote || opening}${value}${quote}`;
+  out.push(text.slice(pos));
+  return out.join("");
 }
 
 /**

@@ -22,6 +22,7 @@ import {
   waitFor,
 } from "@pipedog/asyncio";
 import type { BaseClock } from "../clocks/base_clock.ts";
+import type { ExpressionPolicy } from "../expressive/policy.ts";
 import {
   CancelFrame,
   ErrorFrame,
@@ -72,9 +73,11 @@ export interface FrameProcessorSetupOptions {
   pipelineWorker: PipelineWorker | null;
   audioInSampleRate?: number;
   audioOutSampleRate?: number;
+  enableExpressiveConversation?: boolean;
   enableMetrics?: boolean;
   enableTracing?: boolean;
   enableUsageMetrics?: boolean;
+  expressionPolicy?: ExpressionPolicy | null;
   observer?: BaseObserver | null;
   reportOnlyInitialTtfb?: boolean;
   tracingContext?: TracingContext | null;
@@ -85,7 +88,12 @@ export interface FrameProcessorSetupOptions {
  *
  * - `audioInSampleRate` / `audioOutSampleRate`: audio sample rates in Hz.
  * - `clock`: the clock instance for timing operations.
+ * - `enableExpressiveConversation`: whether the agent takes part in an
+ *   expressive conversation (alpha). See
+ *   `PipelineParams.enableExpressiveConversation`.
  * - `enableMetrics` / `enableTracing` / `enableUsageMetrics`: feature switches.
+ * - `expressionPolicy`: which expression tags the LLMs are offered and when to
+ *   use them (alpha). See `PipelineParams.expressionPolicy`.
  * - `pipelineWorker`: the PipelineWorker running this pipeline, so processors
  *   can reach worker-scoped state (e.g. `this.pipelineWorker.appResources`).
  * - `observer`: optional observer for monitoring frame processing events.
@@ -98,9 +106,11 @@ export class FrameProcessorSetup {
   pipelineWorker: PipelineWorker | null;
   audioInSampleRate: number;
   audioOutSampleRate: number;
+  enableExpressiveConversation: boolean;
   enableMetrics: boolean;
   enableTracing: boolean;
   enableUsageMetrics: boolean;
+  expressionPolicy: ExpressionPolicy | null;
   observer: BaseObserver | null;
   reportOnlyInitialTtfb: boolean;
   tracingContext: TracingContext | null;
@@ -111,9 +121,11 @@ export class FrameProcessorSetup {
     this.pipelineWorker = options.pipelineWorker;
     this.audioInSampleRate = options.audioInSampleRate ?? 16000;
     this.audioOutSampleRate = options.audioOutSampleRate ?? 24000;
+    this.enableExpressiveConversation = options.enableExpressiveConversation ?? false;
     this.enableMetrics = options.enableMetrics ?? false;
     this.enableTracing = options.enableTracing ?? false;
     this.enableUsageMetrics = options.enableUsageMetrics ?? false;
+    this.expressionPolicy = options.expressionPolicy ?? null;
     this.observer = options.observer ?? null;
     this.reportOnlyInitialTtfb = options.reportOnlyInitialTtfb ?? false;
     this.tracingContext = options.tracingContext ?? null;
@@ -932,6 +944,31 @@ export class FrameProcessor extends BaseObject {
         category: ErrorCategory.UNKNOWN,
       });
     }
+  }
+
+  /**
+   * Stop processing a frame if it is the one in progress, leaving the queue as it is.
+   *
+   * Unlike `_startInterruption`, this drops nothing else: the frames queued
+   * behind the cancelled one, interruptible or not, are processed next. The
+   * cancelled frame's callback, if any, is not called.
+   *
+   * Call it from a system frame's processing, as interruptions are, so it runs
+   * on the input task and never overlaps an interruption.
+   *
+   * @param frame The frame to stop processing.
+   * @returns Whether `frame` was in progress and its processing was cancelled.
+   */
+  protected async _cancelFrameInProgress(frame: Frame): Promise<boolean> {
+    if (this.#processCurrentFrame !== frame || !this.#processFrameTask) {
+      return false;
+    }
+    await this.#cancelProcessTask();
+    this.#processFrameTask = this.createTask(
+      () => this.#processFrameTaskHandler(),
+      "__process_frame_task_handler",
+    );
+    return true;
   }
 
   async #internalPushFrame(frame: Frame, direction: FrameDirection): Promise<void> {

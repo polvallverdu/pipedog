@@ -237,14 +237,15 @@ export function advanceByChars(text: string, startPos: number, n: number): numbe
  * without decrementing the budget.
  *
  * After the `n` alnum chars are consumed, advances further past any
- * immediately following punctuation (e.g. the `,` in `"questions,"` or the `.`
- * in `"done."`), stopping before the next space, alnum char, or XML tag.
+ * immediately following punctuation or tags (e.g. the `,` in `"questions,"` or
+ * the `</card>.` in `"4111</card>."`), stopping before the next space or alnum
+ * char.
  *
  * @param text The source text to scan.
  * @param startPos Starting position in `text`.
  * @param n Number of alphanumeric characters (code units) to consume.
- * @returns New position in `text` after consuming `n` alnum chars and
- *   trailing punctuation.
+ * @returns New position in `text` after consuming `n` alnum chars and what
+ *   follows them.
  */
 export function advanceByAlnums(text: string, startPos: number, n: number): number {
   let pos = startPos;
@@ -264,7 +265,14 @@ export function advanceByAlnums(text: string, startPos: number, n: number): numb
 
   while (pos < text.length) {
     if (text[pos] === "<") {
-      break;
+      // A tag goes with the word it touches, so with none consumed it is
+      // left for the next word.
+      const end = text.indexOf(">", pos);
+      if (end === -1 || !count) {
+        break;
+      }
+      pos = end + 1;
+      continue;
     }
     const ch = charAt(text, pos);
     if (isAlnum(ch) || isSpace(ch)) {

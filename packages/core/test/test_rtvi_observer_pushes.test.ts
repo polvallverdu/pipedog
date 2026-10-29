@@ -426,6 +426,55 @@ describe("TestRTVIObserverSegments", () => {
     ]);
   });
 
+  test("test_a_segment_reports_the_modes_of_each_word_as_it_is_spoken", async () => {
+    const segment = _segment("I'm back", TextType.SENTENCE);
+    const first = _progress(segment, "I'm", " back");
+    first.delivery = ["calm"];
+    const second = _progress(segment, "I'm back", "");
+    second.delivery = ["excited", "emphasis"];
+    await _push(segment);
+    await _push(_word("I'm", segment));
+    await _push(first);
+    await _push(_word("back", segment));
+    await _push(second);
+
+    expect(_sentOutputs().map((data) => [data.spokenStatus, data.delivery])).toEqual([
+      ["new", null],
+      ["in-progress", ["calm"]],
+      ["completed", ["excited", "emphasis"]],
+    ]);
+  });
+
+  test("test_an_expression_sound_is_a_segment_of_its_own_once_performed", async () => {
+    const laugh = new TTSTextFrame({
+      text: "laugh",
+      textType: TextType.EXPRESSION_SOUND,
+      contextId: "turn",
+    });
+    laugh.willBeSpoken = true;
+    await _push(laugh);
+
+    expect(
+      _sentOutputs().map((d) => [d.text, d.textType, d.spokenStatus, d.segmentId, d.delivery]),
+    ).toEqual([["laugh", TextType.EXPRESSION_SOUND, "completed", laugh.id, null]]);
+  });
+
+  test("test_text_with_no_words_to_show_is_not_sent", async () => {
+    // A unit that is only tags, announced and then spoken.
+    const segment = _segment("", TextType.SENTENCE);
+    await _push(segment);
+    const spoken = new TTSTextFrame({
+      text: "",
+      textType: TextType.SENTENCE,
+      contextId: "turn",
+      rawText: "<<calm>>",
+    });
+    spoken.willBeSpoken = true;
+    await _push(spoken);
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
   test("test_a_skipped_segment_keeps_its_progress_and_words_from_the_client", async () => {
     const status = _segment("One moment, please.", "status");
     await _push(status);
@@ -514,7 +563,7 @@ describe("TestRTVIObserverSegments", () => {
       RTVI.BotTTSTextMessage,
       RTVI.BotOutputMessage,
     ]);
-    expect(_sentOutputs().map((data) => [data.textType, data.spokenStatus])).toEqual([
+    expect(_sentOutputs().map((data) => [data.outputType, data.spokenStatus])).toEqual([
       [TextType.BACKCHANNEL, "new"],
       [TextType.BACKCHANNEL, "in-progress"],
     ]);
@@ -572,6 +621,42 @@ describe("TestRTVIObserverSegments", () => {
 
     expect(send).not.toHaveBeenCalled();
     expect(observer._skippedSegmentIds).toEqual(new Set());
+  });
+
+  test("test_an_expression_sound_is_sent_as_output_alone", async () => {
+    // Not as TTS text, which a client takes for words the bot spoke.
+    _connectClient([2, 3, 0]);
+    observer._params.ttsRawTextEnabled = true;
+    for (const [text, textType] of [
+      ["laugh", TextType.EXPRESSION_SOUND],
+      ["400", TextType.EXPRESSION_PAUSE],
+    ] as const) {
+      const sound = new TTSTextFrame({ text, textType, contextId: "turn" });
+      sound.willBeSpoken = true;
+      await _push(sound);
+    }
+
+    expect(_sentMessages().map((m) => [typeOf(m), m.data.text])).toEqual([
+      [RTVI.BotOutputMessage, "laugh"],
+      [RTVI.BotOutputMessage, "400"],
+    ]);
+  });
+
+  test("test_an_expression_sound_is_kept_from_older_clients", async () => {
+    for (const version of [
+      [2, 2, 0],
+      [1, 4, 0],
+    ]) {
+      // subTest(version=version)
+      _connectClient(version);
+      for (const textType of [TextType.EXPRESSION_SOUND, TextType.EXPRESSION_PAUSE]) {
+        const sound = new TTSTextFrame({ text: "laugh", textType, contextId: "turn" });
+        sound.willBeSpoken = true;
+        await _push(sound);
+      }
+
+      expect(send).not.toHaveBeenCalled();
+    }
   });
 
   test("test_a_segment_after_a_backchannel_is_sent_to_older_clients", async () => {

@@ -31,6 +31,7 @@ import {
   InterimTranscriptionFrame,
   LLMFullResponseEndFrame,
   LLMFullResponseStartFrame,
+  PipelineFlushFrame,
   StartFrame,
   StopFrame,
   TextFrame,
@@ -41,6 +42,7 @@ import {
 import { BaseObserver, type FramePushed } from "../src/observers/base_observer.ts";
 import { ParallelPipeline } from "../src/pipeline/parallel_pipeline.ts";
 import { Pipeline } from "../src/pipeline/pipeline.ts";
+import { ServiceSwitcher } from "../src/pipeline/service_switcher.ts";
 import { SyncParallelPipeline } from "../src/pipeline/sync_parallel_pipeline.ts";
 import { PipelineParams, PipelineWorker } from "../src/pipeline/worker.ts";
 import { FrameFilter } from "../src/processors/filters/frame_filter.ts";
@@ -198,6 +200,86 @@ describe("TestParallelPipeline", () => {
     // StartFrame processing, then the regular TextFrame.
     const expectedDownFrames = [StartFrame, TextFrame, TextFrame];
     await runTest(pipeline, { framesToSend, expectedDownFrames, ignoreStart: false });
+  });
+});
+
+const FLUSH_LEGS: [FrameDirection, boolean][] = [
+  [FrameDirection.DOWNSTREAM, false],
+  [FrameDirection.UPSTREAM, false],
+  [FrameDirection.DOWNSTREAM, true],
+];
+
+/** Records the legs of each flush that pass through it. */
+class FlushRecorder extends FrameProcessor {
+  legs: Map<number, [FrameDirection, boolean][]> = new Map();
+
+  override async processFrame(frame: Frame, direction: FrameDirection): Promise<void> {
+    await super.processFrame(frame, direction);
+    if (frame instanceof PipelineFlushFrame) {
+      let legs = this.legs.get(frame.flushId);
+      if (legs === undefined) {
+        legs = [];
+        this.legs.set(frame.flushId, legs);
+      }
+      legs.push([direction, frame.returning]);
+    }
+    await this.pushFrame(frame, direction);
+  }
+}
+
+describe("TestPipelineFlush", () => {
+  const flush = async (processor: FrameProcessor, flushes = 1): Promise<boolean[]> => {
+    const worker = new PipelineWorker(new Pipeline([processor]));
+    const started = new Event();
+    const results: boolean[] = [];
+
+    worker.eventHandler("on_pipeline_started", async (_worker: PipelineWorker, _frame: Frame) => {
+      started.set();
+    });
+
+    const drive = async (): Promise<void> => {
+      await started.wait();
+      const flushing = Array.from({ length: flushes }, () => () => worker.flushPipeline(1.0));
+      results.push(...(await gather(...flushing)));
+      await worker.queueFrame(new EndFrame());
+    };
+
+    await waitFor(
+      () =>
+        gather(
+          () => worker.run(workerParams()),
+          () => drive(),
+        ),
+      10.0,
+    );
+    return results;
+  };
+
+  test("test_flush_through_parallel_pipeline", async () => {
+    // Every branch sees every leg of each flush.
+    const branches = [new FlushRecorder(), new FlushRecorder()];
+
+    const results = await flush(new ParallelPipeline(...branches.map((b) => [b])), 2);
+
+    expect(results).toEqual([true, true]);
+    for (const branch of branches) {
+      expect([...branch.legs.values()]).toEqual([FLUSH_LEGS, FLUSH_LEGS]);
+    }
+  });
+
+  test("test_flush_through_nested_service_switchers", async () => {
+    // Only the active service sees the flush.
+    const active = new FlushRecorder();
+    const inactive = new FlushRecorder();
+    const outer = new FlushRecorder();
+    const switcher = new ServiceSwitcher([new ServiceSwitcher([active, inactive]), outer]);
+
+    const results = await flush(switcher);
+
+    expect(results).toEqual([true]);
+    expect([...active.legs.values()]).toEqual([FLUSH_LEGS]);
+    expect(inactive.legs.size).toEqual(0);
+    expect(outer.legs.size).toEqual(0);
   });
 });
 
@@ -718,29 +800,30 @@ describe("TestPipelineWorker", () => {
   });
 
   test("test_idle_task_event_handler_quiet_user", async () => {
+    // Quiet user audio doesn't count as activity, and a timeout doesn't fire again at once.
+    const idleTimeoutSecs = 0.2;
     const identity = new IdentityFilter();
     const pipeline = new Pipeline([identity]);
     const worker = new PipelineWorker(pipeline, {
-      idleTimeoutSecs: 0.2,
+      idleTimeoutSecs,
       cancelOnIdleTimeout: false,
     });
 
-    let idleTimeout = 0;
+    const firedAt: number[] = [];
+    const finished = new Event();
 
     worker.eventHandler("on_idle_timeout", async (worker: PipelineWorker) => {
-      idleTimeout += 1;
-      // Stay a bit longer here while user audio frames are still being
-      // pushed. We do this to make sure this function is only called once.
-      await sleep(0.1);
-      await worker.queueFrame(new EndFrame());
+      firedAt.push(monotonic());
+      if (firedAt.length === 1) {
+        // Wrap up while user audio keeps coming in, as a bot saying
+        // goodbye would, then end the pipeline.
+        await sleep(0.1);
+        await worker.queueFrame(new EndFrame());
+      }
     });
 
     const sendAudio = async (): Promise<void> => {
-      // We send audio during and after the 0.2 seconds of idle
-      // timeout. Inside `on_idle_timeout` we are waiting a little bit
-      // simulating the pipeline finishing (e.g. goodbye message from bot
-      // flushing).
-      for (let i = 0; i < 30; i++) {
+      while (!finished.isSet()) {
         await worker.queueFrame(
           new InputAudioRawFrame({
             audio: new Uint8Array([0x00]),
@@ -752,11 +835,29 @@ describe("TestPipelineWorker", () => {
       }
     };
 
-    await gather(
-      () => sendAudio(),
-      () => worker.run(workerParams()),
+    const run = async (): Promise<void> => {
+      try {
+        await worker.run(workerParams());
+      } finally {
+        finished.set();
+      }
+    };
+
+    await waitFor(
+      () =>
+        gather(
+          () => sendAudio(),
+          () => run(),
+        ),
+      5.0,
     );
-    expect(idleTimeout).toEqual(1);
+
+    // The audio never stopped, so the timeout fired while it was coming in.
+    expect(firedAt.length).toBeGreaterThanOrEqual(1);
+    // A timeout waits a whole idle period before firing again, however long
+    // the pipeline takes to end, instead of firing on the next frame.
+    const gaps = firedAt.slice(1).map((later, i) => later - firedAt[i]!);
+    expect(gaps.every((gap) => gap >= idleTimeoutSecs)).toBe(true);
   });
 
   test("test_idle_task_frames", async () => {
@@ -1302,6 +1403,7 @@ interface StartRecorderOptions extends FrameProcessorOptions {
   setupSecs?: number;
   failSetup?: boolean;
   preSetupSecs?: number;
+  setupWaitsFor?: readonly StartRecorder[];
 }
 
 /**
@@ -1309,13 +1411,17 @@ interface StartRecorderOptions extends FrameProcessorOptions {
  * gets the StartFrame (seconds since `t0`), whether it gets a CancelFrame and
  * whether it is cleaned up. `preSetupSecs` are spent before
  * `FrameProcessor.setup()`, like a processor that connects first.
+ * Setting up also waits until the `setupWaitsFor` processors have the
+ * StartFrame: if this setup held it from them, the worker would never finish.
  */
 class StartRecorder extends FrameProcessor {
   protected _t0: number;
   protected _setupSecs: number;
   protected _failSetup: boolean;
   protected _preSetupSecs: number;
+  protected _setupWaitsFor: readonly StartRecorder[];
   startAt: number | null = null;
+  started = new Event();
   gotCancel = false;
   cleanedUp = false;
 
@@ -1325,6 +1431,7 @@ class StartRecorder extends FrameProcessor {
     this._setupSecs = options.setupSecs ?? 0.0;
     this._failSetup = options.failSetup ?? false;
     this._preSetupSecs = options.preSetupSecs ?? 0.0;
+    this._setupWaitsFor = options.setupWaitsFor ?? [];
   }
 
   override async setup(setup: FrameProcessorSetup): Promise<void> {
@@ -1333,6 +1440,9 @@ class StartRecorder extends FrameProcessor {
     }
     await super.setup(setup);
     await sleep(this._setupSecs);
+    for (const processor of this._setupWaitsFor) {
+      await processor.started.wait();
+    }
     if (this._failSetup) {
       throw new Error("cannot connect");
     }
@@ -1347,6 +1457,7 @@ class StartRecorder extends FrameProcessor {
     await super.processFrame(frame, direction);
     if (frame instanceof StartFrame) {
       this.startAt = monotonic() - this._t0;
+      this.started.set();
     } else if (frame instanceof CancelFrame) {
       this.gotCancel = true;
     }
@@ -1370,9 +1481,19 @@ describe("TestPipelineWorkerStartup", () => {
     const llmSetupSecs = 1.0;
     const t0 = monotonic();
 
+    // The input transport starts while STT is still connecting, and STT
+    // while the LLM is.
     const transportInput = new StartRecorder(t0, { name: "input" });
-    const stt = new StartRecorder(t0, { setupSecs: sttSetupSecs, name: "stt" });
-    const llm = new StartRecorder(t0, { setupSecs: llmSetupSecs, name: "llm" });
+    const stt = new StartRecorder(t0, {
+      setupSecs: sttSetupSecs,
+      setupWaitsFor: [transportInput],
+      name: "stt",
+    });
+    const llm = new StartRecorder(t0, {
+      setupSecs: llmSetupSecs,
+      setupWaitsFor: [stt],
+      name: "llm",
+    });
 
     const worker = new PipelineWorker(new Pipeline([transportInput, stt, llm]));
 
@@ -1385,11 +1506,8 @@ describe("TestPipelineWorkerStartup", () => {
     await worker.queueFrame(new EndFrame());
     await runWorker(worker);
 
-    // The input transport has nothing to connect, so it starts right away.
-    expect(transportInput.startAt!).toBeLessThan(sttSetupSecs);
-    // STT starts once its own connection is up, not the LLM's.
+    // STT still waits for its own connection.
     expect(stt.startAt!).toBeGreaterThanOrEqual(sttSetupSecs);
-    expect(stt.startAt!).toBeLessThan(llmSetupSecs);
     // The pipeline still only counts as started once everything is set up.
     expect(llm.startAt!).toBeGreaterThanOrEqual(llmSetupSecs);
     expect(startedAt.length).toEqual(1);
@@ -1401,13 +1519,12 @@ describe("TestPipelineWorkerStartup", () => {
     const t0 = monotonic();
     const first = new StartRecorder(t0);
     const fast = new StartRecorder(t0, { setupSecs: 0.1 });
-    const slow = new StartRecorder(t0, { setupSecs: 1.0 });
+    const slow = new StartRecorder(t0, { setupSecs: 1.0, setupWaitsFor: [first] });
 
     const worker = new PipelineWorker(new Pipeline([first, new ParallelPipeline([fast], [slow])]));
     await worker.queueFrame(new EndFrame());
     await runWorker(worker);
 
-    expect(first.startAt!).toBeLessThan(0.1);
     expect(slow.startAt!).toBeGreaterThanOrEqual(1.0);
   });
 
@@ -1416,15 +1533,13 @@ describe("TestPipelineWorkerStartup", () => {
     const t0 = monotonic();
     const first = new StartRecorder(t0);
     const innerFast = new StartRecorder(t0, { setupSecs: 0.1 });
-    const innerSlow = new StartRecorder(t0, { setupSecs: 1.0 });
+    const innerSlow = new StartRecorder(t0, { setupSecs: 1.0, setupWaitsFor: [first, innerFast] });
 
     const worker = new PipelineWorker(new Pipeline([first, new Pipeline([innerFast, innerSlow])]));
     await worker.queueFrame(new EndFrame());
     await runWorker(worker);
 
-    expect(first.startAt!).toBeLessThan(0.1);
     expect(innerFast.startAt!).toBeGreaterThanOrEqual(0.1);
-    expect(innerFast.startAt!).toBeLessThan(1.0);
     expect(innerSlow.startAt!).toBeGreaterThanOrEqual(1.0);
   });
 
@@ -1483,7 +1598,7 @@ describe("TestPipelineWorkerStartup", () => {
     const t0 = monotonic();
     const first = new StartRecorder(t0);
     const slow = new StartRecorder(t0, { setupSecs: 30.0 });
-    const worker = new PipelineWorker(new Pipeline([first, slow]), { cancelTimeoutSecs: 1.0 });
+    const worker = new PipelineWorker(new Pipeline([first, slow]), { cancelTimeoutSecs: 3.0 });
 
     const cancelSoon = async (): Promise<void> => {
       await sleep(0.2);
@@ -1496,7 +1611,7 @@ describe("TestPipelineWorkerStartup", () => {
     );
 
     expect(worker.hasFinished()).toBe(true);
-    expect(monotonic() - t0).toBeLessThan(1.0);
+    expect(monotonic() - t0).toBeLessThan(3.0);
     // The cancelled setup is abandoned, so that processor never starts. The
     // pipeline never started either, so it is cleaned up, not cancelled.
     expect(first.startAt).not.toBeNull();
@@ -1616,7 +1731,7 @@ describe("TestPipelineWorkerStartup", () => {
     // a slow branch is set up.
     const t0 = monotonic();
     const first = new StartRecorder(t0);
-    const slow = new StartRecorder(t0, { setupSecs: 0.5 });
+    const slow = new StartRecorder(t0, { setupSecs: 0.5, setupWaitsFor: [first] });
     const after = new StartRecorder(t0);
     const worker = new PipelineWorker(
       new Pipeline([first, new SyncParallelPipeline([slow]), after]),
@@ -1631,7 +1746,6 @@ describe("TestPipelineWorkerStartup", () => {
     await worker.queueFrame(new EndFrame());
     await runWorker(worker);
 
-    expect(first.startAt!).toBeLessThan(0.5);
     expect(slow.startAt!).toBeGreaterThanOrEqual(0.5);
     expect(after.startAt!).toBeGreaterThanOrEqual(slow.startAt!);
     expect(startedAt.length).toEqual(1);

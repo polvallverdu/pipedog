@@ -298,6 +298,15 @@ function getOpcodes(a: readonly string[], b: readonly string[]): Opcode[] {
   return answer;
 }
 
+/** Options for `TextSegmentMap`. */
+export interface TextSegmentMapOptions {
+  /**
+   * Tags only `llmText` carries, beyond `<...>` markup, which its cursor
+   * passes over without counting their letters.
+   */
+  llmMarkup?: RegExp | null;
+}
+
 /**
  * Answers "where are we?" in three versions of one utterance, word by word.
  *
@@ -377,6 +386,7 @@ export class TextSegmentMap {
   protected _ttsText: string;
   protected _originalText: string;
   protected _llmText: string;
+  protected _llmScan: string;
   protected _segments: TextSegment[];
 
   protected _segIdx = 0;
@@ -401,11 +411,32 @@ export class TextSegmentMap {
    * @param llmText The same content as the LLM wrote it, which may add
    *   delimiters the other two never see. Rides its own cursor rather than
    *   being diffed. Defaults to `originalText`.
+   * @param options.llmMarkup Tags only `llmText` carries, beyond `<...>`
+   *   markup, which its cursor passes over without counting their letters.
    */
-  constructor(ttsText: string, originalText: string, llmText: string | null = null) {
+  constructor(
+    ttsText: string,
+    originalText: string,
+    llmText: string | null = null,
+    options: TextSegmentMapOptions = {},
+  ) {
     this._ttsText = ttsText;
     this._originalText = originalText;
     this._llmText = llmText !== null && llmText !== undefined ? llmText : originalText;
+    // The LLM text as its cursor reads it: the extra tags blanked to `<...>`
+    // of the same length, so positions in it are positions in the LLM text.
+    // A tag takes the space after it, as the service's markup for it does, so
+    // the cursor never counts a space the spoken words didn't cross.
+    const llmMarkup = options.llmMarkup ?? null;
+    this._llmScan = llmMarkup
+      ? this._llmText.replace(
+          new RegExp(
+            `(?:${llmMarkup.source})[ \\t]*`,
+            llmMarkup.flags.includes("g") ? llmMarkup.flags : `${llmMarkup.flags}g`,
+          ),
+          (m) => `<${" ".repeat(Math.max(0, m.length - 2))}>`,
+        )
+      : this._llmText;
     this._segments = TextSegmentMap._buildSegments(ttsText, originalText);
     this._resetState();
   }
@@ -920,9 +951,9 @@ export class TextSegmentMap {
    * crossed it.
    */
   protected _advanceLlmCursors(crossed: string, nAlnum: number): void {
-    this._llmSpokenPos = advanceByChars(this._llmText, this._llmSpokenPos, crossed.length);
+    this._llmSpokenPos = advanceByChars(this._llmScan, this._llmSpokenPos, crossed.length);
     this._llmPos = Math.max(
-      advanceByAlnums(this._llmText, this._llmPos, nAlnum),
+      advanceByAlnums(this._llmScan, this._llmPos, nAlnum),
       this._llmSpokenPos,
     );
   }
@@ -932,7 +963,7 @@ export class TextSegmentMap {
     this._userFacingPos = seg.originalEnd;
     // The original's count, not the TTS side's: llmText holds "$42.50"
     // (4 alnums), never the spoken "forty two dollars".
-    this._llmPos = advanceByAlnums(this._llmText, this._llmPos, seg.originalAlnumCount);
+    this._llmPos = advanceByAlnums(this._llmScan, this._llmPos, seg.originalAlnumCount);
     // The span is spoken in full or not at all, so both cursors land together.
     this._llmSpokenPos = this._llmPos;
   }

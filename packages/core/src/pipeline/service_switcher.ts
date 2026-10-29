@@ -265,11 +265,15 @@ const INACTIVE_SERVICE_UPDATES_MAXLEN = 64;
  * `ServiceSwitcherFrame` frames and delegated to a pluggable
  * `ServiceSwitcherStrategy`.
  *
- * `ServiceUpdateSettingsFrame` is the exception to the gating. A settings
- * update addressed to a member service (`service`) reaches it whether or not
- * it is active, and one marked `reachInactiveServices` reaches every member,
- * so whichever service becomes active later is already configured. Any other
- * settings update applies to the active service alone.
+ * Two kinds of frame are exceptions to the gating. A settings update
+ * (`ServiceUpdateSettingsFrame`) addressed to a member service (`service`)
+ * reaches it whether or not it is active, and one marked
+ * `reachInactiveServices` reaches every member, so whichever service becomes
+ * active later is already configured. Any other settings update applies to
+ * the active service alone. And a `ServiceMetadataFrame` from a service
+ * outside the switcher reaches every member, so a member that reads another
+ * service's metadata has it when it becomes active. It travels on once, from
+ * the active member, as it would through that service alone.
  *
  * @example
  * const switcher = new ServiceSwitcher([stt1, stt2]);
@@ -283,6 +287,9 @@ export class ServiceSwitcher<
   // they can be consumed again on their way out. A small ring is enough: an
   // update crosses its service long before the ring wraps.
   protected _inactiveServiceUpdates: number[] = [];
+  // Ids of the metadata from outside handed to services that weren't
+  // active, consumed the same way.
+  protected _inactiveServiceMetadata: number[] = [];
   // `isUsable` is read from the services, so keep the last value announced: a
   // service changing its own doesn't always change the switcher's.
   protected _announcedUsable: boolean;
@@ -434,9 +441,10 @@ export class ServiceSwitcher<
    * all the filters let it pass, and `StartFrame` causes the service to
    * generate `ServiceMetadataFrame`.
    *
-   * Also suppresses the copies of a `ServiceUpdateSettingsFrame` handed to
-   * the inactive services, so that the update the rest of the pipeline sees
-   * is the one travelling the active service's branch.
+   * Also suppresses the copies of a `ServiceUpdateSettingsFrame` or of
+   * another service's `ServiceMetadataFrame` handed to the inactive
+   * services, so that the frame the rest of the pipeline sees is the one
+   * travelling the active service's branch.
    *
    * `ErrorFrame` instances from the services being switched between are
    * answered for here rather than travelling on, since the rest of the
@@ -462,9 +470,18 @@ export class ServiceSwitcher<
       }
     }
 
-    // Only let metadata from the active service escape.
+    // Metadata escapes from the active service's branch: its own, or another
+    // service's passing through it.
     if (frame instanceof ServiceMetadataFrame) {
-      if (frame.serviceName !== this.strategy.activeService.name) {
+      // A copy of another service's metadata, handed to an inactive service.
+      if (this._inactiveServiceMetadata.includes(frame.id)) {
+        return;
+      }
+      // An inactive service's own metadata, such as what it pushes at start.
+      if (
+        frame.serviceName !== this.strategy.activeService.name &&
+        this._services.some((service) => frame.serviceName === service.name)
+      ) {
         return;
       }
     }
@@ -551,6 +568,34 @@ export class ServiceSwitcher<
 
       if (frame instanceof ServiceUpdateSettingsFrame) {
         await this._updateInactiveServices(frame, direction);
+      } else if (frame instanceof ServiceMetadataFrame) {
+        await this._shareMetadata(frame, direction);
+      }
+    }
+  }
+
+  /**
+   * Hand metadata from a service outside the switcher to the inactive members.
+   *
+   * The active service receives it through its branch, and that frame
+   * travels on. The copies the inactive ones pass on go no further than the
+   * switcher.
+   *
+   * @param frame The metadata to hand over.
+   * @param direction The direction the metadata is travelling.
+   */
+  protected async _shareMetadata(
+    frame: ServiceMetadataFrame,
+    direction: FrameDirection,
+  ): Promise<void> {
+    for (const service of this.services) {
+      if (service !== this.strategy.activeService) {
+        const copy = copyFrame(frame);
+        this._inactiveServiceMetadata.push(copy.id);
+        if (this._inactiveServiceMetadata.length > INACTIVE_SERVICE_UPDATES_MAXLEN) {
+          this._inactiveServiceMetadata.shift();
+        }
+        await service.queueFrame(copy, direction);
       }
     }
   }
@@ -603,9 +648,18 @@ export class ServiceSwitcher<
   }
 }
 
-/** `dataclasses.replace(frame)`: a shallow copy with a fresh `id` and `name`. */
+/**
+ * `dataclasses.replace(frame)`: a shallow copy of the init fields. Re-running
+ * `Frame.__post_init__` gives it a fresh `id` and `name` and resets the
+ * fields that sets (`pts`, `broadcastSiblingId`, `metadata`, transport names).
+ */
 function copyFrame<F extends Frame>(frame: F): F {
   const clone = Object.assign(Object.create(Object.getPrototypeOf(frame)), frame) as F;
   renewFrameIdentity(clone);
+  clone.pts = null;
+  clone.broadcastSiblingId = null;
+  clone.metadata = {};
+  clone.transportSource = null;
+  clone.transportDestination = null;
   return clone;
 }

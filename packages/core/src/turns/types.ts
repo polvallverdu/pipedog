@@ -11,9 +11,16 @@
  * return nothing from `processFrame()`, and `StrategyMode` says how they combine.
  */
 
+import type { PerceptionSignal } from "../expressive/perception.ts";
+
 export interface UserTurnSpeculationOptions {
   /** The user turn text the inference was run against. */
   text: string;
+  /**
+   * How the user said it, as read at the eager end of turn, or null. Part of
+   * expressive conversation (alpha).
+   */
+  perception?: PerceptionSignal[] | null;
 }
 
 /**
@@ -24,12 +31,16 @@ export interface UserTurnSpeculationOptions {
  * until the turn is confirmed.
  *
  * - `text`: The user turn text the inference was run against.
+ * - `perception`: How the user said it, as read at the eager end of turn,
+ *   or null. Part of expressive conversation (alpha).
  */
 export class UserTurnSpeculation {
   text: string;
+  perception: PerceptionSignal[] | null;
 
   constructor(options: UserTurnSpeculationOptions) {
     this.text = options.text;
+    this.perception = options.perception ?? null;
   }
 }
 

@@ -141,6 +141,7 @@ export class JevClient {
       try {
         response = await this._http.get("/v1/models");
       } catch (e) {
+        // A broken TLS connection also comes through as an HttpError.
         if (e instanceof HttpError) {
           throw new ClassifierError(`could not connect to Jev: ${e.message}`, { cause: e });
         }
@@ -196,6 +197,8 @@ export class JevClient {
       try {
         response = await this._http.post("/v1/systemone", { json: body, headers });
       } catch (e) {
+        // HttpClient wraps every transport failure (a broken TLS connection
+        // included, upstream's OSError) in an HttpError.
         if (e instanceof HttpError) {
           // Some errors, such as a timeout, carry no useful message.
           throw new ClassifierError(`Jev request failed: ${errorRepr(e)}`, { cause: e });
