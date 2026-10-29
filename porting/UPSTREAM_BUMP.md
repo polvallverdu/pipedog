@@ -609,7 +609,7 @@ Each PR is stacked on the one before it; review and merge them in this order.
 | 4 | `@pipedog/core` modules (expressive conversation first, `llm_with_backend`, text/TTS) | `upstream-bump/core` | #102 |
 | 5 | Speech providers (Cartesia, ElevenLabs, Fish, MiniMax, Deepgram, Inworld, Smallest, Speechify, Sarvam, Google) | `upstream-bump/providers-speech` | #103 |
 | 6 | LLM and other providers (OpenAI, AWS, Azure, Perplexity, Smallest LLM, Together, Inception, evals, CLI, runner, Twilio) | `upstream-bump/providers-llm` | #104 |
-| 7 | New providers: NVIDIA LLM + Omni, Zoom AI STT, AssemblyAI TTS, Pipecat Tone | `upstream-bump/new-providers` | see the PR list on #99 |
+| 7 | New providers: NVIDIA LLM + Omni, Zoom AI STT, AssemblyAI TTS, Pipecat Tone | `upstream-bump/new-providers` | #105 |
 
 Tooling fixed along the way: `--sync-tests` no longer marks a stale test as done (#103), and the
 port workflow single-quotes the notes it records (#104).
