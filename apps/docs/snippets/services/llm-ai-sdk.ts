@@ -19,8 +19,8 @@ const llm = new AISDKLLMService({
 // #endregion usage
 
 // #region tools
-import { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import type { FunctionCallParams } from "@pipedog/core/services/llm_service";
 

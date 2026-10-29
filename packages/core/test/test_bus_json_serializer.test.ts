@@ -7,8 +7,8 @@
 /** Unit tests for JSONMessageSerializer's ToolsSchema/LLMContext adapters. */
 
 import { beforeEach, describe, expect, test } from "bun:test";
-import { FunctionSchema } from "../src/adapters/schemas/function_schema.ts";
-import { AdapterType, ToolsSchema } from "../src/adapters/schemas/tools_schema.ts";
+import { FunctionSchema } from "../src/adapters/llm/schemas/function_schema.ts";
+import { AdapterType, ToolsSchema } from "../src/adapters/llm/schemas/tools_schema.ts";
 import { BusFrameMessage } from "../src/bus/messages.ts";
 import { JSONMessageSerializer } from "../src/bus/serializers/json.ts";
 import { LLMContextFrame } from "../src/frames/frames.ts";

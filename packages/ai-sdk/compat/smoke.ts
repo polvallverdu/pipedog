@@ -6,8 +6,8 @@
 // and checks the text and the re-prompt.
 
 import { AISDKLLMService } from "@pipedog/ai-sdk";
-import { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { LLMContextFrame, LLMTextFrame } from "@pipedog/core/frames/frames";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import type { FunctionCallParams } from "@pipedog/core/services/llm_service";

@@ -17,7 +17,7 @@
  *   the docstring and type hints, are attached as direct-function metadata.
  */
 
-import { type DirectFunction, toolOptions } from "../../adapters/schemas/direct_function.ts";
+import { type DirectFunction, toolOptions } from "../../adapters/llm/schemas/direct_function.ts";
 import { JobError, JobParams } from "../../pipeline/job_context.ts";
 import type { FunctionCallParams } from "../../services/llm_service.ts";
 import { logger } from "../../utils/logger.ts";

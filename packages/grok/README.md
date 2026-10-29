@@ -2,7 +2,7 @@
 
 Grok services for pipedog: `GrokLLMService` and `GrokRealtimeLLMService`, re-exported from `@pipedog/xai/llm` and `@pipedog/xai/realtime/*`. These modules are deprecated upstream: import from `@pipedog/xai` instead. `@pipedog/grok/grok_realtime_adapter` re-exports `GrokRealtimeLLMAdapter`.
 
-A port of Pipecat's `pipecat.services.grok` and `pipecat.adapters.services.grok_realtime_adapter`. Subpaths mirror upstream: `@pipedog/grok/llm`, `/realtime/llm`, `/realtime/events`, `/grok_realtime_adapter`.
+A port of Pipecat's `pipecat.services.grok` and `pipecat.adapters.llm.services.grok_realtime_adapter`. Subpaths mirror upstream: `@pipedog/grok/llm`, `/realtime/llm`, `/realtime/events`, `/grok_realtime_adapter`.
 
 ## Install
 

@@ -4,7 +4,7 @@
 //
 // Ported from pipecat: tests/test_direct_functions.py
 
-// DIVERGENCE (see adapters/schemas/direct_function.ts): JavaScript has no
+// DIVERGENCE (see adapters/llm/schemas/direct_function.ts): JavaScript has no
 // runtime type hints or docstrings, so the descriptions and parameter types
 // upstream reads from annotations/docstrings are attached here as
 // `DirectFunctionMetadata` (`description`, `parameters`). Python `int` maps to
@@ -13,7 +13,7 @@
 // and per-parameter docstring descriptions as `description` inside them.
 
 import { describe, expect, test } from "bun:test";
-import { DirectFunctionWrapper } from "../src/adapters/schemas/direct_function.ts";
+import { DirectFunctionWrapper } from "../src/adapters/llm/schemas/direct_function.ts";
 import type { FunctionCallParams } from "../src/services/llm_service.ts";
 
 describe("TestDirectFunction", () => {

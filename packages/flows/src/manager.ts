@@ -32,9 +32,9 @@
  */
 
 import { rethrowIfCancelled, TimeoutError, waitFor } from "@pipedog/asyncio";
-import { toolOptions } from "@pipedog/core/adapters/schemas/direct_function";
-import { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { toolOptions } from "@pipedog/core/adapters/llm/schemas/direct_function";
+import { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   type Frame,
   FunctionCallResultProperties,

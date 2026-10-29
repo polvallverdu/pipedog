@@ -10,9 +10,9 @@ import { type } from "arktype";
 import * as v from "valibot";
 import { z } from "zod";
 
-import { defineTool, registerTools } from "../src/adapters/schemas/standard_tool.ts";
-import { ToolsSchema } from "../src/adapters/schemas/tools_schema.ts";
-import { OpenAILLMAdapter } from "../src/adapters/services/open_ai_adapter.ts";
+import { defineTool, registerTools } from "../src/adapters/llm/schemas/standard_tool.ts";
+import { ToolsSchema } from "../src/adapters/llm/schemas/tools_schema.ts";
+import { OpenAILLMAdapter } from "../src/adapters/llm/services/open_ai_adapter.ts";
 import { SystemClock } from "../src/clocks/system_clock.ts";
 import { FunctionCallFromLLM, FunctionCallResultFrame } from "../src/frames/frames.ts";
 import { LLMContext } from "../src/processors/aggregators/llm_context.ts";

@@ -8,7 +8,7 @@ official `openai` JS SDK (installed as a dependency), and `baseUrl` points it at
 servers.
 
 A port of Pipecat's `pipecat.services.openai` and the OpenAI adapters in
-`pipecat.adapters.services`. Subpaths mirror upstream: `@pipedog/openai/llm`, `/stt`, `/tts`,
+`pipecat.adapters.llm.services`. Subpaths mirror upstream: `@pipedog/openai/llm`, `/stt`, `/tts`,
 `/realtime/llm`, `/live/llm`, `/responses/llm`, `/image`.
 
 ## Install

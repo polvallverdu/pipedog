@@ -17,7 +17,7 @@
  * the message that reported each call running.
  */
 
-import { FunctionSchema } from "../adapters/schemas/function_schema.ts";
+import { FunctionSchema } from "../adapters/llm/schemas/function_schema.ts";
 
 export const ASYNC_TOOL_CANCELLATION_INSTRUCTIONS = `ASYNC TOOL CANCELLATION:
 Some of your tools keep running in the background after you have replied, and some of \

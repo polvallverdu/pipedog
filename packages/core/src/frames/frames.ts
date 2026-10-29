@@ -23,9 +23,9 @@
  */
 
 import { type Event, time } from "@pipedog/asyncio";
-import type { DirectFunction } from "../adapters/schemas/direct_function.ts";
-import type { FunctionSchema } from "../adapters/schemas/function_schema.ts";
-import type { ToolsSchema } from "../adapters/schemas/tools_schema.ts";
+import type { DirectFunction } from "../adapters/llm/schemas/direct_function.ts";
+import type { FunctionSchema } from "../adapters/llm/schemas/function_schema.ts";
+import type { ToolsSchema } from "../adapters/llm/schemas/tools_schema.ts";
 import { KeypadEntry } from "../audio/dtmf/types.ts";
 import type { BaseTurnParams } from "../audio/turn/base_turn_analyzer.ts";
 import type { VADParams } from "../audio/vad/vad_analyzer.ts";

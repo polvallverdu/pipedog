@@ -4,7 +4,7 @@ DeepSeek services for pipedog: `DeepSeekLLMService`, an LLM service for DeepSeek
 extends `OpenAILLMService` from [`@pipedog/openai`](https://www.npmjs.com/package/@pipedog/openai),
 so streaming, function calling, usage metrics and `runInference` work as they do there.
 
-A port of Pipecat's `pipecat.services.deepseek` and `pipecat.adapters.services.deepseek_adapter`. Subpaths mirror upstream: `@pipedog/deepseek/llm` and `@pipedog/deepseek/deepseek_adapter`.
+A port of Pipecat's `pipecat.services.deepseek` and `pipecat.adapters.llm.services.deepseek_adapter`. Subpaths mirror upstream: `@pipedog/deepseek/llm` and `@pipedog/deepseek/deepseek_adapter`.
 
 ## Install
 

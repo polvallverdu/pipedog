@@ -11,9 +11,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   type DirectFunctionWrapper,
   toolOptions,
-} from "../src/adapters/schemas/direct_function.ts";
-import { FunctionSchema } from "../src/adapters/schemas/function_schema.ts";
-import { ToolsSchema } from "../src/adapters/schemas/tools_schema.ts";
+} from "../src/adapters/llm/schemas/direct_function.ts";
+import { FunctionSchema } from "../src/adapters/llm/schemas/function_schema.ts";
+import { ToolsSchema } from "../src/adapters/llm/schemas/tools_schema.ts";
 import { SystemClock } from "../src/clocks/system_clock.ts";
 import { StartFrame } from "../src/frames/frames.ts";
 import { LLMContext } from "../src/processors/aggregators/llm_context.ts";
@@ -31,7 +31,7 @@ import { type BaseTaskManager, TaskManager } from "../src/utils/asyncio/task_man
 import { LOG_LEVELS, type LogLevel, logger } from "../src/utils/logger.ts";
 import { tool } from "../src/workers/llm/tool_decorator.ts";
 
-// DIVERGENCE (see adapters/schemas/direct_function.ts): JavaScript has no
+// DIVERGENCE (see adapters/llm/schemas/direct_function.ts): JavaScript has no
 // docstrings or runtime type hints, so direct functions carry their
 // description and parameter types as attached metadata.
 

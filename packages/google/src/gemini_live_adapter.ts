@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/gemini_live_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/gemini_live_adapter.py
 
 /** Gemini Live LLM adapter for Pipecat. */
 

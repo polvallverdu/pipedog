@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/gemini_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/gemini_adapter.py
 
 /**
  * Gemini LLM adapter for Pipecat.
@@ -25,8 +25,11 @@
 
 import type { Content, Blob as GenAIBlob, Part } from "@google/genai";
 import { rethrowIfCancelled } from "@pipedog/asyncio";
-import { BaseLLMAdapter, LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
-import { AdapterType, type ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import {
+  BaseLLMAdapter,
+  LLMContextConversionError,
+} from "@pipedog/core/adapters/llm/base_llm_adapter";
+import { AdapterType, type ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   type LLMContext,
   type LLMContextMessage,

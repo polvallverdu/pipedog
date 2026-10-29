@@ -28,9 +28,9 @@ import type {
   FunctionCallHandler,
   FunctionCallParams,
   LLMService,
-} from "../../services/llm_service.ts";
-import { logger } from "../../utils/logger.ts";
-import type { StandardJSONSchemaV1, StandardSchemaV1 } from "../../utils/standard_schema.ts";
+} from "../../../services/llm_service.ts";
+import { logger } from "../../../utils/logger.ts";
+import type { StandardJSONSchemaV1, StandardSchemaV1 } from "../../../utils/standard_schema.ts";
 import { type ToolOptions, toolOptions } from "./direct_function.ts";
 import { FunctionSchema } from "./function_schema.ts";
 

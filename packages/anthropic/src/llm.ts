@@ -37,7 +37,7 @@ import {
   TimeoutError,
   waitFor,
 } from "@pipedog/asyncio";
-import { LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
+import { LLMContextConversionError } from "@pipedog/core/adapters/llm/base_llm_adapter";
 import {
   type Frame,
   FunctionCallFromLLM,

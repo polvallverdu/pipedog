@@ -24,9 +24,9 @@
  */
 
 import { describe, expect, mock, test } from "bun:test";
-import { toolOptions } from "../src/adapters/schemas/direct_function.ts";
-import { FunctionSchema } from "../src/adapters/schemas/function_schema.ts";
-import { ToolsSchema } from "../src/adapters/schemas/tools_schema.ts";
+import { toolOptions } from "../src/adapters/llm/schemas/direct_function.ts";
+import { FunctionSchema } from "../src/adapters/llm/schemas/function_schema.ts";
+import { ToolsSchema } from "../src/adapters/llm/schemas/tools_schema.ts";
 import { LLMContext, NOT_GIVEN } from "../src/processors/aggregators/llm_context.ts";
 import type { FunctionCallParams } from "../src/services/llm_service.ts";
 
@@ -45,7 +45,7 @@ async function importOrSkip(path: string): Promise<AnyModule | null> {
 
 const MODULES = {
   openAiRealtimeAdapter: {
-    name: "pipecat.adapters.services.open_ai_realtime_adapter",
+    name: "pipecat.adapters.llm.services.open_ai_realtime_adapter",
     path: "../../openai/src/open_ai_realtime_adapter.ts",
   },
   geminiLive: {

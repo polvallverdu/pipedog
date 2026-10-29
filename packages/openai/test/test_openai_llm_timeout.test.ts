@@ -20,7 +20,7 @@
 
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { CancelledError, TimeoutError } from "@pipedog/asyncio";
-import { LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
+import { LLMContextConversionError } from "@pipedog/core/adapters/llm/base_llm_adapter";
 import {
   type Frame,
   LLMContextFrame,

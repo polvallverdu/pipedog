@@ -6,7 +6,7 @@
 // audio with the default (WASM) resampler engine, then checks that the
 // optional OpenTelemetry peer is detected exactly when it is installed.
 
-import { defineTool } from "@pipedog/core/adapters/schemas/standard_tool";
+import { defineTool } from "@pipedog/core/adapters/llm/schemas/standard_tool";
 import { createFileResampler, createStreamResampler } from "@pipedog/core/audio/utils";
 import { EndFrame, type Frame, TextFrame } from "@pipedog/core/frames/frames";
 import { TurnTrackingObserver } from "@pipedog/core/observers/turn_tracking_observer";

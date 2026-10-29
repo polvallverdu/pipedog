@@ -30,10 +30,10 @@ import {
   wait,
   waitFor,
 } from "@pipedog/asyncio";
-import type { BaseLLMAdapter } from "../adapters/base_llm_adapter.ts";
-import { DirectFunctionWrapper } from "../adapters/schemas/direct_function.ts";
-import { ToolsSchema } from "../adapters/schemas/tools_schema.ts";
-import { OpenAILLMAdapter } from "../adapters/services/open_ai_adapter.ts";
+import type { BaseLLMAdapter } from "../adapters/llm/base_llm_adapter.ts";
+import { DirectFunctionWrapper } from "../adapters/llm/schemas/direct_function.ts";
+import { ToolsSchema } from "../adapters/llm/schemas/tools_schema.ts";
+import { OpenAILLMAdapter } from "../adapters/llm/services/open_ai_adapter.ts";
 import {
   type CancelFrame,
   EagerEndOfTurnCancelFrame,

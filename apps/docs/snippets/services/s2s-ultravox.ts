@@ -4,7 +4,7 @@
 // Samples for content/docs/services/s2s/ultravox.mdx. Type-checked on every docs build.
 
 // #region usage
-import { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
+import { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
 import { LLMUpdateSettingsFrame } from "@pipedog/core/frames/frames";
 import type { FunctionCallParams } from "@pipedog/core/services/llm_service";
 import {

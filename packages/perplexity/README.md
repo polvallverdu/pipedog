@@ -4,7 +4,7 @@ Perplexity services for pipedog: `PerplexityLLMService`, an LLM service for Perp
 extends `OpenAILLMService` from [`@pipedog/openai`](https://www.npmjs.com/package/@pipedog/openai),
 so streaming, function calling, usage metrics and `runInference` work as they do there.
 
-A port of Pipecat's `pipecat.services.perplexity` and `pipecat.adapters.services.perplexity_adapter`. Subpaths mirror upstream: `@pipedog/perplexity/llm` and `@pipedog/perplexity/perplexity_adapter`.
+A port of Pipecat's `pipecat.services.perplexity` and `pipecat.adapters.llm.services.perplexity_adapter`. Subpaths mirror upstream: `@pipedog/perplexity/llm` and `@pipedog/perplexity/perplexity_adapter`.
 
 ## Install
 

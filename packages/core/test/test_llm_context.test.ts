@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { OpenAILLMAdapter } from "../src/adapters/services/open_ai_adapter.ts";
+import { OpenAILLMAdapter } from "../src/adapters/llm/services/open_ai_adapter.ts";
 import {
   LLMContext,
   type LLMContextMessage,

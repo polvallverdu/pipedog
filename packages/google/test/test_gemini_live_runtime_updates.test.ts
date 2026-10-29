@@ -11,7 +11,7 @@
  */
 
 import { afterEach, expect, spyOn, test } from "bun:test";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { type Frame, LLMSetToolsFrame } from "@pipedog/core/frames/frames";
 import { FrameDirection } from "@pipedog/core/processors/frame_processor";
 import { logger } from "@pipedog/core/utils/logger";

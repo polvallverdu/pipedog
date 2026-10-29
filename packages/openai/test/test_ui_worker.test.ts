@@ -17,7 +17,7 @@
 import { describe, expect, mock, test } from "bun:test";
 
 import { createTask, Event, sleep, type Task, waitFor } from "@pipedog/asyncio";
-import { DirectFunctionWrapper } from "@pipedog/core/adapters/schemas/direct_function";
+import { DirectFunctionWrapper } from "@pipedog/core/adapters/llm/schemas/direct_function";
 import {
   BusJobCancelMessage,
   BusJobRequestMessage,

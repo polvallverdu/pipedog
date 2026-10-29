@@ -5,8 +5,8 @@
 // Ported from pipecat: tests/flows_test_helpers.py
 
 import { expect, mock } from "bun:test";
-import type { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import type { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import type { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import type { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { EndFrame, type Frame, LLMSetToolsFrame, TTSSpeakFrame } from "@pipedog/core/frames/frames";
 import { NOT_GIVEN } from "@pipedog/core/processors/aggregators/llm_context";
 import type { FunctionCallHandler } from "@pipedog/core/services/llm_service";

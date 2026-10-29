@@ -199,8 +199,8 @@ describe("AWSBedrockLLMService ConverseStream", () => {
       toolChoice: "auto",
     });
     // Tools in the standard schema.
-    const { FunctionSchema } = await import("@pipedog/core/adapters/schemas/function_schema");
-    const { ToolsSchema } = await import("@pipedog/core/adapters/schemas/tools_schema");
+    const { FunctionSchema } = await import("@pipedog/core/adapters/llm/schemas/function_schema");
+    const { ToolsSchema } = await import("@pipedog/core/adapters/llm/schemas/tools_schema");
     context.setTools(
       new ToolsSchema({
         standardTools: [

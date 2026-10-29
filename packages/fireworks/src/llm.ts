@@ -11,7 +11,7 @@
  * `settings`).
  */
 
-import type { OpenAILLMInvocationParams } from "@pipedog/core/adapters/services/open_ai_adapter";
+import type { OpenAILLMInvocationParams } from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import { logger } from "@pipedog/core/utils/logger";
 import { type OpenAIClientOptions, OpenAILLMSettings } from "@pipedog/openai/base_llm";
 import { OpenAILLMService, type OpenAILLMServiceOptions } from "@pipedog/openai/llm";

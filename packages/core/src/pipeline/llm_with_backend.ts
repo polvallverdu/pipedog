@@ -24,7 +24,7 @@
  */
 
 import { Event, rethrowIfCancelled, type Task, TimeoutError, waitFor } from "@pipedog/asyncio";
-import { FunctionSchema } from "../adapters/schemas/function_schema.ts";
+import { FunctionSchema } from "../adapters/llm/schemas/function_schema.ts";
 import { FunctionCallResultProperties, LLMMessagesAppendFrame } from "../frames/frames.ts";
 import {
   type LLMContextMessage,

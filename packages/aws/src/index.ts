@@ -4,7 +4,7 @@
 /**
  * AWS services for pipedog. Subpaths mirror `pipecat.services.aws.*` (`/llm`, `/stt`, `/tts`,
  * `/agent_core`, `/nova_sonic/llm`, `/nova_sonic/session_continuation`,
- * `/sagemaker/bidi_client`, `/utils`) and `pipecat.adapters.services.*` (`/bedrock_adapter`,
+ * `/sagemaker/bidi_client`, `/utils`) and `pipecat.adapters.llm.services.*` (`/bedrock_adapter`,
  * `/aws_nova_sonic_adapter`). `/aws_session`, `/sigv4`, `/event_stream` and
  * `/bidirectional_stream` hold the SigV4 signing and event-stream plumbing.
  */
