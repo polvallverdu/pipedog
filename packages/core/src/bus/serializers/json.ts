@@ -35,8 +35,8 @@
  *   `init=False` fields.
  */
 
-import { FunctionSchema } from "../../adapters/schemas/function_schema.ts";
-import { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
+import { FunctionSchema } from "../../adapters/llm/schemas/function_schema.ts";
+import { ToolsSchema } from "../../adapters/llm/schemas/tools_schema.ts";
 import * as frames from "../../frames/frames.ts";
 import * as metrics from "../../metrics/metrics.ts";
 import { LLMContext, LLMSpecificMessage } from "../../processors/aggregators/llm_context.ts";
@@ -124,9 +124,9 @@ function registerDefaultTypes(): void {
     "pipecat.processors.aggregators.llm_context.LLMSpecificMessage",
     LLMSpecificMessage,
   );
-  registerSerializableType("pipecat.adapters.schemas.tools_schema.ToolsSchema", ToolsSchema);
+  registerSerializableType("pipecat.adapters.llm.schemas.tools_schema.ToolsSchema", ToolsSchema);
   registerSerializableType(
-    "pipecat.adapters.schemas.function_schema.FunctionSchema",
+    "pipecat.adapters.llm.schemas.function_schema.FunctionSchema",
     FunctionSchema,
   );
   registerSerializableType("pipecat.processors.frame_processor.FrameDirection", FrameDirection);

@@ -143,6 +143,9 @@ export class CallData {
    * @throws CallDataValidationError If a field has the wrong type.
    */
   static modelValidate<T extends CallData>(this: new () => T, data: JsonDict): T {
+    // pydantic reflection is dynamic: `this` is the concrete subclass constructor, whose
+    // static `fields` table drives validation, and fields are assigned by name below.
+    // biome-ignore lint/complexity/noThisInStatic: `this` must be the subclass (cls in a classmethod), not CallData.
     const cls = this as unknown as typeof CallData;
     if (!isRecord(data)) {
       throw new CallDataValidationError(
@@ -172,6 +175,7 @@ export class CallData {
   protected _wireDict(): JsonDict {
     const cls = this.constructor as typeof CallData;
     const out: JsonDict = {};
+    // Dynamic field access by name, mirroring pydantic's `model_dump(by_alias=True)`.
     for (const field of cls.fields) {
       out[field.alias ?? field.name] = (this as unknown as JsonDict)[field.prop];
     }

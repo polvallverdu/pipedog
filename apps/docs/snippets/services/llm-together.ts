@@ -24,6 +24,16 @@ const noThinking = new TogetherLLMService({
 });
 // #endregion reasoning
 
+// #region effort
+const lowEffort = new TogetherLLMService({
+  apiKey: process.env.TOGETHER_API_KEY ?? "",
+  settings: new TogetherLLMService.Settings({
+    model: "zai-org/GLM-5.3",
+    reasoningEffort: "low",
+  }),
+});
+// #endregion effort
+
 // #region update
 // Queue it on the worker, or push it from a processor upstream of the service.
 const update = new LLMUpdateSettingsFrame({

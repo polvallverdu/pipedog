@@ -1,0 +1,124 @@
+---
+title: TEN VAD
+description: Detect the user's voice with TEN VAD's WebAssembly build, which you obtain from TEN and pass in, as an opt-in alternative to Silero.
+---
+
+## Overview
+
+`TenVADAnalyzer` is a VAD analyzer backed by [TEN VAD](https://github.com/TEN-framework/ten-vad),
+a small voice activity detector from the TEN framework. It goes wherever a VAD analyzer goes (the
+user aggregator's `vadAnalyzer`, `VADProcessor`), in place of [Silero](/docs/concepts/turn-detection).
+This is pipedog only: upstream Pipecat has no TEN VAD.
+
+<Callout type="warn" title="TEN VAD has its own license">
+TEN VAD is licensed under Apache-2.0 **with additional conditions** (among them a non-compete
+clause regarding Agora, and that derivative works of TEN VAD stay under TEN's license). pipedog is
+BSD-2-Clause, so `@pipedog/audio-ten-vad` contains **none** of TEN's code, JavaScript glue,
+WebAssembly or model: it only calls TEN's documented WebAssembly interface. You download TEN's
+prebuilt files yourself and pass them in, and TEN's conditions apply to your use of them.
+[Read TEN VAD's license](https://github.com/TEN-framework/ten-vad/blob/main/LICENSE) before you
+ship, and consider crediting it in your app ("Powered by ten-vad").
+</Callout>
+
+<Cards>
+  <Card title="Source" href="https://github.com/polvallverdu/pipedog/tree/main/packages/audio-ten-vad/src">
+    `ten_vad.ts`.
+  </Card>
+  <Card title="TEN VAD" href="https://github.com/TEN-framework/ten-vad">
+    TEN's repository, its WebAssembly build and its license.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+bun add @pipedog/audio-ten-vad
+```
+
+```ts
+import { loadTenVadModule, TenVADAnalyzer } from "@pipedog/audio-ten-vad";
+```
+
+Then get TEN's WebAssembly build from [TEN's repository](https://github.com/TEN-framework/ten-vad):
+`lib/Web/ten_vad.js` (the Emscripten loader, whose default export is `createVADModule`) and
+`lib/Web/ten_vad.wasm`. Copy both into your app, for example as `ten-vad/`.
+
+## Runtimes
+
+<RuntimeMatrix pkg="@pipedog/audio-ten-vad" />
+
+The table covers pipedog's analyzer, which the compat test runs against a stand-in module. Whether
+TEN's `ten_vad.js` loads on a runtime is up to TEN's build (it targets browsers and web workers).
+
+## Usage
+
+`loadTenVadModule()` calls TEN's factory with the Emscripten options for where the `.wasm` comes
+from. Load it once per process and pass the promise to every analyzer: each one creates its own TEN
+VAD instance in the shared module.
+
+On **Bun, Node and Deno**, read the `.wasm` bytes:
+
+<include cwd meta='title="ten_vad.ts"'>snippets/ten_vad.ts#server</include>
+
+In **browsers**, TEN's loader can fetch `ten_vad.wasm` from next to `ten_vad.js`:
+
+<include cwd>snippets/ten_vad.ts#browser</include>
+
+On **Cloudflare Workers**, which can't compile WebAssembly from bytes, import the `.wasm` file as a
+module (Wrangler's default rule for `.wasm` gives a `WebAssembly.Module`) and pass it as
+`wasmModule`. It goes through Emscripten's `instantiateWasm` hook:
+
+<include cwd>snippets/ten_vad.ts#workers</include>
+
+Then use the analyzer like Silero:
+
+<include cwd>snippets/ten_vad.ts#pipeline</include>
+
+TEN VAD is created once the module has loaded: `await vad.ready()` waits for it, otherwise the first
+`analyzeAudio` does. After that every frame is scored synchronously. `cleanup()` destroys the
+instance and frees its memory.
+
+### 16 kHz only
+
+TEN VAD takes 16 kHz mono 16-bit audio, so the analyzer throws for any other sample rate. Run the
+transport's input at 16 kHz (`audioInSampleRate: 16000`), or resample before the VAD.
+
+## Configuration
+
+`new TenVADAnalyzer(options)`:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `module` | `TenVADModule \| Promise<TenVADModule>` | required | TEN VAD's WebAssembly module, from `loadTenVadModule()`. |
+| `hopSize` | `160 \| 256` | `256` | Samples per frame: 256 (16 ms) or 160 (10 ms), the sizes TEN VAD is optimized for. |
+| `threshold` | `number` | `0.5` | TEN's own speech-flag threshold. The analyzer uses TEN's speech **probability** as the confidence, so `params.confidence` decides what counts as speech; this only sets the flag TEN computes alongside. |
+| `sampleRate` | `number` | set later | Must be 16000. |
+| `params` | `VADParams` | `new VADParams()` | Confidence, start and stop times, and the volume gate, as for every VAD analyzer. |
+
+`loadTenVadModule(options)`:
+
+| Option | Type | Description |
+|---|---|---|
+| `factory` | `TenVADModuleFactory` | The default export of TEN's `ten_vad.js`. |
+| `wasmBinary` | `ArrayBuffer \| Uint8Array` | The `.wasm` bytes. |
+| `wasmModule` | `WebAssembly.Module` | The `.wasm` compiled ahead of time (Cloudflare Workers). |
+| `moduleOverrides` | `Record<string, unknown>` | Further Emscripten options, such as `locateFile`. |
+
+Pass `wasmBinary` or `wasmModule`, or neither to let TEN's loader find the file.
+
+## TEN VAD or Silero
+
+Both are small neural VADs; which one works better depends on your audio. In short:
+
+| | TEN VAD | Silero |
+|---|---|---|
+| Package | `@pipedog/audio-ten-vad` | `@pipedog/audio-silero` |
+| License of the model and runtime | Apache-2.0 with TEN's additional conditions | MIT |
+| Files | you obtain and pass TEN's `.js` and `.wasm` (about 300 KB) | the model ships with the package (2.3 MB) |
+| Runtime | WebAssembly | ONNX Runtime (`onnxruntime-node` or `onnxruntime-web`) |
+| Sample rates | 16 kHz | 8 and 16 kHz |
+| Frame | 10 or 16 ms | 32 ms |
+
+TEN reports lower per-frame cost and faster speech-end detection than Silero in its own
+benchmarks. Evaluate both on recordings of your own users (line quality, noise, languages) before
+switching, and tune `VADParams` for the one you pick.

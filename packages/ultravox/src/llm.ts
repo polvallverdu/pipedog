@@ -23,9 +23,9 @@
  */
 
 import { rethrowIfCancelled, type Task } from "@pipedog/asyncio";
-import type { DirectFunction } from "@pipedog/core/adapters/schemas/direct_function";
-import type { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import type { DirectFunction } from "@pipedog/core/adapters/llm/schemas/direct_function";
+import type { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { createStreamResampler } from "@pipedog/core/audio/utils";
 import {
   type CancelFrame,

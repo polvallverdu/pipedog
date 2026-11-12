@@ -30,8 +30,8 @@
  */
 
 import { currentTask, type Task } from "@pipedog/asyncio";
-import { DirectFunctionWrapper } from "../../adapters/schemas/direct_function.ts";
-import { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
+import { DirectFunctionWrapper } from "../../adapters/llm/schemas/direct_function.ts";
+import { ToolsSchema } from "../../adapters/llm/schemas/tools_schema.ts";
 import { type Frame, LLMMessagesAppendFrame, LLMSetToolsFrame } from "../../frames/frames.ts";
 import { Pipeline } from "../../pipeline/pipeline.ts";
 import { PipelineParams, PipelineWorker } from "../../pipeline/worker.ts";

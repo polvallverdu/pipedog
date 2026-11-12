@@ -376,6 +376,35 @@ describe("TestJevClient", () => {
     await client.close();
   });
 
+  test("test_a_broken_tls_connection_is_an_error", async () => {
+    const handler = (_request: MockRequest): Response => {
+      // Upstream raises ssl.SSLError("bad record mac"); fetch reports a TLS
+      // failure as a plain Error.
+      throw new Error("bad record mac");
+    };
+
+    const client = _client(handler);
+
+    const promise = client.ask("a", NOUL);
+    await expect(promise).rejects.toThrow(ClassifierError);
+    await expect(promise).rejects.toThrow(/failed/);
+    await client.close();
+  });
+
+  test("test_a_broken_tls_connection_at_connect_is_an_error", async () => {
+    const handler = (_request: MockRequest): Response => {
+      // Upstream raises ssl.SSLError("bad record mac").
+      throw new Error("bad record mac");
+    };
+
+    const client = _client(handler);
+
+    const promise = client.connect();
+    await expect(promise).rejects.toThrow(ClassifierError);
+    await expect(promise).rejects.toThrow(/could not connect/);
+    await client.close();
+  });
+
   test("test_needs_an_api_key", () => {
     expect(() => new JevClient({ apiKey: "" })).toThrow(Error);
   });

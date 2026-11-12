@@ -67,6 +67,12 @@ export type OpenAIImageQuality =
   | "standard"
   | "hd";
 
+/**
+ * Hint set for the `moderation` argument to `images.generate`, redeclared and
+ * used the same way as `OpenAIImageSize` above.
+ */
+export type OpenAIImageModeration = "low" | "auto";
+
 export interface OpenAIImageGenSettingsOptions extends ImageGenSettingsOptions {
   /** Target size for generated images. */
   imageSize?: OpenAIImageSize | (string & {}) | null | NotGiven;
@@ -76,6 +82,12 @@ export interface OpenAIImageGenSettingsOptions extends ImageGenSettingsOptions {
    * model.
    */
   quality?: OpenAIImageQuality | (string & {}) | null | NotGiven;
+  /**
+   * Content-moderation level applied to generated images, either `"low"` for
+   * less restrictive filtering or `"auto"`. `null` leaves OpenAI's default in
+   * place.
+   */
+  moderation?: OpenAIImageModeration | (string & {}) | null | NotGiven;
 }
 
 /**
@@ -86,10 +98,14 @@ export interface OpenAIImageGenSettingsOptions extends ImageGenSettingsOptions {
  * - `quality`: rendering quality for generated images. Lower tiers generate
  *   faster at the cost of detail. `null` lets OpenAI pick the best quality
  *   for the model.
+ * - `moderation`: content-moderation level applied to generated images,
+ *   either `"low"` for less restrictive filtering or `"auto"`. `null` leaves
+ *   OpenAI's default in place.
  */
 export class OpenAIImageGenSettings extends ImageGenSettings {
   imageSize: OpenAIImageSize | (string & {}) | null | NotGiven = NOT_GIVEN;
   quality: OpenAIImageQuality | (string & {}) | null | NotGiven = NOT_GIVEN;
+  moderation: OpenAIImageModeration | (string & {}) | null | NotGiven = NOT_GIVEN;
 
   constructor(options: OpenAIImageGenSettingsOptions = {}) {
     super(options);
@@ -203,6 +219,7 @@ export class OpenAIImageGenService extends ImageGenService {
       model: "gpt-image-2.5-flare",
       imageSize: null,
       quality: null,
+      moderation: null,
     });
 
     // 2. Apply settings delta (canonical API, always wins)
@@ -230,6 +247,7 @@ export class OpenAIImageGenService extends ImageGenService {
 
     const size = assertGiven(this._settings.imageSize);
     const quality = assertGiven(this._settings.quality);
+    const moderation = assertGiven(this._settings.moderation);
     const image = await abortable(
       this._client.images.generate(
         {
@@ -238,6 +256,7 @@ export class OpenAIImageGenService extends ImageGenService {
           n: 1,
           size: size as OpenAI.Images.ImageGenerateParams["size"],
           quality: quality as OpenAI.Images.ImageGenerateParams["quality"],
+          moderation: moderation as OpenAI.Images.ImageGenerateParams["moderation"],
         },
         { signal: currentSignal() },
       ),

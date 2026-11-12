@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/azure_voice_live_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/azure_voice_live_adapter.py
 
 /**
  * Azure Voice Live LLM adapter for Pipecat.
@@ -11,9 +11,9 @@
  * Azure's Voice Live API.
  */
 
-import { BaseLLMAdapter } from "@pipedog/core/adapters/base_llm_adapter";
-import type { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import type { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { BaseLLMAdapter } from "@pipedog/core/adapters/llm/base_llm_adapter";
+import type { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import type { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   type LLMContext,
   type LLMContextMessage,

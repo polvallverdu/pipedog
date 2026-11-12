@@ -15,9 +15,9 @@
  * using a service-specific adapter.
  */
 
-import type { DirectFunction } from "../../adapters/schemas/direct_function.ts";
-import { FunctionSchema } from "../../adapters/schemas/function_schema.ts";
-import { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
+import type { DirectFunction } from "../../adapters/llm/schemas/direct_function.ts";
+import { FunctionSchema } from "../../adapters/llm/schemas/function_schema.ts";
+import { ToolsSchema } from "../../adapters/llm/schemas/tools_schema.ts";
 import { pcmToWav } from "../../audio/utils.ts";
 import type { AudioRawFrame, FileSourceType } from "../../frames/frames.ts";
 import { bytesToBase64 } from "../../utils/base64.ts";

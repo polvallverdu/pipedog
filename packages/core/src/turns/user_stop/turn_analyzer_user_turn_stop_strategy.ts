@@ -24,7 +24,6 @@ import {
 import type { MetricsData } from "../../metrics/metrics.ts";
 import type { FrameProcessorSetup } from "../../processors/frame_processor.ts";
 import { logger } from "../../utils/logger.ts";
-import { ProcessFrameResult } from "../types.ts";
 import {
   BaseUserTurnStopStrategy,
   type BaseUserTurnStopStrategyOptions,
@@ -170,9 +169,8 @@ export class TurnAnalyzerUserTurnStopStrategy extends BaseUserTurnStopStrategy {
    * Process an incoming frame to update the turn analyzer and strategy state.
    *
    * @param frame The frame to be analyzed.
-   * @returns Always returns CONTINUE so subsequent stop strategies are evaluated.
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     await super.processFrame(frame);
 
     if (frame instanceof StartFrame) {
@@ -201,8 +199,6 @@ export class TurnAnalyzerUserTurnStopStrategy extends BaseUserTurnStopStrategy {
       // aggressive STT endpoint or a manually raised stop_secs.
       this._transcriptFinalized = false;
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 
   /** Process the start frame to configure the turn analyzer. */
@@ -225,7 +221,7 @@ export class TurnAnalyzerUserTurnStopStrategy extends BaseUserTurnStopStrategy {
       const [, prediction] = await this._turnAnalyzer.analyzeEndOfTurn();
       await this._handlePredictionResult(prediction);
       this._turnComplete = true;
-      await this._maybeTriggerUserTurnStopped();
+      await this._maybeReportUserTurnStopped();
     }
   }
 
@@ -291,7 +287,7 @@ export class TurnAnalyzerUserTurnStopStrategy extends BaseUserTurnStopStrategy {
     // is false) may already have satisfied the trigger conditions while the
     // analyzer was running. The analyzer's verdict is only known now, so
     // re-check here rather than wait out the safety-net timer.
-    await this._maybeTriggerUserTurnStopped();
+    await this._maybeReportUserTurnStopped();
   }
 
   /** Handle user transcription. */
@@ -301,13 +297,13 @@ export class TurnAnalyzerUserTurnStopStrategy extends BaseUserTurnStopStrategy {
     if (frame.finalized) {
       this._transcriptFinalized = true;
       // For finalized transcripts, trigger immediately if turn is complete
-      await this._maybeTriggerUserTurnStopped();
+      await this._maybeReportUserTurnStopped();
     } else if (this._timeoutExpired && this._turnComplete) {
       // The p99 timeout already elapsed without a transcript. Now that
       // we have one, trigger the turn stop immediately. This handles the
       // case where the transcript is slower to arrive than the p99 timeout,
       // trigger the user turn to stop immediately.
-      await this.triggerUserTurnStopped();
+      await this.reportUserTurnStopped();
       return;
     }
 
@@ -352,7 +348,7 @@ export class TurnAnalyzerUserTurnStopStrategy extends BaseUserTurnStopStrategy {
     }
 
     this._timeoutExpired = true;
-    await this._maybeTriggerUserTurnStopped();
+    await this._maybeReportUserTurnStopped();
   }
 
   /**
@@ -366,7 +362,7 @@ export class TurnAnalyzerUserTurnStopStrategy extends BaseUserTurnStopStrategy {
    * - When `waitForTranscript` is false: fire as soon as the turn analyzer
    *   reports COMPLETE — independent of transcripts.
    */
-  protected async _maybeTriggerUserTurnStopped(): Promise<void> {
+  protected async _maybeReportUserTurnStopped(): Promise<void> {
     if (!this._turnComplete) {
       return;
     }
@@ -377,7 +373,7 @@ export class TurnAnalyzerUserTurnStopStrategy extends BaseUserTurnStopStrategy {
         await this.taskManager.cancelTask(this._timeoutTask);
         this._timeoutTask = null;
       }
-      await this.triggerUserTurnStopped();
+      await this.reportUserTurnStopped();
       return;
     }
 
@@ -392,13 +388,13 @@ export class TurnAnalyzerUserTurnStopStrategy extends BaseUserTurnStopStrategy {
         await this.taskManager.cancelTask(this._timeoutTask);
         this._timeoutTask = null;
       }
-      await this.triggerUserTurnStopped();
+      await this.reportUserTurnStopped();
       return;
     }
 
     // For non-finalized, only trigger if timeout task has completed
     if (this._timeoutTask === null) {
-      await this.triggerUserTurnStopped();
+      await this.reportUserTurnStopped();
     }
   }
 }

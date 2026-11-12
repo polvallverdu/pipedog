@@ -15,22 +15,38 @@ import {
   TranscriptionFrame,
   UserStartedSpeakingFrame,
   UserStoppedSpeakingFrame,
+  UserTurnResponseCancelFrame,
   VADUserStartedSpeakingFrame,
   VADUserStoppedSpeakingFrame,
 } from "../frames/frames.ts";
 import { FrameDirection, type FrameProcessorSetup } from "../processors/frame_processor.ts";
 import { BaseObject } from "../utils/base_object.ts";
-import { ProcessFrameResult, type UserTurnSpeculation } from "./types.ts";
-import type { BaseUserTurnStartStrategy, UserTurnStartedParams } from "./user_start/index.ts";
+import { logger } from "../utils/logger.ts";
+import { UserTurnResumedParams, type UserTurnSpeculation } from "./types.ts";
+import { type BaseUserTurnStartStrategy, UserTurnStartedParams } from "./user_start/index.ts";
 import { type BaseUserTurnStopStrategy, UserTurnStoppedParams } from "./user_stop/index.ts";
-import type { UserTurnStrategies } from "./user_turn_strategies.ts";
+import {
+  StrategyMode,
+  type UserTurnStrategies,
+  UserTurnStrategiesParams,
+} from "./user_turn_strategies.ts";
+
+/** The inference triggered for the stop decisions made so far in a user turn. */
+const _UserTurnInference = {
+  NONE: "none",
+  TRIGGERED: "triggered",
+  SPECULATIVE: "speculative",
+} as const;
+type _UserTurnInference = (typeof _UserTurnInference)[keyof typeof _UserTurnInference];
 
 export interface UserTurnControllerOptions {
   /** Configured strategies for starting and stopping user turns. */
   userTurnStrategies: UserTurnStrategies;
+  /** How the strategies decide. Defaults to `new UserTurnStrategiesParams()`. */
+  userTurnStrategiesParams?: UserTurnStrategiesParams | null;
   /**
-   * Timeout in seconds to automatically stop a user turn if no activity is
-   * detected.
+   * Seconds without user activity before an open user turn is ended, unless a
+   * stop strategy has a decision scheduled.
    */
   userTurnStopTimeout?: number;
 }
@@ -44,18 +60,49 @@ type AnyStrategy = BaseUserTurnStartStrategy | BaseUserTurnStopStrategy;
  * stop strategies, and emits events when user turns begin, end, or timeout
  * occurs.
  *
+ * How a turn starts and ends follows the `startMode` and `stopMode` of its
+ * `UserTurnStrategiesParams`. With `StrategyMode.FIRST` the first strategy to
+ * decide starts or ends the turn. With `StrategyMode.ALL` the turn starts or
+ * ends once every strategy in the list has decided. Turns start on the first
+ * start strategy and end once every stop strategy agrees by default. A stop
+ * strategy that waits for the turn's inference gets its say in either mode:
+ * in a `FIRST` list, the first stop strategy to decide runs the inference,
+ * and the turn ends once a strategy waiting for that inference decides. A
+ * cancelled answer voids the stop decisions made on it.
+ *
+ * In an `ALL` list the controller starts the turn's inference itself, once
+ * every stop strategy that listens to the user has decided. A stop strategy
+ * that waits for the inference instead, such as one reading the LLM's
+ * turn-completion marker, then decides on that inference. An eager end of
+ * turn still starts its speculation at once.
+ *
  * Event handlers available:
  *
  * - on_user_turn_started: Emitted when a user turn starts.
  * - on_user_turn_inference_triggered: Emitted when enough signal exists to
  *   start LLM inference, carrying a `UserTurnSpeculation` when the turn it
  *   answers hasn't ended yet. Fires together with `on_user_turn_stopped` for
- *   most strategies; fires alone when a downstream strategy gates
- *   finalization on the LLM's verdict.
+ *   most strategies; fires alone when the turn's end waits for a decision on
+ *   the inference, or for an eager end of turn to be confirmed.
  * - on_user_turn_stopped: Emitted when a user turn is semantically final.
- * - on_user_turn_stop_timeout: Emitted if no stop strategy triggers before timeout.
+ * - on_user_turn_resumed: Emitted when the user starts speaking again in an
+ *   open turn, after they stopped or after the turn's inference was
+ *   triggered. Its `UserTurnResumedParams` say whether that inference was
+ *   triggered, since the new speech voids the answer it started.
+ * - on_user_turn_stop_timeout: Emitted when the stop timeout ends a user turn
+ *   its stop strategies didn't end.
+ * - on_user_turn_speculation_cancelled: Emitted when a stop strategy
+ *   withdraws its speculative inference, such as an eager end of turn whose
+ *   prediction turned out wrong.
+ * - on_reset_aggregation: Emitted when a start strategy wants the user's
+ *   aggregated text dropped, as the wake phrase strategy does for speech
+ *   before the wake phrase.
  * - on_push_frame: Emitted when a strategy wants to push a frame.
  * - on_broadcast_frame: Emitted when a strategy wants to broadcast a frame.
+ *
+ * Porting note: upstream still unwraps the deprecated
+ * `DeferredUserTurnStopStrategy` and honors the deprecated
+ * `ProcessFrameResult.STOP` in a `StrategyMode.FIRST` list; neither is ported.
  *
  * @example
  * controller.eventHandler("on_user_turn_started", async (controller, strategy, params) => { ... });
@@ -64,18 +111,29 @@ type AnyStrategy = BaseUserTurnStartStrategy | BaseUserTurnStopStrategy;
  *   async (controller, strategy, speculation) => { ... },
  * );
  * controller.eventHandler("on_user_turn_stopped", async (controller, strategy, params) => { ... });
+ * controller.eventHandler("on_user_turn_resumed", async (controller, params) => { ... });
  * controller.eventHandler("on_user_turn_stop_timeout", async (controller) => { ... });
+ * controller.eventHandler("on_user_turn_speculation_cancelled", async (controller) => { ... });
+ * controller.eventHandler("on_reset_aggregation", async (controller, strategy) => { ... });
  * controller.eventHandler("on_push_frame", async (controller, frame, direction) => { ... });
  * controller.eventHandler("on_broadcast_frame", async (controller, frameCls, options) => { ... });
  */
 export class UserTurnController extends BaseObject {
   protected _userTurnStrategies: UserTurnStrategies;
+  protected _userTurnStopStrategies: BaseUserTurnStopStrategy[];
+  protected _userTurnStrategiesParams: UserTurnStrategiesParams;
   protected _userTurnStopTimeout: number;
   protected _setup: FrameProcessorSetup | null = null;
 
   protected _userSpeaking = false;
 
   protected _userTurn = false;
+  protected _userTurnStartDecisions = new Map<BaseUserTurnStartStrategy, UserTurnStartedParams>();
+  protected _userTurnStopDecisions = new Map<BaseUserTurnStopStrategy, UserTurnStoppedParams>();
+  // The inference triggered for the stop decisions made so far, if any.
+  protected _userTurnInference: _UserTurnInference = _UserTurnInference.NONE;
+  // Whether the open turn interrupts the bot, as its start decided.
+  protected _userTurnEnableInterruptions = false;
   protected _userTurnStopTimeoutEvent = new Event();
   protected _userTurnStopTimeoutTask: Task<unknown> | null = null;
 
@@ -83,6 +141,9 @@ export class UserTurnController extends BaseObject {
     super();
 
     this._userTurnStrategies = options.userTurnStrategies;
+    this._userTurnStopStrategies = UserTurnController._stopStrategiesOf(options.userTurnStrategies);
+    this._userTurnStrategiesParams =
+      options.userTurnStrategiesParams ?? new UserTurnStrategiesParams();
     this._userTurnStopTimeout = options.userTurnStopTimeout ?? 5.0;
 
     this._registerEventHandler("on_push_frame", true);
@@ -91,10 +152,10 @@ export class UserTurnController extends BaseObject {
     this._registerEventHandler("on_user_turn_inference_triggered", true);
     this._registerEventHandler("on_user_turn_speculation_cancelled", true);
     this._registerEventHandler("on_user_turn_stopped", true);
+    this._registerEventHandler("on_user_turn_resumed", true);
     this._registerEventHandler("on_user_turn_stop_timeout", true);
     this._registerEventHandler("on_reset_aggregation", true);
   }
-
   /** The currently active user turn strategies. */
   get userTurnStrategies(): UserTurnStrategies {
     return this._userTurnStrategies;
@@ -159,6 +220,9 @@ export class UserTurnController extends BaseObject {
   async updateStrategies(strategies: UserTurnStrategies): Promise<void> {
     await this._cleanupStrategies();
     this._userTurnStrategies = strategies;
+    this._userTurnStopStrategies = UserTurnController._stopStrategiesOf(strategies);
+    this._userTurnStartDecisions.clear();
+    this._userTurnStopDecisions.clear();
     await this._setupStrategies();
   }
 
@@ -180,7 +244,7 @@ export class UserTurnController extends BaseObject {
    * The end-of-turn counterpart to `resolvesProposedTurnStartFrames`.
    */
   get resolvesProposedTurnStopFrames(): boolean {
-    return (this._userTurnStrategies.stop ?? []).some((s) => s.resolvesProposedTurnStopFrames);
+    return this._userTurnStopStrategies.some((s) => s.resolvesProposedTurnStopFrames);
   }
 
   /**
@@ -211,14 +275,19 @@ export class UserTurnController extends BaseObject {
       await this._handleTranscription(frame);
     }
 
+    // Every strategy sees every frame.
     for (const strategy of this._userTurnStrategies.start ?? []) {
-      const result = await strategy.processFrame(frame);
-      if (result === ProcessFrameResult.STOP) break;
+      await strategy.processFrame(frame);
     }
 
-    for (const strategy of this._userTurnStrategies.stop ?? []) {
-      const result = await strategy.processFrame(frame);
-      if (result === ProcessFrameResult.STOP) break;
+    for (const strategy of this._userTurnStopStrategies) {
+      await strategy.processFrame(frame);
+    }
+
+    // Handled once the stop strategies have seen it, so an inference started
+    // here is the one they then wait for.
+    if (frame instanceof UserTurnResponseCancelFrame) {
+      await this._handleUserTurnResponseCancel();
     }
   }
 
@@ -235,13 +304,28 @@ export class UserTurnController extends BaseObject {
       s.addEventHandler("on_reset_aggregation", this._onResetAggregation);
     }
 
-    for (const s of this._userTurnStrategies.stop ?? []) {
+    for (const s of this._userTurnStopStrategies) {
       await s.setup(this._setup);
       s.addEventHandler("on_push_frame", this._onPushFrame);
       s.addEventHandler("on_broadcast_frame", this._onBroadcastFrame);
       s.addEventHandler("on_user_turn_inference_triggered", this._onUserTurnInferenceTriggered);
       s.addEventHandler("on_user_turn_speculation_cancelled", this._onUserTurnSpeculationCancelled);
       s.addEventHandler("on_user_turn_stopped", this._onUserTurnStopped);
+    }
+
+    this._warnIfNoStopStrategyListensToTheUser();
+  }
+
+  protected _warnIfNoStopStrategyListensToTheUser(): void {
+    // The turn's inference runs once the stop strategies that listen to the
+    // user have decided, so with none of them only the stop timeout runs it.
+    const stopStrategies = this._userTurnStopStrategies;
+    if (stopStrategies.length > 0 && stopStrategies.every((s) => s.waitsForInference)) {
+      logger.warning(
+        `${this}: every user turn stop strategy waits for the turn's inference, so ` +
+          "nothing runs it until the user turn stop timeout. Add a stop strategy that " +
+          "detects the user stopping, such as SpeechTimeoutUserTurnStopStrategy.",
+      );
     }
   }
 
@@ -257,7 +341,7 @@ export class UserTurnController extends BaseObject {
       s.removeEventHandler("on_reset_aggregation", this._onResetAggregation);
     }
 
-    for (const s of this._userTurnStrategies.stop ?? []) {
+    for (const s of this._userTurnStopStrategies) {
       await s.cleanup();
       s.removeEventHandler("on_push_frame", this._onPushFrame);
       s.removeEventHandler("on_broadcast_frame", this._onBroadcastFrame);
@@ -273,7 +357,7 @@ export class UserTurnController extends BaseObject {
   protected async _handleUserStartedSpeaking(
     _frame: UserStartedSpeakingFrame | ProposedUserStartedSpeakingFrame,
   ): Promise<void> {
-    this._userSpeaking = true;
+    await this._handleSpeechStarted();
 
     // The user started talking, let's reset the user turn timeout.
     this._userTurnStopTimeoutEvent.set();
@@ -286,12 +370,14 @@ export class UserTurnController extends BaseObject {
 
     // The user stopped talking, let's reset the user turn timeout.
     this._userTurnStopTimeoutEvent.set();
+
+    await this._endUserTurnIfDecided();
   }
 
   protected async _handleVadUserStartedSpeaking(
     _frame: VADUserStartedSpeakingFrame,
   ): Promise<void> {
-    this._userSpeaking = true;
+    await this._handleSpeechStarted();
 
     // The user started talking, let's reset the user turn timeout.
     this._userTurnStopTimeoutEvent.set();
@@ -304,6 +390,25 @@ export class UserTurnController extends BaseObject {
 
     // The user stopped talking, let's reset the user turn timeout.
     this._userTurnStopTimeoutEvent.set();
+
+    await this._endUserTurnIfDecided();
+  }
+
+  protected async _handleSpeechStarted(): Promise<void> {
+    // Speech in an open turn clears the stop decisions made so far, and the
+    // inference triggered for them. It resumes the turn when the user had
+    // stopped, or when that inference was already triggered.
+    const resumed = this._userTurn && (!this._userSpeaking || this._userTurnInferenceTriggered);
+    const params = new UserTurnResumedParams({
+      enableInterruptions: this._userTurnEnableInterruptions,
+      inferenceTriggered: this._userTurnInferenceTriggered,
+    });
+    this._userSpeaking = true;
+    this._userTurnStopDecisions.clear();
+    this._userTurnInference = _UserTurnInference.NONE;
+    if (resumed) {
+      await this._callEventHandler("on_user_turn_resumed", params);
+    }
   }
 
   protected async _handleTranscription(
@@ -332,36 +437,47 @@ export class UserTurnController extends BaseObject {
     await this._callEventHandler("on_broadcast_frame", frameCls, options);
   };
 
-  protected _onUserTurnSpeculationCancelled = async (
-    _strategy: BaseUserTurnStopStrategy,
-  ): Promise<void> => {
-    await this._callEventHandler("on_user_turn_speculation_cancelled");
-  };
+  protected get _startMode(): StrategyMode {
+    return this._userTurnStrategiesParams.startMode;
+  }
 
   protected _onUserTurnStarted = async (
     strategy: BaseUserTurnStartStrategy,
     params: UserTurnStartedParams,
   ): Promise<void> => {
-    await this._triggerUserTurnStart(strategy, params);
-  };
-
-  protected _onUserTurnInferenceTriggered = async (
-    strategy: BaseUserTurnStopStrategy,
-    speculation: UserTurnSpeculation | null,
-  ): Promise<void> => {
-    await this._triggerUserTurnInferenceTriggered(strategy, speculation);
-  };
-
-  protected _onUserTurnStopped = async (
-    strategy: BaseUserTurnStopStrategy,
-    params: UserTurnStoppedParams,
-  ): Promise<void> => {
-    await this._triggerUserTurnStop(strategy, params);
+    if (this._startMode === StrategyMode.ALL) {
+      await this._addUserTurnStartDecision(strategy, params);
+    } else {
+      await this._triggerUserTurnStart(strategy, params);
+    }
   };
 
   protected _onResetAggregation = async (strategy: BaseUserTurnStartStrategy): Promise<void> => {
     await this._callEventHandler("on_reset_aggregation", strategy);
   };
+
+  protected async _addUserTurnStartDecision(
+    strategy: BaseUserTurnStartStrategy,
+    params: UserTurnStartedParams,
+  ): Promise<void> {
+    if (this._userTurn) return;
+
+    this._userTurnStartDecisions.set(strategy, params);
+
+    if (this._userTurnStartDecisions.size === (this._userTurnStrategies.start ?? []).length) {
+      await this._triggerUserTurnStart(strategy, this._userTurnStartParams());
+    }
+  }
+
+  protected _userTurnStartParams(): UserTurnStartedParams {
+    // One decision saying the turn shouldn't interrupt, or was announced
+    // elsewhere, applies to the whole turn.
+    const decisions = [...this._userTurnStartDecisions.values()];
+    return new UserTurnStartedParams({
+      enableInterruptions: decisions.every((d) => d.enableInterruptions),
+      enableUserSpeakingFrames: decisions.every((d) => d.enableUserSpeakingFrames),
+    });
+  }
 
   protected async _triggerUserTurnStart(
     strategy: BaseUserTurnStartStrategy | null,
@@ -371,7 +487,9 @@ export class UserTurnController extends BaseObject {
     if (this._userTurn) return;
 
     this._userTurn = true;
+    this._userTurnStartDecisions.clear();
     this._userTurnStopTimeoutEvent.set();
+    this._userTurnEnableInterruptions = params.enableInterruptions;
 
     // Notify every strategy that the turn has started. Start strategies ready
     // themselves for the next detection; stop strategies arm to detect this
@@ -380,11 +498,79 @@ export class UserTurnController extends BaseObject {
     for (const s of this._userTurnStrategies.start ?? []) {
       await s.handleUserTurnStarted();
     }
-    for (const s of this._userTurnStrategies.stop ?? []) {
+    for (const s of this._userTurnStopStrategies) {
       await s.handleUserTurnStarted();
     }
 
     await this._callEventHandler("on_user_turn_started", strategy, params);
+  }
+
+  protected get _stopMode(): StrategyMode {
+    return this._userTurnStrategiesParams.stopMode;
+  }
+
+  protected get _userTurnInferenceTriggered(): boolean {
+    return this._userTurnInference !== _UserTurnInference.NONE;
+  }
+
+  protected static _stopStrategiesOf(strategies: UserTurnStrategies): BaseUserTurnStopStrategy[] {
+    return [...(strategies.stop ?? [])];
+  }
+
+  protected _onUserTurnInferenceTriggered = async (
+    strategy: BaseUserTurnStopStrategy,
+    speculation: UserTurnSpeculation | null,
+  ): Promise<void> => {
+    // The controller runs the turn's inference itself once the stop
+    // strategies have decided. A strategy only starts one to speculate.
+    if (!speculation) return;
+
+    await this._triggerUserTurnInferenceTriggered(strategy, speculation);
+  };
+
+  protected _onUserTurnSpeculationCancelled = async (
+    _strategy: BaseUserTurnStopStrategy,
+  ): Promise<void> => {
+    await this._callEventHandler("on_user_turn_speculation_cancelled");
+    // Every strategy learns the speculation is gone, as when its service
+    // withdraws it.
+    await this.processFrame(new UserTurnResponseCancelFrame());
+  };
+
+  protected _onUserTurnStopped = async (
+    strategy: BaseUserTurnStopStrategy,
+    params: UserTurnStoppedParams,
+  ): Promise<void> => {
+    if (this._stopMode === StrategyMode.ALL) {
+      await this._addUserTurnStopDecision(strategy, params);
+    } else {
+      await this._firstUserTurnStop(strategy, params);
+    }
+  };
+
+  protected async _handleUserTurnResponseCancel(): Promise<void> {
+    // Decisions from strategies that wait for the inference were made on the
+    // cancelled answer, so they no longer hold. The other decisions still say
+    // the user is done, including one that confirmed the answer, so once
+    // they're all in, the turn's answer runs again.
+    this._userTurnInference = _UserTurnInference.NONE;
+    const kept = new Map<BaseUserTurnStopStrategy, UserTurnStoppedParams>();
+    for (const [strategy, params] of this._userTurnStopDecisions) {
+      if (!strategy.waitsForInference) {
+        kept.set(
+          strategy,
+          new UserTurnStoppedParams({
+            enableUserSpeakingFrames: params.enableUserSpeakingFrames,
+            confirmsSpeculation: false,
+          }),
+        );
+      }
+    }
+    this._userTurnStopDecisions = kept;
+    if (this._userTurnStopDecisions.size > 0 && this._readyForInference()) {
+      const first = this._userTurnStopDecisions.keys().next().value as BaseUserTurnStopStrategy;
+      await this._triggerUserTurnInferenceTriggered(first);
+    }
   }
 
   protected async _triggerUserTurnInferenceTriggered(
@@ -395,11 +581,102 @@ export class UserTurnController extends BaseObject {
     // active afterward — only `on_user_turn_stopped` flips state.
     if (!this._userTurn) return;
 
+    this._userTurnInference = speculation
+      ? _UserTurnInference.SPECULATIVE
+      : _UserTurnInference.TRIGGERED;
+
     // Re-arm the stop watchdog so a stuck turn (inference fired but
     // finalization never arrives) still times out and finalizes.
     this._userTurnStopTimeoutEvent.set();
 
     await this._callEventHandler("on_user_turn_inference_triggered", strategy, speculation);
+  }
+
+  protected async _firstUserTurnStop(
+    strategy: BaseUserTurnStopStrategy,
+    params: UserTurnStoppedParams,
+  ): Promise<void> {
+    if (!this._userTurn) return;
+
+    // The first decision runs the turn's inference and ends the turn. A stop
+    // strategy that waits for that inference still gets its say: the turn
+    // then ends on its decision instead, keeping what the earlier decisions
+    // said about the turn end.
+    this._userTurnStopDecisions.set(strategy, params);
+    if (!strategy.waitsForInference && !this._userTurnInferenceTriggered) {
+      await this._triggerUserTurnInferenceTriggered(strategy);
+    }
+    if (this._userTurnStopDecided()) {
+      await this._triggerUserTurnStop(strategy, this._userTurnStopParams());
+    }
+  }
+
+  protected async _addUserTurnStopDecision(
+    strategy: BaseUserTurnStopStrategy,
+    params: UserTurnStoppedParams,
+  ): Promise<void> {
+    // A decision counts while the user speaks, as when a service still hears
+    // them while an eager answer runs. Only the turn end waits for them to
+    // stop, and new speech clears the decisions.
+    if (!this._userTurn) return;
+
+    this._userTurnStopDecisions.set(strategy, params);
+    // The eager strategy confirms its speculation when the transcript
+    // commits. If the speculation was already withdrawn, for example because
+    // the LLM wrote ◐, there's nothing left to confirm, so it's handled like
+    // the withdrawal: the decision becomes a plain one and the committed turn
+    // gets its own inference.
+    if (params.confirmsSpeculation && this._userTurnInference !== _UserTurnInference.SPECULATIVE) {
+      await this._handleUserTurnResponseCancel();
+    }
+
+    // Once every stop strategy that listens to the user has decided, run the
+    // turn's inference. This comes before the turn-end check below, so when
+    // this decision also ends the turn, the inference still starts first.
+    if (!this._userTurnInferenceTriggered && this._readyForInference()) {
+      await this._triggerUserTurnInferenceTriggered(strategy);
+    }
+
+    if (this._userTurnStopDecided()) {
+      await this._triggerUserTurnStop(strategy, this._userTurnStopParams());
+    }
+  }
+
+  protected _userTurnStopDecided(): boolean {
+    const decided = this._userTurnStopDecisions;
+    if (this._stopMode === StrategyMode.ALL) {
+      return decided.size === this._userTurnStopStrategies.length;
+    }
+    // A FIRST list ends the turn on its first decision, or, when a stop
+    // strategy waits for the inference, on that strategy's decision.
+    const waiting = this._userTurnStopStrategies.filter((s) => s.waitsForInference);
+    return waiting.length > 0 ? waiting.some((s) => decided.has(s)) : decided.size > 0;
+  }
+
+  protected async _endUserTurnIfDecided(): Promise<void> {
+    // Decisions made while the user was speaking end the turn once they stop.
+    // New speech clears them, so they're about the speech just heard.
+    if (this._userTurnStopDecisions.size > 0 && this._userTurnStopDecided()) {
+      const strategy = [...this._userTurnStopDecisions.keys()].at(-1) ?? null;
+      await this._triggerUserTurnStop(strategy, this._userTurnStopParams());
+    }
+  }
+
+  protected _readyForInference(): boolean {
+    // Only the stop strategies that wait for the inference are left to decide.
+    return this._userTurnStopStrategies.every(
+      (s) => s.waitsForInference || this._userTurnStopDecisions.has(s),
+    );
+  }
+
+  protected _userTurnStopParams(): UserTurnStoppedParams {
+    // One decision saying the turn end was announced elsewhere, or that it
+    // confirms a speculation, applies to the whole turn.
+    const decisions = [...this._userTurnStopDecisions.values()];
+    return new UserTurnStoppedParams({
+      enableUserSpeakingFrames: decisions.every((d) => d.enableUserSpeakingFrames),
+      confirmsSpeculation: decisions.some((d) => d.confirmsSpeculation),
+    });
   }
 
   protected async _triggerUserTurnStop(
@@ -409,26 +686,24 @@ export class UserTurnController extends BaseObject {
     // Prevent two consecutive user turn stops.
     if (!this._userTurn) return;
 
-    // Never finalize while the user is audibly speaking. A stop strategy can
-    // finalize on a latent signal (e.g. an LLM ● that resolves after the user
-    // resumed), which is stale by the time it arrives. Keep the turn open so
-    // the next inference re-evaluates; the watchdog still finalizes if the
-    // user then falls silent. Detector strategies only finalize once the user
-    // has stopped, so this is a no-op for them.
+    // Never end the turn while the user is audibly speaking. The decisions
+    // stay, and the turn ends once the user stops.
     if (this._userSpeaking) return;
 
     this._userTurn = false;
+    this._userTurnStopDecisions.clear();
+    this._userTurnInference = _UserTurnInference.NONE;
     this._userTurnStopTimeoutEvent.set();
 
     // Notify every strategy that the turn has ended. Stop strategies reset
-    // (and, e.g., drop a turn analyzer's buffered speech that must not survive
-    // an externally-ended turn). Start strategies get the same callback, but
-    // it's a no-op by default: their reset is turn-start semantic, so
-    // resetting them here would be wrong.
+    // (and, e.g., drop a turn analyzer's buffered speech that must not
+    // survive an externally-ended turn). Start strategies get the same
+    // callback, but it's a no-op by default: their reset is turn-start
+    // semantic, so resetting them here would be wrong.
     for (const s of this._userTurnStrategies.start ?? []) {
       await s.handleUserTurnStopped();
     }
-    for (const s of this._userTurnStrategies.stop ?? []) {
+    for (const s of this._userTurnStopStrategies) {
       await s.handleUserTurnStopped();
     }
 
@@ -442,12 +717,14 @@ export class UserTurnController extends BaseObject {
         this._userTurnStopTimeoutEvent.clear();
       } catch (e) {
         if (!(e instanceof TimeoutError)) throw e;
-        if (this._userTurn && !this._userSpeaking) {
+        // A stop strategy with a decision of its own scheduled ends the turn
+        // when it fires, so the timeout waits for it.
+        const decisionScheduled = this._userTurnStopStrategies.some((s) => s.decisionScheduled);
+        if (this._userTurn && !this._userSpeaking && !decisionScheduled) {
           await this._callEventHandler("on_user_turn_stop_timeout");
-          await this._triggerUserTurnStop(
-            null,
-            new UserTurnStoppedParams({ enableUserSpeakingFrames: true }),
-          );
+          // The turn ends with what the decisions made so far said about it,
+          // so a confirmed speculation isn't answered a second time.
+          await this._triggerUserTurnStop(null, this._userTurnStopParams());
         }
       }
     }

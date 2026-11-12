@@ -12,7 +12,7 @@
  */
 
 import { expect, spyOn, test } from "bun:test";
-import { OPENAI_NOT_GIVEN } from "@pipedog/core/adapters/services/open_ai_adapter";
+import { OPENAI_NOT_GIVEN } from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import { MistralLLMService, type MistralLLMSettings } from "../src/llm.ts";
 
 function buildParams(settings: MistralLLMSettings | null = null): Record<string, any> {

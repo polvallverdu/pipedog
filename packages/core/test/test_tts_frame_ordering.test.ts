@@ -1050,6 +1050,49 @@ test("test_skipped_frame_flushed_when_word_timestamps_incomplete", async () => {
   expect(skipped[0]!.appendToContext).toBe(true);
 });
 
+test("test_skipped_frame_follows_the_text_frame_spoken_before_it", async () => {
+  // A pushTextFrames service queues its text behind the audio; skipped text follows it.
+  //
+  // Sequence:
+  //     AggregatedTextFrame("Hello there.", SENTENCE)  — spoken; its TTSTextFrame is queued
+  //     AggregatedTextFrame("print(1)", "code")        — skipped; released by that sentence
+  //     AggregatedTextFrame("Done.", SENTENCE)         — spoken
+  //
+  // Expected: the context reads in that order.
+  const context = new LLMContext();
+  await runTest(
+    new Pipeline([
+      new MockHttpPushTextTTSService({ skipTextTypes: ["code"] }),
+      new LLMAssistantAggregator(context),
+    ]),
+    {
+      framesToSend: [
+        new LLMFullResponseStartFrame(),
+        new AggregatedTextFrame({ text: "Hello there.", textType: TextType.SENTENCE }),
+        new AggregatedTextFrame({ text: "print(1)", textType: "code" }),
+        new AggregatedTextFrame({ text: "Done.", textType: TextType.SENTENCE }),
+        new LLMFullResponseEndFrame(),
+      ],
+    },
+  );
+
+  expect((context.messages.at(-1) as { content: unknown }).content).toEqual(
+    "Hello there. print(1) Done.",
+  );
+});
+
+// Skipped: exercises only the `text_filters` option and `MarkdownTextFilter`,
+// both deprecated upstream (1.14.0) and not ported.
+for (const service of ["MockHttpPushTextTTSService", "_MockWordTimestampHttpTTSService"]) {
+  test.skip(`test_the_context_records_the_text_as_the_llm_wrote_it[${service}]`, async () => {
+    // A filter changes what is spoken, not what the context records, whatever the service.
+    //
+    // Upstream: service(text_filters=[MarkdownTextFilter()]) followed by an
+    // LLMAssistantAggregator; LLMTextFrame("It's **fixed** now.") must reach the
+    // context as "It's **fixed** now.".
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tests: LLM text marked skipTts
 // ---------------------------------------------------------------------------
@@ -1644,22 +1687,40 @@ test("test_no_deadlock_on_zero_audio_context_completion", async () => {
   expect(fooLabels(framesReceived[0])).toContain("after_completion");
 });
 
-/** Text filter that strips all text, like a filter removing leaked reasoning tokens. */
+/** Text transform that strips all text, like one removing leaked reasoning tokens. */
+async function _stripEverything(_text: string, _textType: string): Promise<string> {
+  return "";
+}
+
+/** Deprecated text filter equivalent of `_stripEverything`. */
 class _StripEverythingFilter extends BaseTextFilter {
   override async filter(_text: string): Promise<string> {
     return "";
   }
 }
 
-test("test_filter_stripped_text_does_not_pause_frame_processing", async () => {
-  // A text filter that strips the whole utterance must not pause frame processing.
+test("test_transform_stripped_text_does_not_pause_frame_processing", async () => {
+  // A text transform that strips the whole utterance must not pause frame processing.
   //
   // No audio context is opened for the stripped text, so nothing holds the
   // frames that follow it.
   const tts = new MockWebSocketPauseTTSServiceNoAudio({
-    textFilters: [new _StripEverythingFilter()],
+    textTransforms: [["*", _stripEverything]],
   });
+  await _assertStrippedTextDoesNotPause(tts);
+});
 
+// Skipped: exercises only the `text_filters` option, deprecated upstream
+// (1.14.0) and not ported.
+test.skip("test_filter_stripped_text_does_not_pause_frame_processing", async () => {
+  // The deprecated text filters strip text the same way, with a warning.
+  const tts = new MockWebSocketPauseTTSServiceNoAudio({
+    textFilters: [new _StripEverythingFilter()],
+  } as TTSServiceOptions);
+  await _assertStrippedTextDoesNotPause(tts);
+});
+
+async function _assertStrippedTextDoesNotPause(tts: TTSService): Promise<void> {
   const framesToSend = [
     new LLMFullResponseStartFrame(),
     new TextFrame({ text: "Leaked reasoning tokens." }),
@@ -1672,6 +1733,16 @@ test("test_filter_stripped_text_does_not_pause_frame_processing", async () => {
 
   // FooFrame was not received — frame processing paused on filter-stripped text
   expect(fooLabels(framesReceived[0])).toContain("after_stripped_response");
+}
+
+// Skipped: exercises only the `text_filters` option and `MarkdownTextFilter`,
+// both deprecated upstream (1.14.0) and not ported.
+test.skip("test_filter_state_does_not_carry_into_next_reply", async () => {
+  // A code block left open by one reply must not mute the next reply.
+  //
+  // Upstream: a MockHttpTTSService recording the text passed to run_tts, with
+  // text_filters=[MarkdownTextFilter(filter_code=True)]; after a reply containing
+  // "```", the next reply "How else can I help?" must still be synthesized.
 });
 
 test("test_no_error_on_long_streaming_turn", async () => {

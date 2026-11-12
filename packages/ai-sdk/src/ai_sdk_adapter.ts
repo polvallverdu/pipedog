@@ -12,9 +12,12 @@
  */
 
 import { rethrowIfCancelled } from "@pipedog/asyncio";
-import { BaseLLMAdapter, LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
-import type { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import type { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import {
+  BaseLLMAdapter,
+  LLMContextConversionError,
+} from "@pipedog/core/adapters/llm/base_llm_adapter";
+import type { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import type { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   type LLMContext,
   type LLMContextMessage,

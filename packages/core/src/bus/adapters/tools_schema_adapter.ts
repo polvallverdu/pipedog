@@ -6,8 +6,12 @@
 
 /** Type adapter for ToolsSchema serialization. */
 
-import { FunctionSchema } from "../../adapters/schemas/function_schema.ts";
-import { AdapterType, type CustomTools, ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
+import { FunctionSchema } from "../../adapters/llm/schemas/function_schema.ts";
+import {
+  AdapterType,
+  type CustomTools,
+  ToolsSchema,
+} from "../../adapters/llm/schemas/tools_schema.ts";
 import type { Ctor } from "../../utils/mixin.ts";
 import { type DeserializeFunc, type SerializeFunc, TypeAdapter } from "./base.ts";
 

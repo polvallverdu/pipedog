@@ -6,7 +6,7 @@ universal `LLMContext` to Anthropic's message format. It uses the official `@ant
 installed as a dependency.
 
 A port of Pipecat's `pipecat.services.anthropic` and
-`pipecat.adapters.services.anthropic_adapter`. Subpaths mirror upstream:
+`pipecat.adapters.llm.services.anthropic_adapter`. Subpaths mirror upstream:
 `@pipedog/anthropic/llm` and `@pipedog/anthropic/anthropic_adapter`.
 
 ## Install

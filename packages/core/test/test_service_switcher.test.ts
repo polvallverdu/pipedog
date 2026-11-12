@@ -678,6 +678,35 @@ describe("TestServiceSwitcherMetadata", () => {
     expect(service2.metadataPushCount).toBeGreaterThanOrEqual(1);
     // Only one MockMetadataFrame should have left (from service1)
   });
+
+  /**
+   * Metadata from a service outside the switcher reaches the inactive services too.
+   *
+   * A member that reads another service's metadata then has it when it
+   * becomes active. It arrives once at each member, and travels on once,
+   * from the active member, as it would through that service alone.
+   */
+  test("test_metadata_from_outside_reaches_every_service", async () => {
+    for (const direction of [FrameDirection.DOWNSTREAM, FrameDirection.UPSTREAM]) {
+      const services = [new MockFrameProcessor("service1"), new MockFrameProcessor("service2")];
+      const switcher = new ServiceSwitcher(services);
+      const passedOn = [MockMetadataFrame];
+
+      await runTest(switcher, {
+        framesToSend: [new MockMetadataFrame({ serviceName: "tts" })],
+        framesToSendDirection: direction,
+        expectedDownFrames: direction === FrameDirection.DOWNSTREAM ? passedOn : [],
+        expectedUpFrames: direction === FrameDirection.UPSTREAM ? passedOn : [],
+      });
+
+      for (const service of services) {
+        const metadata = service.processedFrames.filter(
+          (f): f is MockMetadataFrame => f instanceof MockMetadataFrame,
+        );
+        expect(metadata.map((f) => f.serviceName)).toEqual(["tts"]);
+      }
+    }
+  });
 });
 
 describe("TestServiceSwitcherSettingsUpdates", () => {

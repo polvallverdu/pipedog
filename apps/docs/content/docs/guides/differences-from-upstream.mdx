@@ -25,7 +25,7 @@ These differences apply everywhere, not to one module. They come from the portin
 | Bytes | `bytes`. | `Uint8Array`, never `Buffer`. | `Buffer` is a Node API. Core imports no `node:*` modules except `node:async_hooks`. |
 | Filesystem | `aiofiles`, `pathlib`. | An injected reader or `fs` object (`node:fs/promises` satisfies it). | Core never imports `node:fs`. |
 | WebSocket handshake | The `websockets` package exposes the handshake response. | A standard `WebSocket` does not, so response headers and the HTTP status of a refused handshake are not available. | The standard API has no access to them. Affected services are listed below. |
-| Deprecated APIs | Kept until removal, with warnings. | Not ported: deprecated classes, aliases, parameters and fields are left out. | pipedog starts without the deprecated surface. Each module's dropped items are in its `notes` in `porting/manifest.json`. |
+| Deprecated APIs | Kept until removal, with warnings. | Not ported: deprecated classes, aliases, parameters and fields are left out. | pipedog starts without the deprecated surface. Each module's dropped items are in its `notes` in `porting/manifest.json`. Moved modules exist only at their new path: the LLM adapters are under `adapters/llm` (pipecat 1.14 keeps the old `pipecat.adapters.*` paths as deprecated shims). |
 | Pillow | Decodes and encodes images. | Built-in or injectable decoders and encoders (for example `utils/jpeg_encoder.ts`, an `imageDecoder` option). | No native dependencies. |
 | `GRPC_ENABLE_FORK_SUPPORT` | Set to false at import by the Google services. | Not set. | There is no fork in JS. |
 
@@ -43,10 +43,6 @@ These differences apply everywhere, not to one module. They come from the portin
 - **Connection limits.** Upstream's `connection_limits` returns an httpx `Limits` instance.
   `fetch` has no such object, so `connectionLimits` returns the plain options for an SDK or agent
   that reads them field by field. `packages/core/src/utils/http.ts`
-- **Markdown filter.** Upstream converts Markdown to HTML with the Python-Markdown package. Core
-  takes no runtime dependencies, so it uses a small built-in converter that follows
-  Python-Markdown's rules for common constructs. Exotic Markdown (reference links, nested lists)
-  may convert differently. `packages/core/src/utils/text/markdown_text_filter.ts`
 
 ### TTS
 
@@ -54,6 +50,17 @@ These differences apply everywhere, not to one module. They come from the portin
   `warmAudioCache()` synthesizes fixed lines ahead of time, so they play without a request to the
   provider. Off by default. See [TTS audio cache](/docs/concepts/tts-audio-cache).
   `packages/core/src/services/tts_audio_cache.ts`
+
+### Expressive conversation
+
+- **Text offsets.** The expression formatter and `SpokenExpression` count offsets in UTF-16 code
+  units (JavaScript string indices), not code points, so they differ from upstream only after an
+  astral character such as an emoji. A `[[pause N]]` tag takes ASCII digits only (Python's `\d`
+  also accepts other Unicode digits). `packages/core/src/expressive/formatter.ts`
+- **`ExpressionGuidance`.** Upstream's `StrEnum` is a class with static instances (`value`,
+  `values()`, `fromValue()`) rather than an `as const` object, so `instanceof` can still tell a
+  preset from a developer line with the same text, which upstream's `isinstance` check relies on.
+  `packages/core/src/expressive/policy.ts`
 
 ### Logging
 
@@ -112,7 +119,7 @@ These differences apply everywhere, not to one module. They come from the portin
   description and parameter types come from optional `DirectFunctionMetadata` attached to the
   function. Parameters without metadata get an any-type schema. Minified functions lose their
   parameter names, so direct functions must ship unminified.
-  `packages/core/src/adapters/schemas/direct_function.ts`
+  `packages/core/src/adapters/llm/schemas/direct_function.ts`
 - **Collected tools are unbound.** `_collectTools` returns the methods found on the prototype
   chain, not bound methods, because a bound function does not expose the source its schema is
   read from. `LLMWorker` binds each one when it registers it.
@@ -142,6 +149,12 @@ These differences apply everywhere, not to one module. They come from the portin
   bot count only if the VAD heard the user recently. Both are off by default.
   `packages/core/src/turns/user_start/min_words_user_turn_start_strategy.ts`,
   `packages/core/src/turns/user_start/backchannel.ts`
+- **A wake phrase doesn't gate a `StrategyMode.FIRST` list.** Upstream's
+  `WakePhraseUserTurnStartStrategy`, while asleep, still keeps the start strategies after it in a
+  `FIRST` list from seeing frames, through the deprecated `ProcessFrameResult.STOP`. pipedog doesn't
+  port `ProcessFrameResult`, so every strategy sees every frame: use the wake phrase strategy alone,
+  or combine it with other conditions in a `StrategyMode.ALL` list (both work the same upstream).
+  `packages/core/src/turns/user_start/wake_phrase_user_turn_start_strategy.ts`
 
 ## Providers
 
@@ -370,6 +383,9 @@ main ones, in short:
   [soundfile mixer](/docs/audio/soundfile-mixer#differences-from-upstream).
 - **Ducking** (`@pipedog/audio-ducking`) is pipedog only: an output audio filter that lowers the
   bot's voice while the user talks over it. See [Ducking](/docs/audio/ducking).
+- **TEN VAD** (`@pipedog/audio-ten-vad`) is pipedog only: `TenVADAnalyzer`, an opt-in alternative
+  to Silero that drives TEN VAD's WebAssembly build. pipedog ships none of TEN's files; you obtain
+  them from TEN, under TEN's license, and pass them in. See [TEN VAD](/docs/audio/ten-vad).
 - **Local speech models** (Whisper, Moonshine, FunASR, Kokoro, Piper, Pocket TTS) run on ONNX
   Runtime instead of the Python libraries. Each page has a Differences section, for example
   [Kokoro](/docs/services/tts/kokoro#differences-from-upstream).

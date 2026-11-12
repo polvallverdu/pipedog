@@ -9,7 +9,7 @@
 import type { Frame } from "../../frames/frames.ts";
 import { FrameDirection, type FrameProcessorSetup } from "../../processors/frame_processor.ts";
 import { BaseObject, type BaseObjectOptions } from "../../utils/base_object.ts";
-import type { ProcessFrameResult, UserTurnSpeculation } from "../types.ts";
+import type { UserTurnSpeculation } from "../types.ts";
 
 export interface UserTurnStoppedParamsOptions {
   /**
@@ -51,25 +51,12 @@ export class UserTurnStoppedParams {
 
 export interface BaseUserTurnStopStrategyOptions extends BaseObjectOptions {}
 
-export interface TriggerUserTurnStoppedOptions {
+export interface ReportUserTurnStoppedOptions {
   /**
    * Whether to emit `UserStoppedSpeakingFrame` for this turn. Pass false when
    * something else in the pipeline has already emitted it.
    */
   enableUserSpeakingFrames?: boolean | null;
-}
-
-export interface TriggerUserTurnInferenceTriggeredOptions {
-  /**
-   * Set to run this inference speculatively, against a provisional context
-   * carrying the turn text it names, for a turn that hasn't ended yet. The
-   * response it produces is held back until the turn is confirmed. Leave null
-   * to run the inference against the conversation as it stands.
-   */
-  speculation?: UserTurnSpeculation | null;
-}
-
-export interface TriggerUserTurnFinalizedOptions extends TriggerUserTurnStoppedOptions {
   /**
    * Whether a response generated ahead of this turn ending already answers
    * it, so inference should not run again.
@@ -87,20 +74,23 @@ export interface TriggerUserTurnFinalizedOptions extends TriggerUserTurnStoppedO
  * Events triggered by strategies:
  *
  *   - `on_push_frame`: Indicates the strategy wants to push a frame.
- *   - `on_user_turn_inference_triggered`: Signals that enough evidence
- *     exists to start LLM inference for the current user turn, carrying a
- *     `UserTurnSpeculation` when the turn it answers hasn't ended yet. In
- *     most cases this fires together with `on_user_turn_stopped`. Strategies
- *     that gate finalization on the LLM (e.g.
- *     `LLMTurnCompletionUserTurnStopStrategy`) fire only this event
- *     upstream and a separate strategy fires `on_user_turn_stopped` once
- *     the LLM confirms the turn is complete.
- *   - `on_user_turn_stopped`: Signals that the user turn is semantically
- *     final. Observers, transcript appenders, and UI indicators should
- *     bind this event.
+ *   - `on_broadcast_frame`: Indicates the strategy wants to broadcast a frame.
+ *   - `on_user_turn_stopped`: Reports the strategy's decision that the user
+ *     is done, from `reportUserTurnStopped()`. The turn controller combines
+ *     the stop strategies' decisions into the turn end.
+ *   - `on_user_turn_inference_triggered`: Starts a speculative inference for
+ *     a turn that hasn't ended yet, carrying a `UserTurnSpeculation`, from
+ *     `startUserTurnSpeculation()`.
+ *   - `on_user_turn_speculation_cancelled`: Withdraws that speculation, from
+ *     `cancelUserTurnSpeculation()`.
  *
  * Porting note: the deprecated `enable_user_speaking_frames` constructor
- * argument and the deprecated `reset()` hook are not ported.
+ * argument, the deprecated `reset()` hook, the deprecated `trigger_*` methods
+ * (`trigger_user_turn_stopped`, `trigger_user_turn_finalized`,
+ * `trigger_user_turn_inference_triggered`,
+ * `trigger_user_turn_speculation_cancelled`, and the override compatibility
+ * for them) and the deprecated `ProcessFrameResult` return value are not
+ * ported.
  */
 export class BaseUserTurnStopStrategy extends BaseObject {
   protected _enableUserSpeakingFrames = true;
@@ -124,6 +114,30 @@ export class BaseUserTurnStopStrategy extends BaseObject {
    * proposal for a while before deciding.
    */
   get resolvesProposedTurnStopFrames(): boolean {
+    return false;
+  }
+
+  /**
+   * Whether this strategy waits for the turn's inference before deciding.
+   *
+   * In a `StrategyMode.ALL` list, the turn's inference runs once every other
+   * stop strategy has decided, and this strategy then decides on it.
+   * Override to true in a strategy that decides from the turn's answer, such
+   * as one reading the LLM's turn-completion marker.
+   */
+  get waitsForInference(): boolean {
+    return false;
+  }
+
+  /**
+   * Whether this strategy has a decision of its own scheduled.
+   *
+   * While a stop strategy has one, the turn controller's stop timeout waits
+   * for it instead of ending the turn. Override to return true only while the
+   * strategy is sure to decide soon on its own, as when a timer of its own
+   * will fire, so a turn whose decision never comes still times out.
+   */
+  get decisionScheduled(): boolean {
     return false;
   }
 
@@ -165,12 +179,8 @@ export class BaseUserTurnStopStrategy extends BaseObject {
    * the user has stopped speaking.
    *
    * @param frame The frame to be analyzed.
-   * @returns A ProcessFrameResult indicating the outcome, or null (treated as
-   *   CONTINUE for backward compatibility).
    */
-  async processFrame(_frame: Frame): Promise<ProcessFrameResult | null> {
-    return null;
-  }
+  async processFrame(_frame: Frame): Promise<void> {}
 
   /**
    * Emit on_push_frame to push a frame using the user aggregator.
@@ -203,34 +213,18 @@ export class BaseUserTurnStopStrategy extends BaseObject {
    * reach a downstream gate *after* the turn end that follows it, and the
    * gate would release the response the withdrawal was meant to discard.
    */
-  async triggerUserTurnSpeculationCancelled(): Promise<void> {
+  async cancelUserTurnSpeculation(): Promise<void> {
     await this._callEventHandler("on_user_turn_speculation_cancelled");
   }
 
   /**
-   * Fire both `on_user_turn_inference_triggered` and `on_user_turn_stopped`.
+   * Report that the user is done, by firing `on_user_turn_stopped`.
    *
-   * Most strategies call this when they decide a turn has ended. To
-   * defer finalization to another strategy (so this strategy fires
-   * only the inference-triggered event), wrap this strategy with
-   * `deferred()` instead of changing the trigger call.
+   * A strategy calls this when it decides the user's turn has ended. The
+   * controller combines the stop strategies' decisions into the turn end, and
+   * runs the turn's inference itself once they have decided.
    */
-  async triggerUserTurnStopped(options: TriggerUserTurnStoppedOptions = {}): Promise<void> {
-    await this.triggerUserTurnInferenceTriggered();
-    await this.triggerUserTurnFinalized({
-      enableUserSpeakingFrames: options.enableUserSpeakingFrames ?? null,
-    });
-  }
-
-  /** Trigger only the `on_user_turn_inference_triggered` event. */
-  async triggerUserTurnInferenceTriggered(
-    options: TriggerUserTurnInferenceTriggeredOptions = {},
-  ): Promise<void> {
-    await this._callEventHandler("on_user_turn_inference_triggered", options.speculation ?? null);
-  }
-
-  /** Trigger only the `on_user_turn_stopped` event. */
-  async triggerUserTurnFinalized(options: TriggerUserTurnFinalizedOptions = {}): Promise<void> {
+  async reportUserTurnStopped(options: ReportUserTurnStoppedOptions = {}): Promise<void> {
     await this._callEventHandler(
       "on_user_turn_stopped",
       new UserTurnStoppedParams({
@@ -239,5 +233,20 @@ export class BaseUserTurnStopStrategy extends BaseObject {
         confirmsSpeculation: options.confirmsSpeculation ?? false,
       }),
     );
+  }
+
+  /**
+   * Start a speculative inference, by firing `on_user_turn_inference_triggered`.
+   *
+   * The controller runs a turn's inference itself once the stop strategies
+   * have decided, so a strategy only calls this to answer ahead of that, as an
+   * eager end of turn does.
+   *
+   * @param speculation The speculation to run, against a provisional context
+   *   carrying the turn text it names, for a turn that hasn't ended yet. The
+   *   speculation gate keeps its response back until the turn is confirmed.
+   */
+  async startUserTurnSpeculation(speculation: UserTurnSpeculation): Promise<void> {
+    await this._callEventHandler("on_user_turn_inference_triggered", speculation);
   }
 }

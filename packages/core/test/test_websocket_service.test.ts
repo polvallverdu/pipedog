@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 
 import * as asyncio from "@pipedog/asyncio";
-import { monotonic } from "@pipedog/asyncio";
+import { monotonic, TimeoutError } from "@pipedog/asyncio";
 
 import { ErrorFrame } from "../src/frames/frames.ts";
 import * as websocketServiceModule from "../src/services/websocket_service.ts";
@@ -19,8 +19,10 @@ import {
   type ReportErrorCallback,
   WebsocketClientConnection,
   type WebsocketConnectOptions,
+  type WebsocketData,
   WebsocketService,
   WS_CLOSE_TIMEOUT,
+  WS_SEND_TIMEOUT,
 } from "../src/services/websocket_service.ts";
 import { BaseObject } from "../src/utils/base_object.ts";
 import { logger } from "../src/utils/logger.ts";
@@ -275,6 +277,99 @@ test("test_stable_connection_resets_quick_failure_counter", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// Waiting for the server to confirm a connection
+// ---------------------------------------------------------------------------
+
+async function* _messages(
+  items: string[],
+  options: { thenHang?: boolean } = {},
+): AsyncGenerator<string, void, unknown> {
+  for (const item of items) {
+    yield item;
+  }
+  if (options.thenHang) {
+    await new asyncio.Event().wait();
+  }
+}
+
+function _confirmOn(
+  confirmation: string,
+  confirmed: asyncio.Event,
+  handled: WebsocketData[],
+): (message: WebsocketData) => Promise<void> {
+  return async (message) => {
+    handled.push(message);
+    if (message === confirmation) {
+      confirmed.set();
+    }
+  };
+}
+
+test("test_receive_until_confirmed_stops_after_confirmation", async () => {
+  // Messages up to the confirmation are handled; the rest are left for the caller.
+  const confirmed = new asyncio.Event();
+  const handled: WebsocketData[] = [];
+  const messages = _messages(["hello", "connected", "after"]);
+
+  const result = await service._receiveUntilConfirmed(
+    messages,
+    confirmed,
+    _confirmOn("connected", confirmed, handled),
+    1.0,
+  );
+
+  expect(result).toBe(true);
+  expect(handled).toEqual(["hello", "connected"]);
+  const rest: string[] = [];
+  for await (const m of messages) rest.push(m);
+  expect(rest).toEqual(["after"]);
+});
+
+test("test_receive_until_confirmed_returns_false_when_closed_first", async () => {
+  // A connection that closes before confirming returns False.
+  const confirmed = new asyncio.Event();
+  const handled: WebsocketData[] = [];
+
+  const result = await service._receiveUntilConfirmed(
+    _messages(["hello"]),
+    confirmed,
+    _confirmOn("connected", confirmed, handled),
+    1.0,
+  );
+
+  expect(result).toBe(false);
+  expect(handled).toEqual(["hello"]);
+});
+
+test("test_receive_until_confirmed_times_out_as_a_quick_failure", async () => {
+  // A missing confirmation raises ConnectionError and restarts the connection's lifetime.
+  const confirmed = new asyncio.Event();
+  service._lastConnectTime = 0.0;
+
+  await expect(
+    service._receiveUntilConfirmed(
+      _messages(["hello"], { thenHang: true }),
+      confirmed,
+      _confirmOn("connected", confirmed, []),
+      0.05,
+    ),
+  ).rejects.toThrow("did not confirm the connection");
+
+  expect(monotonic() - service._lastConnectTime).toBeLessThan(1.0);
+});
+
+test("test_receive_until_confirmed_propagates_handler_errors", async () => {
+  // An error raised while handling a message reaches the caller.
+  const reject = async (_message: WebsocketData): Promise<void> => {
+    throw new Error("rejected");
+  };
+
+  await expect(
+    service._receiveUntilConfirmed(_messages(["error"]), new asyncio.Event(), reject, 1.0),
+  ).rejects.toThrow("rejected");
+});
+
+// ---------------------------------------------------------------------------
 // Lifecycle and guards
 // ---------------------------------------------------------------------------
 
@@ -389,6 +484,8 @@ test("test_websocket_connect_forwards_arguments", async () => {
 class FakeWebSocket extends EventTarget {
   binaryType = "blob";
   readyState: number = WebSocket.OPEN;
+  url = "wss://example.test/";
+  bufferedAmount = 0;
 
   constructor(readonly closeDelay: number | null) {
     super();
@@ -414,7 +511,7 @@ class FakeWebSocket extends EventTarget {
 test("test_websocket_connect_installs_bounded_close_connection", async () => {
   // Connections are created as the class that reports an overrunning close.
   //
-  // Upstream checks the `create_connection=_BoundedCloseConnection` kwarg
+  // Upstream checks the `create_connection=_BoundedConnection` kwarg
   // passed to `websockets.connect`. Here the bounded close is built into
   // WebsocketClientConnection, which websocketConnect() always returns, so
   // the check is on the returned connection.
@@ -522,6 +619,163 @@ test.skip("test_bounded_close_against_unresponsive_peer", async () => {
     expect(logSink.getValue()).toContain("did not acknowledge the websocket close");
   } finally {
     logSink.remove();
+    server.stop(true);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Send timeout — bounding a send to a peer that has stopped reading
+// ---------------------------------------------------------------------------
+
+test("test_websocket_connect_applies_default_send_timeout", async () => {
+  // Connections get the default send timeout without the caller asking.
+  const connectMock = patchConnect();
+  try {
+    connectMock.mockResolvedValue(
+      new WebsocketClientConnection(new FakeWebSocket(0) as unknown as WebSocket),
+    );
+
+    const websocket = await service._websocketConnect("wss://example.test");
+
+    expect(websocket.sendTimeout).toEqual(WS_SEND_TIMEOUT);
+  } finally {
+    restoreConnect();
+  }
+});
+
+// @pytest.mark.parametrize("timeout", [3.5, None])
+test.each([[3.5], [null]])(
+  "test_websocket_connect_honors_send_timeout_override[%p]",
+  async (timeout: number | null) => {
+    // wsSendTimeout passed at construction reaches the connection.
+    const connectMock = patchConnect();
+    try {
+      const service = new ConcreteWebsocketService({ wsSendTimeout: timeout });
+      connectMock.mockResolvedValue(
+        new WebsocketClientConnection(new FakeWebSocket(0) as unknown as WebSocket),
+      );
+
+      const websocket = await service._websocketConnect("wss://example.test");
+
+      expect(websocket.sendTimeout).toEqual(timeout);
+    } finally {
+      restoreConnect();
+    }
+  },
+);
+
+test("test_bounded_send_passes_through_without_timeout", async () => {
+  // With no send timeout the send is awaited unchanged.
+  const ws = new FakeWebSocket(0);
+  const sent = mock((_data: unknown) => {});
+  ws.send = sent;
+  const conn = new WebsocketClientConnection(ws as unknown as WebSocket);
+  const audio = new TextEncoder().encode("audio");
+
+  await conn.send(audio);
+
+  expect(sent).toHaveBeenCalledTimes(1);
+  expect(sent).toHaveBeenCalledWith(audio);
+});
+
+test("test_bounded_send_aborts_transport_when_send_stalls", async () => {
+  // A send that outlasts the timeout drops the connection and fails as closed.
+  //
+  // The `WebSocket` API never blocks a send, so a stalled send is a write
+  // buffer that never drains; dropping the transport is closing the socket.
+  const logSink = withLogSink();
+  try {
+    const ws = new FakeWebSocket(null);
+    ws.url = "wss://stt.example.test/";
+    ws.send = () => {
+      ws.bufferedAmount = 10 * 1024 * 1024;
+    };
+    const abort = mock(() => {});
+    ws.close = abort;
+    const conn = new WebsocketClientConnection(ws as unknown as WebSocket, {
+      sendTimeout: 0.05,
+    });
+
+    await expect(conn.send(new TextEncoder().encode("audio"))).rejects.toThrow(
+      ConnectionClosedError,
+    );
+
+    expect(abort).toHaveBeenCalledTimes(1);
+    expect(abort).toHaveBeenCalledWith();
+    expect(logSink.getValue()).toContain("send to stt.example.test did not complete");
+  } finally {
+    logSink.remove();
+  }
+});
+
+test("test_bounded_send_leaves_other_timeouts_alone", async () => {
+  // A TimeoutError raised by the send itself is not mistaken for the bound expiring.
+  const ws = new FakeWebSocket(null);
+  ws.send = () => {
+    throw new TimeoutError("inner");
+  };
+  const abort = mock(() => {});
+  ws.close = abort;
+  const conn = new WebsocketClientConnection(ws as unknown as WebSocket, { sendTimeout: 5.0 });
+
+  await expect(conn.send(new TextEncoder().encode("audio"))).rejects.toThrow(
+    new TimeoutError("inner"),
+  );
+
+  expect(abort).not.toHaveBeenCalled();
+});
+
+test("test_bounded_send_against_peer_that_stops_reading", async () => {
+  // End to end: a send that cannot drain is bounded and closes the connection.
+  //
+  // Upstream pauses writes on the connection, which is what the transport does
+  // once a peer stops reading and the write buffer fills. The `WebSocket` API
+  // has no such hook, so here the peer really stops reading after the
+  // handshake and a send larger than the socket buffers fills them.
+  const decoder = new TextDecoder();
+  const server = Bun.listen<{ request: string; deaf: boolean }>({
+    hostname: "127.0.0.1",
+    port: 0,
+    socket: {
+      open(socket) {
+        socket.data = { request: "", deaf: false };
+      },
+      data(socket, chunk) {
+        if (socket.data.deaf) return;
+        socket.data.request += decoder.decode(chunk);
+        if (!socket.data.request.includes("\r\n\r\n")) return;
+        socket.data.deaf = true;
+        const key = socket.data.request
+          .split("\r\n")
+          .find((line) => line.toLowerCase().startsWith("sec-websocket-key:"))
+          ?.split(":", 2)[1]
+          ?.trim();
+        const accept = new Bun.CryptoHasher("sha1").update(key + _WS_GUID).digest("base64");
+        socket.write(
+          "HTTP/1.1 101 Switching Protocols\r\n" +
+            "Upgrade: websocket\r\nConnection: Upgrade\r\n" +
+            `Sec-WebSocket-Accept: ${accept}\r\n\r\n`,
+        );
+        // Stop reading: what is sent now stays in the socket buffers.
+        socket.pause();
+      },
+    },
+  });
+  const port = server.port;
+  const service = new ConcreteWebsocketService({ wsSendTimeout: 0.3, wsCloseTimeout: 0.1 });
+  try {
+    const websocket = await service._websocketConnect(`ws://127.0.0.1:${port}`);
+
+    const started = monotonic();
+    await expect(websocket.send(new Uint8Array(64 * 1024 * 1024))).rejects.toThrow(
+      ConnectionClosedError,
+    );
+    const elapsed = monotonic() - started;
+
+    expect(elapsed).toBeGreaterThanOrEqual(0.3);
+    expect(elapsed).toBeLessThan(3.0);
+    expect(websocket.closeCode).toEqual(1006);
+  } finally {
     server.stop(true);
   }
 });

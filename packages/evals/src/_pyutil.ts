@@ -50,7 +50,7 @@ export function sha256Hex(data: Uint8Array | string): string {
       const s1 = rotr(b, 17) ^ rotr(b, 19) ^ (b >>> 10);
       w[i] = ((w[i - 16] as number) + s0 + (w[i - 7] as number) + s1) >>> 0;
     }
-    let [a, b, c, d, e, f, g, hh] = h as unknown as number[] as [
+    let [a, b, c, d, e, f, g, hh] = Array.from(h) as [
       number,
       number,
       number,
@@ -150,4 +150,35 @@ export function formatFixed2(value: number): string {
     return (even / 100).toFixed(2);
   }
   return value.toFixed(2);
+}
+
+/**
+ * Python's `re.compile(pattern)` for a `re.search`, as a JS `RegExp`.
+ *
+ * DIVERGENCE: JS regexes are not Python's. The common Python-only syntax is
+ * rewritten: named groups `(?P<name>...)` and backreferences `(?P=name)`, the
+ * anchors `\A` and `\Z`, and global inline flags (`(?i)`, `(?s)`, `(?m)`,
+ * `(?x)` is not supported) at the head of the pattern. Anything else is
+ * compiled as JS reads it, and an invalid pattern throws a `SyntaxError`.
+ */
+export function pyRegExp(pattern: string): RegExp {
+  let source = pattern;
+  let flags = "";
+  const head = /^\(\?([aiLmsux]+)\)/.exec(source);
+  if (head) {
+    for (const flag of head[1]!) {
+      if (flag === "i" || flag === "m" || flag === "s") {
+        if (!flags.includes(flag)) flags += flag;
+      } else if (flag === "x") {
+        throw new SyntaxError("verbose flag (?x) is not supported");
+      }
+    }
+    source = source.slice(head[0].length);
+  }
+  source = source
+    .replace(/\(\?P<([A-Za-z_]\w*)>/g, "(?<$1>")
+    .replace(/\(\?P=([A-Za-z_]\w*)\)/g, "\\k<$1>")
+    .replace(/(^|[^\\])((?:\\\\)*)\\A/g, "$1$2^")
+    .replace(/(^|[^\\])((?:\\\\)*)\\Z/g, "$1$2$");
+  return new RegExp(source, flags);
 }

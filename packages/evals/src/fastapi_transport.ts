@@ -45,6 +45,8 @@ import type { EvalTransportParams } from "./transport.ts";
  *
  * A vision bot asks for the user's camera image; under eval there is no
  * camera, so the image the harness registered for the turn is served instead.
+ * With no image registered, the request is answered with an error, so the
+ * function call that made it still finishes.
  */
 export class EvalFastAPIWebsocketInputTransport extends FastAPIWebsocketInputTransport {
   /** Serve image requests; otherwise behave like the base input transport. */
@@ -62,10 +64,10 @@ export class EvalFastAPIWebsocketInputTransport extends FastAPIWebsocketInputTra
       image = await serializer.userImageFrame(request);
     }
     if (image === null) {
-      logger.warning(`${this}: UserImageRequestFrame but no eval image registered`);
-      return;
+      await this._answerImageRequests([request], "No user image is registered.");
+    } else {
+      await this.pushFrame(image);
     }
-    await this.pushFrame(image);
   }
 }
 

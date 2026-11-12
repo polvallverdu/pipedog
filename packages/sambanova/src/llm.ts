@@ -16,7 +16,7 @@
  */
 
 import { abortable, rethrowIfCancelled } from "@pipedog/asyncio";
-import type { OpenAILLMInvocationParams } from "@pipedog/core/adapters/services/open_ai_adapter";
+import type { OpenAILLMInvocationParams } from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import { FunctionCallFromLLM } from "@pipedog/core/frames/frames";
 import { LLMTokenUsage } from "@pipedog/core/metrics/metrics";
 import type { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";

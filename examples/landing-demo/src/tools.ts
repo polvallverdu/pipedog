@@ -8,7 +8,7 @@
 // (each is capped at MAX_RESULT_CHARS).
 
 import { rethrowIfCancelled } from "@pipedog/asyncio";
-import { defineTool, type ToolDefinition } from "@pipedog/core/adapters/schemas/standard_tool";
+import { defineTool, type ToolDefinition } from "@pipedog/core/adapters/llm/schemas/standard_tool";
 import { FunctionCallResultProperties } from "@pipedog/core/frames/frames";
 import { z } from "zod";
 

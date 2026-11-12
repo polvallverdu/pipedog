@@ -524,6 +524,70 @@ describe("TestForeignFlushProbes", () => {
     expect(flushed).toBe(true);
     expect(bystanderProbes).toEqual(new Map());
   });
+
+  test("test_the_worker_answering_a_probe_lets_go_of_it_once_settled", async () => {
+    // Each leg of the trip is a new frame, all of them under one flush id.
+    //
+    // A holder that kept the probe would go on reporting progress on a flush
+    // that is over.
+
+    // Leaves the probe for the holder to answer.
+    const origin = new PipelineWorker(new Pipeline([new IdentityFilter()]), {
+      name: "origin",
+      bridged: [],
+      cancelOnIdleTimeout: false,
+    });
+    const holder = new PipelineWorker(
+      new Pipeline([new BusBridgeProcessor({ bus, workerName: "holder" }), new IdentityFilter()]),
+      { name: "holder", cancelOnIdleTimeout: false },
+    );
+
+    const tracked: number[] = [];
+    const trackFlushProbe = holder.trackFlushProbe.bind(holder);
+
+    holder.trackFlushProbe = (frame) => {
+      tracked.push(frame.flushId);
+      trackFlushProbe(frame);
+    };
+
+    const workers = [origin, holder];
+    const runner = new WorkerRunner({ bus, handleSigint: false });
+    await runner.addWorkers(...workers);
+
+    const running = workers.map(() => new Event());
+
+    workers.forEach((worker, i) => {
+      const event = running[i]!;
+      worker.eventHandler("on_pipeline_started", (_worker: PipelineWorker, _frame: Frame) =>
+        event.set(),
+      );
+    });
+
+    let flushed: boolean | null = null;
+    let holderProbes: Map<number, string> | null = null;
+
+    const drive = async () => {
+      await gather(...running.map((event) => () => event.wait()));
+      flushed = await origin.flushPipeline(1.0);
+      holderProbes = new Map(internals(holder)._foreignProbes);
+      for (const worker of workers) {
+        await worker.queueFrame(new EndFrame());
+      }
+    };
+
+    await waitFor(
+      () =>
+        gather(
+          () => runner.run(),
+          () => drive(),
+        ),
+      10.0,
+    );
+
+    expect(flushed).toBe(true);
+    expect(new Set(tracked).size).toEqual(1);
+    expect(holderProbes).toEqual(new Map());
+  });
 });
 
 describe("TestPipelineWorkerLifecycle", () => {

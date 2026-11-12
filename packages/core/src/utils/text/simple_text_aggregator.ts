@@ -13,6 +13,7 @@
  */
 
 import { matchEndofsentence, SENTENCE_ENDING_PUNCTUATION } from "../string.ts";
+import { isAlnum, isSpace } from "./alnum_utils.ts";
 import {
   Aggregation,
   BaseTextAggregator,
@@ -38,19 +39,6 @@ const _LookaheadState = {
   IN_WORD: 4,
 } as const;
 type _LookaheadState = (typeof _LookaheadState)[keyof typeof _LookaheadState];
-
-const SPACE_RE = /^\s+$/u;
-const ALNUM_RE = /^[\p{L}\p{N}]+$/u;
-
-/** Python `str.isspace()` for a single character. */
-function isSpace(char: string): boolean {
-  return SPACE_RE.test(char);
-}
-
-/** Python `str.isalnum()` for a single character. */
-function isAlnum(char: string): boolean {
-  return ALNUM_RE.test(char);
-}
 
 /** Python `str.strip(" ")`: strip only ASCII spaces. */
 export function _stripSpaces(text: string): string {
@@ -151,9 +139,17 @@ export class SimpleTextAggregator extends BaseTextAggregator {
    * Subclasses can call this via super for tag or pattern handling.
    *
    * @param char The character just appended to the aggregation buffer.
+   * @param options.protectedEnd Buffer offset before which no sentence boundary is
+   *   accepted. Subclasses pass the end of the last closed tag or
+   *   pattern, so punctuation inside it (`<spell>St. Louis</spell>`)
+   *   never splits the text.
    * @returns Aggregation if a sentence boundary is confirmed, otherwise null.
    */
-  protected async _checkSentenceWithLookahead(char: string): Promise<Aggregation | null> {
+  protected async _checkSentenceWithLookahead(
+    char: string,
+    options: { protectedEnd?: number } = {},
+  ): Promise<Aggregation | null> {
+    const protectedEnd = options.protectedEnd ?? 0;
     const isPunctuation = SENTENCE_ENDING_PUNCTUATION.has(char);
     let result: Aggregation | null = null;
 
@@ -163,7 +159,16 @@ export class SimpleTextAggregator extends BaseTextAggregator {
       // For "...I. Did?", check "...I. Did" for the earlier boundary.
       // Including "?" could make the terminal-punctuation fallback accept
       // the whole buffer. This temporary slice does not discard the "?".
-      const candidate = isPunctuation ? this._text.slice(0, -char.length) : this._text;
+      let candidate = isPunctuation ? this._text.slice(0, -char.length) : this._text;
+      if (protectedEnd) {
+        // Blank out punctuation up to protectedEnd with equal-width
+        // spaces, so boundary offsets still refer to this._text.
+        let protectedText = "";
+        for (const c of candidate.slice(0, protectedEnd)) {
+          protectedText += SENTENCE_ENDING_PUNCTUATION.has(c) ? " ".repeat(c.length) : c;
+        }
+        candidate = protectedText + candidate.slice(protectedEnd);
+      }
       const eosMarker = matchEndofsentence(candidate, { language: this.language });
       if (eosMarker) {
         result = new Aggregation({

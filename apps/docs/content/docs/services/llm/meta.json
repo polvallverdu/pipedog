@@ -13,6 +13,8 @@
     "langchain",
     "ai-sdk",
     "cloudflare",
+    "perplexity",
+    "nvidia",
     "baseten",
     "cerebras",
     "crusoe",
@@ -25,13 +27,11 @@
     "novita",
     "ollama",
     "openrouter",
-    "perplexity",
     "qwen",
     "sambanova",
     "sarvam",
+    "smallest",
     "together",
-    "grok",
-    "---Coming soon---",
-    "nvidia"
+    "grok"
   ]
 }

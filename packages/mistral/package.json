@@ -51,7 +51,7 @@
       "workerd"
     ],
     "upstream": [
-      "src/pipecat/adapters/services/mistral_adapter.py",
+      "src/pipecat/adapters/llm/services/mistral_adapter.py",
       "src/pipecat/services/mistral"
     ]
   }

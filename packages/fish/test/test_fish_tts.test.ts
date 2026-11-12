@@ -8,7 +8,9 @@
 
 import { describe, expect, test } from "bun:test";
 import { decode, encode } from "@msgpack/msgpack";
+import { BaseExpressionAdapter } from "@pipedog/core/adapters/tts/base_expression_adapter";
 import { NOT_GIVEN } from "@pipedog/core/utils/types";
+import { FishAudioS2ExpressionAdapter } from "../src/fish_adapter.ts";
 import { FishAudioTTSService } from "../src/tts.ts";
 
 // Tests reach into protected members.
@@ -162,5 +164,77 @@ describe("TestFishAudioTTS", () => {
     await service._receiveMessages();
 
     expect(appended.map((a) => Array.from(a))).toEqual(chunks.map((c) => Array.from(c)));
+  });
+});
+
+describe("TestS2ExpressionAdapter", () => {
+  test("test_capabilities", () => {
+    const capabilities = new FishAudioS2ExpressionAdapter().capabilities();
+    expect(capabilities.allowsFreeText).toBeTruthy();
+    expect(capabilities.emphasis).toBeTruthy();
+    expect(capabilities.sounds.map((term) => term.name)).toContain("laughing");
+    // A delivery tag separates its names by spaces.
+    expect(
+      capabilities.delivery.every((term) => term.name.split(/\s+/).filter(Boolean).length === 1),
+    ).toBe(true);
+  });
+
+  test("test_slow_and_fast_are_written_as_speaking_tags", () => {
+    const adapter = new FishAudioS2ExpressionAdapter();
+    const names = new Set(adapter.capabilities().delivery.map((term) => term.name));
+    expect(names.has("slow") && names.has("fast")).toBe(true);
+    expect(adapter.formatText("Hi.", ["calm", "slow"], null)).toBe("[calm][speaking slowly] Hi.");
+    expect(adapter.formatText("Hi.", ["fast"], null)).toBe("[speaking quickly] Hi.");
+  });
+
+  test("test_a_pace_is_set_back_where_a_speed_delivery_ends", () => {
+    const adapter = new FishAudioS2ExpressionAdapter();
+    // Within a request, the words after the slow ones set the pace back...
+    expect(adapter.formatText(", thanks.", ["calm"], ["calm", "slow"])).toBe(
+      "[normal pace][calm] , thanks.",
+    );
+    // ...and a request that ends slow sets it back at its end.
+    expect(adapter.formatEnd(["calm", "slow"])).toBe(" [normal pace]");
+    expect(adapter.formatEnd(["calm"])).toBe("");
+  });
+
+  test("test_tags_where_delivery_changes", () => {
+    const adapter = new FishAudioS2ExpressionAdapter();
+    expect(adapter.formatText("Hi.", ["excited"], null)).toBe("[excited] Hi.");
+    expect(adapter.formatText("Hi.", ["excited"], ["excited"])).toBe("Hi.");
+    expect(adapter.formatText("Hi.", ["sad", "whispering"], null)).toBe("[sad][whispering] Hi.");
+  });
+
+  test("test_return_to_baseline_writes_no_tag", () => {
+    // Fish reads a [neutral] tag as a delivery of its own.
+    expect(new FishAudioS2ExpressionAdapter().formatText("Hi.", [], ["excited"])).toBe("Hi.");
+  });
+
+  test("test_emphasis", () => {
+    const adapter = new FishAudioS2ExpressionAdapter();
+    expect(adapter.formatText("now", ["emphasis"], null)).toBe("[emphasis] now");
+    expect(adapter.formatText("now", ["excited", "emphasis"], ["excited"])).toBe("[emphasis] now");
+  });
+
+  test("test_sounds_and_pauses", () => {
+    const adapter = new FishAudioS2ExpressionAdapter();
+    expect(adapter.formatSound("clear throat")).toBe("[clear throat]");
+    expect(adapter.formatPause(600)).toBe("[break]");
+    expect(adapter.formatPause(1200)).toBe("[long-break]");
+  });
+});
+
+describe("test_expression_adapter_follows_the_model", () => {
+  test.each([
+    ["s2.1-pro", FishAudioS2ExpressionAdapter],
+    ["s2-pro", FishAudioS2ExpressionAdapter],
+    ["s1", BaseExpressionAdapter],
+    ["drama-3", BaseExpressionAdapter],
+  ] as const)("test_expression_adapter_follows_the_model[%s]", (model, adapter) => {
+    const service = new FishAudioTTSService({
+      apiKey: "key",
+      settings: new FishAudioTTSService.Settings({ model }),
+    });
+    expect(service.getExpressionAdapter().constructor).toBe(adapter);
   });
 });

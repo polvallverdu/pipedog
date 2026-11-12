@@ -10,7 +10,7 @@ import { SpeechifyHttpTTSService } from "@pipedog/speechify/tts";
 const tts = new SpeechifyHttpTTSService({
   apiKey: process.env.SPEECHIFY_API_KEY ?? "",
   settings: new SpeechifyHttpTTSService.Settings({
-    model: "simba-3.2",
+    model: "simba-3.5",
     voice: "geffen_32",
     textNormalization: true,
   }),

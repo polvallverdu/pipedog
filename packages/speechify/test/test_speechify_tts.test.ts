@@ -356,7 +356,7 @@ describe("TestSpeechifyHttpTTSService", () => {
         expect(payload).toEqual({
           input: TEXT,
           voice_id: "geffen_32",
-          model: "simba-3.2",
+          model: "simba-3.5",
           output_format: "pcm_24000",
           language: "en-US",
           options: { text_normalization: true },

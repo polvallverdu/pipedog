@@ -91,6 +91,36 @@ class CaptureProcessor extends FrameProcessor {
   }
 }
 
+interface _CancelInProgressFrameOptions {
+  target?: Frame | null;
+}
+
+/** Asks the processor to cancel `target` if it is the frame in progress. */
+class _CancelInProgressFrame extends SystemFrame {
+  target: Frame | null;
+
+  constructor(options: _CancelInProgressFrameOptions = {}) {
+    super(options);
+    this.target = options.target ?? null;
+  }
+}
+
+/** Takes 0.4s over every non-system frame, and records what each cancel request did. */
+class _CancelInProgressProcessor extends FrameProcessor {
+  cancelled: boolean[] = [];
+
+  override async processFrame(frame: Frame, direction: FrameDirection): Promise<void> {
+    await super.processFrame(frame, direction);
+    if (frame instanceof _CancelInProgressFrame) {
+      expect(frame.target).not.toBeNull();
+      this.cancelled.push(await this._cancelFrameInProgress(frame.target as Frame));
+    } else if (!(frame instanceof SystemFrame)) {
+      await sleep(0.4);
+    }
+    await this.pushFrame(frame, direction);
+  }
+}
+
 describe("TestFrameProcessor", () => {
   test("test_before_after_events", async () => {
     const identity = new IdentityFilter();
@@ -250,6 +280,58 @@ describe("TestFrameProcessor", () => {
       framesToSend,
       expectedDownFrames,
     });
+  });
+
+  test("test_cancel_frame_in_progress_keeps_the_queue", async () => {
+    const processor = new _CancelInProgressProcessor();
+    const inProgress = new TextFrame({ text: "in progress" });
+    const framesToSend = [
+      inProgress,
+      new SleepFrame({ sleep: 0.1 }),
+      new TextFrame({ text: "queued" }),
+      new _CancelInProgressFrame({ target: inProgress }),
+    ];
+    const [down] = await runTest(processor, {
+      framesToSend,
+      expectedDownFrames: [_CancelInProgressFrame, TextFrame],
+    });
+    expect(processor.cancelled).toEqual([true]);
+    expect((down[down.length - 1] as TextFrame).text).toBe("queued");
+  });
+
+  test("test_cancel_frame_in_progress_leaves_other_frames_alone", async () => {
+    const processor = new _CancelInProgressProcessor();
+    const queued = new TextFrame({ text: "queued" });
+    const framesToSend = [
+      new TextFrame({ text: "in progress" }),
+      new SleepFrame({ sleep: 0.1 }),
+      queued,
+      new _CancelInProgressFrame({ target: queued }),
+    ];
+    const [down] = await runTest(processor, {
+      framesToSend,
+      expectedDownFrames: [_CancelInProgressFrame, TextFrame, TextFrame],
+    });
+    expect(processor.cancelled).toEqual([false]);
+    expect(down.slice(1).map((f) => (f as TextFrame).text)).toEqual(["in progress", "queued"]);
+  });
+
+  test("test_an_interruption_after_cancel_frame_in_progress_still_interrupts", async () => {
+    const processor = new _CancelInProgressProcessor();
+    const inProgress = new TextFrame({ text: "in progress" });
+    const framesToSend = [
+      inProgress,
+      new SleepFrame({ sleep: 0.1 }),
+      new _CancelInProgressFrame({ target: inProgress }),
+      new TextFrame({ text: "next" }),
+      new SleepFrame({ sleep: 0.1 }),
+      new InterruptionFrame(),
+    ];
+    await runTest(processor, {
+      framesToSend,
+      expectedDownFrames: [_CancelInProgressFrame, InterruptionFrame],
+    });
+    expect(processor.cancelled).toEqual([true]);
   });
 
   test("test_interruptible_flag_decides_for_a_frame", async () => {

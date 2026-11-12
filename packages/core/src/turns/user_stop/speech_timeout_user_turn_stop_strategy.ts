@@ -18,7 +18,6 @@ import {
 } from "../../frames/frames.ts";
 import type { FrameProcessorSetup } from "../../processors/frame_processor.ts";
 import { logger } from "../../utils/logger.ts";
-import { ProcessFrameResult } from "../types.ts";
 import {
   BaseUserTurnStopStrategy,
   type BaseUserTurnStopStrategyOptions,
@@ -161,9 +160,8 @@ export class SpeechTimeoutUserTurnStopStrategy extends BaseUserTurnStopStrategy 
    * will be triggered when appropriate based on the collected frames.
    *
    * @param frame The frame to be analyzed.
-   * @returns Always returns CONTINUE so subsequent stop strategies are evaluated.
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     if (frame instanceof STTMetadataFrame) {
       this._sttTimeout = frame.ttfsP99Latency;
       this._stopSecsWarned = false;
@@ -188,8 +186,6 @@ export class SpeechTimeoutUserTurnStopStrategy extends BaseUserTurnStopStrategy 
       // STT endpoint or a manually raised stop_secs.
       this._transcriptFinalized = false;
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 
   /** Handle when the VAD indicates the user is speaking. */
@@ -267,7 +263,7 @@ export class SpeechTimeoutUserTurnStopStrategy extends BaseUserTurnStopStrategy 
     // If both waits are already done, the turn was waiting on text —
     // trigger now.
     if (this._userSpeechWaitDone && this._sttWaitDone) {
-      await this._maybeTriggerUserTurnStopped();
+      await this._maybeReportUserTurnStopped();
       return;
     }
 
@@ -310,7 +306,7 @@ export class SpeechTimeoutUserTurnStopStrategy extends BaseUserTurnStopStrategy 
     }
 
     this._userSpeechWaitDone = true;
-    await this._maybeTriggerUserTurnStopped();
+    await this._maybeReportUserTurnStopped();
   }
 
   /**
@@ -329,7 +325,7 @@ export class SpeechTimeoutUserTurnStopStrategy extends BaseUserTurnStopStrategy 
     }
 
     this._sttWaitDone = true;
-    await this._maybeTriggerUserTurnStopped();
+    await this._maybeReportUserTurnStopped();
   }
 
   /**
@@ -341,7 +337,7 @@ export class SpeechTimeoutUserTurnStopStrategy extends BaseUserTurnStopStrategy 
    * `waitForTranscript` is true — at least one transcript must have been
    * received.
    */
-  protected async _maybeTriggerUserTurnStopped(): Promise<void> {
+  protected async _maybeReportUserTurnStopped(): Promise<void> {
     if (this._vadUserSpeaking) {
       return;
     }
@@ -351,7 +347,7 @@ export class SpeechTimeoutUserTurnStopStrategy extends BaseUserTurnStopStrategy 
     }
 
     if (this._userSpeechWaitDone && this._sttWaitDone) {
-      await this.triggerUserTurnStopped();
+      await this.reportUserTurnStopped();
     }
   }
 

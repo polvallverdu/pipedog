@@ -1,0 +1,61 @@
+{
+  "name": "@pipedog/tone",
+  "version": "0.10.0",
+  "description": "Pipecat Tone's models for pipedog: the reader and tagger ONNX models, running locally through @pipedog/onnx.",
+  "keywords": [
+    "pipecat",
+    "pipedog",
+    "voice-ai",
+    "conversational-ai",
+    "realtime",
+    "tone",
+    "emotion",
+    "onnx"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polvallverdu/pipedog.git",
+    "directory": "packages/tone"
+  },
+  "homepage": "https://github.com/polvallverdu/pipedog/tree/main/packages/tone#readme",
+  "bugs": {
+    "url": "https://github.com/polvallverdu/pipedog/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@huggingface/tokenizers": "^0.2.0",
+    "@pipedog/asyncio": "workspace:*",
+    "@pipedog/core": "workspace:*",
+    "@pipedog/onnx": "workspace:*"
+  },
+  "pipecat": {
+    "runtimes": [
+      "bun",
+      "node",
+      "workerd"
+    ],
+    "upstream": [
+      "src/pipecat/processors/tone/reader/model.py",
+      "src/pipecat/processors/tone/tagger/model.py"
+    ],
+    "compat": {
+      "usesOptionalPeers": [
+        "onnxruntime-node",
+        "onnxruntime-web"
+      ]
+    }
+  }
+}

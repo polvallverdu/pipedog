@@ -9,7 +9,7 @@
 import { expect, mock, spyOn, test } from "bun:test";
 
 import Anthropic from "@anthropic-ai/sdk";
-import { LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
+import { LLMContextConversionError } from "@pipedog/core/adapters/llm/base_llm_adapter";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 
 import { AnthropicLLMService } from "../src/llm.ts";

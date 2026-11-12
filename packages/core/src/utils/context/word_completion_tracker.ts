@@ -24,6 +24,11 @@ export interface WordCompletionTrackerOptions {
    * with markup stripped.
    */
   userFacingText?: string | null;
+  /**
+   * Tags only `llmText` carries, beyond `<...>` markup, which word tracking
+   * passes over in it.
+   */
+  llmMarkup?: RegExp | null;
 }
 
 /**
@@ -110,6 +115,8 @@ export class WordCompletionTracker {
    *   are matched against. May carry synthesis tags (`<spell>...`).
    * @param options.llmText What the LLM wrote (see `WordCompletionTrackerOptions`).
    * @param options.userFacingText What a client displays.
+   * @param options.llmMarkup Tags only `llmText` carries, beyond `<...>`
+   *   markup, which word tracking passes over in it.
    */
   constructor(ttsText: string, options: WordCompletionTrackerOptions = {}) {
     this._ttsText = ttsText;
@@ -121,7 +128,9 @@ export class WordCompletionTracker {
         ? options.userFacingText
         : stripCompleteMarkup(ttsText);
     this._llmText = options.llmText ?? null;
-    this._segmentMap = new TextSegmentMap(ttsText, this._userFacingText, this._llmText);
+    this._segmentMap = new TextSegmentMap(ttsText, this._userFacingText, this._llmText, {
+      llmMarkup: options.llmMarkup ?? null,
+    });
   }
 
   /**
@@ -312,9 +321,13 @@ export class WordCompletionTracker {
    *
    * A false answer means the provider dropped an event. Callers ask this
    * before adding a word so they can offer it to the next frame instead;
-   * adding it anyway force-completes this one.
+   * adding it anyway force-completes this one. A frame that is only markup,
+   * such as a pause tag, is never reported, so no word belongs to it.
    */
   wordBelongsHere(word: string): boolean {
+    if (!stripCompleteMarkup(this._ttsText).trim()) {
+      return false;
+    }
     return this._segmentMap.wordBelongsCurrentSegment(word);
   }
 

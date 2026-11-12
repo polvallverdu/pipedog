@@ -2073,6 +2073,8 @@ export function _parseIceServers(value: string | string[] | null | undefined): I
     for (const key of Object.keys(record)) {
       if (record[key] !== null && record[key] !== undefined) server[key] = record[key];
     }
+    // Upstream passes the user's JSON dict through without value type checks (only keys
+    // are validated above), so the value types are genuinely dynamic here.
     iceServers.push(server as unknown as IceServerDict);
   }
 

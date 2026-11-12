@@ -20,7 +20,14 @@ import { Lock, rethrowIfCancelled, sleep } from "@pipedog/asyncio";
 import { logger } from "../../../utils/logger.ts";
 import { exponentialBackoffTime } from "../../../utils/network.ts";
 import { ClassifierError } from "../../base_classifier.ts";
-import { errorRepr, HttpClient, HttpError, type HttpResponse, isDict } from "../../http_client.ts";
+import {
+  errorRepr,
+  HttpClient,
+  HttpError,
+  type HttpResponse,
+  isDict,
+  pyTruthy,
+} from "../../http_client.ts";
 
 /** Workers AI answers a request with this status when it is out of capacity. */
 const TOO_MANY_REQUESTS = 429;
@@ -140,6 +147,7 @@ export class ClefClient {
           params: { model: `@cf/cloudflare/${this._model}` },
         });
       } catch (e) {
+        // A broken TLS connection also comes through as an HttpError.
         if (e instanceof HttpError) {
           throw new ClassifierError(`could not connect to Clef: ${e.message}`, { cause: e });
         }
@@ -192,6 +200,8 @@ export class ClefClient {
       try {
         response = await this._http.post(`/run/@cf/cloudflare/${this._model}`, { json: body });
       } catch (e) {
+        // HttpClient wraps every transport failure (a broken TLS connection
+        // included, upstream's OSError) in an HttpError.
         if (e instanceof HttpError) {
           // Some errors, such as a timeout, carry no useful message.
           throw new ClassifierError(`Clef request failed: ${errorRepr(e)}`, { cause: e });
@@ -266,7 +276,7 @@ export class ClefClient {
       return status;
     }
     const reasons = (Array.isArray(errors) ? errors : [])
-      .filter((error) => isDict(error) && error.message)
+      .filter((error) => isDict(error) && pyTruthy(error.message))
       .map((error) => String((error as Record<string, unknown>).message));
     return reasons.length > 0 ? `${status}: ${reasons.join("; ")}` : status;
   }

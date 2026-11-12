@@ -16,16 +16,26 @@
 
 import { afterEach, expect, type Mock, mock, spyOn, test } from "bun:test";
 
-import { sleep } from "@pipedog/asyncio";
+import { CancelledError, sleep } from "@pipedog/asyncio";
 
+import {
+  BaseClassifier,
+  ClassifierError,
+  type ClassifierQuestion,
+  type ClassifierResult,
+  type ClassifierValue,
+  YesNoResult,
+} from "../src/classifiers/base_classifier.ts";
 import {
   ExternalFunctionCallInProgressFrame,
   ExternalFunctionCallResultFrame,
   ExternalFunctionCallsStartedFrame,
   type Frame,
   FunctionCallFromLLM,
+  FunctionCallInProgressFrame,
   FunctionCallResultFrame,
   FunctionCallResultProperties,
+  InterruptionFrame,
   LLMContextFrame,
   LLMFullResponseEndFrame,
   LLMFullResponseStartFrame,
@@ -36,15 +46,21 @@ import {
   LLMThoughtEndFrame,
   LLMThoughtStartFrame,
   LLMThoughtTextFrame,
+  LLMUpdateSettingsFrame,
+  MetricsFrame,
   StartFrame,
+  TextFrame,
 } from "../src/frames/frames.ts";
+import { ConnectorContext } from "../src/pipeline/llm_with_backend/connector.ts";
+import {
+  BACKEND_MESSAGE_RELAY_INSTRUCTION,
+  TRANSCRIPT_FRONTEND_INSTRUCTION,
+} from "../src/pipeline/llm_with_backend/prompts.ts";
 import {
   BackendConnector,
-  ConnectorContext,
   ExplicitBackendRequestStrategy,
   LLMWithBackend,
-  RELAY_NOTE,
-  TRANSCRIPT_FRONTEND_INSTRUCTION,
+  PredictiveDelegation,
   TranscriptBackendRequestStrategy,
 } from "../src/pipeline/llm_with_backend.ts";
 import {
@@ -215,7 +231,6 @@ class _RealtimeFrontend extends _TextFrontend {
     return new LLMServiceMetadataFrame({ serviceName: this.name, isRealtimeService: true });
   }
 }
-void _RealtimeFrontend;
 
 /** A text frontend that calls `delegate` on its first context frame. */
 class _DelegatingFrontend extends _TextFrontend {
@@ -350,12 +365,12 @@ test("test_the_frontend_guidance_covers_delegation_and_the_backends_messages", (
   expect(guidance).toContain("delegate tool");
   expect(guidance).toContain('marked "Backend:"');
   expect(guidance).toContain('"Backend (working):"');
-  expect(guidance).toContain("calling it off, in any words");
+  expect(guidance).toContain("to start, change or stop its work");
 });
 
 test("test_the_strategys_guidance_sits_inside_the_delegating_paragraph", () => {
   const guidance = _bound().frontendInstruction || "";
-  expect(guidance.startsWith("DELEGATING:")).toBe(true);
+  expect(guidance.startsWith("THE BACKEND:")).toBe(true);
   const delegating = guidance.split("\n\n")[0] as string;
   expect(delegating.endsWith(` ${TRANSCRIPT_FRONTEND_INSTRUCTION}`)).toBe(true);
   expect(guidance).not.toContain("{strategy}");
@@ -365,6 +380,13 @@ test("test_the_strategys_guidance_sits_inside_the_delegating_paragraph", () => {
   for (const heading of ["ONE ASSISTANT:", "AFTER DELEGATING:", "BACKEND MESSAGES:"]) {
     expect(guidance).toContain(heading);
   }
+  // The instruction ends by restating its rule for messages about delegated work.
+  const paragraphs = guidance.split("\n\n");
+  expect(
+    (paragraphs[paragraphs.length - 1] as string).startsWith(
+      "Whatever else a reply does, a user message about work",
+    ),
+  ).toBe(true);
 });
 
 test("test_an_app_can_replace_the_frontends_pairing_instruction", () => {
@@ -389,7 +411,7 @@ test("test_a_strategy_takes_its_three_texts_as_arguments", async () => {
     requestInstruction: "Do it now.",
   });
   const connector = _bound(new BackendConnector({ requestStrategy: strategy }));
-  expect(connector.frontendInstruction || "").toContain("around it. Say it plainly.");
+  expect(connector.frontendInstruction || "").toContain("waiting. Say it plainly.");
   expect(connector.tool.description).toBe("Hand it over.");
   const request = await strategy.composeRequest(_params(null, { request: "Book a taxi" }));
   expect(request).toBe("Book a taxi\n\nDo it now.");
@@ -548,7 +570,15 @@ test("test_outputs_are_appended_to_the_frontend_and_run_it_as_flagged", async ()
   expect(appended.map((f) => [f.messages, f.runLlm])).toEqual([
     [[{ role: "developer", content: "Backend (note): Let me check." }], false],
     [[{ role: "developer", content: "Backend (thinking): Weather first." }], false],
-    [[{ role: "developer", content: `Backend: It's 62 and raining.\n\n${RELAY_NOTE}` }], true],
+    [
+      [
+        {
+          role: "developer",
+          content: `Backend: It's 62 and raining.\n\n${BACKEND_MESSAGE_RELAY_INSTRUCTION}`,
+        },
+      ],
+      true,
+    ],
   ]);
   expect(frontend.pushFrame).not.toHaveBeenCalled();
 });
@@ -765,7 +795,7 @@ test("test_a_local_backend_is_heard_through_the_frontends_conversation", async (
   expect(appended.map((f) => [(f.messages[0] as Any).content, f.runLlm])).toEqual([
     ["Backend (note): Let me check.", false],
     ["Backend (working): get_weather(location='Seattle')", false],
-    [`Backend: It's 62 and raining.\n\n${RELAY_NOTE}`, true],
+    [`Backend: It's 62 and raining.\n\n${BACKEND_MESSAGE_RELAY_INSTRUCTION}`, true],
   ]);
   // A message queued while the bot speaks waits behind the speech; an
   // interruption must not drop it on the way to the aggregator.
@@ -828,6 +858,430 @@ test("test_a_local_backend_is_added_before_the_frontend_starts", async () => {
   await runTest(service, { framesToSend: [new SleepFrame({ sleep: 0.5 })] });
 
   expect(events.slice(0, 2)).toEqual(["backend_added", "frontend_started"]);
+});
+
+// ---------------------------------------------------------------------------
+// Predictive delegation
+// ---------------------------------------------------------------------------
+
+/**
+ * A text frontend whose inference waits before its first output, then streams.
+ *
+ * Its output is two text chunks `streaming` seconds apart, or a call to
+ * `call` with no text. It records whether an inference was cancelled.
+ */
+class _StreamingFrontend extends LLMService {
+  protected _firstOutputAfter: number;
+  protected _streaming: number;
+  protected _call: string | null;
+  cancelled = false;
+
+  constructor(options: {
+    firstOutputAfter: number;
+    streaming?: number;
+    call?: string | null;
+    systemInstruction?: string;
+  }) {
+    super({ settings: _settings(options.systemInstruction ?? "You are a voice assistant.") });
+    this._firstOutputAfter = options.firstOutputAfter;
+    this._streaming = options.streaming ?? 0.0;
+    this._call = options.call ?? null;
+  }
+
+  override async processFrame(frame: Frame, direction: FrameDirection): Promise<void> {
+    await super.processFrame(frame, direction);
+    if (!(frame instanceof LLMContextFrame)) {
+      await this.pushFrame(frame, direction);
+      return;
+    }
+    try {
+      await this.pushFrame(new LLMFullResponseStartFrame());
+      await sleep(this._firstOutputAfter);
+      if (this._call) {
+        await this.runFunctionCalls([
+          new FunctionCallFromLLM({
+            context: frame.context,
+            toolCallId: "model_call",
+            functionName: this._call,
+            arguments: {},
+          }),
+        ]);
+      } else {
+        await this.pushFrame(new LLMTextFrame({ text: "Hello" }));
+        await sleep(this._streaming);
+        await this.pushFrame(new LLMTextFrame({ text: " there" }));
+      }
+    } catch (e) {
+      if (e instanceof CancelledError) {
+        this.cancelled = true;
+      }
+      throw e;
+    } finally {
+      await this.pushFrame(new LLMFullResponseEndFrame());
+    }
+  }
+}
+
+/**
+ * Answers after `after` seconds, "yes" for the user messages in `yes`.
+ *
+ * Records each state it was asked about.
+ */
+class _ScriptedClassifier extends BaseClassifier {
+  protected _after: number;
+  protected _yes: readonly string[];
+  protected _fail: boolean;
+  states: Any[] = [];
+
+  constructor(options: { after: number; yes?: readonly string[]; fail?: boolean }) {
+    super();
+    this._after = options.after;
+    this._yes = options.yes ?? [];
+    this._fail = options.fail ?? false;
+  }
+
+  protected override async _ask(
+    state: ClassifierValue,
+    questions: Readonly<Record<string, ClassifierQuestion>>,
+  ): Promise<[Record<string, ClassifierResult>, null]> {
+    this.states.push(state);
+    await sleep(this._after);
+    if (this._fail) {
+      throw new ClassifierError("unavailable");
+    }
+    const conversation = (state as Any).conversation as Any[];
+    const last = conversation[conversation.length - 1].text;
+    const probability = this._yes.includes(last) ? 0.95 : 0.05;
+    const results: Record<string, ClassifierResult> = {};
+    for (const name of Object.keys(questions)) {
+      results[name] = new YesNoResult({ probability });
+    }
+    return [results, null];
+  }
+}
+
+/** A connector whose `delegate` records each call instead of reaching a backend. */
+class _RecordingConnector extends BackendConnector {
+  delegated: string[] = [];
+
+  override async delegate(params: FunctionCallParams): Promise<void> {
+    this.delegated.push(params.toolCallId);
+    await params.resultCallback(
+      { status: "delegated" },
+      { properties: new FunctionCallResultProperties({ runLlm: false }) },
+    );
+  }
+}
+
+function _userTurn(text = "Fix the flaky test."): LLMContextFrame {
+  return new LLMContextFrame({
+    context: new LLMContext({ messages: [{ role: "user", content: text }] }),
+  });
+}
+
+function _withPredictiveDelegation(
+  frontend: LLMService,
+  classifier: BaseClassifier,
+): [LLMWithBackend, _RecordingConnector] {
+  const connector = new _RecordingConnector();
+  const service = new LLMWithBackend({
+    frontend,
+    backend: "backend",
+    connector,
+    predictiveDelegation: new PredictiveDelegation(classifier),
+  });
+  return [service, connector];
+}
+
+function _texts(frames: Frame[]): string[] {
+  return frames.filter((f) => f instanceof LLMTextFrame).map((f) => (f as LLMTextFrame).text);
+}
+
+function _earlyDelegations(delegated: string[]): string[] {
+  return delegated.filter((d) => d !== "model_call");
+}
+
+test("test_a_yes_before_the_frontends_first_output_delegates_the_turn_early", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.4 });
+  const classifier = new _ScriptedClassifier({ after: 0.05, yes: ["Fix the flaky test."] });
+  const [service, connector] = _withPredictiveDelegation(frontend, classifier);
+
+  const [down] = await runTest(service, {
+    framesToSend: [
+      _userTurn(),
+      new TextFrame({ text: "queued behind the inference" }),
+      new SleepFrame({ sleep: 0.6 }),
+    ],
+  });
+
+  expect(_earlyDelegations(connector.delegated).length).toBe(1);
+  expect(frontend.cancelled).toBe(true);
+  expect(_texts(down)).toEqual([]);
+  // What was queued behind the cancelled inference is still processed.
+  expect(down.filter((f) => f.constructor === TextFrame).map((f) => (f as TextFrame).text)).toEqual(
+    ["queued behind the inference"],
+  );
+  // Downstream, the call sits inside the cancelled inference's response, as
+  // a model's own call would.
+  const shape = down
+    .filter(
+      (f) =>
+        f instanceof LLMFullResponseStartFrame ||
+        f instanceof FunctionCallInProgressFrame ||
+        f instanceof LLMFullResponseEndFrame,
+    )
+    .map((f) => f.constructor);
+  expect(shape).toEqual([
+    LLMFullResponseStartFrame,
+    FunctionCallInProgressFrame,
+    LLMFullResponseEndFrame,
+  ]);
+});
+
+test("test_a_yes_after_the_frontends_first_text_leaves_the_turn_to_the_frontend", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.05, streaming: 0.3 });
+  const classifier = new _ScriptedClassifier({ after: 0.15, yes: ["Fix the flaky test."] });
+  const [service, connector] = _withPredictiveDelegation(frontend, classifier);
+
+  const [down] = await runTest(service, {
+    framesToSend: [_userTurn(), new SleepFrame({ sleep: 0.5 })],
+  });
+
+  expect(connector.delegated).toEqual([]);
+  expect(_texts(down)).toEqual(["Hello", " there"]);
+});
+
+test("test_a_yes_after_the_frontends_own_delegate_call_adds_nothing", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.05, call: "delegate" });
+  const classifier = new _ScriptedClassifier({ after: 0.15, yes: ["Fix the flaky test."] });
+  const [service, connector] = _withPredictiveDelegation(frontend, classifier);
+
+  await runTest(service, { framesToSend: [_userTurn(), new SleepFrame({ sleep: 0.3 })] });
+
+  expect(connector.delegated).toEqual(["model_call"]);
+});
+
+test("test_a_no_leaves_the_turn_to_the_frontend", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.2 });
+  const classifier = new _ScriptedClassifier({ after: 0.05 });
+  const [service, connector] = _withPredictiveDelegation(frontend, classifier);
+
+  const [down] = await runTest(service, {
+    framesToSend: [_userTurn(), new SleepFrame({ sleep: 0.3 })],
+  });
+
+  expect(connector.delegated).toEqual([]);
+  expect(_texts(down)).toEqual(["Hello", " there"]);
+});
+
+test("test_a_failing_classifier_leaves_the_turn_to_the_frontend", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.2 });
+  const classifier = new _ScriptedClassifier({ after: 0.05, fail: true });
+  const [service, connector] = _withPredictiveDelegation(frontend, classifier);
+
+  const [down] = await runTest(service, {
+    framesToSend: [_userTurn(), new SleepFrame({ sleep: 0.3 })],
+  });
+
+  expect(connector.delegated).toEqual([]);
+  expect(_texts(down)).toEqual(["Hello", " there"]);
+});
+
+test("test_a_yes_for_a_turn_still_queued_is_carried_out_once_it_starts", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.3 });
+  const classifier = new _ScriptedClassifier({ after: 0.05, yes: ["Fix the flaky test."] });
+  const [service, connector] = _withPredictiveDelegation(frontend, classifier);
+
+  const [down] = await runTest(service, {
+    framesToSend: [
+      _userTurn("Tell me a joke."),
+      _userTurn("Fix the flaky test."),
+      new SleepFrame({ sleep: 0.8 }),
+    ],
+  });
+
+  // The earlier response ran to the end; the queued turn was delegated
+  // early once its inference started.
+  expect(_texts(down)).toEqual(["Hello", " there"]);
+  expect(_earlyDelegations(connector.delegated).length).toBe(1);
+  expect(frontend.cancelled).toBe(true);
+});
+
+test("test_an_interruption_leaves_the_turn_to_the_frontend", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.3 });
+  const classifier = new _ScriptedClassifier({ after: 0.2, yes: ["Fix the flaky test."] });
+  const [service, connector] = _withPredictiveDelegation(frontend, classifier);
+
+  await runTest(service, {
+    framesToSend: [
+      _userTurn(),
+      new SleepFrame({ sleep: 0.1 }),
+      new InterruptionFrame(),
+      new SleepFrame({ sleep: 0.4 }),
+    ],
+  });
+
+  expect(connector.delegated).toEqual([]);
+});
+
+test("test_only_a_new_user_message_is_raced", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.0 });
+  const classifier = new _ScriptedClassifier({ after: 0.0 });
+  const [service] = _withPredictiveDelegation(frontend, classifier);
+  const turn = _userTurn();
+  const developer = new LLMContextFrame({
+    context: new LLMContext({ messages: [{ role: "developer", content: "Greet the user." }] }),
+  });
+  const speculative = new LLMContextFrame({
+    context: new LLMContext({ messages: [{ role: "user", content: "Fix the" }] }),
+    speculation: true,
+  });
+
+  await runTest(service, {
+    framesToSend: [
+      developer,
+      speculative,
+      turn,
+      new SleepFrame({ sleep: 0.1 }),
+      turn,
+      new SleepFrame({ sleep: 0.1 }),
+    ],
+  });
+
+  // The developer message and the speculative turn aren't raced, and a turn
+  // raced once isn't raced again.
+  expect(classifier.states.length).toBe(1);
+});
+
+test("test_no_turn_is_raced_while_the_frontend_filters_incomplete_turns", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.0 });
+  const classifier = new _ScriptedClassifier({ after: 0.0 });
+  const [service] = _withPredictiveDelegation(frontend, classifier);
+
+  await runTest(service, {
+    framesToSend: [
+      new LLMUpdateSettingsFrame({ delta: new LLMSettings({ filterIncompleteUserTurns: true }) }),
+      new SleepFrame({ sleep: 0.1 }),
+      _userTurn(),
+      new SleepFrame({ sleep: 0.1 }),
+    ],
+  });
+
+  expect(classifier.states).toEqual([]);
+});
+
+test("test_the_classifier_sees_the_frontends_instruction_and_the_latest_conversation", async () => {
+  const frontend = new _StreamingFrontend({
+    firstOutputAfter: 0.0,
+    systemInstruction: "You are Pip.",
+  });
+  const classifier = new _ScriptedClassifier({ after: 0.0 });
+  const [service] = _withPredictiveDelegation(frontend, classifier);
+  const turn = new LLMContextFrame({
+    context: new LLMContext({
+      messages: [
+        { role: "user", content: "Fix the flaky test." },
+        {
+          role: "assistant",
+          tool_calls: [
+            {
+              id: "c1",
+              type: "function",
+              function: { name: "delegate", arguments: "{}" },
+            },
+          ],
+        } as Any,
+        { role: "tool", tool_call_id: "c1", content: '{"status": "delegated"}' } as Any,
+        {
+          role: "developer",
+          content: `Backend: Fixed it.\n\n${BACKEND_MESSAGE_RELAY_INSTRUCTION}`,
+        },
+        { role: "user", content: "Thanks!" },
+      ],
+    }),
+  });
+
+  await runTest(service, { framesToSend: [turn, new SleepFrame({ sleep: 0.1 })] });
+
+  expect(classifier.states.length).toBe(1);
+  const state = classifier.states[0];
+  // What the frontend's model reads: the app's instruction, then the pairing
+  // instruction appended to it.
+  expect((state.assistant as string).startsWith("You are Pip.\n\nTHE BACKEND:")).toBe(true);
+  expect(state.conversation).toEqual([
+    { speaker: "user", text: "Fix the flaky test." },
+    { speaker: "assistant", action: "handed the request to the backend" },
+    { speaker: "backend", text: "Backend: Fixed it." },
+    { speaker: "user", text: "Thanks!" },
+  ]);
+});
+
+test("test_the_classifiers_metrics_reach_the_pipeline", async () => {
+  const frontend = new _StreamingFrontend({ firstOutputAfter: 0.0 });
+  const classifier = new _ScriptedClassifier({ after: 0.0 });
+  const [service] = _withPredictiveDelegation(frontend, classifier);
+
+  const [down] = await runTest(service, {
+    framesToSend: [_userTurn(), new SleepFrame({ sleep: 0.1 })],
+  });
+
+  expect(down.some((f) => f instanceof MetricsFrame)).toBe(true);
+});
+
+test.each([true, false])(
+  "test_an_early_delegation_is_settled_like_the_models_own[%p]",
+  async (respondOnDelegate) => {
+    const backend = new BackendLLMWorker({
+      name: "backend",
+      llm: new _ScriptedLLM([[["text", ">> On it."]]]),
+      context: new LLMContext(),
+    });
+    const frontend = new _StreamingFrontend({ firstOutputAfter: 1.0 });
+    const service = new LLMWithBackend({
+      frontend,
+      backend,
+      connector: new BackendConnector({ respondOnDelegate }),
+      predictiveDelegation: new PredictiveDelegation(
+        new _ScriptedClassifier({ after: 0.05, yes: ["Fix the flaky test."] }),
+      ),
+    });
+
+    const [down] = await runTest(service, {
+      framesToSend: [_userTurn(), new SleepFrame({ sleep: 1.5 })],
+    });
+
+    const results = down.filter((f) => f instanceof FunctionCallResultFrame);
+    expect(results.length).toBe(1);
+    const result = results[0] as FunctionCallResultFrame;
+    expect((result.result as Any).status).toBe("delegated");
+    expect(result.properties).toEqual(
+      new FunctionCallResultProperties({ runLlm: respondOnDelegate }),
+    );
+  },
+);
+
+test("test_predictive_delegation_needs_a_text_frontend", () => {
+  expect(
+    () =>
+      new LLMWithBackend({
+        frontend: new _RealtimeFrontend(),
+        backend: "backend",
+        connector: new BackendConnector({ requestStrategy: new ExplicitBackendRequestStrategy() }),
+        predictiveDelegation: new PredictiveDelegation(new _ScriptedClassifier({ after: 0.0 })),
+      }),
+  ).toThrow("text frontend");
+});
+
+test("test_predictive_delegation_needs_a_delegate_call_with_no_arguments", () => {
+  expect(
+    () =>
+      new LLMWithBackend({
+        frontend: new _TextFrontend(),
+        backend: "backend",
+        connector: new BackendConnector({ requestStrategy: new ExplicitBackendRequestStrategy() }),
+        predictiveDelegation: new PredictiveDelegation(new _ScriptedClassifier({ after: 0.0 })),
+      }),
+  ).toThrow("ExplicitBackendRequestStrategy");
 });
 
 // Referenced so the frame-direction import matches the upstream test's imports.

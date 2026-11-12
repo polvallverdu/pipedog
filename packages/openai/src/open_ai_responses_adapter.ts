@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/open_ai_responses_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/open_ai_responses_adapter.py
 
 /**
  * OpenAI Responses API adapter for Pipecat.
@@ -13,12 +13,15 @@
  */
 
 import { rethrowIfCancelled } from "@pipedog/asyncio";
-import { BaseLLMAdapter, LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
-import { AdapterType, type ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import {
+  BaseLLMAdapter,
+  LLMContextConversionError,
+} from "@pipedog/core/adapters/llm/base_llm_adapter";
+import { AdapterType, type ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   type OpenAINotGiven,
   openaiFromLlmContextTools,
-} from "@pipedog/core/adapters/services/open_ai_adapter";
+} from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import {
   type LLMContext,
   type LLMContextMessage,

@@ -26,8 +26,8 @@ import { rethrowIfCancelled } from "@pipedog/asyncio";
 import { State } from "@pipedog/core/services/websocket_service";
 import { logger } from "@pipedog/core/utils/logger";
 import { assertGiven } from "@pipedog/core/utils/types";
+import { describeRefusal } from "@pipedog/deepgram/_errors";
 import {
-  _describeRefusal,
   DeepgramFluxSTTService,
   type DeepgramFluxSTTServiceOptions,
   DeepgramFluxSTTSettings,
@@ -133,7 +133,7 @@ export class WorkersAIFluxSTTService extends DeepgramFluxSTTService {
       this._connectionEstablishedEvent.set();
     } catch (e) {
       rethrowIfCancelled(e);
-      const refusal = _describeRefusal(e);
+      const refusal = describeRefusal(e);
       await this.pushError(refusal ?? `Workers AI Flux connection failed: ${errorMessage(e)}`, {
         exception: e,
       });

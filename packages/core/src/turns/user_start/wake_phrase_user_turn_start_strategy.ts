@@ -10,13 +10,14 @@ import { Event, type Task, TimeoutError, waitFor } from "@pipedog/asyncio";
 import {
   BotSpeakingFrame,
   type Frame,
+  ProposedUserStartedSpeakingFrame,
   TranscriptionFrame,
   UserSpeakingFrame,
+  UserStartedSpeakingFrame,
   VADUserStartedSpeakingFrame,
 } from "../../frames/frames.ts";
 import type { FrameProcessorSetup } from "../../processors/frame_processor.ts";
 import { logger } from "../../utils/logger.ts";
-import { ProcessFrameResult } from "../types.ts";
 import {
   BaseUserTurnStartStrategy,
   type BaseUserTurnStartStrategyOptions,
@@ -56,12 +57,31 @@ export interface WakePhraseUserTurnStartStrategyOptions extends BaseUserTurnStar
 /**
  * User turn start strategy that requires a wake phrase before interaction.
  *
- * Blocks subsequent strategies until a wake phrase is detected in a final
- * transcription. After detection, allows interaction for a configurable
- * timeout period before requiring the wake phrase again. Use
+ * Starts a turn when it hears a wake phrase in a final transcription, and
+ * then, until a configurable timeout, whenever the user starts speaking or a
+ * final transcription arrives, which covers speech VAD missed. Use
  * `singleActivation: true` to require the wake phrase before every turn.
+ * Speech before the wake phrase is dropped from the aggregation.
  *
- * This strategy should be placed first in the start strategies list.
+ * It starts turns on its own, so use it as the only start strategy:
+ *
+ * ```ts
+ * userParams: new LLMUserAggregatorParams({
+ *   userTurnStrategies: new UserTurnStrategies({
+ *     start: [new WakePhraseUserTurnStartStrategy({ phrases: ["hey pipecat"] })],
+ *   }),
+ * }),
+ * ```
+ *
+ * To combine it with other start strategies, such as
+ * `MinWordsUserTurnStartStrategy`, put them in a `StrategyMode.ALL` list,
+ * where it's one more condition a turn needs.
+ *
+ * Porting note: upstream also lets it gate the strategies after it in a
+ * `StrategyMode.FIRST` list by returning the deprecated
+ * `ProcessFrameResult.STOP` until it hears the wake phrase. That gating is
+ * deprecated and not ported: in a FIRST list next to other start strategies,
+ * the others still decide while it is idle.
  *
  * Event handlers available:
  *
@@ -168,17 +188,15 @@ export class WakePhraseUserTurnStartStrategy extends BaseUserTurnStartStrategy {
    * Process an incoming frame for wake phrase detection or passthrough.
    *
    * @param frame The frame to be processed.
-   * @returns STOP when the wake phrase is detected or when in IDLE state
-   *   (blocks subsequent strategies), CONTINUE when in AWAKE state (allows
-   *   subsequent strategies to proceed).
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     await super.processFrame(frame);
 
     if (this._state === _WakeState.IDLE) {
-      return await this._processIdle(frame);
+      await this._processIdle(frame);
+      return;
     }
-    return await this._processAwake(frame);
+    await this._processAwake(frame);
   }
 
   /**
@@ -187,28 +205,33 @@ export class WakePhraseUserTurnStartStrategy extends BaseUserTurnStartStrategy {
    * Only final `TranscriptionFrame` instances are checked for wake phrase
    * matches. When a match is found, a user turn start is triggered.
    * Transcription frames that don't match have their text cleared so that
-   * pre-wake-phrase speech is not added to the LLM context. All frames
-   * return STOP to block subsequent strategies.
+   * pre-wake-phrase speech is not added to the LLM context.
    */
-  protected async _processIdle(frame: Frame): Promise<ProcessFrameResult> {
+  protected async _processIdle(frame: Frame): Promise<void> {
     if (frame instanceof TranscriptionFrame) {
       if (this._checkWakePhrase(frame.text)) {
-        await this.triggerUserTurnStarted();
-        return ProcessFrameResult.STOP;
+        await this.reportUserTurnStarted();
+        return;
       }
       await this.triggerResetAggregation();
     }
-
-    return ProcessFrameResult.STOP;
   }
 
   /**
    * Process a frame while in AWAKE state.
    *
-   * Refreshes the timeout on activity frames (timeout mode only). Returns
-   * CONTINUE so subsequent strategies can process the frame.
+   * Starts a turn when the user starts speaking or a final transcription
+   * arrives, and refreshes the timeout on activity frames (timeout mode only).
    */
-  protected async _processAwake(frame: Frame): Promise<ProcessFrameResult> {
+  protected async _processAwake(frame: Frame): Promise<void> {
+    if (
+      frame instanceof VADUserStartedSpeakingFrame ||
+      frame instanceof UserStartedSpeakingFrame ||
+      frame instanceof ProposedUserStartedSpeakingFrame ||
+      frame instanceof TranscriptionFrame
+    ) {
+      await this.reportUserTurnStarted();
+    }
     if (!this._singleActivation) {
       if (frame instanceof UserSpeakingFrame || frame instanceof BotSpeakingFrame) {
         this._refreshTimeout();
@@ -218,8 +241,6 @@ export class WakePhraseUserTurnStartStrategy extends BaseUserTurnStartStrategy {
         this._refreshTimeout();
       }
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 
   /** Strip punctuation from text, keeping only letters, digits, and whitespace. */

@@ -203,6 +203,21 @@ describe("TestPatternPairAggregator", () => {
     expect(aggregator.text.text).toEqual("");
   });
 
+  /** Punctuation inside a closed KEEP pattern is not a sentence boundary. */
+  test("test_keep_pattern_content_not_split", async () => {
+    aggregator.addPattern("spell_pattern", "<spell>", "</spell>", MatchAction.KEEP);
+
+    const text = "Your code is <spell>X. Y. Z</spell>. Say <spell>St. Louis</spell> slowly. Done";
+    const results = await collect(aggregator.aggregate(text));
+
+    expect(results.map((r) => r.text)).toEqual([
+      "Your code is <spell>X. Y. Z</spell>.",
+      "Say <spell>St. Louis</spell> slowly.",
+    ]);
+    const result = await aggregator.flush();
+    expect(result!.text).toEqual("Done");
+  });
+
   /**
    * Unclosed REMOVE pattern: flush returns text before it, drops the rest.
    *
@@ -572,5 +587,81 @@ describe("TestPatternPairAggregatorTokenMode", () => {
     // reassembles intact instead of leaking as a fragment ("<e").
     const texts = results.map((r) => r.text);
     expect(texts).toEqual(["very ", "<em>excited</em> today"]);
+  });
+});
+
+/** A pattern whose start and end delimiters are the same string, like a Markdown code fence. */
+describe("TestPatternPairAggregatorSameDelimiter", () => {
+  let aggregator: PatternPairAggregator;
+
+  beforeEach(() => {
+    aggregator = new PatternPairAggregator();
+    aggregator.addPattern("code", "```", "```", MatchAction.AGGREGATE);
+  });
+
+  async function run(chunks: string[]): Promise<[string, string][]> {
+    const results: [string, string][] = [];
+    for (const chunk of chunks) {
+      for await (const aggregation of aggregator.aggregate(chunk)) {
+        results.push([String(aggregation.type), aggregation.text]);
+      }
+    }
+    const remaining = await aggregator.flush();
+    if (remaining) {
+      results.push(["flush", remaining.text]);
+    }
+    return results;
+  }
+
+  test("test_text_before_fence_is_yielded", async () => {
+    const results = await run(["Here is the code:\n```python\nprint(1)\n```\nDone."]);
+    expect(results).toEqual([
+      ["sentence", "Here is the code:"],
+      ["code", "python\nprint(1)"],
+      ["flush", "Done."],
+    ]);
+  });
+
+  test("test_sentence_before_fence_is_not_split_inside_it", async () => {
+    const results = await run(["Here is the code.\n```python\nprint(1)\n```\nDone."]);
+    expect(results).toEqual([
+      ["sentence", "Here is the code."],
+      ["code", "python\nprint(1)"],
+      ["flush", "Done."],
+    ]);
+  });
+
+  test("test_fence_split_across_chunks", async () => {
+    const results = await run([
+      "Here is",
+      " the code.\n",
+      "``",
+      "`python\nprint(1)\n",
+      "``",
+      "`\nDone.",
+    ]);
+    expect(results).toEqual([
+      ["sentence", "Here is the code."],
+      ["code", "python\nprint(1)"],
+      ["flush", "Done."],
+    ]);
+  });
+
+  test("test_two_blocks_pair_in_order", async () => {
+    const results = await run(["A.\n```\none\n```\nB.\n```\ntwo\n```\nC."]);
+    expect(results).toEqual([
+      ["sentence", "A."],
+      ["code", "one"],
+      ["sentence", "B."],
+      ["code", "two"],
+      ["flush", "C."],
+    ]);
+  });
+
+  test("test_unclosed_fence_is_dropped_at_flush", async () => {
+    const results = await run(["Type ``` to start a block."]);
+    expect(results).toEqual([["sentence", "Type"]]);
+    // The next reply starts clean.
+    expect(await run(["How else can I help?"])).toEqual([["flush", "How else can I help?"]]);
   });
 });

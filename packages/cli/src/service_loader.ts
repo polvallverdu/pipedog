@@ -55,12 +55,14 @@ const ENV_DESCRIPTIONS: Record<string, string> = {
   INWORLD_API_KEY: "https://platform.inworld.ai/",
   MISTRAL_API_KEY: "https://console.mistral.ai/api-keys",
   MISTRAL_VOICE_ID: "a voice from your Mistral account",
+  NVIDIA_API_KEY: "https://build.nvidia.com/ (not needed for a local NIM)",
   OPENAI_API_KEY: "https://platform.openai.com/api-keys",
   SONIOX_API_KEY: "https://console.soniox.com/",
   SPEECHMATICS_API_KEY: "https://portal.speechmatics.com/",
   TOGETHER_API_KEY: "https://api.together.ai/settings/api-keys",
   ULTRAVOX_API_KEY: "https://app.ultravox.ai/",
   XAI_API_KEY: "https://console.x.ai/",
+  ZOOM_AI_API_KEY: "https://developers.zoom.us/docs/ai-services/",
 };
 
 /** One `import { A, B } from "module";` line, taken apart. */
@@ -80,12 +82,9 @@ export function mergeImports(lines: Iterable<string>): string[] {
       others.add(line);
       continue;
     }
-    const [, type, names, module] = match as unknown as [
-      string,
-      string | undefined,
-      string,
-      string,
-    ];
+    const type = match[1];
+    const names = match[2] ?? "";
+    const module = match[3] ?? "";
     const key = `${type ? "type " : ""}${module}`;
     const entry = modules.get(key) ?? { names: new Set<string>(), type: Boolean(type) };
     for (const name of names.split(",")) entry.names.add(name.trim());

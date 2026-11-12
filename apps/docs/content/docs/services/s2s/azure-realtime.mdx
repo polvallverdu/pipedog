@@ -78,7 +78,8 @@ The same as [`OpenAIRealtimeLLMService`](/docs/services/s2s/openai#event-handler
 
 - With an API key the socket sends it as the `api-key` header. With `tokenProvider`, the token
   is fetched before each connection and sent as `Authorization: Bearer <token>`. One of the two
-  is required.
+  is required. The service picks the header in `_authHeaders()`, the hook
+  `OpenAIRealtimeLLMService` calls when it connects, and otherwise connects as that service does.
 - A `baseUrl` that already has a query string is used as given, so you can name the deployment
   (or other parameters) yourself.
 - Frames, turn detection, pre-roll and video input behave as in the

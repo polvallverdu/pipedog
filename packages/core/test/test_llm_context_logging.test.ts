@@ -14,6 +14,9 @@ import { InvalidEnvVarValueError } from "../src/utils/env.ts";
 import { _LLM_CONTEXT_LOG_ENV_VAR, _resetLlmContextLogMode } from "../src/utils/log_config.ts";
 import { LOG_LEVELS, type LogLevel, logger } from "../src/utils/logger.ts";
 
+// Python's str() of MESSAGES, which upstream's f-string logs.
+const MESSAGES_REPR = `[{'role': 'system', 'content': 'You are helpful.'}, {'role': 'user', 'content': "What's the weather?"}]`;
+
 const MESSAGES = [
   { role: "system", content: "You are helpful." },
   { role: "user", content: "What's the weather?" },
@@ -83,16 +86,14 @@ test("test_full_logs_every_message", () => {
   const sink = captured();
   const service = new LLMService();
   asLogging(service)._logLlmResponse(newContext());
-  expect(sink.getvalue()).toBe(`${service}: Generating LLM response ${JSON.stringify(MESSAGES)}\n`);
+  expect(sink.getvalue()).toBe(`${service}: Generating LLM response ${MESSAGES_REPR}\n`);
 });
 
 test("test_conversation_setup_logs_every_message", () => {
   const sink = captured();
   const service = new LLMService();
   asLogging(service)._logLlmConversationSetup(newContext());
-  expect(sink.getvalue()).toBe(
-    `${service}: Setting up LLM conversation ${JSON.stringify(MESSAGES)}\n`,
-  );
+  expect(sink.getvalue()).toBe(`${service}: Setting up LLM conversation ${MESSAGES_REPR}\n`);
 });
 
 test("test_off_logs_without_context", () => {

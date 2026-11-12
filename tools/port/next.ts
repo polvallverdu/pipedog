@@ -24,6 +24,7 @@ interface Mod {
   deps: string[];
   layer: number;
   notes: string;
+  portedAt?: string | null;
 }
 interface TestEntry {
   file: string;
@@ -106,13 +107,14 @@ if (kind === "modules") {
         id: `u${String(i + 1).padStart(2, "0")}`,
         package: mods[0]!.package,
         lines: mods.reduce((a, m) => a + m.lines, 0),
-        modules: mods.map(({ module, upstream, ts, lines, status, notes }) => ({
+        modules: mods.map(({ module, upstream, ts, lines, status, notes, portedAt }) => ({
           module,
           upstream,
           ts,
           lines,
           status,
           notes,
+          portedAt,
         })),
       })),
     ),

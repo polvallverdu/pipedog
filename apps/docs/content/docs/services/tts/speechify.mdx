@@ -45,12 +45,13 @@ Runtime-updatable settings, passed as `settings: new SpeechifyHttpTTSService.Set
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `model` | `string` | `"simba-3.2"` | Speech model: `simba-3.2` (English) or `simba-3.0` (multilingual). |
+| `model` | `string` | `"simba-3.5"` | Speech model, such as `simba-3.5` or `simba-3.0` (multilingual). |
 | `voice` | `string` | `"geffen_32"` | Voice id. |
 | `language` | `Language \| null` | `null` | Language, sent as a tag such as `en-US`. |
 | `loudnessNormalization` | `boolean \| null` | `null` | Normalize the audio's loudness. Adds latency. |
 | `textNormalization` | `boolean \| null` | `null` | Spell out numbers, dates and similar tokens. Adds latency. |
 | `safetyIdentifier` | `string \| null` | `null` | A stable, opaque id for the end user (1 to 64 characters), so Speechify can limit one user instead of the workspace. Never an email address. |
+| `pronunciations` | `Dict[] \| null` | `null` | How specific words are spoken (up to 200), by IPA phones or a spoken alias. Applied on `simba-3.5` in the languages Speechify lists for pronunciations, which excludes English. |
 
 ## Usage
 

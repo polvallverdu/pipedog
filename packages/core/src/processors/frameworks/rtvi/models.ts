@@ -31,7 +31,7 @@
  * - Kept although deprecated upstream, because the observer still sends them
  *   by default and clients read them: `BotLLMTextMessage`,
  *   `BotTTSTextMessage`, `UserTranscriptionMessage(Data)` and the
- *   `aggregated_by` wire field of `BotOutputMessageData`.
+ *   `text_type` / `aggregated_by` wire fields of `BotOutputMessageData`.
  */
 
 import type { KeypadEntry } from "../../../audio/dtmf/types.ts";
@@ -49,7 +49,7 @@ import type { TextType } from "../../../utils/text/base_text_aggregator.ts";
 export type RTVIFileSourceType = "bytes" | "url";
 
 // -- Constants --
-export const PROTOCOL_VERSION = "2.2.0";
+export const PROTOCOL_VERSION = "2.3.0";
 
 // -- Version compatibility --
 // Any 1.x client is deprecated but still supported with the old bot-output format.
@@ -1348,13 +1348,15 @@ export class BotOutputTransformResult extends BaseModel {
 }
 
 export interface BotOutputMessageDataOptions extends TextMessageDataOptions {
-  textType?: TextType | string;
+  outputType?: TextType | string;
+  textType?: TextType | string | null;
   aggregatedBy?: TextType | string | null;
   segmentId?: number | null;
   spoken?: boolean | null;
   willBeSpoken?: boolean | null;
   spokenStatus?: SpokenStatus;
   spokenProgress?: SpokenProgressData | SpokenProgressDataOptions | null;
+  delivery?: string[] | null;
 }
 
 /**
@@ -1367,10 +1369,13 @@ export interface BotOutputMessageDataOptions extends TextMessageDataOptions {
  * version; `sendRtviMessage` serialises with `excludeNone: true` so each
  * client only sees the fields relevant to its version.
  *
- * - `textType`: what form the text is in (e.g., sentence, code, etc.).
- * - `aggregatedBy`: what form the text is in, always the same as `textType`.
- *   Deprecated upstream since 1.13.0 (use `textType`); kept because it is
- *   still on the wire.
+ * - `outputType`: what form the text is in (e.g., sentence, code, etc.).
+ * - `textType`: what form the text is in, always the same as `outputType`.
+ *   Deprecated upstream since 1.14.0 (use `outputType`); kept because it is
+ *   still on the wire and pre-2.3 clients read it.
+ * - `aggregatedBy`: what form the text is in, always the same as
+ *   `outputType`. Deprecated upstream since 1.13.0 (use `outputType`); kept
+ *   because it is still on the wire.
  * - `segmentId`: ID of the source AggregatedTextFrame.
  * - `spoken`: **(v1 only)** whether the text has been spoken by TTS.
  * - `willBeSpoken`: **(v2+)** whether the text will be spoken by TTS.
@@ -1380,9 +1385,15 @@ export interface BotOutputMessageDataOptions extends TextMessageDataOptions {
  *   `"completed"` once its last word is spoken.
  * - `spokenProgress`: **(v2+)** accumulated / remaining text breakdown.
  *   Present when `willBeSpoken` is true.
+ * - `delivery`: **(2.3.0+)** the delivery of the text just spoken, by its
+ *   universal names, such as `["warm", "emphasis"]`, empty for the voice's
+ *   baseline. They change within a segment where its delivery does, so a
+ *   segment's `"new"` message has none. Present in expressive conversation
+ *   (alpha).
  */
 export class BotOutputMessageData extends TextMessageData {
-  declare textType: TextType | string;
+  declare outputType: TextType | string;
+  declare textType: TextType | string | null;
   declare aggregatedBy: TextType | string | null;
   declare segmentId: number | null;
   // v1 field (protocol 1.4.x)
@@ -1391,30 +1402,42 @@ export class BotOutputMessageData extends TextMessageData {
   declare willBeSpoken: boolean | null;
   declare spokenStatus: SpokenStatus;
   declare spokenProgress: SpokenProgressData | null;
+  declare delivery: string[] | null;
 
   static override readonly fields: FieldSpecs = {
     ...TextMessageData.fields,
-    textType: field<string>(P.str()),
+    outputType: field<string>(P.str()),
+    textType: field(P.optional(P.str()), () => null),
     aggregatedBy: field(P.optional(P.str()), () => null),
     segmentId: field(P.optional(P.int()), () => null),
     spoken: field(P.optional(P.bool()), () => null),
     willBeSpoken: field(P.optional(P.bool()), () => null),
     spokenStatus: field(P.optional(P.literal("new", "in-progress", "completed")), () => null),
     spokenProgress: field(P.optional(P.model(() => SpokenProgressData)), () => null),
+    delivery: field(P.optional(P.list(P.str())), () => null),
   };
 
   constructor(options: BotOutputMessageDataOptions) {
     super(options as TextMessageDataOptions);
   }
 
-  /** Fill whichever of `textType` and `aggregatedBy` is missing from the other. */
+  /** Fill whichever of `outputType` and its deprecated names are missing. */
   protected static override _beforeValidate(
     data: Record<string, unknown>,
   ): Record<string, unknown> {
-    if (data.textType === undefined && data.aggregatedBy !== undefined) {
-      return { ...data, textType: data.aggregatedBy };
-    } else if (data.aggregatedBy === undefined && data.textType !== undefined) {
-      return { ...data, aggregatedBy: data.textType };
+    const names = ["outputType", "textType", "aggregatedBy"] as const;
+    const given = names.filter((name) => data[name] !== undefined).map((name) => data[name]);
+    if (given.length > 0) {
+      const filled: Record<string, unknown> = {};
+      for (const name of names) {
+        filled[name] = given[0];
+      }
+      for (const [key, value] of Object.entries(data)) {
+        if (value !== undefined) {
+          filled[key] = value;
+        }
+      }
+      return { ...data, ...filled };
     }
     return data;
   }
@@ -1710,6 +1733,61 @@ export class UserTranscriptionMessage extends BaseModel {
 
 export type UserInputType = "transcription" | "chat" | "backchannel";
 
+export interface UserPerceptionLabelOptions {
+  label: string;
+  confidence: number;
+}
+
+/**
+ * A label of a perception signal, with how sure the reading is.
+ *
+ * - `label`: the label, such as `"frustrated"`.
+ * - `confidence`: how sure the reading is, from 0 to 1.
+ */
+export class UserPerceptionLabel extends BaseModel {
+  declare label: string;
+  declare confidence: number;
+
+  static override readonly fields: FieldSpecs = {
+    label: field(P.str()),
+    confidence: field(P.float()),
+  };
+
+  constructor(options: UserPerceptionLabelOptions) {
+    super(options);
+  }
+}
+
+export interface UserPerceptionSignalOptions {
+  name: string;
+  labels?: (UserPerceptionLabel | UserPerceptionLabelOptions)[];
+  value?: number | null;
+}
+
+/**
+ * One signal of a reading of how the user spoke.
+ *
+ * - `name`: what is read, such as `"tone"`.
+ * - `labels`: the likeliest labels, likeliest first, for a signal read as
+ *   labels.
+ * - `value`: the measure, for a signal read as a value.
+ */
+export class UserPerceptionSignal extends BaseModel {
+  declare name: string;
+  declare labels: UserPerceptionLabel[];
+  declare value: number | null;
+
+  static override readonly fields: FieldSpecs = {
+    name: field(P.str()),
+    labels: field(P.list(P.model(() => UserPerceptionLabel)), () => []),
+    value: field(P.optional(P.float()), () => null),
+  };
+
+  constructor(options: UserPerceptionSignalOptions) {
+    super(options);
+  }
+}
+
 export interface UserInputMessageDataOptions {
   text: string;
   inputType: UserInputType;
@@ -1717,6 +1795,7 @@ export interface UserInputMessageDataOptions {
   final: boolean;
   userId?: string | null;
   msgId?: string | null;
+  perception?: (UserPerceptionSignal | UserPerceptionSignalOptions)[] | null;
 }
 
 /**
@@ -1732,6 +1811,9 @@ export interface UserInputMessageDataOptions {
  * - `userId`: identifier for the user who spoke or typed. For chat, set only
  *   when the transport knows the sender, such as Daily and LiveKit.
  * - `msgId`: for chat, the id of the client's `send-text` message.
+ * - `perception`: for a transcription, how the user said it, when the STT
+ *   service reports a reading with it. Part of expressive conversation
+ *   (alpha).
  */
 export class UserInputMessageData extends BaseModel {
   declare text: string;
@@ -1740,6 +1822,7 @@ export class UserInputMessageData extends BaseModel {
   declare final: boolean;
   declare userId: string | null;
   declare msgId: string | null;
+  declare perception: UserPerceptionSignal[] | null;
 
   static override readonly fields: FieldSpecs = {
     text: field(P.str()),
@@ -1748,6 +1831,7 @@ export class UserInputMessageData extends BaseModel {
     final: field(P.bool()),
     userId: field(P.optional(P.str()), () => null),
     msgId: field(P.optional(P.str()), () => null),
+    perception: field(P.optional(P.list(P.model(() => UserPerceptionSignal))), () => null),
   };
 
   constructor(options: UserInputMessageDataOptions) {

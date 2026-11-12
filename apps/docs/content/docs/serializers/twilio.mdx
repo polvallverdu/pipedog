@@ -43,8 +43,10 @@ import { TwilioFrameSerializer } from "@pipedog/serializer-twilio/twilio";
 
 - A Twilio account and a phone number with voice, whose incoming-call webhook returns TwiML with
   `<Connect><Stream url="wss://your.host/ws" />`.
-- Your account SID and auth token, for auto hang-up. The examples read them from
-  `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`.
+- For auto hang-up, your account SID and one credential: the auth token, or an API key (its SID,
+  which starts with `SK`, and its secret). The examples read them from `TWILIO_ACCOUNT_SID`,
+  `TWILIO_AUTH_TOKEN`, `TWILIO_API_KEY` and `TWILIO_API_SECRET`. Each Twilio region has its own
+  auth token and API keys, so use the ones that belong to the region you hang up through.
 - The stream SID and call SID, which Twilio sends in its `start` message.
   [`parseTelephonyWebsocket`](/docs/telephony#reading-the-handshake) reads them for you.
 
@@ -72,6 +74,10 @@ Read Twilio's handshake to get the call details, then build the serializer and t
 
 <include cwd meta='title="twilio.ts"'>snippets/services/serializer-twilio.ts#usage</include>
 
+To hang up with an API key instead of the auth token, pass `apiKeySid` and `apiKeySecret`:
+
+<include cwd>snippets/services/serializer-twilio.ts#api-key</include>
+
 To hang up through a regional API host, pass both `region` and `edge`:
 
 <include cwd>snippets/services/serializer-twilio.ts#region</include>
@@ -82,11 +88,13 @@ Without auto hang-up, only the stream SID is needed:
 
 ### Notes
 
-- With `autoHangUp` on (the default), the constructor throws if `callSid`, `accountSid` or
-  `authToken` is missing, or if only one of `region` and `edge` is set (unless `baseUrl` is).
+- With `autoHangUp` on (the default), the constructor throws if `callSid` or `accountSid` is
+  missing, if there is neither an `authToken` nor an API key, if both an `authToken` and any part
+  of an API key are given, if only one of `apiKeySid` and `apiKeySecret` is set, or if only one of
+  `region` and `edge` is set (unless `baseUrl` is).
 - The hang-up is a `POST` of `Status=completed` to
-  `https://api.twilio.com/2010-04-01/Accounts/{accountSid}/Calls/{callSid}.json` with Basic auth,
-  attempted once. A 404 with code 20404 (call already ended) is logged at debug level; other
+  `https://api.twilio.com/2010-04-01/Accounts/{accountSid}/Calls/{callSid}.json` with Basic auth
+  (`accountSid` and `authToken`, or `apiKeySid` and `apiKeySecret`), attempted once. A 404 with code 20404 (call already ended) is logged at debug level; other
   failures are logged as errors and don't throw. `baseUrl` replaces the host, for a
   Twilio-compatible API.
 - When the caller hangs up first, the socket is already closed, so no hang-up request is made.

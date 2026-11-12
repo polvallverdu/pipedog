@@ -57,6 +57,11 @@ export class SkipTagsAggregator extends SimpleTextAggregator {
     this._currentTagIndex = 0;
   }
 
+  /** The tag pairs whose text is kept in one aggregation. */
+  get tags(): readonly StartEndTags[] {
+    return this._tags;
+  }
+
   /**
    * Aggregate text while respecting tag boundaries.
    *
@@ -128,12 +133,28 @@ export class SkipTagsAggregator extends SimpleTextAggregator {
         continue;
       }
 
-      // Otherwise, use parent's lookahead logic for sentence detection
-      const result = await super._checkSentenceWithLookahead(char);
+      // Otherwise, use parent's lookahead logic for sentence detection,
+      // ignoring boundaries inside tags that have already closed.
+      const result = await super._checkSentenceWithLookahead(char, {
+        protectedEnd: this._closedTagsOffset(),
+      });
       if (result) {
+        // The buffer was trimmed, so rescan it from the start for tags.
+        this._currentTagIndex = 0;
         yield result;
       }
     }
+  }
+
+  /** Return the buffer offset just past the last closing tag, or 0 if none. */
+  protected _closedTagsOffset(): number {
+    let offset = 0;
+    for (const [, endTag] of this._tags) {
+      if (this._text.includes(endTag)) {
+        offset = Math.max(offset, this._text.lastIndexOf(endTag) + endTag.length);
+      }
+    }
+    return offset;
   }
 
   /**

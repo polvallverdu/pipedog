@@ -35,7 +35,7 @@ with the context ID of the request, and `TTSStoppedFrame`, as for live synthesis
   function `(text) => boolean` decides per line.
 - **Lines, as the service asks for them.** LLM text is cut into sentences before synthesis, so
   `warmAudioCache(text)` cuts the text the same way (`tts.spokenSentences(text)` shows the
-  result) and runs it through the service's text filters and transforms. A `TTSSpeakFrame` is
+  result) and runs it through the service's text transforms. A `TTSSpeakFrame` is
   spoken whole: warm its text with `{ split: false }`.
 - **The key** is the text plus the service class, its settings (voice, model, language and the
   rest of `settings`), the sample rate and `audioCacheNamespace`. Change the voice and the cached

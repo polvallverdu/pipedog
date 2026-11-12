@@ -15,7 +15,7 @@ import { expandNumbers } from "../src/utils/text/transforms/numbers.ts";
 import { expandPercentages } from "../src/utils/text/transforms/percentages.ts";
 import { expandPhoneNumbers } from "../src/utils/text/transforms/phone.ts";
 import { replaceText } from "../src/utils/text/transforms/replacements.ts";
-import { stripMarkdown } from "../src/utils/text/transforms/strip_markdown.ts";
+import { StripMarkdown, stripMarkdown } from "../src/utils/text/transforms/strip_markdown.ts";
 import { expandUnits } from "../src/utils/text/transforms/units.ts";
 import { VoiceFormatter } from "../src/utils/text/transforms/voice_formatter.ts";
 
@@ -56,6 +56,78 @@ describe("TestStripMarkdown", () => {
     const text = "Hello world";
     const result = await stripMarkdown(text, "*");
     expect(result).toEqual(text);
+  });
+
+  test("test_content_asterisks_kept", async () => {
+    const cases: Record<string, string> = {
+      "Press * then #": "Press * then #",
+      "5 * 3 = 15": "5 * 3 = 15",
+      "2 * 3 * 4 = 24": "2 * 3 * 4 = 24",
+      "Use the * key, then * again": "Use the * key, then * again",
+      "2*3*4 is 24": "2*3*4 is 24",
+      "2**3 is 8": "2**3 is 8",
+      "Type \\*literal\\* asterisks": "Type *literal* asterisks",
+    };
+    for (const [text, expected] of Object.entries(cases)) {
+      expect(await stripMarkdown(text, "*"), text).toEqual(expected);
+    }
+  });
+
+  test("test_list_bullets", async () => {
+    const cases: Record<string, string> = {
+      "\n- Coffee for three dollars.": "\nCoffee for three dollars.",
+      "- Step one.\n    - Sub step.": "Step one.\n    Sub step.",
+      "* item one\n* item two": "item one\nitem two",
+      "+ plus item": "plus item",
+      "1. First\n2. Second": "1. First\n2. Second",
+      "a - b": "a - b",
+    };
+    for (const [text, expected] of Object.entries(cases)) {
+      expect(await stripMarkdown(text, "*"), text).toEqual(expected);
+    }
+  });
+
+  test("test_strikethrough_dropped", async () => {
+    const cases: Record<string, string> = {
+      "The price was ~~ten~~ eight dollars.": "The price was eight dollars.",
+      "It is ~~not ready~~ ready now.": "It is ready now.",
+      "~~Old.~~ New.": " New.",
+      "About ~~ 5 minutes": "About ~~ 5 minutes",
+      "Roughly ~5 minutes": "Roughly ~5 minutes",
+    };
+    for (const [text, expected] of Object.entries(cases)) {
+      expect(await stripMarkdown(text, "*"), text).toEqual(expected);
+    }
+  });
+
+  test("test_links_reduced_to_label", async () => {
+    const cases: Record<string, string> = {
+      "See [the docs](https://example.com/docs) here.": "See the docs here.",
+      "See ![a cat](cat.png) here.": "See a cat here.",
+      "Go to [example.com](https://example.com).": "Go to example.com.",
+      "Visit https://example.com today": "Visit https://example.com today",
+      "[**bold** link](x)": "bold link",
+    };
+    for (const [text, expected] of Object.entries(cases)) {
+      expect(await stripMarkdown(text, "*"), text).toEqual(expected);
+    }
+  });
+
+  test("test_links_kept", async () => {
+    const keep = new StripMarkdown({ stripUrls: false });
+    const text = "See [the docs](https://example.com/docs) here.";
+    expect(await keep(text, "*")).toEqual(text);
+  });
+
+  test("test_horizontal_rules", async () => {
+    const cases: Record<string, string> = {
+      "First part.\n\n---\n\nSecond part.": "First part.\n\n\nSecond part.",
+      "* * *\ntext": "text",
+      "___\ntext": "text",
+    };
+    for (const [text, expected] of Object.entries(cases)) {
+      expect(await stripMarkdown(text, "*"), text).toEqual(expected);
+    }
   });
 });
 
@@ -377,6 +449,14 @@ describe("TestVoiceFormatter", () => {
     const formatter = new VoiceFormatter({ stripMarkdown: false });
     const result = await formatter("**Hello**", "*");
     expect(result).toContain("**");
+  });
+
+  test("test_strip_urls_passthrough", async () => {
+    const text = "See [the docs](https://example.com/docs) here.";
+    const stripped = await new VoiceFormatter()(text, "*");
+    const kept = await new VoiceFormatter({ stripUrls: false })(text, "*");
+    expect(stripped).toEqual("See the docs here.");
+    expect(kept).toContain("https://example.com/docs");
   });
 
   test("test_custom_replacements_applied", async () => {

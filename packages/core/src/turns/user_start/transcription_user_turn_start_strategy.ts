@@ -7,7 +7,6 @@
 /** User turn start strategy based on transcriptions. */
 
 import { type Frame, InterimTranscriptionFrame, TranscriptionFrame } from "../../frames/frames.ts";
-import { ProcessFrameResult } from "../types.ts";
 import {
   BaseUserTurnStartStrategy,
   type BaseUserTurnStartStrategyOptions,
@@ -40,17 +39,12 @@ export class TranscriptionUserTurnStartStrategy extends BaseUserTurnStartStrateg
    * Process an incoming frame to detect the start of a user turn.
    *
    * @param frame The frame to be processed.
-   * @returns STOP if a transcription was received, CONTINUE otherwise.
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     if (frame instanceof InterimTranscriptionFrame && this._useInterim) {
-      await this.triggerUserTurnStarted();
-      return ProcessFrameResult.STOP;
+      await this.reportUserTurnStarted();
     } else if (frame instanceof TranscriptionFrame) {
-      await this.triggerUserTurnStarted();
-      return ProcessFrameResult.STOP;
+      await this.reportUserTurnStarted();
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 }

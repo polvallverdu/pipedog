@@ -57,7 +57,13 @@ function concat(parts: Uint8Array[]): Uint8Array {
 
 function urls(): { seen: string[]; fetch: (u: string | URL | Request) => string } {
   const seen: string[] = [];
-  return { seen, fetch: (u) => (seen.push(String(u)), String(u)) };
+  return {
+    seen,
+    fetch: (u) => {
+      seen.push(String(u));
+      return String(u);
+    },
+  };
 }
 
 async function sigv4(): Promise<void> {

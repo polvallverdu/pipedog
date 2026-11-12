@@ -6,7 +6,7 @@
 
 /** User turn stop strategy driven by another component in the pipeline. */
 
-import { Event, type Task, TimeoutError, waitFor } from "@pipedog/asyncio";
+import { sleep, type Task } from "@pipedog/asyncio";
 import {
   type Frame,
   InterimTranscriptionFrame,
@@ -15,10 +15,10 @@ import {
   TranscriptionFrame,
   UserStartedSpeakingFrame,
   UserStoppedSpeakingFrame,
+  VADUserStartedSpeakingFrame,
+  VADUserStoppedSpeakingFrame,
 } from "../../frames/frames.ts";
-import type { FrameProcessorSetup } from "../../processors/frame_processor.ts";
 import { logger } from "../../utils/logger.ts";
-import { ProcessFrameResult } from "../types.ts";
 import {
   BaseUserTurnStopStrategy,
   type BaseUserTurnStopStrategyOptions,
@@ -26,8 +26,9 @@ import {
 
 export interface ExternalUserTurnStopStrategyOptions extends BaseUserTurnStopStrategyOptions {
   /**
-   * A short delay (seconds) used internally to handle consecutive or slightly
-   * delayed transcriptions.
+   * How long (seconds) to wait after a final transcription for more of them,
+   * so a turn whose transcription arrives late or in pieces is decided once
+   * the text has settled.
    */
   timeout?: number;
   /**
@@ -59,7 +60,7 @@ export interface ExternalUserTurnStopStrategyOptions extends BaseUserTurnStopStr
  *   strategy adopts that decision and emits nothing.
  *
  * To shift the timing further, subclass this strategy and override
- * `BaseUserTurnStopStrategy.triggerUserTurnStopped`, which both paths reach
+ * `BaseUserTurnStopStrategy.reportUserTurnStopped`, which both paths reach
  * once they decide the turn is over. Its `enableUserSpeakingFrames` option
  * already carries whichever path got there, so pass it through when the
  * override eventually finalizes.
@@ -72,8 +73,11 @@ export class ExternalUserTurnStopStrategy extends BaseUserTurnStopStrategy {
   protected _seenInterimResults = false;
   protected _turnAnnouncedElsewhere = false;
   protected _turnOpen = false;
-  protected _event = new Event();
-  protected _task: Task<unknown> | null = null;
+  // Whether this strategy decided since the user last spoke or new text
+  // arrived. The controller clears the decisions on speech, so it decides
+  // again after that, but never repeats a decision that still counts.
+  protected _decided = false;
+  protected _transcriptTask: Task<unknown> | null = null;
 
   constructor(options: ExternalUserTurnStopStrategyOptions = {}) {
     super(options);
@@ -113,26 +117,14 @@ export class ExternalUserTurnStopStrategy extends BaseUserTurnStopStrategy {
     this._userSpeaking = false;
     this._seenInterimResults = false;
     this._turnAnnouncedElsewhere = false;
-    this._event.clear();
-  }
-
-  /**
-   * Set up the strategy.
-   *
-   * @param setup Configuration object containing setup parameters.
-   */
-  override async setup(setup: FrameProcessorSetup): Promise<void> {
-    await super.setup(setup);
-    this._task = this.createTask(() => this._taskHandler(), `${this}::_task_handler`);
+    this._decided = false;
+    await this._cancelTranscriptTimer();
   }
 
   /** Cleanup the strategy. */
   override async cleanup(): Promise<void> {
     await super.cleanup();
-    if (this._task) {
-      await this.taskManager.cancelTask(this._task);
-      this._task = null;
-    }
+    await this._cancelTranscriptTimer();
   }
 
   /**
@@ -142,9 +134,8 @@ export class ExternalUserTurnStopStrategy extends BaseUserTurnStopStrategy {
    * turn will be triggered when appropriate based on the collected frames.
    *
    * @param frame The frame to be analyzed.
-   * @returns Always returns CONTINUE so subsequent stop strategies are evaluated.
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     if (frame instanceof ProposedUserStartedSpeakingFrame) {
       await this._handleUserStartedSpeaking({ announcedElsewhere: false });
     } else if (frame instanceof ProposedUserStoppedSpeakingFrame) {
@@ -153,13 +144,17 @@ export class ExternalUserTurnStopStrategy extends BaseUserTurnStopStrategy {
       await this._handleUserStartedSpeaking({ announcedElsewhere: true });
     } else if (frame instanceof UserStoppedSpeakingFrame) {
       await this._handleUserStoppedSpeaking({ announcedElsewhere: true });
+    } else if (frame instanceof VADUserStartedSpeakingFrame) {
+      // The controller clears the decisions on any speech, even speech the
+      // service doesn't hear, so this strategy decides again after it.
+      this._decided = false;
+    } else if (frame instanceof VADUserStoppedSpeakingFrame) {
+      await this._maybeReportUserTurnStopped();
     } else if (frame instanceof InterimTranscriptionFrame) {
       await this._handleInterimTranscription(frame);
     } else if (frame instanceof TranscriptionFrame) {
       await this._handleTranscription(frame);
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 
   /** Handle the external signal that the user is speaking. */
@@ -167,6 +162,7 @@ export class ExternalUserTurnStopStrategy extends BaseUserTurnStopStrategy {
     announcedElsewhere: boolean;
   }): Promise<void> {
     this._userSpeaking = true;
+    this._decided = false;
     this._turnAnnouncedElsewhere = options.announcedElsewhere;
   }
 
@@ -176,7 +172,7 @@ export class ExternalUserTurnStopStrategy extends BaseUserTurnStopStrategy {
   }): Promise<void> {
     this._userSpeaking = false;
     this._turnAnnouncedElsewhere = options.announcedElsewhere;
-    await this._maybeTriggerUserTurnStopped();
+    await this._maybeReportUserTurnStopped();
   }
 
   protected async _handleInterimTranscription(_frame: InterimTranscriptionFrame): Promise<void> {
@@ -188,32 +184,29 @@ export class ExternalUserTurnStopStrategy extends BaseUserTurnStopStrategy {
     this._text += frame.text;
     // We just got a final result, so let's reset interim results.
     this._seenInterimResults = false;
-    // Reset aggregation timer.
-    this._event.set();
+    // The new text is worth a decision of its own, once no more arrives.
+    this._decided = false;
+    await this._cancelTranscriptTimer();
+    this._transcriptTask = this.createTask(
+      () => this._transcriptTimerHandler(),
+      `${this}::_transcript_timer_handler`,
+    );
   }
 
-  /**
-   * Asynchronously monitor transcriptions and trigger user end turn when ready.
-   *
-   * If transcription text exists and the user is not currently speaking,
-   * triggers the user end turn. Handles multiple or delayed transcriptions
-   * gracefully.
-   */
-  protected async _taskHandler(): Promise<void> {
-    while (true) {
-      try {
-        await waitFor(() => this._event.wait(), this._timeout);
-        this._event.clear();
-      } catch (e) {
-        if (!(e instanceof TimeoutError)) throw e;
-        // Note: with waitForTranscript off (realtime mode) this fires on
-        // every tick. The _turnOpen check protects against unnecessarily
-        // triggering over and over (harmless, since the controller drops
-        // repeated triggers, but noisy).
-        if (this._turnOpen) {
-          await this._maybeTriggerUserTurnStopped();
-        }
-      }
+  /** Decide once no more transcriptions arrive for a while. */
+  protected async _transcriptTimerHandler(): Promise<void> {
+    await sleep(this._timeout);
+    this._transcriptTask = null;
+    if (this._turnOpen) {
+      await this._maybeReportUserTurnStopped();
+    }
+  }
+
+  protected async _cancelTranscriptTimer(): Promise<void> {
+    if (this._transcriptTask) {
+      const task = this._transcriptTask;
+      this._transcriptTask = null;
+      await this.cancelTask(task);
     }
   }
 
@@ -224,29 +217,30 @@ export class ExternalUserTurnStopStrategy extends BaseUserTurnStopStrategy {
    * land here from the transcript timeout above, long after the signal that
    * set it.
    */
-  protected async _triggerUserTurnStopped(): Promise<void> {
+  protected async _reportUserTurnStopped(): Promise<void> {
     if (this._turnAnnouncedElsewhere) {
       logger.debug(`${this}: adopting a user turn stop decided elsewhere`);
     } else {
       logger.debug(`${this}: resolving a proposed user turn stop`);
     }
-    await this.triggerUserTurnStopped({
+    this._decided = true;
+    await this.reportUserTurnStopped({
       enableUserSpeakingFrames: this._turnAnnouncedElsewhere ? false : null,
     });
   }
 
-  protected async _maybeTriggerUserTurnStopped(): Promise<void> {
-    if (this._userSpeaking) {
+  protected async _maybeReportUserTurnStopped(): Promise<void> {
+    if (this._userSpeaking || this._decided) {
       return;
     }
     if (!this._waitForTranscript) {
       // Fire as soon as the external stop signal arrives —
       // transcripts (if any) are off the latency critical path.
-      await this._triggerUserTurnStopped();
+      await this._reportUserTurnStopped();
       return;
     }
     if (!this._seenInterimResults && this._text) {
-      await this._triggerUserTurnStopped();
+      await this._reportUserTurnStopped();
     }
   }
 }

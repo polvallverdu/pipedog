@@ -9,6 +9,7 @@ import {
   BotStoppedSpeakingFrame,
   EndWorkerFrame,
   ErrorFrame,
+  type Frame,
   InputAudioRawFrame,
   InterruptionFrame,
   StopWorkerFrame,
@@ -17,7 +18,6 @@ import {
   VADUserStoppedSpeakingFrame,
 } from "../src/frames/frames.ts";
 import { Language } from "../src/transcriptions/language.ts";
-import { ProcessFrameResult } from "../src/turns/types.ts";
 import { EndingUserMuteStrategy, OpeningUserMuteStrategy } from "../src/turns/user_mute/index.ts";
 import {
   BACKCHANNEL_PHRASES,
@@ -33,6 +33,17 @@ function captureStarts(strategy: MinWordsUserTurnStartStrategy): { count: number
   return starts;
 }
 
+/** Process `frame` and say whether it made the strategy report a turn start. */
+async function reports(
+  strategy: MinWordsUserTurnStartStrategy,
+  starts: { count: number },
+  frame: Frame,
+): Promise<boolean> {
+  const before = starts.count;
+  await strategy.processFrame(frame);
+  return starts.count > before;
+}
+
 function transcription(text: string, language: Language | null = null): TranscriptionFrame {
   return new TranscriptionFrame({ text, userId: "cat", timestamp: "", language });
 }
@@ -42,9 +53,7 @@ describe("MinWordsUserTurnStartStrategy options", () => {
     const strategy = new MinWordsUserTurnStartStrategy({ minWords: 3 });
     const starts = captureStarts(strategy);
 
-    expect(await strategy.processFrame(new VADUserStartedSpeakingFrame())).toBe(
-      ProcessFrameResult.CONTINUE,
-    );
+    expect(await reports(strategy, starts, new VADUserStartedSpeakingFrame())).toBe(false);
     expect(starts.count).toBe(0);
   });
 
@@ -55,26 +64,18 @@ describe("MinWordsUserTurnStartStrategy options", () => {
     });
     const starts = captureStarts(strategy);
 
-    expect(await strategy.processFrame(new VADUserStartedSpeakingFrame())).toBe(
-      ProcessFrameResult.STOP,
-    );
+    expect(await reports(strategy, starts, new VADUserStartedSpeakingFrame())).toBe(true);
     expect(starts.count).toBe(1);
 
     await strategy.processFrame(new BotStartedSpeakingFrame());
-    expect(await strategy.processFrame(new VADUserStartedSpeakingFrame())).toBe(
-      ProcessFrameResult.CONTINUE,
-    );
-    expect(await strategy.processFrame(transcription("yes"))).toBe(ProcessFrameResult.CONTINUE);
+    expect(await reports(strategy, starts, new VADUserStartedSpeakingFrame())).toBe(false);
+    expect(await reports(strategy, starts, transcription("yes"))).toBe(false);
     expect(starts.count).toBe(1);
-    expect(await strategy.processFrame(transcription("wait a second"))).toBe(
-      ProcessFrameResult.STOP,
-    );
+    expect(await reports(strategy, starts, transcription("wait a second"))).toBe(true);
     expect(starts.count).toBe(2);
 
     await strategy.processFrame(new BotStoppedSpeakingFrame());
-    expect(await strategy.processFrame(new VADUserStartedSpeakingFrame())).toBe(
-      ProcessFrameResult.STOP,
-    );
+    expect(await reports(strategy, starts, new VADUserStartedSpeakingFrame())).toBe(true);
     expect(starts.count).toBe(3);
   });
 
@@ -113,21 +114,17 @@ describe("MinWordsUserTurnStartStrategy options", () => {
     const starts = captureStarts(strategy);
 
     await strategy.processFrame(new BotStartedSpeakingFrame());
-    expect(await strategy.processFrame(transcription("Yes, okay."))).toBe(
-      ProcessFrameResult.CONTINUE,
-    );
-    expect(await strategy.processFrame(transcription("Mm-hm, right"))).toBe(
-      ProcessFrameResult.CONTINUE,
-    );
+    expect(await reports(strategy, starts, transcription("Yes, okay."))).toBe(false);
+    expect(await reports(strategy, starts, transcription("Mm-hm, right"))).toBe(false);
     expect(starts.count).toBe(0);
-    expect(await strategy.processFrame(transcription("yes, but what about Friday?"))).toBe(
-      ProcessFrameResult.STOP,
+    expect(await reports(strategy, starts, transcription("yes, but what about Friday?"))).toBe(
+      true,
     );
     expect(starts.count).toBe(1);
 
     // With the bot quiet, a backchannel is an answer and starts the turn.
     await strategy.processFrame(new BotStoppedSpeakingFrame());
-    expect(await strategy.processFrame(transcription("yes okay"))).toBe(ProcessFrameResult.STOP);
+    expect(await reports(strategy, starts, transcription("yes okay"))).toBe(true);
     expect(starts.count).toBe(2);
   });
 
@@ -153,36 +150,28 @@ describe("MinWordsUserTurnStartStrategy options", () => {
 
     await strategy.processFrame(new BotStartedSpeakingFrame());
     // No VAD at all: a background TV.
-    expect(await strategy.processFrame(transcription("and now the weather"))).toBe(
-      ProcessFrameResult.CONTINUE,
-    );
+    expect(await reports(strategy, starts, transcription("and now the weather"))).toBe(false);
     // VAD stopped long ago.
     await strategy.processFrame(new VADUserStartedSpeakingFrame());
     await strategy.processFrame(new VADUserStoppedSpeakingFrame({ timestamp: time() - 5 }));
-    expect(await strategy.processFrame(transcription("and now the weather"))).toBe(
-      ProcessFrameResult.CONTINUE,
-    );
+    expect(await reports(strategy, starts, transcription("and now the weather"))).toBe(false);
     expect(starts.count).toBe(0);
 
     // VAD hears the user now.
     await strategy.processFrame(new VADUserStartedSpeakingFrame());
-    expect(await strategy.processFrame(transcription("hold on please"))).toBe(
-      ProcessFrameResult.STOP,
-    );
+    expect(await reports(strategy, starts, transcription("hold on please"))).toBe(true);
     expect(starts.count).toBe(1);
 
     // The final transcript arrives just after VAD stopped.
     await strategy.processFrame(new BotStartedSpeakingFrame());
     await strategy.processFrame(new VADUserStoppedSpeakingFrame());
-    expect(await strategy.processFrame(transcription("hold on please"))).toBe(
-      ProcessFrameResult.STOP,
-    );
+    expect(await reports(strategy, starts, transcription("hold on please"))).toBe(true);
     expect(starts.count).toBe(2);
 
     // With the bot quiet, there is no check.
     await strategy.processFrame(new BotStoppedSpeakingFrame());
     await strategy.processFrame(new VADUserStoppedSpeakingFrame({ timestamp: time() - 5 }));
-    expect(await strategy.processFrame(transcription("hello"))).toBe(ProcessFrameResult.STOP);
+    expect(await reports(strategy, starts, transcription("hello"))).toBe(true);
   });
 });
 

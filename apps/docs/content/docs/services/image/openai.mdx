@@ -51,6 +51,7 @@ Runtime-updatable settings, passed as `settings: new OpenAIImageGenService.Setti
 | `model` | `string` | `"gpt-image-2.5-flare"` | Image model. |
 | `imageSize` | `OpenAIImageSize \| string \| null` | `null` | `"auto"`, `"1024x1024"`, `"1536x1024"`, `"1024x1536"`, ... `null` leaves it to OpenAI. |
 | `quality` | `OpenAIImageQuality \| string \| null` | `null` | `"auto"`, `"low"`, `"medium"`, `"high"`, ... Lower is faster. `null` lets OpenAI pick. |
+| `moderation` | `OpenAIImageModeration \| string \| null` | `null` | Content-moderation level for generated images: `"low"` for less restrictive filtering, or `"auto"`. `null` leaves OpenAI's default. |
 
 ### Usage
 

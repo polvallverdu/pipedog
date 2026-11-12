@@ -2,7 +2,7 @@
 
 Mistral services for pipedog: `MistralLLMService` (chat completions, an `OpenAILLMService` subclass, with `MistralLLMAdapter`), `MistralSTTService` (Voxtral realtime transcription) and `MistralTTSService` (Voxtral speech synthesis).
 
-A port of Pipecat's `pipecat.adapters.services.mistral_adapter`, `pipecat.services.mistral`. Subpaths mirror upstream: `@pipedog/mistral/llm`, `@pipedog/mistral/mistral_adapter`, `@pipedog/mistral/stt`, `@pipedog/mistral/tts`.
+A port of Pipecat's `pipecat.adapters.llm.services.mistral_adapter`, `pipecat.services.mistral`. Subpaths mirror upstream: `@pipedog/mistral/llm`, `@pipedog/mistral/mistral_adapter`, `@pipedog/mistral/stt`, `@pipedog/mistral/tts`.
 
 ## Install
 

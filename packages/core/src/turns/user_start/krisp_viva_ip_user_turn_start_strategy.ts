@@ -13,7 +13,7 @@
  * the IP model to predict whether the speech is a real interruption.
  *
  * Only when the IP model's probability exceeds the configured threshold is
- * `triggerUserTurnStarted()` called. This prevents the bot from being
+ * `reportUserTurnStarted()` called. This prevents the bot from being
  * interrupted by brief acknowledgements or filler words.
  *
  * PARTIAL PORT: the Krisp SDK (`krisp_audio`) is a native Python module with no
@@ -37,7 +37,6 @@ import {
 } from "../../frames/frames.ts";
 import { getEnv } from "../../utils/env.ts";
 import { logger } from "../../utils/logger.ts";
-import { ProcessFrameResult } from "../types.ts";
 import {
   BaseUserTurnStartStrategy,
   type BaseUserTurnStartStrategyOptions,
@@ -224,35 +223,29 @@ export class KrispVivaIPUserTurnStartStrategy extends BaseUserTurnStartStrategy 
    * resets the candidate state.
    *
    * @param frame The incoming frame.
-   * @returns STOP if a genuine interruption was detected, CONTINUE otherwise.
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     if (frame instanceof VADUserStartedSpeakingFrame) {
-      return await this._handleVadStarted(frame);
+      await this._handleVadStarted(frame);
     } else if (frame instanceof InputAudioRawFrame) {
-      return await this._handleAudio(frame);
+      await this._handleAudio(frame);
     } else if (
       frame instanceof VADUserStoppedSpeakingFrame ||
       frame instanceof BotStoppedSpeakingFrame
     ) {
-      return await this._handleReset(frame);
+      await this._handleReset(frame);
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 
   /**
    * Begin collecting audio for interruption classification.
    *
-   * @returns Always CONTINUE; the decision is deferred until enough audio is processed.
+   * The decision waits until enough audio is processed.
    */
-  protected async _handleVadStarted(
-    _frame: VADUserStartedSpeakingFrame,
-  ): Promise<ProcessFrameResult> {
+  protected async _handleVadStarted(_frame: VADUserStartedSpeakingFrame): Promise<void> {
     logger.trace("Krisp VIVA IP: VAD speech started, collecting audio for classification");
     this._speechActive = true;
     this._decisionMade = false;
-    return ProcessFrameResult.CONTINUE;
   }
 
   /**
@@ -265,14 +258,13 @@ export class KrispVivaIPUserTurnStartStrategy extends BaseUserTurnStartStrategy 
    * evaluation.
    *
    * @param frame Raw audio input frame.
-   * @returns STOP if the model detects a genuine interruption, CONTINUE otherwise.
    */
-  protected async _handleAudio(frame: InputAudioRawFrame): Promise<ProcessFrameResult> {
+  protected async _handleAudio(frame: InputAudioRawFrame): Promise<void> {
     this._ensureSession(frame.sampleRate);
 
     if (this._ipSession === null || this._samplesPerFrame === null) {
       logger.warning("IP session not ready, skipping frame");
-      return ProcessFrameResult.CONTINUE;
+      return;
     }
 
     const buffer = new Uint8Array(this._audioBuffer.length + frame.audio.length);
@@ -284,7 +276,7 @@ export class KrispVivaIPUserTurnStartStrategy extends BaseUserTurnStartStrategy 
     const numCompleteFrames = Math.floor(totalSamples / this._samplesPerFrame);
 
     if (numCompleteFrames === 0) {
-      return ProcessFrameResult.CONTINUE;
+      return;
     }
 
     const completeSamplesCount = numCompleteFrames * this._samplesPerFrame;
@@ -313,26 +305,19 @@ export class KrispVivaIPUserTurnStartStrategy extends BaseUserTurnStartStrategy 
             `threshold=${this._threshold})`,
         );
         this._decisionMade = true;
-        await this.triggerUserTurnStarted();
-        return ProcessFrameResult.STOP;
+        await this.reportUserTurnStarted();
+        return;
       }
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 
-  /**
-   * Reset state when the candidate interruption window ends.
-   *
-   * @returns Always CONTINUE.
-   */
+  /** Reset state when the candidate interruption window ends. */
   protected async _handleReset(
     _frame: VADUserStoppedSpeakingFrame | BotStoppedSpeakingFrame,
-  ): Promise<ProcessFrameResult> {
+  ): Promise<void> {
     if (this._speechActive) {
       logger.trace("Krisp VIVA IP: speech segment ended, resetting state");
       this._resetState();
     }
-    return ProcessFrameResult.CONTINUE;
   }
 }

@@ -7,13 +7,11 @@
 /**
  * Azure OpenAI Realtime LLM service implementation.
  *
- * Porting note: the websocket is `websocketConnect()` from core, which sends
- * the `api-key` / `Authorization` header on Bun, Node, Deno and Cloudflare
- * Workers.
+ * Porting note: the base service opens the websocket with core
+ * `websocketConnect()`, which sends the `api-key` / `Authorization` header
+ * returned by `_authHeaders()` on Bun, Node, Deno and Cloudflare Workers.
  */
 
-import { rethrowIfCancelled } from "@pipedog/asyncio";
-import { websocketConnect } from "@pipedog/core/services/websocket_service";
 import { logger } from "@pipedog/core/utils/logger";
 import {
   OpenAIRealtimeLLMService,
@@ -22,10 +20,6 @@ import {
 } from "@pipedog/openai/realtime/llm";
 
 import type { AzureTokenProvider } from "../common.ts";
-
-function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
 
 /** Settings for AzureRealtimeLLMService. */
 export class AzureRealtimeLLMSettings extends OpenAIRealtimeLLMSettings {}
@@ -122,33 +116,10 @@ export class AzureRealtimeLLMService extends OpenAIRealtimeLLMService {
     }
   }
 
-  protected override async _connect(): Promise<void> {
-    try {
-      if (this._websocket) {
-        // Here we assume that if we have a websocket, we are connected. We
-        // handle disconnections in the send/recv code paths.
-        return;
-      }
-
-      let headers: Record<string, string>;
-      if (this._tokenProvider) {
-        headers = { Authorization: `Bearer ${await this._tokenProvider()}` };
-      } else {
-        headers = { "api-key": this.apiKey };
-      }
-
-      logger.info(`Connecting to ${this.baseUrl}`);
-      this._websocket = await websocketConnect(this.baseUrl, {
-        additionalHeaders: headers,
-      });
-      this._receiveTask = this.createTask(
-        () => this._receiveTaskHandler(),
-        "_receive_task_handler",
-      );
-    } catch (e) {
-      rethrowIfCancelled(e);
-      await this.pushError(`initialization error: ${errorMessage(e)}`, { exception: e });
-      this._websocket = null;
+  protected override async _authHeaders(): Promise<Record<string, string>> {
+    if (this._tokenProvider) {
+      return { Authorization: `Bearer ${await this._tokenProvider()}` };
     }
+    return { "api-key": this.apiKey };
   }
 }

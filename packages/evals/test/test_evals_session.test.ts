@@ -510,10 +510,10 @@ describe("TestFramesToEvents", () => {
       new InputTransportMessageFrame({
         message: { label: RTVI.MESSAGE_LABEL, type: msgType, data },
       });
-    const botOutput = (textType: string, status: string, accumulated = "Mm-hmm.") =>
+    const botOutput = (outputType: string, status: string, accumulated = "Mm-hmm.") =>
       msg("bot-output", {
         text: "Mm-hmm.",
-        text_type: textType,
+        output_type: outputType,
         spoken_status: status,
         spoken_progress: { accumulated_text: accumulated, remaining_text: "" },
       });
@@ -531,6 +531,77 @@ describe("TestFramesToEvents", () => {
     expect(
       s.frameToEvent(msg("user-input", { text: "hello", input_type: "transcription" })),
     ).toBeNull();
+  });
+
+  test("test_expression_from_messages", () => {
+    // Expressive conversation reports what the TTS performed: where the delivery
+    // of the spoken text change, and each event and pause.
+    const s = _stream(true);
+
+    const botOutput = (
+      segmentId: number,
+      options: {
+        textType?: string;
+        text?: string;
+        delivery?: string[] | null;
+        status?: string;
+      } = {},
+    ) => {
+      const data: Dict = {
+        text: options.text ?? "words",
+        text_type: options.textType ?? "sentence",
+        segment_id: segmentId,
+        will_be_spoken: true,
+        spoken_status: options.status ?? "in-progress",
+      };
+      if (options.delivery !== undefined && options.delivery !== null) {
+        data.delivery = options.delivery;
+      }
+      return new InputTransportMessageFrame({
+        message: { label: RTVI.MESSAGE_LABEL, type: "bot-output", data },
+      });
+    };
+
+    const expression = (frame: Frame) => {
+      const event = s.frameToEvent(frame);
+      return event ? event.text : event;
+    };
+
+    s.frameToEvent(new LLMFullResponseStartFrame());
+    // Spoken text counts as it is spoken, not when it is announced.
+    expect(expression(botOutput(1, { delivery: ["excited"], status: "new" }))).toBeNull();
+    expect(expression(botOutput(1, { delivery: ["excited"] }))).toBe("<<excited>>");
+    expect(expression(botOutput(1, { delivery: ["excited"], status: "completed" }))).toBeNull();
+    expect(expression(botOutput(2, { delivery: ["excited", "emphasis"] }))).toBe(
+      "<<excited, emphasis>>",
+    );
+    // Delivery can change within a segment, word by word.
+    expect(expression(botOutput(2, { delivery: ["calm"] }))).toBe("<<calm>>");
+    // An event counts when it is heard, once.
+    expect(
+      expression(botOutput(3, { textType: "expression_sound", text: "laughter", status: "new" })),
+    ).toBeNull();
+    expect(
+      expression(
+        botOutput(3, { textType: "expression_sound", text: "laughter", status: "completed" }),
+      ),
+    ).toBe("[[laughter]]");
+    expect(
+      expression(
+        botOutput(3, { textType: "expression_sound", text: "laughter", status: "completed" }),
+      ),
+    ).toBeNull();
+    expect(
+      expression(botOutput(4, { textType: "expression_pause", text: "600", status: "completed" })),
+    ).toBe("[[pause 600]]");
+    expect(expression(botOutput(5, { delivery: ["excited"] }))).toBe("<<excited>>");
+    expect(expression(botOutput(6, { delivery: ["excited"] }))).toBeNull();
+    expect(expression(botOutput(7, { delivery: [] }))).toBe("<<neutral>>");
+    // Without expressive conversation, spoken text carries no delivery.
+    expect(expression(botOutput(8))).toBeNull();
+    // Each response starts from the baseline.
+    s.frameToEvent(new LLMFullResponseStartFrame());
+    expect(expression(botOutput(9, { delivery: [] }))).toBeNull();
   });
 
   test("test_transcription_frame_is_ignored_by_the_sink", () => {
@@ -1391,6 +1462,27 @@ describe("TestEvaluateAggregate", () => {
     expect(failure!.reason).toContain("'Berlin.●'");
   });
 
+  test("test_text_matches_checks_the_accumulated_reply", async () => {
+    const exp = new EvalExpectation({
+      event: "llm_response",
+      textContains: "Germany",
+      textMatches: ["^●"],
+    });
+    for (const [first, kind] of [
+      ["● Berlin.", null],
+      ["Berlin. ●", "text_unmatched"],
+    ] as const) {
+      const s = _matcher(null, false);
+      (s as any)._stream._queue.putNowait({ type: "llm_response", text: first });
+      (s as any)._stream._queue.putNowait({
+        type: "llm_response",
+        text: "The capital of Germany.",
+      });
+      const failure = await s.match(exp, monotonic(), 100, 0, 0);
+      expect(failure ? failure.kind : null).toBe(kind);
+    }
+  });
+
   test("test_eval_yes_passes", async () => {
     const s = _matcher();
     (s as any)._judge = new _FakeJudge(["yes"]);
@@ -1697,6 +1789,23 @@ describe("TestTextContainsResolution", () => {
     // Spacing is ignored, as for text_contains.
     exp = new EvalExpectation({ event: "llm_response", textExcludes: "not sure" });
     expect(_check({ type: "llm_response", text: "I'm not  sure." }, exp)).not.toBeNull();
+  });
+
+  test("test_text_matches", () => {
+    const exp = new EvalExpectation({
+      event: "llm_response",
+      textMatches: [String.raw`^\[\[voice:[^\]]*\]\]`, String.raw`\]\]\s*\S`],
+    });
+    const ok = { type: "llm_response", text: "[[voice: emotion=warm]] Sure thing." };
+    expect(_check(ok, exp)).toBeNull();
+    let failure = _check({ type: "llm_response", text: "Sure. [[voice: x]]" }, exp);
+    expect(failure.kind).toBe("text_unmatched");
+    expect(failure.reason).toContain("does not match '^");
+    // Each pattern must match; the failure names the first that did not.
+    failure = _check({ type: "llm_response", text: "[[voice: emotion=warm]]" }, exp);
+    expect(failure.kind).toBe("text_unmatched");
+    // repr(r"\]\]\s*\S")
+    expect(failure.reason).toContain(String.raw`'\\]\\]\\s*\\S'`);
   });
 });
 

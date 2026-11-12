@@ -53,9 +53,9 @@
     ],
     "upstream": [
       "src/pipecat/services/openai",
-      "src/pipecat/adapters/services/open_ai_live_adapter.py",
-      "src/pipecat/adapters/services/open_ai_realtime_adapter.py",
-      "src/pipecat/adapters/services/open_ai_responses_adapter.py"
+      "src/pipecat/adapters/llm/services/open_ai_live_adapter.py",
+      "src/pipecat/adapters/llm/services/open_ai_realtime_adapter.py",
+      "src/pipecat/adapters/llm/services/open_ai_responses_adapter.py"
     ]
   }
 }

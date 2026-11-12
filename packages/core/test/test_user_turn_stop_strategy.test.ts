@@ -18,20 +18,17 @@ import {
   TranscriptionFrame,
   UserStartedSpeakingFrame,
   UserStoppedSpeakingFrame,
-  UserTurnInferenceCompletedFrame,
   VADUserStartedSpeakingFrame,
   VADUserStoppedSpeakingFrame,
 } from "../src/frames/frames.ts";
 import { FrameProcessorSetup } from "../src/processors/frame_processor.ts";
-import type { ProcessFrameResult } from "../src/turns/types.ts";
 import type {
-  TriggerUserTurnStoppedOptions,
+  ReportUserTurnStoppedOptions,
   UserTurnStoppedParams,
 } from "../src/turns/user_stop/base_user_turn_stop_strategy.ts";
 import type { ExternalUserTurnStopStrategyOptions } from "../src/turns/user_stop/external_user_turn_stop_strategy.ts";
 import {
   BaseUserTurnStopStrategy,
-  ExternalUserTurnCompletionStopStrategy,
   ExternalUserTurnStopStrategy,
   SpeechTimeoutUserTurnStopStrategy,
 } from "../src/turns/user_stop/index.ts";
@@ -811,37 +808,10 @@ describe("TestSpeechTimeoutStopSecsWarnings", () => {
 });
 
 describe("TestExternalUserTurnCompletionStopStrategy", () => {
-  let taskManager: TaskManager;
-
-  beforeEach(() => {
-    taskManager = new TaskManager();
-  });
-
-  async function createStrategy(): Promise<ExternalUserTurnCompletionStopStrategy> {
-    const strategy = new ExternalUserTurnCompletionStopStrategy();
-    await strategy.setup(frameProcessorSetup(taskManager));
-    return strategy;
-  }
-
-  /**
-   * The strategy fires on_user_turn_stopped on UserTurnInferenceCompletedFrame.
-   *
-   * The stale-completion-while-speaking gate lives in the controller (which
-   * holds the authoritative user-speaking state), not in this strategy; see
-   * test_user_turn_controller.py.
-   */
-  test("test_finalizes_on_completion", async () => {
-    const strategy = await createStrategy();
-
-    let finalized = false;
-
-    strategy.eventHandler("on_user_turn_stopped", async (_strategy, _params) => {
-      finalized = true;
-    });
-
-    await strategy.processFrame(new UserTurnInferenceCompletedFrame());
-    expect(finalized).toBe(true);
-  });
+  // Skipped: exercises the deprecated ExternalUserTurnCompletionStopStrategy,
+  // which is not ported (use ExternalUserTurnStopStrategy, or
+  // LLMTurnCompletionUserTurnStopStrategy for the LLM's markers).
+  test.skip("test_finalizes_on_completion", () => {});
 });
 
 describe("TestExternalUserTurnStopStrategy", () => {
@@ -875,6 +845,7 @@ describe("TestExternalUserTurnStopStrategy", () => {
 
   test("test_external_strategy", async () => {
     const strategy = new ExternalUserTurnStopStrategy();
+    await strategy.setup(frameProcessorSetup(taskManager));
 
     let shouldStart: boolean | null = null;
 
@@ -901,6 +872,7 @@ describe("TestExternalUserTurnStopStrategy", () => {
 
     await strategy.processFrame(new UserStoppedSpeakingFrame());
     expect(shouldStart).toBe(true);
+    await strategy.cleanup();
   });
 
   test("test_proposal_finalizes_with_emission_enabled", async () => {
@@ -928,12 +900,11 @@ describe("TestExternalUserTurnStopStrategy", () => {
   });
 
   /**
-   * The idle timer must stay quiet between turns.
+   * The strategy stays quiet between turns, with wait_for_transcript off too.
    *
-   * With wait_for_transcript off (how realtime mode configures this
-   * strategy) the timer path would otherwise fire on every tick forever.
+   * That's how realtime mode configures this strategy.
    */
-  test("test_no_timer_driven_finalization_while_no_turn_is_open", async () => {
+  test("test_no_decisions_while_no_turn_is_open", async () => {
     const strategy = new ExternalUserTurnStopStrategy({ timeout: 0.05, waitForTranscript: false });
     await strategy.setup(frameProcessorSetup(taskManager));
 
@@ -943,11 +914,11 @@ describe("TestExternalUserTurnStopStrategy", () => {
       fired += 1;
     });
 
-    // Never started a turn: several timer ticks should pass in silence.
+    // Never started a turn: nothing decides.
     await sleep(0.3);
     expect(fired).toEqual(0);
 
-    // Once a turn opens, the timer finalizes it as before.
+    // Once a turn opens, the stop signal ends it.
     await strategy.handleUserTurnStarted();
     await strategy.processFrame(new ProposedUserStoppedSpeakingFrame());
     expect(fired).toEqual(1);
@@ -964,7 +935,7 @@ describe("TestExternalUserTurnStopStrategy", () => {
    * Finalization from the transcript timeout carries the right flags.
    *
    * A transcript that arrives after the stop signal closes the turn from
-   * the internal timeout, long after the signal that determined whether
+   * the transcript timer, long after the signal that determined whether
    * emission is suppressed. This ordering happens with services whose
    * stop signal and transcript come from independent events; a service
    * that pushes the transcript before proposing the stop takes the
@@ -988,7 +959,7 @@ describe("TestExternalUserTurnStopStrategy", () => {
     await strategy.handleUserTurnStarted();
 
     // Stop signal first, transcript after: the stop resolves from the
-    // timeout in the strategy's task handler.
+    // transcript timer.
     await strategy.processFrame(new UserStartedSpeakingFrame());
     await strategy.processFrame(new UserStoppedSpeakingFrame());
     expect(params).toBeNull();
@@ -999,6 +970,102 @@ describe("TestExternalUserTurnStopStrategy", () => {
     await sleep(0.15);
     expect(params).not.toBeNull();
     expect(params!.enableUserSpeakingFrames).toBe(false);
+    await strategy.cleanup();
+  });
+
+  async function openTurn(
+    strategy: ExternalUserTurnStopStrategy,
+  ): Promise<UserTurnStoppedParams[]> {
+    const decisions: UserTurnStoppedParams[] = [];
+
+    strategy.eventHandler(
+      "on_user_turn_stopped",
+      async (_strategy, params: UserTurnStoppedParams) => {
+        decisions.push(params);
+      },
+    );
+
+    await strategy.setup(frameProcessorSetup(taskManager));
+    await strategy.handleUserTurnStarted();
+    return decisions;
+  }
+
+  async function say(strategy: ExternalUserTurnStopStrategy, text: string): Promise<void> {
+    await strategy.processFrame(new ProposedUserStartedSpeakingFrame());
+    await strategy.processFrame(new TranscriptionFrame({ text, userId: "", timestamp: "now" }));
+    await strategy.processFrame(new ProposedUserStoppedSpeakingFrame());
+  }
+
+  test("test_it_decides_once_while_the_turn_stays_open", async () => {
+    const strategy = new ExternalUserTurnStopStrategy({ timeout: 0.05 });
+    const decisions = await openTurn(strategy);
+
+    await say(strategy, "Hello!");
+    await sleep(0.3);
+
+    expect(decisions.length).toEqual(1);
+    await strategy.cleanup();
+  });
+
+  /** VAD hearing a cough clears the controller's decisions, so it decides again after it. */
+  test("test_speech_the_service_did_not_hear_lets_it_decide_again", async () => {
+    const strategy = new ExternalUserTurnStopStrategy({ timeout: 0.05 });
+    const decisions = await openTurn(strategy);
+    await say(strategy, "Hello!");
+
+    await strategy.processFrame(new VADUserStartedSpeakingFrame());
+    await strategy.processFrame(new VADUserStoppedSpeakingFrame());
+
+    expect(decisions.length).toEqual(2);
+    await strategy.cleanup();
+  });
+
+  test("test_speech_the_service_heard_waits_for_its_stop", async () => {
+    const strategy = new ExternalUserTurnStopStrategy({ timeout: 0.05 });
+    const decisions = await openTurn(strategy);
+    await say(strategy, "Hello!");
+
+    await strategy.processFrame(new ProposedUserStartedSpeakingFrame());
+    await strategy.processFrame(new VADUserStartedSpeakingFrame());
+    await strategy.processFrame(new VADUserStoppedSpeakingFrame());
+    expect(decisions.length).toEqual(1);
+
+    await strategy.processFrame(new ProposedUserStoppedSpeakingFrame());
+    expect(decisions.length).toEqual(2);
+    await strategy.cleanup();
+  });
+
+  test("test_new_text_after_the_decision_gets_a_decision_of_its_own", async () => {
+    const strategy = new ExternalUserTurnStopStrategy({ timeout: 0.05 });
+    const decisions = await openTurn(strategy);
+    await say(strategy, "Book a flight");
+
+    await strategy.processFrame(
+      new TranscriptionFrame({ text: " to Boston", userId: "", timestamp: "now" }),
+    );
+    await sleep(0.15);
+
+    expect(decisions.length).toEqual(2);
+    await strategy.cleanup();
+  });
+
+  test("test_a_transcription_in_pieces_after_the_stop_gets_one_decision", async () => {
+    const strategy = new ExternalUserTurnStopStrategy({ timeout: 0.1 });
+    const decisions = await openTurn(strategy);
+    await strategy.processFrame(new ProposedUserStartedSpeakingFrame());
+    await strategy.processFrame(new ProposedUserStoppedSpeakingFrame());
+
+    await strategy.processFrame(
+      new TranscriptionFrame({ text: "Book a flight", userId: "", timestamp: "now" }),
+    );
+    await sleep(0.05);
+    await strategy.processFrame(
+      new TranscriptionFrame({ text: " to Boston", userId: "", timestamp: "now" }),
+    );
+    expect(decisions).toEqual([]);
+
+    await sleep(0.2);
+    expect(decisions.length).toEqual(1);
     await strategy.cleanup();
   });
 
@@ -1017,7 +1084,7 @@ describe("TestExternalUserTurnStopStrategy", () => {
         this.pending = null;
       }
 
-      override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+      override async processFrame(frame: Frame): Promise<void> {
         if (frame instanceof ProposedUserStartedSpeakingFrame && this.pending) {
           const task = this.pending;
           this.pending = null;
@@ -1026,8 +1093,8 @@ describe("TestExternalUserTurnStopStrategy", () => {
         return await super.processFrame(frame);
       }
 
-      override async triggerUserTurnStopped(
-        options: TriggerUserTurnStoppedOptions = {},
+      override async reportUserTurnStopped(
+        options: ReportUserTurnStoppedOptions = {},
       ): Promise<void> {
         if (this.pending) {
           return;
@@ -1040,7 +1107,7 @@ describe("TestExternalUserTurnStopStrategy", () => {
       async _finalizeLater(enableUserSpeakingFrames: boolean | null): Promise<void> {
         await sleep(0.2);
         this.pending = null;
-        await super.triggerUserTurnStopped({ enableUserSpeakingFrames });
+        await super.reportUserTurnStopped({ enableUserSpeakingFrames });
       }
     }
 
@@ -1110,7 +1177,28 @@ describe("TestBaseUserTurnStopStrategyDeprecations", () => {
     const strategy = new BaseUserTurnStopStrategy();
     const captured = await captureParams(strategy);
 
-    await strategy.triggerUserTurnStopped();
+    await strategy.reportUserTurnStopped();
     expect(captured[0]!.enableUserSpeakingFrames).toBe(true);
   });
+
+  // Skipped: exercises an override of the deprecated
+  // `trigger_user_turn_stopped()`, which is not ported.
+  test.skip("test_an_override_of_the_deprecated_trigger_still_gets_reports", () => {});
+
+  // Skipped: exercises the compatibility for a half-migrated override of the
+  // deprecated `trigger_user_turn_stopped()`, which is not ported.
+  test.skip("test_a_half_migrated_override_reports_once", () => {});
+
+  // Skipped: same as above, from a task the override starts.
+  test.skip("test_a_half_migrated_override_reports_once_from_its_own_task", () => {});
+
+  // Skipped: exercises the deprecated `trigger_user_turn_inference_triggered()`
+  // and `trigger_user_turn_speculation_cancelled()`, which are not ported.
+  test.skip("test_the_deprecated_speculation_methods_still_fire", () => {});
+});
+
+describe("TestInferenceWithoutSpeculation", () => {
+  // Skipped: exercises the deprecated `trigger_user_turn_inference_triggered()`,
+  // which is not ported (`startUserTurnSpeculation()` always takes one).
+  test.skip("test_a_call_without_a_speculation_warns_once_and_is_ignored", () => {});
 });

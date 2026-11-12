@@ -25,6 +25,7 @@
  */
 
 import { abortable, currentSignal, rethrowIfCancelled } from "@pipedog/asyncio";
+import type { BaseExpressionAdapter } from "@pipedog/core/adapters/tts/base_expression_adapter";
 import {
   ErrorFrame,
   type Frame,
@@ -48,7 +49,9 @@ import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { normalizeIpa } from "@pipedog/core/utils/text/phonemes";
 import { installTracedTts } from "@pipedog/core/utils/tracing/service_decorators";
 import { assertGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
+import { ElevenLabsAudioTagExpressionAdapter } from "./elevenlabs_adapter.ts";
 import {
+  _endsInAudioTag,
   _selectAlignment,
   _stripUtteranceLeadingSpaces,
   _wordTimestampsIncludeInterFrameSpaces,
@@ -91,7 +94,7 @@ export const ELEVENLABS_CONTEXT_UNSUPPORTED_MODELS: ReadonlySet<string> = new Se
   "eleven_v3_conversational",
 ]);
 
-/** Voice-setting wire keys and the settings fields they come from. */
+/** Voice-setting keys (dict keys) and the settings fields they come from. */
 const VOICE_SETTING_KEYS: readonly (readonly [string, string])[] = [
   ["stability", "stability"],
   ["similarity_boost", "similarityBoost"],
@@ -104,8 +107,7 @@ const VOICE_SETTING_KEYS: readonly (readonly [string, string])[] = [
  * Build voice settings dictionary for ElevenLabs based on provided settings.
  *
  * @param settings Dictionary or settings containing voice settings
- *   parameters. A dictionary is read by the wire key (`similarity_boost`),
- *   falling back to the field name (`similarityBoost`).
+ *   parameters. A dictionary is read by the wire key (`similarity_boost`).
  * @returns Dictionary of voice settings or null if no valid settings are
  *   provided.
  */
@@ -119,7 +121,7 @@ export function buildElevenlabsVoiceSettings(
       // Upstream reads the field with getattr(settings, field): a dynamic lookup.
       val = (settings as unknown as Record<string, unknown>)[field];
     } else {
-      val = Object.hasOwn(settings, key) ? settings[key] : settings[field];
+      val = settings[key];
     }
     // NOT_GIVEN is an attribute value upstream too, but never in a store.
     if (val !== null && val !== undefined && val !== NOT_GIVEN) {
@@ -603,23 +605,19 @@ export class ElevenLabsTTSService extends ElevenLabsTTSBase {
               ? true
               : null,
           });
+        }
 
-          // Calculate the actual end time of this audio chunk
-          const charStartTimesMs: number[] = alignment.charStartTimesMs ?? [];
-          const charDurationsMs: number[] = alignment.charDurationsMs ?? [];
+        // Alignment times restart at zero in every message, so the clock
+        // advances by each chunk's span, including chunks that complete no
+        // word, such as trailing punctuation arriving on its own.
+        const charStartTimesMs: number[] = alignment.charStartTimesMs ?? [];
+        const charDurationsMs: number[] = alignment.charDurationsMs ?? [];
 
-          if (charStartTimesMs.length > 0 && charDurationsMs.length > 0) {
-            // End time = start time of last character + duration of last character
-            const chunkEndTimeMs = charStartTimesMs.at(-1)! + charDurationsMs.at(-1)!;
-            const chunkEndTimeSeconds = chunkEndTimeMs / 1000.0;
-            this._cumulativeTime += chunkEndTimeSeconds;
-          } else {
-            // Fallback: use the last word's start time (current behavior)
-            this._cumulativeTime = wordTimes.at(-1)![1];
-            logger.warning(
-              "_receive_messages: using fallback timing method - consider investigating alignment data structure",
-            );
-          }
+        if (charStartTimesMs.length > 0 && charDurationsMs.length > 0) {
+          const chunkEndTimeMs = charStartTimesMs.at(-1)! + charDurationsMs.at(-1)!;
+          this._cumulativeTime += chunkEndTimeMs / 1000.0;
+        } else if (wordTimes.length > 0) {
+          this._cumulativeTime = wordTimes.at(-1)![1];
         }
       }
     }
@@ -761,6 +759,7 @@ export class ElevenLabsHttpTTSService extends TTSService {
   /** Track partial words that span across alignment chunks. */
   protected _partialWord: string;
   protected _partialWordStartTime: number;
+  protected _audioTagExpressionAdapter: ElevenLabsAudioTagExpressionAdapter;
 
   /**
    * Initialize the ElevenLabs HTTP TTS service.
@@ -822,6 +821,24 @@ export class ElevenLabsHttpTTSService extends TTSService {
     // Track partial words that span across alignment chunks
     this._partialWord = "";
     this._partialWordStartTime = 0.0;
+
+    this._audioTagExpressionAdapter = new ElevenLabsAudioTagExpressionAdapter();
+  }
+
+  /**
+   * The adapter for the model: audio tags on Eleven v3 and v4, otherwise none.
+   *
+   * @returns The expression adapter for the current model.
+   */
+  override getExpressionAdapter(): BaseExpressionAdapter {
+    const model = this._settings.model;
+    if (
+      typeof model === "string" &&
+      (model.startsWith("eleven_v3") || model.startsWith("eleven_v4"))
+    ) {
+      return this._audioTagExpressionAdapter;
+    }
+    return super.getExpressionAdapter();
   }
 
   /**
@@ -932,6 +949,8 @@ export class ElevenLabsHttpTTSService extends TTSService {
    * alignment chunks.
    *
    * @param alignmentInfo Character timing data from ElevenLabs.
+   * @param options.audioTags Whether a bracketed audio tag, such as
+   *   `[short pause]`, is one word, spaces and all.
    * @returns List of [word, timestamp] pairs for complete words in this chunk.
    *
    * @example
@@ -944,7 +963,11 @@ export class ElevenLabsHttpTTSService extends TTSService {
    * // Would produce word times (with cumulativeTime = 0):
    * // [["Hello", 0.1], ["world", 0.5]]
    */
-  calculateWordTimes(alignmentInfo: Dict): [string, number][] {
+  calculateWordTimes(
+    alignmentInfo: Dict,
+    options: { audioTags?: boolean } = {},
+  ): [string, number][] {
+    const audioTags = options.audioTags ?? false;
     const chars: string[] = alignmentInfo.characters ?? [];
     const charStartTimes: number[] = alignmentInfo.character_start_times_seconds ?? [];
 
@@ -965,10 +988,14 @@ export class ElevenLabsHttpTTSService extends TTSService {
     // Start with any partial word from previous chunk
     let currentWord = this._partialWord;
     let wordStartTime: number | null = this._partialWord ? this._partialWordStartTime : null;
+    let inTag = audioTags && _endsInAudioTag(currentWord);
 
     for (let i = 0; i < chars.length; i++) {
       const char = chars[i]!;
-      if (char === " ") {
+      if (audioTags && (char === "[" || char === "]")) {
+        inTag = char === "[";
+      }
+      if (char === " " && !inTag) {
         if (currentWord) {
           // Only add non-empty words
           words.push(currentWord);
@@ -1079,7 +1106,8 @@ export class ElevenLabsHttpTTSService extends TTSService {
         // Track the duration of this utterance based on the last character's end time
         let utteranceDuration = 0;
         let alignmentStarted = false;
-        const decoder = new TextDecoder("utf-8");
+        // Strict, like Python's `bytes.decode("utf-8")`: invalid bytes raise.
+        const decoder = new TextDecoder("utf-8", { fatal: true });
         for await (const line of iterLines(response.body)) {
           const lineStr = decoder.decode(line).trim();
           if (!lineStr) {
@@ -1132,8 +1160,11 @@ export class ElevenLabsHttpTTSService extends TTSService {
                 utteranceDuration = Math.max(utteranceDuration, chunkEndTime);
               }
 
-              // Calculate word timestamps
-              const wordTimes = this.calculateWordTimes(alignment);
+              // Calculate word timestamps. The audio tags expressive
+              // conversation sends mark when its sounds are performed.
+              const wordTimes = this.calculateWordTimes(alignment, {
+                audioTags: Boolean(this._expressionFormatter),
+              });
               if (wordTimes.length > 0) {
                 await this.addWordTimestamps(wordTimes, contextId, {
                   includesInterFrameSpaces: this._includesInterFrameSpaces(),

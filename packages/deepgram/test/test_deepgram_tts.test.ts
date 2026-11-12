@@ -20,9 +20,9 @@ import { DeepgramHttpTTSService, DeepgramTTSService } from "../src/tts.ts";
  * response with its status code.
  */
 class InvalidStatus extends Error {
-  response: { status_code: number };
+  response: { status_code: number; headers: Headers };
 
-  constructor(response: { status_code: number }) {
+  constructor(response: { status_code: number; headers: Headers }) {
     super(`server rejected WebSocket connection: HTTP ${response.status_code}`);
     this.name = "InvalidStatus";
     this.response = response;
@@ -30,8 +30,9 @@ class InvalidStatus extends Error {
 }
 
 /** Build the exception `websockets` raises when a handshake is rejected. */
-function websocketRejection(statusCode: number): InvalidStatus {
-  return new InvalidStatus({ status_code: statusCode });
+function websocketRejection(statusCode: number, reason: string | null = null): InvalidStatus {
+  const headers = reason ? new Headers({ "dg-error": reason }) : new Headers();
+  return new InvalidStatus({ status_code: statusCode, headers });
 }
 
 /**
@@ -70,6 +71,29 @@ test("test_deepgram_server_error_leaves_the_service_usable", async () => {
   await service._connectWebsocket();
 
   expect(service.isUsable).toBe(true);
+});
+
+/** Deepgram's reason for refusing the handshake reaches the error and the event. */
+test("test_deepgram_refusal_reports_deepgram_reason", async () => {
+  const reason = "'speed' must be within documented range.";
+
+  const fakeWebsocketConnect = async (..._args: unknown[]): Promise<never> => {
+    throw websocketRejection(400, reason);
+  };
+
+  const service = new DeepgramTTSService({ apiKey: "test-key", sampleRate: 24000 });
+  patchWebsocketConnect(service, fakeWebsocketConnect);
+  const connectionErrors: unknown[] = [];
+
+  service.eventHandler("on_connection_error", async (_service: unknown, error: unknown) => {
+    connectionErrors.push(error);
+  });
+
+  await service._connectWebsocket();
+  // Event handlers run as background tasks; let it finish.
+  await sleep(0);
+
+  expect(connectionErrors).toEqual([`Deepgram refused the connection (HTTP 400): ${reason}`]);
 });
 
 /** HTTP TTS audio frames hold whole 16-bit samples however the stream is split. */

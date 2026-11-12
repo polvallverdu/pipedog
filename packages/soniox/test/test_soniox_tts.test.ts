@@ -180,6 +180,7 @@ describe("TestSonioxUpdateSettingsFinalizesOldContext", () => {
     const svc = s as any;
     // Applying a settings delta reports the service usable again.
     svc._isUsable = true;
+    svc._expressionFormatter = null;
     // Real streaming sequencer with a mid-sentence prefix pending on the turn ctx.
     const seq = new AggregatedFrameSequencer({ name: s.name, streaming: true });
     svc._aggregatedFrameSequencer = seq;

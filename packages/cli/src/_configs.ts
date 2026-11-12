@@ -100,7 +100,7 @@ export const COMPATIBLE_LLMS: readonly CompatibleLlm[] = [
     pkg: "@pipedog/inception",
     cls: "InceptionLLMService",
     env: "INCEPTION_API_KEY",
-    model: "mercury-2",
+    model: "mercury-3",
   },
   {
     value: "mistral_llm",
@@ -143,14 +143,6 @@ export const COMPATIBLE_LLMS: readonly CompatibleLlm[] = [
     model: "openai/gpt-4.1",
   },
   {
-    value: "perplexity_llm",
-    label: "Perplexity",
-    pkg: "@pipedog/perplexity",
-    cls: "PerplexityLLMService",
-    env: "PERPLEXITY_API_KEY",
-    model: "sonar",
-  },
-  {
     value: "qwen_llm",
     label: "Qwen",
     pkg: "@pipedog/qwen",
@@ -173,6 +165,14 @@ export const COMPATIBLE_LLMS: readonly CompatibleLlm[] = [
     cls: "SarvamLLMService",
     env: "SARVAM_API_KEY",
     model: "sarvam-105b",
+  },
+  {
+    value: "smallest_llm",
+    label: "Smallest",
+    pkg: "@pipedog/smallest",
+    cls: "SmallestLLMService",
+    env: "SMALLEST_API_KEY",
+    model: "electron",
   },
   {
     value: "together_llm",
@@ -269,6 +269,7 @@ ${CLOUDFLARE_CREDENTIALS}
   }),
 })`,
   xai_stt: keyed("XAISTTService", "XAI_API_KEY"),
+  zoom_ai_stt: keyed("ZoomAISTTService", "ZOOM_AI_API_KEY"),
 
   // LLM services
   // A model ID string goes through the AI Gateway. Any AI SDK model works in its place, e.g.
@@ -329,6 +330,13 @@ ${CLOUDFLARE_CREDENTIALS}
     systemInstruction: SYSTEM_INSTRUCTION,
   }),
 })`,
+  // NVIDIA NIM. For a local NIM deployment, pass `baseUrl` (e.g. http://localhost:8000/v1).
+  nvidia_llm: keyed(
+    "NvidiaLLMService",
+    "NVIDIA_API_KEY",
+    `    model: process.env.NVIDIA_MODEL ?? "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    systemInstruction: SYSTEM_INSTRUCTION,`,
+  ),
   openai_llm: keyed(
     "OpenAILLMService",
     "OPENAI_API_KEY",
@@ -341,9 +349,21 @@ ${CLOUDFLARE_CREDENTIALS}
     `    model: process.env.OPENAI_MODEL ?? "gpt-4.1",
     systemInstruction: SYSTEM_INSTRUCTION,`,
   ),
+  // Perplexity's Agent API speaks the OpenAI Responses protocol, so it isn't in COMPATIBLE_LLMS.
+  perplexity_llm: keyed(
+    "PerplexityAgentHttpLLMService",
+    "PERPLEXITY_API_KEY",
+    `    model: process.env.PERPLEXITY_MODEL ?? "openai/gpt-5.6-luna",
+    systemInstruction: SYSTEM_INSTRUCTION,`,
+  ),
   ...Object.fromEntries(COMPATIBLE_LLMS.map((llm) => [llm.value, compatibleLlmConfig(llm)])),
 
   // TTS services
+  assemblyai_tts: keyed(
+    "AssemblyAITTSService",
+    "ASSEMBLYAI_API_KEY",
+    `    voice: process.env.ASSEMBLYAI_VOICE_ID ?? "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3",`,
+  ),
   aws_polly_tts: `new AWSPollyTTSService({
 ${AWS_CREDENTIALS}
   awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,

@@ -15,9 +15,10 @@
  *
  * DIVERGENCE: upstream lists every Pipecat service, whether or not it is installed. This list is
  * limited to what pipedog has ported, so a service that isn't ported can't be offered (Daily,
- * Deepgram's SageMaker variants, AssemblyAI, ...). Pipecat Cloud, Daily PSTN, Twilio +
- * Daily SIP and Krisp aren't offered either; they have no pipedog counterpart. Upstream's
- * `package` field (`pipecat-ai[deepgram]`, a PyPI extra) is an npm package here.
+ * the Deepgram and NVIDIA SageMaker variants, NVIDIA Riva STT and TTS, ...). Pipecat Cloud,
+ * Daily PSTN, Twilio + Daily SIP and Krisp aren't offered either; they have no pipedog
+ * counterpart. Upstream's `package` field (`pipecat-ai[deepgram]`, a PyPI extra) is an npm
+ * package here.
  *
  * For operations on services, use `ServiceLoader` from `service_loader.ts`.
  */
@@ -177,6 +178,8 @@ export const NOT_OFFERED: Record<string, string> = {
   WhisperSTTServiceMLX:
     "upstream doesn't offer it either; in pipedog it runs the same ONNX engine as WhisperSTTService, which is offered",
   FunASRSTTService: "upstream doesn't offer it; a local SenseVoice model, mainly for Chinese",
+  NvidiaOmniLLMService:
+    "upstream doesn't offer it either; it hears the user itself, so it replaces the STT service and needs a pipeline of its own",
   PiperHttpTTSService:
     "needs a separately run Piper HTTP server (PiperTTSService, which runs Piper in process, is offered)",
 };
@@ -314,6 +317,7 @@ export class ServiceRegistry {
       note: "Runs the model locally (downloaded on first use into ~/.cache/pipedog): Bun, Node and Deno, not Workers.",
     }),
     svc("xai_stt", "xAI", "@pipedog/xai", ["XAISTTService"]),
+    svc("zoom_ai_stt", "Zoom AI", "@pipedog/zoom-ai", ["ZoomAISTTService"]),
   ];
 
   /** LLM services (cascade mode). */
@@ -344,16 +348,19 @@ export class ServiceRegistry {
     svc("google_vertex_llm", "Google Vertex AI", "@pipedog/google", ["GoogleVertexLLMService"], {
       note: "Uses Google's Node SDK for credentials: runs on Bun and Node.",
     }),
+    svc("nvidia_llm", "NVIDIA", "@pipedog/nvidia", ["NvidiaLLMService"]),
     svc("openai_llm", "OpenAI", "@pipedog/openai", ["OpenAILLMService"]),
     svc("openai_responses_llm", "OpenAI Responses", "@pipedog/openai", [
       "OpenAIResponsesLLMService",
     ]),
+    svc("perplexity_llm", "Perplexity", "@pipedog/perplexity", ["PerplexityAgentHttpLLMService"]),
     // The OpenAI-compatible services, one package each.
     ...COMPATIBLE_LLMS.map((l) => svc(l.value, l.label, l.pkg, [l.cls])),
   ].sort((a, b) => a.label.localeCompare(b.label));
 
   /** Text-to-speech services (cascade mode). */
   static readonly TTS_SERVICES: ServiceDefinition[] = [
+    svc("assemblyai_tts", "AssemblyAI", "@pipedog/assemblyai", ["AssemblyAITTSService"]),
     svc("asyncai_tts", "Async", "@pipedog/asyncai", ["AsyncAITTSService"]),
     svc("aws_polly_tts", "AWS Polly", "@pipedog/aws", ["AWSPollyTTSService"]),
     svc("azure_tts", "Azure TTS", "@pipedog/azure", ["AzureTTSService"]),

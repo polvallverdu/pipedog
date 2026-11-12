@@ -29,9 +29,9 @@
  */
 
 import { rethrowIfCancelled } from "@pipedog/asyncio";
-import type { DirectFunction } from "@pipedog/core/adapters/schemas/direct_function";
-import type { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import type { DirectFunction } from "@pipedog/core/adapters/llm/schemas/direct_function";
+import type { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import { pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { BaseModel, type ModelDumpOptions, ValidationError } from "@pipedog/openai/realtime/events";

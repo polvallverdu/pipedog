@@ -87,6 +87,7 @@ describe("TestPublish", () => {
   skipped("test_opens_and_adopts", PUBLISH);
   skipped("test_multi_commit_branch_stitches_pr", PUBLISH);
   skipped("test_renames_changelog_fragments_to_pr_number", PUBLISH);
+  skipped("test_renames_only_fragments_the_pr_adds", PUBLISH);
   skipped("test_sweep_leaves_correct_and_non_bot_prs_alone", PUBLISH);
   skipped("test_second_pass_is_a_no_op", PUBLISH);
   skipped("test_ensure_digest_keeps_the_rendered_digest", PUBLISH);

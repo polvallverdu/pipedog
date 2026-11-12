@@ -100,6 +100,18 @@ if (runnerArgs instanceof WebSocketRunnerArguments) {
 }
 ```
 
+The serializer hangs up the call when the pipeline ends, with credentials it reads from the
+environment:
+
+| Provider | Environment variables |
+|---|---|
+| Twilio | `TWILIO_ACCOUNT_SID`, and `TWILIO_AUTH_TOKEN` or an API key (`TWILIO_API_KEY` and `TWILIO_API_SECRET`, without `TWILIO_AUTH_TOKEN`). `TWILIO_REGION` and `TWILIO_EDGE`, set together, hang up through a regional API host. |
+| Telnyx | `TELNYX_API_KEY` |
+| Plivo | `PLIVO_AUTH_ID`, `PLIVO_AUTH_TOKEN` |
+| Exotel | none: Exotel's serializer doesn't hang up |
+
+See [Twilio](/docs/serializers/twilio) for how the credentials are checked.
+
 A caller can hang up while the call is connecting, before the provider's `start` message. That
 is a typed outcome rather than a stray exception: `createTransport()` throws
 `TelephonyCallEndedError` (a subclass of the `TelephonyHandshakeError` upstream raises), and

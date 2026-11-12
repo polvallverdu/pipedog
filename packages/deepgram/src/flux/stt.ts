@@ -15,14 +15,14 @@
  *   `fetch` so the header is sent there too).
  * - A standard `WebSocket` exposes neither the handshake's HTTP status nor its
  *   response headers, so the `dg-*` headers upstream logs on connect are not
- *   available, and `_describeRefusal()` only finds Deepgram's `dg-error`
+ *   available, and `describeRefusal()` (in `../_errors.ts`) only finds Deepgram's `dg-error`
  *   reason when the error thrown by the connect (e.g. from a custom
  *   `webSocketFactory`) carries a `response` with `headers`.
  * - Deprecated APIs are not ported: `DeepgramFluxSTTService.InputParams` and
  *   the `model` and `params` constructor options.
  */
 
-import { monotonic, rethrowIfCancelled, type Task, TimeoutError, timeout } from "@pipedog/asyncio";
+import { monotonic, rethrowIfCancelled, type Task } from "@pipedog/asyncio";
 import { ErrorFrame, type Frame } from "@pipedog/core/frames/frames";
 import {
   State,
@@ -33,6 +33,7 @@ import {
 } from "@pipedog/core/services/websocket_service";
 import { logger } from "@pipedog/core/utils/logger";
 import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
+import { describeRefusal } from "../_errors.ts";
 import {
   DeepgramFluxSTTBase,
   type DeepgramFluxSTTBaseOptions,
@@ -48,37 +49,6 @@ type Dict = Record<string, any>;
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
-}
-
-/**
- * Describe Deepgram refusing the handshake, if that is what failed.
- *
- * Deepgram explains a refusal (an invalid setting, a bad API key) in the
- * `dg-error` response header, which the exception's own message leaves out.
- */
-export function _describeRefusal(exception: unknown): string | null {
-  const response = (exception as { response?: any } | null)?.response;
-  const headers = response?.headers;
-  if (!headers) {
-    return null;
-  }
-  const reason: unknown =
-    typeof headers.get === "function" ? headers.get("dg-error") : headers["dg-error"];
-  if (reason) {
-    const status = response.status_code ?? response.statusCode ?? response.status;
-    return `Deepgram refused the connection (HTTP ${status}): ${reason}`;
-  }
-  return null;
-}
-
-/**
- * Python's built-in `ConnectionError`. JS has no such class, so it carries a
- * connection error code, which the default error classification reads as a
- * connectivity failure.
- */
-class ConnectionError extends Error {
-  override name = "ConnectionError";
-  code = "ECONNABORTED";
 }
 
 /** Python's `type(x)` repr for a received message. */
@@ -347,7 +317,7 @@ export class DeepgramFluxSTTService extends WebsocketService(DeepgramFluxSTTBase
       logger.debug(`${this}: Websocket connection initialized`);
     } catch (e) {
       rethrowIfCancelled(e);
-      const refusal = _describeRefusal(e);
+      const refusal = describeRefusal(e);
       await this.pushError(refusal ?? `Unknown error occurred: ${errorMessage(e)}`, {
         exception: e,
       });
@@ -452,32 +422,14 @@ export class DeepgramFluxSTTService extends WebsocketService(DeepgramFluxSTTBase
    */
   override async _receiveMessages(): Promise<void> {
     const messages = this._getWebsocket()[Symbol.asyncIterator]();
-    const connectionTimeout = this._cls._CONNECTION_TIMEOUT;
-    let closedBeforeConfirming = false;
-    try {
-      await timeout(connectionTimeout, async () => {
-        while (!this._connectionEstablishedEvent.isSet()) {
-          const next = await messages.next();
-          if (next.done) {
-            closedBeforeConfirming = true;
-            return;
-          }
-          await this._processMessage(next.value);
-        }
-      });
-    } catch (e) {
-      if (e instanceof TimeoutError) {
-        // The connection never carried a session, so it counts as failing
-        // right after connecting, and the receive loop gives up after a few
-        // in a row rather than retrying forever.
-        this._lastConnectTime = monotonic();
-        throw new ConnectionError(
-          `Flux did not confirm the connection within ${connectionTimeout}s`,
-        );
-      }
-      throw e;
-    }
-    if (closedBeforeConfirming) {
+    if (
+      !(await this._receiveUntilConfirmed(
+        messages,
+        this._connectionEstablishedEvent,
+        (message) => this._processMessage(message),
+        this._cls._CONNECTION_TIMEOUT,
+      ))
+    ) {
       // Closed before confirming; the receive loop treats it as a drop.
       return;
     }

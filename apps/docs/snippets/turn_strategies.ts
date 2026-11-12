@@ -4,17 +4,21 @@
 // Samples for content/docs/concepts/turn-detection.mdx and turn-strategies.mdx.
 // Type-checked on every docs build.
 
+import { sleep, type Task } from "@pipedog/asyncio";
 import { SileroVADAnalyzer } from "@pipedog/audio-silero";
 import { createLocalSmartTurnAnalyzerV3, HttpSmartTurnAnalyzer } from "@pipedog/audio-smart-turn";
 import { WorkersAISmartTurnAnalyzer } from "@pipedog/cloudflare/smart_turn";
-import { type Frame, TranscriptionFrame } from "@pipedog/core/frames/frames";
+import {
+  type Frame,
+  ProposedUserStartedSpeakingFrame,
+  TranscriptionFrame,
+} from "@pipedog/core/frames/frames";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import {
   LLMContextAggregatorPair,
   LLMUserAggregatorParams,
 } from "@pipedog/core/processors/aggregators/llm_response_universal";
 import { EmptyUserTurnConfig } from "@pipedog/core/turns/empty_user_turn";
-import { ProcessFrameResult } from "@pipedog/core/turns/types";
 import {
   BaseUserTurnStartStrategy,
   MinWordsUserTurnStartStrategy,
@@ -22,19 +26,22 @@ import {
   VADUserTurnStartStrategy,
   WakePhraseUserTurnStartStrategy,
 } from "@pipedog/core/turns/user_start/index";
+import type { ReportUserTurnStoppedOptions } from "@pipedog/core/turns/user_stop/base_user_turn_stop_strategy";
 import {
-  deferred,
   ExactMatch,
+  ExternalUserTurnStopStrategy,
   LLMTurnCompletionUserTurnStopStrategy,
   SpeechTimeoutUserTurnStopStrategy,
   TurnAnalyzerUserTurnStopStrategy,
 } from "@pipedog/core/turns/user_stop/index";
 import { UserTurnCompletionConfig } from "@pipedog/core/turns/user_turn_completion_mixin";
 import {
-  defaultUserTurnStartStrategies,
   EagerUserTurnStrategies,
   FilterIncompleteUserTurnStrategies,
+  MergeMode,
+  StrategyMode,
   UserTurnStrategies,
+  UserTurnStrategiesParams,
 } from "@pipedog/core/turns/user_turn_strategies";
 import { OpenAIRealtimeSTTService } from "@pipedog/openai/stt";
 
@@ -85,6 +92,12 @@ const context = new LLMContext();
       stop: [
         new TurnAnalyzerUserTurnStopStrategy({ turnAnalyzer: createLocalSmartTurnAnalyzerV3() }),
       ],
+    }),
+    // The first start strategy to decide starts the turn; every stop strategy
+    // has to agree before it ends.
+    userTurnStrategiesParams: new UserTurnStrategiesParams({
+      startMode: StrategyMode.FIRST,
+      stopMode: StrategyMode.ALL,
     }),
     // A turn with no speech, transcript or turn activity for this long ends anyway.
     userTurnStopTimeout: 5.0,
@@ -164,11 +177,46 @@ const context = new LLMContext();
   const userParams = new LLMUserAggregatorParams({
     vadAnalyzer: new SileroVADAnalyzer(),
     userTurnStrategies: new UserTurnStrategies({
-      // First, so it can hold back the other start strategies while asleep.
-      start: [wakePhrase, ...defaultUserTurnStartStrategies()],
+      // It starts turns on its own once awake, so it is the only start strategy.
+      start: [wakePhrase],
     }),
   });
   // #endregion wake-phrase
+  void userParams;
+}
+
+{
+  // #region wake-phrase-all
+  // Every start strategy has to agree: the wake phrase, and three words.
+  const userParams = new LLMUserAggregatorParams({
+    vadAnalyzer: new SileroVADAnalyzer(),
+    userTurnStrategies: new UserTurnStrategies({
+      start: [
+        new WakePhraseUserTurnStartStrategy({ phrases: ["hey pipedog"] }),
+        new MinWordsUserTurnStartStrategy({ minWords: 3 }),
+      ],
+    }),
+    userTurnStrategiesParams: new UserTurnStrategiesParams({ startMode: StrategyMode.ALL }),
+  });
+  // #endregion wake-phrase-all
+  void userParams;
+}
+
+{
+  // #region stop-mode
+  // Two stop strategies: by default (StrategyMode.ALL) both must agree.
+  // StrategyMode.FIRST ends the turn on whichever decides first.
+  const userParams = new LLMUserAggregatorParams({
+    vadAnalyzer: new SileroVADAnalyzer(),
+    userTurnStrategies: new UserTurnStrategies({
+      stop: [
+        new TurnAnalyzerUserTurnStopStrategy({ turnAnalyzer: createLocalSmartTurnAnalyzerV3() }),
+        new SpeechTimeoutUserTurnStopStrategy({ userSpeechTimeout: 2.0 }),
+      ],
+    }),
+    userTurnStrategiesParams: new UserTurnStrategiesParams({ stopMode: StrategyMode.FIRST }),
+  });
+  // #endregion stop-mode
   void userParams;
 }
 
@@ -207,7 +255,8 @@ const context = new LLMContext();
 
 {
   // #region filter-incomplete
-  // Smart Turn still triggers inference; the LLM's ● marker ends the turn.
+  // Smart Turn decides the user stopped, which runs the inference; the LLM's
+  // ● marker then ends the turn.
   const strategies = new FilterIncompleteUserTurnStrategies({
     config: new UserTurnCompletionConfig({
       incompleteShortTimeout: 5.0,
@@ -215,18 +264,23 @@ const context = new LLMContext();
     }),
   });
 
-  // The same chain, built by hand:
+  // The same strategies, built by hand:
   const byHand = new UserTurnStrategies({
     stop: [
-      deferred(
-        new TurnAnalyzerUserTurnStopStrategy({ turnAnalyzer: createLocalSmartTurnAnalyzerV3() }),
-      ),
+      new TurnAnalyzerUserTurnStopStrategy({ turnAnalyzer: createLocalSmartTurnAnalyzerV3() }),
       new LLMTurnCompletionUserTurnStopStrategy(),
     ],
+  });
+
+  // On top of the turn detection an STT service recommends:
+  const extending = new LLMUserAggregatorParams({
+    userTurnStrategies: new FilterIncompleteUserTurnStrategies(),
+    userTurnStrategiesParams: new UserTurnStrategiesParams({ stopMergeMode: MergeMode.EXTEND }),
   });
   // #endregion filter-incomplete
   void strategies;
   void byHand;
+  void extending;
 }
 
 {
@@ -253,16 +307,58 @@ const context = new LLMContext();
 }
 
 // #region custom-start
-/** Starts a turn on a final transcript that ends with a question mark. */
+/** Decides the user started on a final transcript that ends with a question mark. */
 export class QuestionUserTurnStartStrategy extends BaseUserTurnStartStrategy {
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     if (frame instanceof TranscriptionFrame && frame.text.trim().endsWith("?")) {
-      await this.triggerUserTurnStarted();
-      // Stop: no later start strategy needs to see this frame.
-      return ProcessFrameResult.STOP;
+      // The turn controller starts the turn on this decision (StrategyMode.FIRST),
+      // or once every start strategy has decided (StrategyMode.ALL).
+      await this.reportUserTurnStarted();
     }
-    // Continue: let the next start strategy look at the frame.
-    return ProcessFrameResult.CONTINUE;
   }
 }
 // #endregion custom-start
+
+// #region custom-stop
+/** Waits a grace period after the service says the user stopped. */
+export class GracePeriodUserTurnStopStrategy extends ExternalUserTurnStopStrategy {
+  #pending: Task<unknown> | null = null;
+
+  /** Cancel a pending report when the user starts speaking again. */
+  override async processFrame(frame: Frame): Promise<void> {
+    if (frame instanceof ProposedUserStartedSpeakingFrame) {
+      await this.#cancelPending();
+    }
+    await super.processFrame(frame);
+  }
+
+  // The base strategy calls this to report that the user is done, so this is
+  // where a subclass adjusts the timing.
+  override async reportUserTurnStopped(options: ReportUserTurnStoppedOptions = {}): Promise<void> {
+    if (this.#pending) return;
+    this.#pending = this.createTask(async () => {
+      await sleep(0.5);
+      this.#pending = null;
+      await super.reportUserTurnStopped(options);
+    }, `${this}::grace_period`);
+  }
+
+  override async handleUserTurnStopped(): Promise<void> {
+    await this.#cancelPending();
+    await super.handleUserTurnStopped();
+  }
+
+  override async cleanup(): Promise<void> {
+    await this.#cancelPending();
+    await super.cleanup();
+  }
+
+  async #cancelPending(): Promise<void> {
+    if (this.#pending) {
+      const task = this.#pending;
+      this.#pending = null;
+      await this.cancelTask(task);
+    }
+  }
+}
+// #endregion custom-stop

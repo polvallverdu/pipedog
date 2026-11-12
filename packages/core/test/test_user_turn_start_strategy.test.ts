@@ -240,7 +240,15 @@ describe("TestBaseUserTurnStartStrategyDeprecations", () => {
     const strategy = new BaseUserTurnStartStrategy();
     const captured = captureParams(strategy);
 
-    await strategy.triggerUserTurnStarted();
+    await strategy.reportUserTurnStarted();
     expect(captured[0]!.enableUserSpeakingFrames).toBe(true);
   });
+
+  // Skipped: exercises an override of the deprecated
+  // `trigger_user_turn_started()`, which is not ported.
+  test.skip("test_an_override_of_the_deprecated_trigger_still_gets_reports", () => {});
+
+  // Skipped: exercises the compatibility for a half-migrated override of the
+  // deprecated `trigger_user_turn_started()`, which is not ported.
+  test.skip("test_a_half_migrated_override_reports_once", () => {});
 });

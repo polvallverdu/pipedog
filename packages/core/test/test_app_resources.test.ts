@@ -5,7 +5,7 @@
 // Ported from pipecat: tests/test_app_resources.py
 
 import { describe, expect, mock, test } from "bun:test";
-import { DirectFunctionWrapper } from "../src/adapters/schemas/direct_function.ts";
+import { DirectFunctionWrapper } from "../src/adapters/llm/schemas/direct_function.ts";
 import { SystemClock } from "../src/clocks/system_clock.ts";
 import { EndFrame, type Frame, StartFrame } from "../src/frames/frames.ts";
 import { Pipeline } from "../src/pipeline/pipeline.ts";

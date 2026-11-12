@@ -80,6 +80,10 @@ describe("TestEvalConversationObserver", () => {
   }
 
   test("test_the_turns_and_calls_are_reported_as_a_conversation_once_the_pipeline_is_done", async () => {
+    // A turn answered early is reported once, as written when it ends.
+    await push(
+      new LLMContextUserTurnFrame({ text: "a table at six", timestamp: "t", speculation: true }),
+    );
     await push(new LLMContextUserTurnFrame({ text: "A table at six.", timestamp: "t" }));
     // A broadcast call arrives as two frames: the upstream one is the same call.
     const downstream = inProgress("check", { time: "6" });

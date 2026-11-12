@@ -27,6 +27,7 @@ import { logger } from "@pipedog/core/utils/logger";
 import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { normalizeIpa } from "@pipedog/core/utils/text/phonemes";
 import { assertGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
+import { ElevenLabsAudioTagExpressionAdapter } from "../elevenlabs_adapter.ts";
 import {
   _selectAlignment,
   _stripUtteranceLeadingSpaces,
@@ -181,12 +182,14 @@ export interface ElevenLabsDialogueTTSServiceOptions
  * Multilingual models — it has a fuller set of voice controls.
  *
  * Eleven v3 and v4 perform inline audio tags such as `[laughs]` and
- * `[excited]`. They come back as spoken characters in the alignment, so they
- * reach the LLM context as text unless a text filter removes them.
+ * `[excited]`. They come back as characters in the alignment, and reach
+ * the word timestamps as words of their own: a sound's or a pause's marks
+ * when it is performed, and other markup isn't spoken.
  */
 export class ElevenLabsDialogueTTSService extends ElevenLabsTTSBase {
   static override Settings: typeof ElevenLabsDialogueTTSSettings = ElevenLabsDialogueTTSSettings;
   declare protected _settings: ElevenLabsDialogueTTSSettings;
+  static override expressionAdapterClass = ElevenLabsAudioTagExpressionAdapter;
 
   static override CONNECTION_NAME = "ElevenLabs Text-to-Dialogue";
 
@@ -208,7 +211,7 @@ export class ElevenLabsDialogueTTSService extends ElevenLabsTTSBase {
    *   service.
    */
   constructor(options: ElevenLabsDialogueTTSServiceOptions) {
-    const defaultSettings = new ElevenLabsDialogueTTSSettings({
+    const defaultSettings = new (new.target as typeof ElevenLabsDialogueTTSService).Settings({
       model: "eleven_v4_turbo",
       voice: null,
       language: null,
@@ -293,7 +296,7 @@ export class ElevenLabsDialogueTTSService extends ElevenLabsTTSBase {
       return;
     }
     const context = this._contexts.get(flushId);
-    if (!context || !context.registered) {
+    if (!context?.registered) {
       return;
     }
 
@@ -346,7 +349,7 @@ export class ElevenLabsDialogueTTSService extends ElevenLabsTTSBase {
    */
   protected override async _closeContext(contextId: string): Promise<void> {
     const context = this._contexts.get(contextId);
-    if (!context || !context.registered) {
+    if (!context?.registered) {
       return;
     }
     // The entry outlives the close so that alignment still arriving for this
@@ -387,7 +390,8 @@ export class ElevenLabsDialogueTTSService extends ElevenLabsTTSBase {
   /** Dispatch a single Text-to-Dialogue server message. */
   async _handleMessage(msg: Dict): Promise<void> {
     if (pyTruthy(msg.error)) {
-      await this.pushError(`ElevenLabs Text-to-Dialogue error: ${msg.message ?? pyJsonDumps(msg)}`);
+      const detail = Object.hasOwn(msg, "message") ? msg.message : pyJsonDumps(msg);
+      await this.pushError(`ElevenLabs Text-to-Dialogue error: ${detail}`);
       return;
     }
 
@@ -448,11 +452,14 @@ export class ElevenLabsDialogueTTSService extends ElevenLabsTTSBase {
         !context.alignmentStarted,
       );
       context.alignmentStarted = true;
+      // The audio tags expressive conversation sends mark when its sounds
+      // are performed.
       const [wordTimes, partialWord, partialWordStartTime] = calculateWordTimes(
         alignment,
         this._cumulativeTime,
         this._partialWord,
         this._partialWordStartTime,
+        { audioTags: Boolean(this._expressionFormatter) },
       );
       this._partialWord = partialWord;
       this._partialWordStartTime = partialWordStartTime;
@@ -513,7 +520,7 @@ export class ElevenLabsDialogueTTSService extends ElevenLabsTTSBase {
     }
 
     const context = this._contexts.get(_KEEPALIVE_CONTEXT_ID);
-    if (!context || !context.registered) {
+    if (!context?.registered) {
       return;
     }
 
@@ -553,14 +560,14 @@ export class ElevenLabsDialogueTTSService extends ElevenLabsTTSBase {
   /** Send text to the WebSocket for synthesis. */
   protected override async _sendText(text: string, contextId: string): Promise<void> {
     const context = this._contexts.get(contextId);
-    if (!this._websocket || !context || !context.registered) {
+    if (!this._websocket || !context?.registered) {
       return;
     }
 
     const newTurn = context.newTurnPending;
     context.newTurnPending = false;
     logger.trace(
-      `${this}: input for context ${contextId} (new_turn=${newTurn}): ${pyJsonDumps(text)}`,
+      `${this}: input for context ${contextId} (new_turn=${newTurn ? "True" : "False"}): ${pyJsonDumps(text)}`,
     );
     const msg = {
       context_id: contextId,

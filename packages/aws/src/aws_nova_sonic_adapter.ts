@@ -2,13 +2,13 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/aws_nova_sonic_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/aws_nova_sonic_adapter.py
 
 /** AWS Nova Sonic LLM adapter for Pipecat. */
 
-import { BaseLLMAdapter } from "@pipedog/core/adapters/base_llm_adapter";
-import type { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import type { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { BaseLLMAdapter } from "@pipedog/core/adapters/llm/base_llm_adapter";
+import type { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import type { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   type LLMContext,
   type LLMContextMessage,

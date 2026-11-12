@@ -372,7 +372,7 @@ test("test_vertex_defaults_to_gemini_3_on_the_global_endpoint", () => {
   // Vertex serves the Gemini 3 series only from global, so both defaults pair.
   const service = _vertexService();
 
-  expect(service._settings.model).toBe("gemini-3.6-flash");
+  expect(service._settings.model).toBe("gemini-3.8-flash");
   expect(service._location).toBe("global");
 });
 

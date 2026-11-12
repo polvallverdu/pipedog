@@ -23,6 +23,8 @@
 import { rethrowIfCancelled, type Task } from "@pipedog/asyncio";
 import { version as pipecatVersion } from "@pipedog/core";
 import {
+  type CancelFrame,
+  type EndFrame,
   ErrorFrame,
   type Frame,
   TTSAudioRawFrame,
@@ -109,7 +111,8 @@ export function languageToSmallestTtsLanguage(language: Language): string {
 export interface SmallestTTSSettingsOptions extends TTSSettingsOptions {
   speed?: number | null | NotGiven;
   mathNotation?: boolean | null | NotGiven;
-  contentFilter?: "reject" | "flag" | string | null | NotGiven;
+  contentFilter?: "reject" | "flag" | "redact" | string | null | NotGiven;
+  dateFormat?: "EU" | "US" | string | null | NotGiven;
 }
 
 /**
@@ -122,13 +125,19 @@ export interface SmallestTTSSettingsOptions extends TTSSettingsOptions {
  * - `contentFilter`: Check the text against Smallest's profanity word list
  *   before synthesis, taking this action on a match: `"reject"` fails the
  *   request with a `CONTENT_FILTER_BLOCKED` error and synthesizes nothing;
- *   `"flag"` synthesizes normally and records the match. The text is never
- *   rewritten. If null, the API default (off) applies.
+ *   `"flag"` synthesizes normally and records the match; `"redact"` drops the
+ *   matched term and speaks the rest, failing like `"reject"` when nothing is
+ *   left to speak. If null, the API default (off) applies.
+ * - `dateFormat`: Order to read all-numeric dates in, independent of the
+ *   synthesis voice: `"EU"` reads `05/03/2024` day-first ("fifth March,
+ *   twenty twenty four"), `"US"` month-first ("May third, twenty twenty
+ *   four"). If null, the API default (`"US"`) applies.
  */
 export class SmallestTTSSettings extends TTSSettings {
   speed: number | null | NotGiven = NOT_GIVEN;
   mathNotation: boolean | null | NotGiven = NOT_GIVEN;
-  contentFilter: "reject" | "flag" | string | null | NotGiven = NOT_GIVEN;
+  contentFilter: "reject" | "flag" | "redact" | string | null | NotGiven = NOT_GIVEN;
+  dateFormat: "EU" | "US" | string | null | NotGiven = NOT_GIVEN;
 
   constructor(options: SmallestTTSSettingsOptions = {}) {
     super(options);
@@ -252,6 +261,7 @@ export class SmallestTTSService extends InterruptibleTTSService {
       speed: null,
       mathNotation: null,
       contentFilter: null,
+      dateFormat: null,
     });
 
     if (options.settings !== undefined && options.settings !== null) {
@@ -353,6 +363,10 @@ export class SmallestTTSService extends InterruptibleTTSService {
       msg.content_filter = { enabled: true, action: this._settings.contentFilter };
     }
 
+    if (this._settings.dateFormat !== null) {
+      msg.date_format = this._settings.dateFormat;
+    }
+
     if (this._wordTimestamps) {
       msg.word_timestamps = true;
     }
@@ -382,10 +396,30 @@ export class SmallestTTSService extends InterruptibleTTSService {
   }
 
   /**
+   * Stop the Smallest TTS service.
+   *
+   * @param frame The end frame.
+   */
+  override async stop(frame: EndFrame): Promise<void> {
+    await super.stop(frame);
+    await this._disconnect();
+  }
+
+  /**
+   * Cancel the Smallest TTS service.
+   *
+   * @param frame The cancel frame.
+   */
+  override async cancel(frame: CancelFrame): Promise<void> {
+    await super.cancel(frame);
+    await this._disconnect();
+  }
+
+  /**
    * Apply a settings delta.
    *
-   * All fields (model, speed, mathNotation, contentFilter, voice, language)
-   * take effect on the next `_buildMsg` call without reconnecting.
+   * All fields (model, speed, mathNotation, contentFilter, dateFormat, voice,
+   * language) take effect on the next `_buildMsg` call without reconnecting.
    */
   protected override async _updateSettings(delta: TTSSettings): Promise<Record<string, unknown>> {
     return await super._updateSettings(delta);
@@ -567,7 +601,10 @@ export class SmallestTTSService extends InterruptibleTTSService {
         const contextId = this.getActiveAudioContextId();
         await this.pushFrame(new TTSStoppedFrame({ contextId }));
         await this.stopAllMetrics();
-        await this.pushError(`Smallest TTS error: ${msg.error ?? pyJsonDumps(msg)}`);
+        const error = "error" in msg ? msg.error : msg;
+        await this.pushError(
+          `Smallest TTS error: ${typeof error === "string" ? error : pyJsonDumps(error)}`,
+        );
       } else {
         logger.warning(`${this} unknown message status: ${pyJsonDumps(msg)}`);
       }

@@ -456,5 +456,5 @@ export async function ollamaService(config: ServiceConfig): Promise<LLMService> 
       model: (model as string | undefined) || DEFAULT_OLLAMA_JUDGE_MODEL,
       extra,
     }),
-  }) as unknown as LLMService;
+  });
 }

@@ -97,7 +97,12 @@ export function _outputFormatFromSampleRate(sampleRate: number): [string, number
   return [`pcm_${SPEECHIFY_DEFAULT_SAMPLE_RATE}`, SPEECHIFY_DEFAULT_SAMPLE_RATE];
 }
 
-/** Python's `mark.get(key, default)`: the default only applies to a missing key. */
+/**
+ * Python's `mark.get(key, default)`: the default only applies to a missing key.
+ *
+ * Returns `any` on purpose: speech marks are untyped server JSON (a plain dict in
+ * Python), and callers check the value's runtime type themselves.
+ */
 function get(mark: Dict, key: string, fallback: unknown): any {
   return Object.hasOwn(mark, key) ? mark[key] : fallback;
 }
@@ -129,9 +134,21 @@ function _markSpan(mark: Dict, textLength: number): [number, number] | null {
   return null;
 }
 
+// Python's whitespace set (`str.isspace()` / `str.strip()`), which differs from JS `\s`:
+// it includes \x1c-\x1f and \x85, and excludes \ufeff.
+const PY_WS =
+  "\\t\\n\\v\\f\\r \\x1c-\\x1f\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
+const PY_SPACE_RE = new RegExp(`^[${PY_WS}]+$`, "u");
+const PY_STRIP_RE = new RegExp(`^[${PY_WS}]+|[${PY_WS}]+$`, "gu");
+
 /** Python's `str.isspace()` for one character. */
 function isSpace(char: string): boolean {
-  return char.length > 0 && /^\s+$/u.test(char);
+  return PY_SPACE_RE.test(char);
+}
+
+/** Python's `str.strip()` with no arguments. */
+function pyStrip(text: string): string {
+  return text.replace(PY_STRIP_RE, "");
 }
 
 /**
@@ -193,7 +210,7 @@ export class _SpeechMarkAccumulator {
       const span = _markSpan(mark, this.#text.length);
       if (span === null) {
         wordTimes.push(...this.flush());
-        const value = String(get(mark, "value", "")).trim();
+        const value = pyStrip(String(get(mark, "value", "")));
         if (value) {
           wordTimes.push([value, startTime]);
         }
@@ -223,7 +240,7 @@ export class _SpeechMarkAccumulator {
     }
     const [start, end, startTime] = this.#pending;
     this.#pending = null;
-    const word = this.#text.slice(start, end).join("").trim();
+    const word = pyStrip(this.#text.slice(start, end).join(""));
     return word ? [[word, startTime]] : [];
   }
 }
@@ -357,6 +374,22 @@ export interface SpeechifyTTSSettingsOptions extends TTSSettingsOptions {
    * rejects.
    */
   safetyIdentifier?: string | null | NotGiven;
+  /**
+   * How specific words in the text should be spoken, up to 200 entries. Each entry
+   * gives the `text` to match and exactly one of `ipa` (phones from the model's set,
+   * for a single word) or `alias` (replacement text), plus an optional
+   * `case_sensitive`:
+   *
+   * ```ts
+   * [{ text: "Pipecat", ipa: "p ˈaɪ p k æ t" },
+   *  { text: "TTS", alias: "text to speech" }]
+   * ```
+   *
+   * Speechify applies these on `simba-3.5` in every language it lists under
+   * `pronunciation_languages` in `GET /v1/audio/models`, which excludes English; any
+   * other model or language returns `pronunciations_unsupported`.
+   */
+  pronunciations?: Dict[] | null | NotGiven;
 }
 
 /**
@@ -371,11 +404,25 @@ export interface SpeechifyTTSSettingsOptions extends TTSSettingsOptions {
  *   the whole workspace. 1 to 64 characters of letters, digits and
  *   `. _ - : | + / =`: a keyed hash of an internal user id, never personal
  *   data such as an email address, which Speechify rejects.
+ * - `pronunciations`: how specific words in the text should be spoken, up to 200
+ *   entries. Each entry gives the `text` to match and exactly one of `ipa`
+ *   (phones from the model's set, for a single word) or `alias` (replacement
+ *   text), plus an optional `case_sensitive`:
+ *
+ *   ```ts
+ *   [{ text: "Pipecat", ipa: "p ˈaɪ p k æ t" },
+ *    { text: "TTS", alias: "text to speech" }]
+ *   ```
+ *
+ *   Speechify applies these on `simba-3.5` in every language it lists under
+ *   `pronunciation_languages` in `GET /v1/audio/models`, which excludes
+ *   English; any other model or language returns `pronunciations_unsupported`.
  */
 export class SpeechifyTTSSettings extends TTSSettings {
   loudnessNormalization: boolean | null | NotGiven = NOT_GIVEN;
   textNormalization: boolean | null | NotGiven = NOT_GIVEN;
   safetyIdentifier: string | null | NotGiven = NOT_GIVEN;
+  pronunciations: Dict[] | null | NotGiven = NOT_GIVEN;
 
   constructor(options: SpeechifyTTSSettingsOptions = {}) {
     super(options);
@@ -402,8 +449,8 @@ export interface SpeechifyHttpTTSServiceOptions extends TTSServiceOptions {
  * Speechify HTTP-based TTS service with word timestamps.
  *
  * Streams PCM audio and word-level speech marks over Server-Sent Events from
- * Speechify's `/v1/audio/stream/with-timestamps` endpoint, using the streaming-native
- * models `simba-3.2` (English) and `simba-3.0` (multilingual).
+ * Speechify's `/v1/audio/stream/with-timestamps` endpoint. Defaults to `simba-3.5`,
+ * which covers 48 languages, English included, under one model id.
  *
  * Requests pin Speechify's API version to `SPEECHIFY_API_VERSION` rather than
  * letting the workspace default decide it. The legacy `simba-english` and
@@ -440,12 +487,13 @@ export class SpeechifyHttpTTSService extends TTSService {
    */
   constructor(options: SpeechifyHttpTTSServiceOptions) {
     const defaultSettings = new (new.target as typeof SpeechifyHttpTTSService).Settings({
-      model: "simba-3.2",
+      model: "simba-3.5",
       voice: "geffen_32",
       language: null,
       loudnessNormalization: null,
       textNormalization: null,
       safetyIdentifier: null,
+      pronunciations: null,
     });
 
     if (options.settings !== undefined && options.settings !== null) {
@@ -543,6 +591,11 @@ export class SpeechifyHttpTTSService extends TTSService {
     const safetyIdentifier = assertGiven(this._settings.safetyIdentifier);
     if (safetyIdentifier) {
       payload.safety_identifier = safetyIdentifier;
+    }
+
+    const pronunciations = assertGiven(this._settings.pronunciations);
+    if (pronunciations && pronunciations.length > 0) {
+      payload.pronunciations = pronunciations;
     }
 
     const options: Dict = {};

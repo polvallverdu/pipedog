@@ -19,7 +19,7 @@
  *   the request's snake_case keys.
  */
 
-import type { OpenAILLMInvocationParams } from "@pipedog/core/adapters/services/open_ai_adapter";
+import type { OpenAILLMInvocationParams } from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import { logger } from "@pipedog/core/utils/logger";
 import { assertGiven, isGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";
 import {

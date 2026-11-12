@@ -41,6 +41,12 @@ Leave out `@pipedog/audio-smart-turn`, or end turns on silence explicitly:
 This answers sooner after a pause than Smart Turn does, so it interrupts users who pause to think more
 often.
 
+## Another VAD: TEN VAD
+
+Silero is the default VAD. [TEN VAD](/docs/audio/ten-vad) (`TenVADAnalyzer`, pipedog only) is an
+opt-in alternative that runs TEN's WebAssembly build, which you obtain from TEN and pass in, under
+TEN's own license. It takes 16 kHz audio only. Pass it as `vadAnalyzer` wherever Silero goes.
+
 ## Remote Smart Turn over HTTP
 
 If you can't run the model on the bot's host (a Worker, a small container), run Smart Turn as a

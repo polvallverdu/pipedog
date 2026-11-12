@@ -152,6 +152,119 @@ describe("TestRedactSecrets", () => {
     const once = redactSecrets(message);
     expect(redactSecrets(once)).toEqual(once);
   });
+
+  test("test_a_long_chain_of_pairs_does_not_exhaust_the_stack", () => {
+    const message = `${"a:".repeat(5000)}a`;
+    expect(typeof redactSecrets(message)).toBe("string");
+  });
+
+  test("test_a_credential_at_the_end_of_a_long_chain_is_still_masked", () => {
+    const result = redactSecrets(`${"a:".repeat(5000)}token=hunter2`);
+    expect(result).not.toContain("hunter2");
+  });
+
+  test("test_masks_a_credential_nested_a_few_pairs_deep", () => {
+    expect(redactSecrets("a:b:c:https://x/p?token=abc&n=1")).toEqual(
+      "a:b:c:https://x/p?token=[REDACTED]&n=1",
+    );
+  });
+
+  test("test_keeps_a_long_chain_of_pairs_without_credentials_as_written", () => {
+    const message = `${"a:".repeat(5000)}z`;
+    expect(redactSecrets(message)).toEqual(message);
+  });
+
+  test("test_keeps_the_detail_after_an_exception_name_holding_a_credential_word", () => {
+    for (const message of [
+      "KeyError: 'audio_content'",
+      "InvalidTokenError: signature has expired",
+      "ExpiredSignatureError: Signature has expired",
+      "TokenExpiredError: jwt expired",
+      "NoCredentialsError: Unable to locate credentials",
+      "jwt.exceptions.ExpiredSignatureError: Signature has expired",
+      "jwt.exceptions.InvalidTokenError: bad",
+      "SomeWarning: a warning",
+    ]) {
+      // subTest(message=message)
+      expect(redactSecrets(message)).toEqual(message);
+    }
+  });
+
+  test("test_still_masks_a_credential_after_an_exception_name", () => {
+    expect(redactSecrets("KeyError: 'k' api_key=abc123")).toEqual(
+      "KeyError: 'k' api_key=[REDACTED]",
+    );
+  });
+
+  test("test_still_masks_what_only_looks_like_an_exception_name", () => {
+    for (const [message, expected] of [
+      ["AuthError: Bearer abc123", "AuthError: Bearer [REDACTED]"],
+      ["TokenError: Basic dXNlcjpwYXNz", "TokenError: Basic [REDACTED]"],
+      ["credentials_error: hunter2", "credentials_error: [REDACTED]"],
+      ["secret_warning: hunter2", "secret_warning: [REDACTED]"],
+      ["X-Auth-Error: xyz789", "X-Auth-Error: [REDACTED]"],
+      ["{'api_key_error': 'abc'}", "{'api_key_error': '[REDACTED]'}"],
+      ["'TokenError': 'abc'", "'TokenError': '[REDACTED]'"],
+      ['"TokenError": "abc"', '"TokenError": "[REDACTED]"'],
+      ["TokenError=abc", "TokenError=[REDACTED]"],
+    ] as const) {
+      // subTest(message=message)
+      expect(redactSecrets(message)).toEqual(expected);
+    }
+  });
+
+  test("test_masks_a_credential_pair_that_follows_another_pair", () => {
+    for (const [message, expected] of [
+      ["ValueError: Authorization: Bearer abc123", "ValueError: Authorization: Bearer [REDACTED]"],
+      ["Unknown error occurred: api_key: abc123", "Unknown error occurred: api_key: [REDACTED]"],
+      ["error: api_key = abc123", "error: api_key = [REDACTED]"],
+      ["X: 'Authorization': 'Bearer abc123'", "X: 'Authorization': '[REDACTED]'"],
+      ["KeyError: api_key: abc123", "KeyError: api_key: [REDACTED]"],
+      ["api_key: token: abc123", "api_key: token: [REDACTED]"],
+      [
+        "error: headers=Authorization: Bearer abc123",
+        "error: headers=Authorization: Bearer [REDACTED]",
+      ],
+      ["error: c=token: abc123", "error: c=token: [REDACTED]"],
+      ["a:b:token: abc123", "a:b:token: [REDACTED]"],
+    ] as const) {
+      // subTest(message=message)
+      expect(redactSecrets(message)).toEqual(expected);
+    }
+  });
+
+  test("test_masks_a_credentials_value_that_reads_like_a_name", () => {
+    for (const [message, expected] of [
+      ["token: abc: def", "token: [REDACTED] def"],
+      ["password: token:", "password: [REDACTED]"],
+    ] as const) {
+      // subTest(message=message)
+      expect(redactSecrets(message)).toEqual(expected);
+    }
+  });
+
+  test("test_masks_a_credential_at_the_end_of_a_long_spaced_chain", () => {
+    const result = redactSecrets(`${"a: ".repeat(5001)}password: hunter2`);
+    expect(result.endsWith("password: [REDACTED]")).toBe(true);
+  });
+
+  test("test_a_prefix_does_not_change_what_a_message_masks", () => {
+    const messages = [
+      "api_key: abc123",
+      "Authorization: Bearer abc123",
+      "'token': 'abc123'",
+      "headers=Authorization: Bearer abc123",
+      "url=https://x/p?token=abc123&n=1",
+      "KeyError: 'audio_content'",
+      "InvalidSignature: Signature verification failed",
+    ];
+    for (const prefix of ["Unknown error occurred: ", "Error: ", "Deepgram error: ", "a:b:"]) {
+      for (const message of messages) {
+        // subTest(prefix=prefix, message=message)
+        expect(redactSecrets(prefix + message)).toEqual(prefix + redactSecrets(message));
+      }
+    }
+  });
 });
 
 describe("TestErrorFrameRedaction", () => {
@@ -162,5 +275,10 @@ describe("TestErrorFrameRedaction", () => {
     expect(frame.error).toEqual(
       "Sarvam API error: headers: {'api-subscription-key': '[REDACTED]'}",
     );
+  });
+
+  test("test_an_error_frame_accepts_a_long_chain_of_pairs", () => {
+    const frame = new ErrorFrame({ error: `${"a:".repeat(5000)}a` });
+    expect(typeof frame.error).toBe("string");
   });
 });

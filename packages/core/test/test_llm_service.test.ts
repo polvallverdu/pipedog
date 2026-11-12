@@ -8,10 +8,10 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import { CancelledError, sleep } from "@pipedog/asyncio";
 
-import { BaseLLMAdapter } from "../src/adapters/base_llm_adapter.ts";
-import { FunctionSchema } from "../src/adapters/schemas/function_schema.ts";
-import { ToolsSchema } from "../src/adapters/schemas/tools_schema.ts";
-import { OpenAILLMAdapter } from "../src/adapters/services/open_ai_adapter.ts";
+import { BaseLLMAdapter } from "../src/adapters/llm/base_llm_adapter.ts";
+import { FunctionSchema } from "../src/adapters/llm/schemas/function_schema.ts";
+import { ToolsSchema } from "../src/adapters/llm/schemas/tools_schema.ts";
+import { OpenAILLMAdapter } from "../src/adapters/llm/services/open_ai_adapter.ts";
 import { SystemClock } from "../src/clocks/system_clock.ts";
 import {
   type ErrorFrame,

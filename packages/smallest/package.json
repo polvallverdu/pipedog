@@ -1,7 +1,7 @@
 {
   "name": "@pipedog/smallest",
   "version": "0.10.0",
-  "description": "Smallest AI services (STT, TTS) for pipedog.",
+  "description": "Smallest AI services (LLM, STT, TTS) for pipedog.",
   "keywords": [
     "pipecat",
     "pipedog",
@@ -10,7 +10,8 @@
     "smallest",
     "smallest-ai",
     "stt",
-    "tts"
+    "tts",
+    "llm"
   ],
   "license": "BSD-2-Clause",
   "repository": {
@@ -37,7 +38,8 @@
   },
   "dependencies": {
     "@pipedog/asyncio": "workspace:*",
-    "@pipedog/core": "workspace:*"
+    "@pipedog/core": "workspace:*",
+    "@pipedog/openai": "workspace:*"
   },
   "pipecat": {
     "runtimes": [

@@ -49,7 +49,7 @@
     ],
     "upstream": [
       "src/pipecat/services/inworld",
-      "src/pipecat/adapters/services/inworld_realtime_adapter.py"
+      "src/pipecat/adapters/llm/services/inworld_realtime_adapter.py"
     ]
   }
 }

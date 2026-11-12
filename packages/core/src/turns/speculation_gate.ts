@@ -7,7 +7,6 @@
 /** Decision engine holding a speculative bot response until its turn is confirmed. */
 
 import {
-  EagerEndOfTurnCancelFrame,
   EndFrame,
   type Frame,
   InterruptionFrame,
@@ -16,6 +15,7 @@ import {
   SystemFrame,
   UserStartedSpeakingFrame,
   UserStoppedSpeakingFrame,
+  UserTurnResponseCancelFrame,
 } from "../frames/frames.ts";
 import { FrameDirection } from "../processors/frame_processor.ts";
 import { FrameQueue } from "../utils/frame_queue.ts";
@@ -55,7 +55,7 @@ export interface SpeculationGateOptions {
  * A host calls `beginSpeculation` when it starts an inference for a turn that
  * may not have ended, and the response that follows is held from its
  * LLMFullResponseStartFrame onward. A UserStoppedSpeakingFrame releases it —
- * the turn it answers has ended — and an EagerEndOfTurnCancelFrame discards
+ * the turn it answers has ended — and a UserTurnResponseCancelFrame discards
  * it. Neither names a response: only one speculation is ever in flight, since
  * producing one takes a whole user turn.
  *
@@ -177,7 +177,7 @@ export class SpeculationGate {
       // Emitted before the verdict is applied, so a released response still
       // follows the frame that ended the turn it answers.
       let emitted: GatedFrame[] = [[frame, direction]];
-      if (frame instanceof EagerEndOfTurnCancelFrame || frame instanceof InterruptionFrame) {
+      if (frame instanceof UserTurnResponseCancelFrame || frame instanceof InterruptionFrame) {
         emitted = emitted.concat(this._discard());
       } else if (frame instanceof UserStoppedSpeakingFrame) {
         emitted = emitted.concat(this._release());

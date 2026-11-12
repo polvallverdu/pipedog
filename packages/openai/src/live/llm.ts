@@ -33,8 +33,8 @@ import {
   timeout,
   waitFor,
 } from "@pipedog/asyncio";
-import type { BaseLLMAdapter } from "@pipedog/core/adapters/base_llm_adapter";
-import { OPENAI_NOT_GIVEN } from "@pipedog/core/adapters/services/open_ai_adapter";
+import type { BaseLLMAdapter } from "@pipedog/core/adapters/llm/base_llm_adapter";
+import { OPENAI_NOT_GIVEN } from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import { createStreamResampler } from "@pipedog/core/audio/utils";
 import {
   type CancelFrame,

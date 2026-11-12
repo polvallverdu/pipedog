@@ -3,8 +3,8 @@
 //
 // Samples for content/docs/concepts/typed-tools.mdx. Type-checked on every docs build.
 
-import { defineTool, registerTools } from "@pipedog/core/adapters/schemas/standard_tool";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import { defineTool, registerTools } from "@pipedog/core/adapters/llm/schemas/standard_tool";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import { OpenAILLMService } from "@pipedog/openai/llm";
 import { toJsonSchema } from "@valibot/to-json-schema";

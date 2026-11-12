@@ -18,18 +18,20 @@
  */
 
 import { rethrowIfCancelled, sleep, type Task } from "@pipedog/asyncio";
-import type { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
+import type { ToolsSchema } from "../../adapters/llm/schemas/tools_schema.ts";
 import type { VADAnalyzer } from "../../audio/vad/vad_analyzer.ts";
 import { VADController } from "../../audio/vad/vad_controller.ts";
+import { stripExpressionTags } from "../../expressive/formatter.ts";
+import { formatPerception, type PerceptionSignal } from "../../expressive/perception.ts";
 import {
   AggregatedTextFrame,
   AssistantImageRawFrame,
   BotStartedSpeakingFrame,
   BotStoppedSpeakingFrame,
   CancelFrame,
-  EagerEndOfTurnCancelFrame,
   EagerTranscriptionFrame,
   EndFrame,
+  ExpressionMetadataFrame,
   type Frame,
   FunctionCallCancelFrame,
   FunctionCallInProgressFrame,
@@ -75,12 +77,13 @@ import {
   UserSpeakingFrame,
   UserStartedSpeakingFrame,
   UserStoppedSpeakingFrame,
+  UserTurnResponseCancelFrame,
   VADUserStartedSpeakingFrame,
   VADUserStoppedSpeakingFrame,
 } from "../../frames/frames.ts";
 import { DEFAULT_TTFS_P99 } from "../../services/stt_latency.ts";
 import { EmptyUserTurnConfig } from "../../turns/empty_user_turn.ts";
-import type { UserTurnSpeculation } from "../../turns/types.ts";
+import type { UserTurnResumedParams, UserTurnSpeculation } from "../../turns/types.ts";
 import { UserIdleController } from "../../turns/user_idle_controller.ts";
 import type { BaseUserMuteStrategy } from "../../turns/user_mute/base_user_mute_strategy.ts";
 import type {
@@ -101,6 +104,7 @@ import { UserTurnController } from "../../turns/user_turn_controller.ts";
 import {
   ExternalUserTurnStrategies,
   UserTurnStrategies,
+  UserTurnStrategiesParams,
 } from "../../turns/user_turn_strategies.ts";
 import type { LLMAutoContextSummarizationConfig } from "../../utils/context/llm_context_summarization.ts";
 import { logger } from "../../utils/logger.ts";
@@ -174,9 +178,17 @@ export interface LLMUserAggregatorParamsOptions {
   audioIdleTimeout?: number;
   /** User turn start and stop strategies. */
   userTurnStrategies?: UserTurnStrategies | null;
+  /**
+   * How the user turn strategies combine with the ones a service recommends,
+   * and how they decide. Defaults to `new UserTurnStrategiesParams()`.
+   */
+  userTurnStrategiesParams?: UserTurnStrategiesParams;
   /** List of user mute strategies. */
   userMuteStrategies?: BaseUserMuteStrategy[];
-  /** Time in seconds to wait before considering the user's turn finished. */
+  /**
+   * Seconds without user activity before an open user turn is ended, unless
+   * a stop strategy has a decision scheduled.
+   */
   userTurnStopTimeout?: number;
   /**
    * Timeout in seconds for detecting user idle state. The aggregator will
@@ -204,6 +216,7 @@ export class LLMUserAggregatorParams {
   addToolChangeMessages: boolean;
   audioIdleTimeout: number;
   userTurnStrategies: UserTurnStrategies | null;
+  userTurnStrategiesParams: UserTurnStrategiesParams;
   userMuteStrategies: BaseUserMuteStrategy[];
   userTurnStopTimeout: number;
   userIdleTimeout: number;
@@ -214,6 +227,8 @@ export class LLMUserAggregatorParams {
     this.addToolChangeMessages = options.addToolChangeMessages ?? false;
     this.audioIdleTimeout = options.audioIdleTimeout ?? 1.0;
     this.userTurnStrategies = options.userTurnStrategies ?? null;
+    this.userTurnStrategiesParams =
+      options.userTurnStrategiesParams ?? new UserTurnStrategiesParams();
     this.userMuteStrategies = options.userMuteStrategies ?? [];
     this.userTurnStopTimeout = options.userTurnStopTimeout ?? 5.0;
     this.userIdleTimeout = options.userIdleTimeout ?? 0;
@@ -267,6 +282,7 @@ export interface UserTurnStoppedMessageOptions {
   content: string | null;
   timestamp: string;
   userId?: string | null;
+  perception?: PerceptionSignal[] | null;
 }
 
 /**
@@ -283,16 +299,21 @@ export interface UserTurnStoppedMessageOptions {
  *   instead.
  * - `timestamp`: When the user turn started.
  * - `userId`: Optional identifier for the user.
+ * - `perception`: The turn's final reading of how the user spoke, with
+ *   expressive conversation on and a perception producer in the pipeline, or
+ *   null. Part of expressive conversation (alpha).
  */
 export class UserTurnStoppedMessage {
   content: string | null;
   timestamp: string;
   userId: string | null;
+  perception: PerceptionSignal[] | null;
 
   constructor(options: UserTurnStoppedMessageOptions) {
     this.content = options.content;
     this.timestamp = options.timestamp;
     this.userId = options.userId ?? null;
+    this.perception = options.perception ?? null;
   }
 }
 
@@ -364,8 +385,10 @@ export interface AssistantTurnStoppedMessageOptions {
 /**
  * An assistant turn stopped message containing an assistant transcript update.
  *
- * A message in a conversation transcript containing the assistant content.
- * This is the aggregated transcript that is then used in the context.
+ * A message in a conversation transcript containing the assistant content:
+ * the aggregated transcript, which the context also records. With expressive
+ * conversation on, it is the words alone, while the context keeps the
+ * expression tags the LLM wrote.
  *
  * - `content`: The message content/text. May be empty if the LLM returned
  *   zero tokens (e.g. turn was interrupted before any tokens were received or
@@ -564,10 +587,14 @@ export abstract class LLMContextAggregator extends FrameProcessor {
    * Push a context frame in the specified direction.
    *
    * @param direction The direction to push the frame (upstream or downstream).
+   * @returns The frame pushed.
    */
-  async pushContextFrame(direction: FrameDirection = FrameDirection.DOWNSTREAM): Promise<void> {
+  async pushContextFrame(
+    direction: FrameDirection = FrameDirection.DOWNSTREAM,
+  ): Promise<LLMContextFrame> {
     const frame = this._getContextFrame();
     await this.pushFrame(frame, direction);
+    return frame;
   }
 
   /**
@@ -671,7 +698,8 @@ interface VADControllerAnalyzerAccess {
  *
  * - on_user_turn_started: Called when the user turn starts
  * - on_user_turn_stopped: Called when the user turn ends
- * - on_user_turn_stop_timeout: Called when no user turn stop strategy triggers
+ * - on_user_turn_stop_timeout: Called when the stop timeout ends a user turn its
+ *   stop strategies didn't end.
  * - on_user_turn_idle: Called when the user has been idle for the configured timeout
  * - on_user_turn_message_added: Called when a user message is written to
  *   context. In realtime mode (`realtimeServiceMode: true`) the write is
@@ -733,6 +761,13 @@ export class LLMUserAggregator extends LLMContextAggregator {
   // several inferences fire before finalization.
   protected _fullUserTurnAggregation: string | null = null;
 
+  // With expressive conversation on, the latest final reading of how the
+  // user spoke: for the user message, written at its head, and for the
+  // turn, reported when it stops. A turn can write several messages.
+  protected _expressive = false;
+  protected _perception: PerceptionSignal[] | null = null;
+  protected _turnPerception: PerceptionSignal[] | null = null;
+
   // Whether the current user turn interrupted the bot.
   protected _userTurnInterruptedBot = false;
   protected _consecutiveEmptyUserTurnRecoveries = 0;
@@ -750,7 +785,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
    * @param context The LLM context for conversation storage.
    */
   constructor(context: LLMContext, options: LLMUserAggregatorOptions = {}) {
-    const params = options.params || new LLMUserAggregatorParams();
+    const params = options.params ?? new LLMUserAggregatorParams();
     super({
       ...options,
       context,
@@ -771,7 +806,16 @@ export class LLMUserAggregator extends LLMContextAggregator {
 
     this._realtimeServiceMode = options._realtimeServiceMode ?? null;
 
-    const userTurnStrategies = this._params.userTurnStrategies || new UserTurnStrategies();
+    let userTurnStrategies = this._params.userTurnStrategies ?? new UserTurnStrategies();
+
+    // No service has recommended strategies yet, so an extending list joins
+    // the defaults.
+    if (this._params.userTurnStrategies !== null) {
+      userTurnStrategies = this._params.userTurnStrategies.mergeWith(
+        null,
+        this._params.userTurnStrategiesParams,
+      );
+    }
 
     // Realtime-mode strategy mutation: drop the transcription-based start
     // strategy and flip waitForTranscript on stop strategies that expose it,
@@ -793,6 +837,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
 
     this._userTurnController = new UserTurnController({
       userTurnStrategies,
+      userTurnStrategiesParams: this._params.userTurnStrategiesParams,
       userTurnStopTimeout: this._params.userTurnStopTimeout,
     });
     this._userTurnController.addEventHandler("on_push_frame", (controller, frame, direction) =>
@@ -805,6 +850,9 @@ export class LLMUserAggregator extends LLMContextAggregator {
     );
     this._userTurnController.addEventHandler("on_user_turn_speculation_cancelled", (controller) =>
       this._onUserTurnSpeculationCancelled(controller),
+    );
+    this._userTurnController.addEventHandler("on_user_turn_resumed", (controller, params) =>
+      this._onUserTurnResumed(controller, params),
     );
     this._userTurnController.addEventHandler(
       "on_user_turn_started",
@@ -865,6 +913,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
    */
   override async setup(setup: FrameProcessorSetup): Promise<void> {
     await super.setup(setup);
+    this._expressive = setup.enableExpressiveConversation;
     if (this._vadController) {
       await this._vadController.setup(setup);
     }
@@ -921,6 +970,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
       await this._cancel(frame);
       await this.pushFrame(frame, direction);
     } else if (frame instanceof TranscriptionFrame) {
+      this._handlePerception(frame.perception);
       await this._handleTranscription(frame);
     } else if (
       frame instanceof InterimTranscriptionFrame ||
@@ -988,6 +1038,12 @@ export class LLMUserAggregator extends LLMContextAggregator {
     await this._userIdleController.processFrame(frame);
   }
 
+  /** Reset the aggregation state, with the turn's reading of how the user spoke. */
+  override async reset(): Promise<void> {
+    await super.reset();
+    this._perception = null;
+  }
+
   /** Push the current aggregation. */
   async pushAggregation(): Promise<string> {
     return await this._pushAggregation();
@@ -1008,14 +1064,23 @@ export class LLMUserAggregator extends LLMContextAggregator {
     }
 
     const aggregation = this.aggregationString();
+    const perception = this._perception;
+    const content =
+      perception && perception.length > 0
+        ? `${formatPerception(perception)} ${aggregation}`
+        : aggregation;
     await this.reset();
-    this._context.addMessage({ role: this.role, content: aggregation });
+    this._context.addMessage({ role: this.role, content });
     await this.broadcastFrame(LLMContextUserTurnFrame, {
       text: aggregation,
       timestamp: this._userTurnStartTimestamp,
+      perception,
     });
     if (runLlm) {
-      await this.pushContextFrame();
+      const frame = await this.pushContextFrame();
+      // A stop strategy that waits for the inference, such as
+      // LLMTurnCompletionUserTurnStopStrategy, waits for this one.
+      await this._userTurnController.processFrame(frame);
     }
 
     const message = new UserTurnMessageAddedMessage({
@@ -1159,9 +1224,10 @@ export class LLMUserAggregator extends LLMContextAggregator {
   /**
    * Apply user turn strategies a service recommends via its metadata frame.
    *
-   * Honored only when the user did not pass their own `userTurnStrategies`,
-   * which always wins. `updateStrategies` is idempotent, so this is safe to
-   * re-run on a later broadcast (e.g. a ServiceSwitcher switch).
+   * The user's own `userTurnStrategies` replace them, except for a list
+   * `userTurnStrategiesParams` extends, which the user's strategies are added
+   * to. `updateStrategies` is idempotent, so this is safe to re-run on a
+   * later broadcast (e.g. a ServiceSwitcher switch).
    */
   protected async _handleServiceUserTurnStrategies(
     serviceName: string,
@@ -1171,7 +1237,9 @@ export class LLMUserAggregator extends LLMContextAggregator {
       return;
     }
 
-    if (this._params.userTurnStrategies !== null) {
+    const provided = this._params.userTurnStrategies;
+    const params = this._params.userTurnStrategiesParams;
+    if (provided !== null && params.replacesServiceStrategies) {
       logger.debug(
         `${this}: ignoring user turn strategies recommended by ` +
           `\`${serviceName}\`; using the user-provided strategies.`,
@@ -1181,7 +1249,10 @@ export class LLMUserAggregator extends LLMContextAggregator {
     }
 
     logger.debug(`${this}: applying user turn strategies recommended by \`${serviceName}\`.`);
-    await this._userTurnController.updateStrategies(userTurnStrategies);
+    const strategies = provided
+      ? provided.mergeWith(userTurnStrategies, params)
+      : userTurnStrategies;
+    await this._userTurnController.updateStrategies(strategies);
   }
 
   /**
@@ -1190,7 +1261,8 @@ export class LLMUserAggregator extends LLMContextAggregator {
    * A service recommends turn strategies by putting them on its
    * `ServiceMetadataFrame.userTurnStrategies`, and one configured with
    * `shouldInterrupt: false` carries that setting there. User-provided
-   * strategies discard the recommendation whole — so the pipeline would
+   * strategies that replace both lists discard the recommendation whole — so
+   * the pipeline would
    * start interrupting with no indication why.
    *
    * Passing `ExternalUserTurnStrategies` explicitly was a safe way to opt out
@@ -1431,6 +1503,14 @@ export class LLMUserAggregator extends LLMContextAggregator {
     }
   }
 
+  protected _handlePerception(signals: PerceptionSignal[] | null): void {
+    if (!this._expressive || !signals || signals.length === 0) {
+      return;
+    }
+    this._perception = signals;
+    this._turnPerception = signals;
+  }
+
   protected async _handleTranscription(frame: TranscriptionFrame): Promise<void> {
     const text = frame.text;
 
@@ -1492,11 +1572,29 @@ export class LLMUserAggregator extends LLMContextAggregator {
     await this._queuedBroadcastFrame(frameCls, options);
   }
 
+  protected async _onUserTurnResumed(
+    _controller: unknown,
+    params: UserTurnResumedParams,
+  ): Promise<void> {
+    if (!params.inferenceTriggered) {
+      return;
+    }
+
+    // The user is still talking, so the answer started for the turn so far
+    // is void. An interruption stops it wherever it got to. A turn that
+    // doesn't interrupt the bot only withdraws a speculation.
+    if (params.enableInterruptions) {
+      await this.broadcastInterruption();
+    } else {
+      await this.broadcastFrame(UserTurnResponseCancelFrame);
+    }
+  }
+
   protected async _onUserTurnSpeculationCancelled(_controller: unknown): Promise<void> {
     // Broadcast rather than queued, so it reaches a downstream gate ahead of
     // the turn end that follows it. Queued, it would arrive after, and the
     // gate would release the response this withdraws.
-    await this.broadcastFrame(EagerEndOfTurnCancelFrame);
+    await this.broadcastFrame(UserTurnResponseCancelFrame);
   }
 
   protected async _onVadSpeechStarted(controller: VADController): Promise<void> {
@@ -1592,21 +1690,39 @@ export class LLMUserAggregator extends LLMContextAggregator {
    * Run an inference for a turn that hasn't ended yet.
    *
    * The turn is still open, so the context must not record it. The inference
-   * runs against a provisional copy carrying the speculated turn text:
-   * nothing here mutates the real context, and `_aggregation` keeps
+   * runs against a provisional copy carrying the speculated turn and its
+   * reading: nothing here mutates the real context, and `_aggregation` keeps
    * accumulating for whenever the turn does end. The response is held
    * downstream until the turn is confirmed, and discarded if it isn't.
+   *
+   * The turn is broadcast as a speculation first. Queued ahead of the
+   * inference, it passes the LLM before the response is held, while the
+   * turn written once it ends waits for the inference to finish.
    *
    * @param speculation The speculation to run, from the stop strategy that
    *   started it.
    */
   protected async _runSpeculativeInference(speculation: UserTurnSpeculation): Promise<void> {
+    const perception = this._expressive ? speculation.perception : null;
+    const content =
+      perception && perception.length > 0
+        ? `${formatPerception(perception)} ${speculation.text}`
+        : speculation.text;
+    await this.broadcastFrame(LLMContextUserTurnFrame, {
+      text: speculation.text,
+      timestamp: this._userTurnStartTimestamp,
+      perception,
+      speculation: true,
+    });
     const provisional = new LLMContext({
-      messages: [...this._context.messages, { role: this.role, content: speculation.text }],
+      messages: [...this._context.messages, { role: this.role, content }],
       tools: this._context.tools,
       toolChoice: this._context.toolChoice,
     });
-    await this.pushFrame(new LLMContextFrame({ context: provisional, speculation: true }));
+    const frame = new LLMContextFrame({ context: provisional, speculation: true });
+    await this.pushFrame(frame);
+    // A stop strategy that waits for the inference decides on this one too.
+    await this._userTurnController.processFrame(frame);
   }
 
   protected async _onUserTurnStopped(
@@ -1651,6 +1767,7 @@ export class LLMUserAggregator extends LLMContextAggregator {
   ): Promise<void> {
     logger.debug(`${this}: Resetting aggregation (strategy: ${strategy})`);
     await this.reset();
+    this._turnPerception = null;
   }
 
   protected async _onUserTurnStopTimeout(_controller: unknown): Promise<void> {
@@ -1697,10 +1814,14 @@ export class LLMUserAggregator extends LLMContextAggregator {
       content = fullAggregation || segment;
     }
 
+    const perception = this._turnPerception;
+    this._turnPerception = null;
+
     if (!onSessionEnd || content) {
       const message = new UserTurnStoppedMessage({
         content,
         timestamp: this._userTurnStartTimestamp,
+        perception,
       });
       await this._callEventHandler("on_user_turn_stopped", strategy, message);
       this._userTurnStartTimestamp = "";
@@ -1860,13 +1981,16 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
 
   protected _summarizer: LLMContextSummarizer | null;
 
+  protected _expressive = false;
+  protected _taggedAfterLlm = false;
+
   /**
    * Initialize the assistant context aggregator.
    *
    * @param context The LLM context for conversation storage.
    */
   constructor(context: LLMContext, options: LLMAssistantAggregatorOptions = {}) {
-    const params = options.params || new LLMAssistantAggregatorParams();
+    const params = options.params ?? new LLMAssistantAggregatorParams();
     super({
       ...options,
       context,
@@ -1893,6 +2017,10 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
     this._summarizer.addEventHandler("on_summary_applied", (summarizer, event) =>
       this._onSummaryApplied(summarizer, event),
     );
+
+    this._expressive = false;
+    // Whether a tagger after the LLM writes the replies' expression tags.
+    this._taggedAfterLlm = false;
 
     this._registerEventHandler("on_assistant_turn_started");
     this._registerEventHandler("on_assistant_turn_stopped");
@@ -1931,6 +2059,7 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
    */
   override async setup(setup: FrameProcessorSetup): Promise<void> {
     await super.setup(setup);
+    this._expressive = setup.enableExpressiveConversation;
     if (this._summarizer) {
       await this._summarizer.setup(setup);
     }
@@ -2014,6 +2143,9 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
       this.setTools(normalizedTools);
     } else if (frame instanceof LLMSetToolChoiceFrame) {
       this.setToolChoice(frame.toolChoice);
+    } else if (frame instanceof ExpressionMetadataFrame) {
+      this._taggedAfterLlm = true;
+      await this.pushFrame(frame, direction);
     } else if (frame instanceof FunctionCallsStartedFrame) {
       await this._handleFunctionCallsStarted(frame);
     } else if (frame instanceof FunctionCallInProgressFrame) {
@@ -2145,9 +2277,17 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
       return "";
     }
 
-    const aggregation = this.aggregationString();
+    let aggregation = this.aggregationString();
     await this.reset();
 
+    // The LLM writes its own replies' tags, or a tagger writes them and
+    // the LLM, never taught them, reads its replies as plain words.
+    if (this._expressive && this._taggedAfterLlm) {
+      aggregation = stripExpressionTags(aggregation);
+      if (!aggregation) {
+        return "";
+      }
+    }
     this._context.addMessage({ role: "assistant", content: aggregation });
 
     return aggregation;
@@ -2157,13 +2297,15 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
    * Push a context frame in the specified direction.
    *
    * @param direction The direction to push the frame (upstream or downstream).
+   * @returns The frame pushed.
    */
   override async pushContextFrame(
     direction: FrameDirection = FrameDirection.DOWNSTREAM,
-  ): Promise<void> {
-    await super.pushContextFrame(direction);
+  ): Promise<LLMContextFrame> {
+    const frame = await super.pushContextFrame(direction);
     this._pushContextOnBotStoppedSpeaking = false;
     this._contextPushOwed = false;
+    return frame;
   }
 
   protected async _handleLlmRun(_frame: LLMRunFrame): Promise<void> {
@@ -2640,12 +2782,14 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
       return;
     }
 
+    // The text as the LLM wrote it, which a unit that is only tags has
+    // without any words to show.
+    const text = frame instanceof AggregatedTextFrame && frame.rawText ? frame.rawText : frame.text;
     // Make sure we really have text (spaces count, too!)
-    if (frame.text.length === 0) {
+    if (text.length === 0) {
       return;
     }
 
-    const text = frame instanceof AggregatedTextFrame && frame.rawText ? frame.rawText : frame.text;
     this._aggregation.push(
       new TextPartForConcatenation({
         text,
@@ -2845,6 +2989,11 @@ export class LLMAssistantAggregator extends LLMContextAggregator {
       // Strip turn completion markers from the transcript
       aggregation = this._maybeStripTurnCompletionMarkers(aggregation);
     }
+    // The context keeps the expression tags the LLM wrote; the transcript
+    // is the words.
+    if (aggregation && this._expressive) {
+      aggregation = stripExpressionTags(aggregation);
+    }
 
     const message = new AssistantTurnStoppedMessage({
       content: aggregation,
@@ -2960,8 +3109,8 @@ export class LLMContextAggregatorPair {
    * @param context The context to be managed by the aggregators.
    */
   constructor(context: LLMContext, options: LLMContextAggregatorPairOptions = {}) {
-    const userParams = options.userParams || new LLMUserAggregatorParams();
-    const assistantParams = options.assistantParams || new LLMAssistantAggregatorParams();
+    const userParams = options.userParams ?? new LLMUserAggregatorParams();
+    const assistantParams = options.assistantParams ?? new LLMAssistantAggregatorParams();
     const addToolChangeMessages = options.addToolChangeMessages ?? null;
     if (addToolChangeMessages !== null) {
       userParams.addToolChangeMessages = addToolChangeMessages;

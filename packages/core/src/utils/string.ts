@@ -338,31 +338,27 @@ export function matchEndofsentence(
   return 0;
 }
 
-function countOccurrences(text: string, sub: string): number {
-  if (sub === "") return text.length + 1;
-  let count = 0;
-  let index = text.indexOf(sub);
-  while (index !== -1) {
-    count++;
-    index = text.indexOf(sub, index + sub.length);
-  }
-  return count;
+// Python's `str.find(sub, start)`: unlike `indexOf`, a start past the end
+// finds nothing, not even an empty string.
+function pyFind(text: string, sub: string, start: number): number {
+  if (start > text.length) return -1;
+  return text.indexOf(sub, start);
 }
 
 /**
  * Parse text to identify start and end tag pairs.
  *
- * If a start tag was previously found (i.e., currentTag is valid), wait for
- * the corresponding end tag. Otherwise, wait for a start tag.
- *
- * This function returns the index in the text where parsing should continue
- * in the next call and the current or new tags.
+ * Scans the text from `currentTagIndex`: inside a tag, for its end tag;
+ * outside one, for the earliest start tag of any pair, and then for that
+ * pair's end tag after it. A pair whose start and end tags are the same,
+ * such as `["^^", "^^"]`, is found the same way.
  *
  * @param text The text to be parsed.
  * @param tags List of tuples containing start and end tags.
  * @param currentTag The currently active tags, if any.
- * @param currentTagIndex The current index in the text.
- * @returns A tuple containing null or the current tag and the index of the text.
+ * @param currentTagIndex Where in the text to resume scanning.
+ * @returns The tag the text ends inside, or null, and where to resume scanning:
+ *   just past the open tag's start, or past the last tag that closed.
  */
 export function parseStartEndTags(
   text: string,
@@ -370,30 +366,31 @@ export function parseStartEndTags(
   currentTag: StartEndTags | null,
   currentTagIndex: number,
 ): [StartEndTags | null, number] {
-  // If we are already inside a tag, check if the end tag is in the text.
-  if (currentTag) {
-    const [, endTag] = currentTag;
-    if (text.slice(currentTagIndex).includes(endTag)) {
-      return [null, text.length];
+  let index = currentTagIndex;
+  for (;;) {
+    if (currentTag) {
+      const end = pyFind(text, currentTag[1], index);
+      if (end < 0) {
+        return [currentTag, index];
+      }
+      index = end + currentTag[1].length;
+      currentTag = null;
     }
-    return [currentTag, currentTagIndex];
-  }
-
-  // Check if any start tag appears in the text
-  for (const [startTag, endTag] of tags) {
-    const rest = text.slice(currentTagIndex);
-    const startTagCount = countOccurrences(rest, startTag);
-    const endTagCount = countOccurrences(rest, endTag);
-    if (startTagCount === 0 && endTagCount === 0) {
-      return [null, currentTagIndex];
-    } else if (startTagCount > endTagCount) {
-      return [[startTag, endTag], text.length];
-    } else if (startTagCount === endTagCount) {
-      return [null, text.length];
+    let best: [number, StartEndTags] | null = null;
+    for (const [start, end] of tags) {
+      const position = pyFind(text, start, index);
+      // min() keeps the first of equal positions.
+      if (position >= 0 && (best === null || position < best[0])) {
+        best = [position, [start, end]];
+      }
     }
+    if (best === null) {
+      return [null, index];
+    }
+    const [position, tag] = best;
+    currentTag = tag;
+    index = position + tag[0].length;
   }
-
-  return [null, currentTagIndex];
 }
 
 /**

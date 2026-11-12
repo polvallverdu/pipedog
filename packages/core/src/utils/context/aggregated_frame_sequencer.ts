@@ -15,12 +15,27 @@ import {
 } from "../../frames/frames.ts";
 import { logger } from "../logger.ts";
 import { matchEndofsentence } from "../string.ts";
+import { stripCompleteMarkup } from "../text/markup_utils.ts";
 import { SimpleTextAggregator } from "../text/simple_text_aggregator.ts";
 import { WordCompletionTracker } from "./word_completion_tracker.ts";
 
 /** Python's `repr()` of a string, for log lines. */
 function repr(text: string): string {
-  return `'${text.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n")}'`;
+  // Python quotes with " when the text holds ' but no ", and only then
+  // leaves the ' unescaped.
+  const quote = text.includes("'") && !text.includes('"') ? '"' : "'";
+  let body = text
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t");
+  if (quote === "'") body = body.replace(/'/g, "\\'");
+  return `${quote}${body}${quote}`;
+}
+
+/** Python's `" ".join(text.split())`: collapse whitespace runs to one space. */
+function joinWords(text: string): string {
+  return text.split(/\s+/).filter(Boolean).join(" ");
 }
 
 /**
@@ -190,7 +205,8 @@ export class _ParallelSentenceAggregator {
    */
   async flush(): Promise<_ParallelAggregation | null> {
     await this._aggregator.flush();
-    if (this._user.trim()) {
+    // A trailing tag has no words to show, but is still text the LLM wrote.
+    if (this._user.trim() || this._llm.trim()) {
       const result = { ttsText: this._tts, llmText: this._llm, userFacingText: this._user };
       this._reset();
       return result;
@@ -363,6 +379,9 @@ interface BuildWordFrameOptions {
 export class AggregatedFrameSequencer {
   protected _name: string;
   protected _streaming: boolean;
+  // Tags only the LLM's text carries, such as expressive conversation's,
+  // which word tracking passes over in it. Set by the TTS service.
+  llmMarkup: RegExp | null = null;
   protected _slots: _AggregatedFrameSlot[] = [];
   protected _contextAppendToContext = new Map<string, boolean>();
   // Transient per-context pending-sentence state, keyed by context ID. An entry
@@ -433,6 +452,7 @@ export class AggregatedFrameSequencer {
           ? new WordCompletionTracker(ttsText, {
               llmText: frame.rawText || frame.text,
               userFacingText: frame.text,
+              llmMarkup: this.llmMarkup,
             })
           : null,
         appendToContext,
@@ -752,14 +772,28 @@ export class AggregatedFrameSequencer {
         if (slot.tracker) {
           const remainingText = slot.tracker.getRemainingTtsText();
           let rawRemaining = slot.tracker.getRemainingLlmText();
-          if (rawRemaining && remainingText && !rawRemaining.includes(remainingText)) {
+          // The words left, not the markup the service was sent for its
+          // tags, are what the LLM's text has to hold, read without its
+          // own tags.
+          const remainingWords = joinWords(stripCompleteMarkup(remainingText));
+          let llmWords = rawRemaining ?? "";
+          if (this.llmMarkup) {
+            const flags = this.llmMarkup.flags.includes("g")
+              ? this.llmMarkup.flags
+              : `${this.llmMarkup.flags}g`;
+            llmWords = llmWords.replace(new RegExp(this.llmMarkup.source, flags), "");
+          }
+          llmWords = joinWords(llmWords);
+          if (rawRemaining && remainingWords && !llmWords.includes(remainingWords)) {
             logger.warning(
               `${this._name} force-complete: raw_remaining ${repr(rawRemaining)} ` +
                 `does not contain remaining_text ${repr(remainingText)}, discarding`,
             );
             rawRemaining = null;
           }
-          if (remainingText) {
+          // A slot that is only tags, such as a sound, has LLM text and
+          // nothing left to say.
+          if (remainingText || rawRemaining) {
             logger.debug(
               `${this._name} force-completing slot with remaining text ${repr(remainingText)}`,
             );
@@ -874,10 +908,12 @@ export class AggregatedFrameSequencer {
    * @returns The sentence frame, followed — for pushTextFrames=true services —
    *   by the whole-sentence TTSTextFrame and any skipped frames it unblocks,
    *   followed by any frames unblocked by replaying previously-buffered words.
-   *   Empty if the aggregated text is entirely whitespace.
+   *   Empty if the sentence has no text in any channel.
    */
   protected _promote(agg: _ParallelAggregation, contextId: string, sc: _StreamingContext): Frame[] {
-    if (!agg.userFacingText.trim()) {
+    // A sentence that is only tags has no words to show, but its text still
+    // reaches the context in order.
+    if (!agg.userFacingText.trim() && !agg.llmText.trim()) {
       return [];
     }
 
@@ -893,16 +929,19 @@ export class AggregatedFrameSequencer {
       ? new WordCompletionTracker(agg.ttsText, {
           llmText: agg.llmText || null,
           userFacingText: agg.userFacingText,
+          llmMarkup: this.llmMarkup,
         })
       : null;
     this._appendSpokenSlot(frame, contextId, tracker, sc.appendToContext, false);
-    const frames: Frame[] = [frame];
+    const frames: Frame[] = agg.userFacingText.trim() ? [frame] : [];
 
     if (!sc.buildTracker) {
+      // Trimmed like a sentence-mode unit: the context joins its parts with
+      // a space, and a streamed sentence keeps the spaces of its tokens.
       const wordFrame = new TTSTextFrame({
-        text: agg.userFacingText,
+        text: agg.userFacingText.trim(),
         textType: sc.textType,
-        rawText: agg.llmText || null,
+        rawText: agg.llmText.trim() || null,
         segmentId: frame.id,
       });
       wordFrame.contextId = contextId;

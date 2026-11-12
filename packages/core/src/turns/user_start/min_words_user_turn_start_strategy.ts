@@ -18,7 +18,6 @@ import {
 } from "../../frames/frames.ts";
 import type { Language } from "../../transcriptions/language.ts";
 import { logger } from "../../utils/logger.ts";
-import { ProcessFrameResult } from "../types.ts";
 import type { BackchannelMatcher } from "./backchannel.ts";
 import {
   BaseUserTurnStartStrategy,
@@ -129,9 +128,8 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
    * triggers the user turn once the minimum word count is reached.
    *
    * @param frame The frame to be analyzed.
-   * @returns STOP if the minimum word count was reached, CONTINUE otherwise.
    */
-  override async processFrame(frame: Frame): Promise<ProcessFrameResult> {
+  override async processFrame(frame: Frame): Promise<void> {
     if (frame instanceof VADUserStartedSpeakingFrame) {
       this._userVadSpeaking = true;
     } else if (frame instanceof VADUserStoppedSpeakingFrame) {
@@ -148,15 +146,12 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
       this._startOnVadWhenBotQuiet &&
       !this._botSpeaking
     ) {
-      await this.triggerUserTurnStarted();
-      return ProcessFrameResult.STOP;
+      await this.reportUserTurnStarted();
     } else if (frame instanceof TranscriptionFrame) {
-      return await this._handleTranscription(frame);
+      await this._handleTranscription(frame);
     } else if (frame instanceof InterimTranscriptionFrame && this._useInterim) {
-      return await this._handleTranscription(frame);
+      await this._handleTranscription(frame);
     }
-
-    return ProcessFrameResult.CONTINUE;
   }
 
   /**
@@ -181,11 +176,10 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
    * Handle a transcription frame and check word count.
    *
    * @param frame The transcription frame to be processed.
-   * @returns STOP if the minimum word count was reached, CONTINUE otherwise.
    */
   protected async _handleTranscription(
     frame: TranscriptionFrame | InterimTranscriptionFrame,
-  ): Promise<ProcessFrameResult> {
+  ): Promise<void> {
     const minWords = this._botSpeaking ? this._minWords : 1;
 
     // Python's str.split(): split on whitespace runs, ignoring leading/trailing.
@@ -202,12 +196,10 @@ export class MinWordsUserTurnStartStrategy extends BaseUserTurnStartStrategy {
     );
 
     if (shouldTrigger) {
-      await this.triggerUserTurnStarted();
-      return ProcessFrameResult.STOP;
+      await this.reportUserTurnStarted();
+    } else {
+      await this.triggerResetAggregation();
     }
-    await this.triggerResetAggregation();
-
-    return ProcessFrameResult.CONTINUE;
   }
 
   /**

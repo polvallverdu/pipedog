@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { toolOptions } from "../src/adapters/schemas/direct_function.ts";
+import { toolOptions } from "../src/adapters/llm/schemas/direct_function.ts";
 import { type Frame, LLMUpdateSettingsFrame } from "../src/frames/frames.ts";
 import { LLMSwitcher } from "../src/pipeline/llm_switcher.ts";
 import { LLMContext } from "../src/processors/aggregators/llm_context.ts";

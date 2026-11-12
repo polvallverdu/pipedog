@@ -148,7 +148,7 @@ With eager end of turn:
   needed. Passing your own `userTurnStrategies` overrides this. See
   [Turn detection](/docs/concepts/turn-detection).
 - With `enableEagerEndOfTurn: true`, `turn.eager_end` pushes an `EagerTranscriptionFrame` that
-  starts a response early. `turn.resume` pushes an `EagerEndOfTurnCancelFrame`. The early
+  starts a response early. `turn.resume` pushes a `UserTurnResponseCancelFrame`. The early
   response is dropped if the user resumes or the final transcript differs. It is off by default
   because every prediction costs an inference.
 - `shouldInterrupt` (default `true`) decides whether the start of a turn interrupts the bot.

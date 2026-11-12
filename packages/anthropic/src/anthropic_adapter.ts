@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/anthropic_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/anthropic_adapter.py
 
 /**
  * Anthropic LLM adapter for Pipecat.
@@ -14,9 +14,12 @@
  */
 
 import { rethrowIfCancelled } from "@pipedog/asyncio";
-import { BaseLLMAdapter, LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
-import type { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import type { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import {
+  BaseLLMAdapter,
+  LLMContextConversionError,
+} from "@pipedog/core/adapters/llm/base_llm_adapter";
+import type { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import type { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   type LLMContext,
   type LLMContextMessage,
@@ -28,6 +31,16 @@ import { pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { isGiven } from "@pipedog/core/utils/types";
 
 type Dict = Record<string, any>;
+
+// Python's `url.split(",")[1]`: a data URL without a comma has no payload, and
+// the index raises IndexError (a RangeError here) rather than yielding undefined.
+function dataUrlPayload(url: string): string {
+  const payload = url.split(",")[1];
+  if (payload === undefined) {
+    throw new RangeError("list index out of range");
+  }
+  return payload;
+}
 
 /** An Anthropic Messages API message (`MessageParam`). */
 export type MessageParam = { role: string; content: string | Dict[] } & Dict;
@@ -446,7 +459,7 @@ export class AnthropicLLMAdapter extends BaseLLMAdapter<AnthropicLLMInvocationPa
             item.source = {
               type: "base64",
               media_type: mimeType,
-              data: url.split(",")[1],
+              data: dataUrlPayload(url),
             };
             delete item.image_url;
           } else if (imageUrl.startsWith("http")) {
@@ -492,7 +505,7 @@ export class AnthropicLLMAdapter extends BaseLLMAdapter<AnthropicLLMInvocationPa
             item.source = {
               type: "base64",
               media_type: mimeType,
-              data: (fData.file_data as string).split(",")[1],
+              data: dataUrlPayload(fData.file_data as string),
             };
             delete item.file;
           } else if (mimeType === "application/pdf") {
@@ -500,7 +513,7 @@ export class AnthropicLLMAdapter extends BaseLLMAdapter<AnthropicLLMInvocationPa
             item.source = {
               type: "base64",
               media_type: mimeType,
-              data: (fData.file_data as string).split(",")[1],
+              data: dataUrlPayload(fData.file_data as string),
             };
             delete item.file;
           } else {

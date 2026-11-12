@@ -15,6 +15,7 @@
 import { rethrowIfCancelled } from "@pipedog/asyncio";
 import { logger } from "../logger.ts";
 import { longestTrailingPartialMatch } from "../string.ts";
+import { isSpace } from "./alnum_utils.ts";
 import { Aggregation, TextType } from "./base_text_aggregator.ts";
 import {
   SimpleTextAggregator,
@@ -92,21 +93,18 @@ interface PatternInfo {
 /** Handler called when a pattern pair is matched. */
 export type PatternMatchHandler = (match: PatternMatch) => Promise<void> | void;
 
+/** Python `str.strip()`: strip Python's whitespace set from both ends. */
+function strip(text: string): string {
+  let start = 0;
+  let end = text.length;
+  while (start < end && isSpace(text[start])) start++;
+  while (end > start && isSpace(text[end - 1])) end--;
+  return text.slice(start, end);
+}
+
 /** Python `re.escape`. */
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\/-]/g, "\\$&");
-}
-
-/** Python `str.count`: non-overlapping occurrences of `sub` in `text`. */
-function countOccurrences(text: string, sub: string): number {
-  if (!sub) return text.length + 1;
-  let count = 0;
-  let index = text.indexOf(sub);
-  while (index !== -1) {
-    count++;
-    index = text.indexOf(sub, index + sub.length);
-  }
-  return count;
 }
 
 function patternRegex(start: string, end: string): RegExp {
@@ -159,7 +157,7 @@ export class PatternPairAggregator extends SimpleTextAggregator {
    */
   override get text(): Aggregation {
     const patternStart = this._matchStartOfPattern(this._text);
-    const strippedText = this._text.trim();
+    const strippedText = strip(this._text);
     const type = patternStart ? (patternStart[1].type ?? TextType.SENTENCE) : TextType.SENTENCE;
     return new Aggregation({ text: strippedText, type });
   }
@@ -251,7 +249,7 @@ export class PatternPairAggregator extends SimpleTextAggregator {
         const fullMatch = match[0]; // Full match including patterns
 
         // Create pattern match object
-        const patternMatch = new PatternMatch({ content: content.trim(), type, fullMatch });
+        const patternMatch = new PatternMatch({ content: strip(content), type, fullMatch });
 
         // Check if this pattern was already processed
         const alreadyProcessed = (match.index ?? 0) + fullMatch.length <= lastProcessedPosition;
@@ -296,25 +294,54 @@ export class PatternPairAggregator extends SimpleTextAggregator {
    *   or null if no patterns are found or all patterns are complete.
    */
   protected _matchStartOfPattern(text: string): [number, PatternInfo] | null {
+    // Only one pattern should ever be open at a time, so the first found wins.
     for (const patternInfo of this._patterns.values()) {
-      const start = patternInfo.start;
-      const end = patternInfo.end;
-
-      // Count occurrences
-      const startCount = countOccurrences(text, start);
-      const endCount = countOccurrences(text, end);
-
-      // If there are more starts than ends, we have incomplete patterns
-      // Again, this is written generically but there only ever should
-      // be one pattern active at a time, so the counts should be 0 or 1.
-      // Which is why we base the return on the first found.
-      if (startCount > endCount) {
-        const startIndex = text.indexOf(start);
+      const startIndex = PatternPairAggregator._unmatchedStart(
+        text,
+        patternInfo.start,
+        patternInfo.end,
+      );
+      if (startIndex !== null) {
         return [startIndex, patternInfo];
       }
     }
 
     return null;
+  }
+
+  /**
+   * Find the first start delimiter in the text that has no end delimiter after it.
+   *
+   * Delimiters are paired the way `_processCompletePatterns` pairs
+   * them, left to right and non-overlapping, which also holds for a
+   * delimiter that reads the same at both ends (a Markdown code fence).
+   *
+   * @param text The text to scan.
+   * @param start The start delimiter.
+   * @param end The end delimiter.
+   * @returns The index of the unmatched start delimiter, or null if every start
+   *   delimiter is closed.
+   */
+  protected static _unmatchedStart(text: string, start: string, end: string): number | null {
+    const matchedSpans: [number, number][] = [...text.matchAll(patternRegex(start, end))].map(
+      (match) => [match.index ?? 0, (match.index ?? 0) + match[0].length],
+    );
+
+    let searchFrom = 0;
+    while (true) {
+      const index = text.indexOf(start, searchFrom);
+      if (index === -1) {
+        return null;
+      }
+
+      const span = matchedSpans.find((s) => s[0] <= index && index < s[1]);
+      if (span === undefined) {
+        return index;
+      }
+      // This occurrence belongs to a completed match; skip past it entirely
+      // so a start nested inside its content isn't mistaken for an unmatched one.
+      searchFrom = span[1];
+    }
   }
 
   /**
@@ -356,7 +383,7 @@ export class PatternPairAggregator extends SimpleTextAggregator {
         const first = patterns[0] as PatternMatch;
         if (patterns.length > 1) {
           logger.warning(
-            `Multiple patterns matched: ${JSON.stringify(patterns.map((p) => p.type))}. Only the first pattern will be returned.`,
+            `Multiple patterns matched: [${patterns.map((p) => `'${p.type}'`).join(", ")}]. Only the first pattern will be returned.`,
           );
         }
         // If the pattern found is set to be aggregated, return it
@@ -385,13 +412,16 @@ export class PatternPairAggregator extends SimpleTextAggregator {
         this._text = this._text.slice(patternStart[0]);
         const aggType =
           this._aggregationType === TextType.TOKEN ? TextType.TOKEN : TextType.SENTENCE;
-        yield new PatternMatch({ content: result.trim(), type: aggType, fullMatch: result });
+        yield new PatternMatch({ content: strip(result), type: aggType, fullMatch: result });
         continue;
       }
 
       if (this._aggregationType !== TextType.TOKEN) {
-        // Use parent's lookahead logic for sentence detection
-        const aggregation = await super._checkSentenceWithLookahead(char);
+        // Use parent's lookahead logic for sentence detection, ignoring
+        // boundaries inside KEEP patterns that are still in the buffer.
+        const aggregation = await super._checkSentenceWithLookahead(char, {
+          protectedEnd: this._keptPatternsOffset(),
+        });
         if (aggregation) {
           // Convert to PatternMatch for consistency with return type
           yield new PatternMatch({
@@ -423,6 +453,19 @@ export class PatternPairAggregator extends SimpleTextAggregator {
         }
       }
     }
+  }
+
+  /** Return the buffer offset just past the last closed KEEP pattern, or 0 if none. */
+  protected _keptPatternsOffset(): number {
+    let offset = 0;
+    for (const pattern of this._patterns.values()) {
+      if (pattern.action !== MatchAction.KEEP) continue;
+      const endPattern = pattern.end;
+      if (this._text.includes(endPattern)) {
+        offset = Math.max(offset, this._text.lastIndexOf(endPattern) + endPattern.length);
+      }
+    }
+    return offset;
   }
 
   /**
@@ -457,7 +500,7 @@ export class PatternPairAggregator extends SimpleTextAggregator {
 
     await this.reset();
 
-    const stripped = resultText.trim();
+    const stripped = strip(resultText);
     if (!stripped) {
       return null;
     }
@@ -468,11 +511,7 @@ export class PatternPairAggregator extends SimpleTextAggregator {
   /**
    * Find the earliest unmatched start delimiter that flush() should cut at.
    *
-   * For each registered pattern, replicates the same left-to-right,
-   * non-overlapping pairing that `_processCompletePatterns` uses
-   * (earliest start paired with earliest following end) to determine
-   * which start-delimiter occurrences are still unmatched. Only
-   * REMOVE/AGGREGATE patterns' unmatched starts are candidates: KEEP
+   * Only REMOVE/AGGREGATE patterns' unmatched starts are candidates: KEEP
    * patterns are excluded because unclosed KEEP content is kept, not cut.
    *
    * @param text The buffered text to scan.
@@ -487,31 +526,9 @@ export class PatternPairAggregator extends SimpleTextAggregator {
         continue;
       }
 
-      const start = patternInfo.start;
-      const matchedSpans: [number, number][] = [
-        ...text.matchAll(patternRegex(start, patternInfo.end)),
-      ].map((match) => [match.index ?? 0, (match.index ?? 0) + match[0].length]);
-
-      let searchFrom = 0;
-      while (true) {
-        const index = text.indexOf(start, searchFrom);
-        if (index === -1) {
-          break;
-        }
-
-        const span = matchedSpans.find((s) => s[0] <= index && index < s[1]);
-        if (span !== undefined) {
-          // This occurrence belongs to a completed match; skip past
-          // it entirely so a start nested inside its content isn't
-          // mistaken for an unmatched one.
-          searchFrom = span[1];
-          continue;
-        }
-
-        if (earliest === null || index < earliest) {
-          earliest = index;
-        }
-        break;
+      const index = PatternPairAggregator._unmatchedStart(text, patternInfo.start, patternInfo.end);
+      if (index !== null && (earliest === null || index < earliest)) {
+        earliest = index;
       }
     }
 

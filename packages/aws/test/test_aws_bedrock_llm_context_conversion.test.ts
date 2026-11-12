@@ -8,7 +8,7 @@
 
 import { expect, mock, spyOn, test } from "bun:test";
 
-import { LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
+import { LLMContextConversionError } from "@pipedog/core/adapters/llm/base_llm_adapter";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 
 import { AWSServiceError } from "../src/aws_session.ts";

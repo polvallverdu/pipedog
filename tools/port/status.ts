@@ -55,6 +55,9 @@ if (args[0] === "--set") {
 if (args[0] === "--sync-tests") {
   for (const t of manifest.tests) {
     if (!existsSync(t.ts)) continue;
+    // A port of an older upstream revision passing says nothing about the upstream diff; it
+    // stays todo until a porter ports that diff and clears the note (see the port workflow).
+    if (t.notes.includes("re-port the diff")) continue;
     const proc = Bun.spawnSync(["bun", "test", t.ts], { stdout: "pipe", stderr: "pipe" });
     const out = `${proc.stdout.toString()}${proc.stderr.toString()}`;
     // Only bun's summary lines (" 3 fail"), not log output such as "attempt 1 failed".

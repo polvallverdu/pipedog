@@ -14,7 +14,7 @@
  */
 
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
-import { OPENAI_NOT_GIVEN } from "@pipedog/core/adapters/services/open_ai_adapter";
+import { OPENAI_NOT_GIVEN } from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import type { OpenAILLMSettingsOptions } from "@pipedog/openai/base_llm";
 import { CerebrasLLMService } from "../src/llm.ts";

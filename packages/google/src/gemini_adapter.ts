@@ -2,7 +2,7 @@
 // Copyright (c) 2026, pipedog contributors
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Ported from pipecat: src/pipecat/adapters/services/gemini_adapter.py
+// Ported from pipecat: src/pipecat/adapters/llm/services/gemini_adapter.py
 
 /**
  * Gemini LLM adapter for Pipecat.
@@ -25,8 +25,11 @@
 
 import type { Content, Blob as GenAIBlob, Part } from "@google/genai";
 import { rethrowIfCancelled } from "@pipedog/asyncio";
-import { BaseLLMAdapter, LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
-import { AdapterType, type ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import {
+  BaseLLMAdapter,
+  LLMContextConversionError,
+} from "@pipedog/core/adapters/llm/base_llm_adapter";
+import { AdapterType, type ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   type LLMContext,
   type LLMContextMessage,
@@ -39,6 +42,16 @@ import { logger } from "@pipedog/core/utils/logger";
 import { pyJsonLoads } from "@pipedog/core/utils/py_json";
 
 type Dict = Record<string, any>;
+
+// Python's `url.split(",")[1]`: a data URL without a comma has no payload, and
+// the index raises IndexError (a RangeError here) rather than yielding undefined.
+function dataUrlPayload(url: string): string {
+  const payload = url.split(",")[1];
+  if (payload === undefined) {
+    throw new RangeError("list index out of range");
+  }
+  return payload;
+}
 
 /** Context-based parameters for invoking Gemini LLM. */
 export interface GeminiLLMInvocationParams {
@@ -733,7 +746,7 @@ export class GeminiLLMAdapter extends BaseLLMAdapter<GeminiLLMInvocationParams> 
           parts.push({
             inlineData: {
               mimeType,
-              data: bytesToBase64(base64ToBytes(url.split(",")[1] as string)),
+              data: bytesToBase64(base64ToBytes(dataUrlPayload(url))),
             },
           });
         } else if (c.type === "image_url") {

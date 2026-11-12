@@ -16,8 +16,9 @@
  *
  * Two tests still apply: the text type given to a frame (upstream passes it by
  * position; frames take an options object here), and the RTVI
- * `BotOutputMessageData` wire format, which still carries both `text_type` and
- * `aggregated_by` so v1 clients keep working.
+ * `BotOutputMessageData` wire format, which carries `output_type` and still
+ * carries its older names `text_type` and `aggregated_by` so older clients
+ * keep working.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -73,11 +74,12 @@ test.skip("test_tts_service_skip_aggregator_types", () => {});
 // ported.
 test.skip("test_tts_service_transformer_aggregation_type", () => {});
 
-describe.each(["textType", "aggregatedBy"])("[%s]", (field) => {
-  test("test_bot_output_message_carries_both_fields", () => {
+describe.each(["outputType", "textType", "aggregatedBy"])("[%s]", (field) => {
+  test("test_bot_output_message_carries_every_name", () => {
     const data = new RTVI.BotOutputMessageData({ text: "Hello.", [field]: "status" });
     expect(data.modelDump({ excludeNone: true })).toEqual({
       text: "Hello.",
+      output_type: "status",
       text_type: "status",
       aggregated_by: "status",
     });

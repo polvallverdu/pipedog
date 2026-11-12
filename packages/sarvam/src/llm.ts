@@ -17,7 +17,7 @@ import {
   OPENAI_NOT_GIVEN,
   type OpenAILLMInvocationParams,
   openaiIsGiven,
-} from "@pipedog/core/adapters/services/open_ai_adapter";
+} from "@pipedog/core/adapters/llm/services/open_ai_adapter";
 import type { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
 import { logger } from "@pipedog/core/utils/logger";
 import { assertGiven, isGiven, NOT_GIVEN, type NotGiven } from "@pipedog/core/utils/types";

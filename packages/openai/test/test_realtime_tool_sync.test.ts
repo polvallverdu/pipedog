@@ -23,7 +23,7 @@ import type {
 
 import { OpenAIRealtimeLLMService } from "../src/realtime/llm.ts";
 
-// DIVERGENCE (see core adapters/schemas/direct_function.ts): JavaScript has no
+// DIVERGENCE (see core adapters/llm/schemas/direct_function.ts): JavaScript has no
 // docstrings or runtime type hints, so the description and parameter types are
 // attached as metadata.
 async function sample_tool(params: FunctionCallParams, query: string) {

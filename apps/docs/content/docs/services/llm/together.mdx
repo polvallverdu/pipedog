@@ -68,6 +68,7 @@ defaults:
 |---|---|---|---|
 | `model` | `string` | `"zai-org/GLM-5.2"` | Model name. |
 | `reasoning` | `Record<string, unknown> \| null` | `null` | Together's reasoning toggle, e.g. `{ enabled: false }`, sent as `reasoning` in the request body. `null` leaves it to the model. |
+| `reasoningEffort` | `"low" \| "medium" \| "high" \| "max" \| string \| null` | `null` | How much the model reasons, sent as `reasoning_effort` when set, unless `extra` already has one. Values vary by model (`"max"` on `zai-org/GLM-5.3`). It reaches models that ignore `reasoning`, such as GLM-5.3. `null` leaves Together's per-model default. |
 
 Every other setting keeps OpenAI's default. Unset sampling settings are left out of the request, so
 the provider's own defaults apply. `extra` carries provider-specific request fields.
@@ -79,6 +80,10 @@ the provider's own defaults apply. `extra` carries provider-specific request fie
 Turn off a reasoning model's thinking pass, which otherwise delays the first spoken token:
 
 <include cwd>snippets/services/llm-together.ts#reasoning</include>
+
+Models that ignore the toggle, such as `zai-org/GLM-5.3`, still take a reasoning effort:
+
+<include cwd>snippets/services/llm-together.ts#effort</include>
 
 Change settings mid-call with an `LLMUpdateSettingsFrame`. The next completion uses them:
 

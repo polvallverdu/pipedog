@@ -8,7 +8,6 @@
 
 import {
   CancelFrame,
-  EagerEndOfTurnCancelFrame,
   EndFrame,
   type Frame,
   ProposedUserStartedSpeakingFrame,
@@ -16,6 +15,7 @@ import {
   StartFrame,
   UserStartedSpeakingFrame,
   UserStoppedSpeakingFrame,
+  UserTurnResponseCancelFrame,
 } from "../frames/frames.ts";
 import {
   FrameDirection,
@@ -24,19 +24,21 @@ import {
   type FrameProcessorSetup,
 } from "../processors/frame_processor.ts";
 import { logger } from "../utils/logger.ts";
-import type { UserTurnSpeculation } from "./types.ts";
+import type { UserTurnResumedParams, UserTurnSpeculation } from "./types.ts";
 import { UserIdleController } from "./user_idle_controller.ts";
 import type { BaseUserTurnStartStrategy, UserTurnStartedParams } from "./user_start/index.ts";
 import type { BaseUserTurnStopStrategy, UserTurnStoppedParams } from "./user_stop/index.ts";
 import { UserTurnController } from "./user_turn_controller.ts";
-import { UserTurnStrategies } from "./user_turn_strategies.ts";
+import { UserTurnStrategies, type UserTurnStrategiesParams } from "./user_turn_strategies.ts";
 
 export interface UserTurnProcessorOptions extends FrameProcessorOptions {
   /** Configured strategies for starting and stopping user turns. */
   userTurnStrategies?: UserTurnStrategies | null;
+  /** How the strategies decide. Defaults to `new UserTurnStrategiesParams()`. */
+  userTurnStrategiesParams?: UserTurnStrategiesParams | null;
   /**
-   * Timeout in seconds to automatically stop a user turn if no activity is
-   * detected.
+   * Seconds without user activity before an open user turn is ended, unless
+   * a stop strategy has a decision scheduled.
    */
   userTurnStopTimeout?: number;
   /**
@@ -60,16 +62,22 @@ export interface UserTurnProcessorOptions extends FrameProcessorOptions {
  * - on_user_turn_started: Emitted when a user turn starts.
  * - on_user_turn_inference_triggered: Emitted when enough signal exists to
  *   start LLM inference. Fires together with `on_user_turn_stopped` for most
- *   strategies; fires alone when a downstream strategy gates finalization on
- *   the LLM's verdict.
+ *   strategies; fires alone when the turn's end waits for a decision on the
+ *   inference, or for an eager end of turn to be confirmed.
  * - on_user_turn_stopped: Emitted when a user turn is semantically final.
- * - on_user_turn_stop_timeout: Emitted if no stop strategy triggers before timeout.
+ * - on_user_turn_resumed: Emitted when the user starts speaking again in an
+ *   open turn, after they stopped or after the turn's inference was
+ *   triggered. Its `UserTurnResumedParams` say whether the turn interrupts
+ *   the bot and whether that inference was triggered.
+ * - on_user_turn_stop_timeout: Emitted when the stop timeout ends a user turn
+ *   its stop strategies didn't end.
  * - on_user_turn_idle: Emitted when the user has been idle for the configured timeout.
  *
  * @example
  * processor.eventHandler("on_user_turn_started", async (processor, strategy) => { ... });
  * processor.eventHandler("on_user_turn_inference_triggered", async (processor, strategy) => { ... });
  * processor.eventHandler("on_user_turn_stopped", async (processor, strategy) => { ... });
+ * processor.eventHandler("on_user_turn_resumed", async (processor, params) => { ... });
  * processor.eventHandler("on_user_turn_stop_timeout", async (processor) => { ... });
  * processor.eventHandler("on_user_turn_idle", async (processor) => { ... });
  */
@@ -82,12 +90,14 @@ export class UserTurnProcessor extends FrameProcessor {
 
     this._registerEventHandler("on_user_turn_started");
     this._registerEventHandler("on_user_turn_stopped");
+    this._registerEventHandler("on_user_turn_resumed");
     this._registerEventHandler("on_user_turn_stop_timeout");
     this._registerEventHandler("on_user_turn_idle");
     this._registerEventHandler("on_user_turn_inference_triggered");
 
     this._userTurnController = new UserTurnController({
       userTurnStrategies: options.userTurnStrategies ?? new UserTurnStrategies(),
+      userTurnStrategiesParams: options.userTurnStrategiesParams ?? null,
       userTurnStopTimeout: options.userTurnStopTimeout ?? 5.0,
     });
     this._userTurnController.addEventHandler("on_push_frame", (_c, frame, direction) =>
@@ -104,6 +114,9 @@ export class UserTurnProcessor extends FrameProcessor {
     );
     this._userTurnController.addEventHandler("on_user_turn_stopped", (c, strategy, params) =>
       this._onUserTurnStopped(c, strategy, params),
+    );
+    this._userTurnController.addEventHandler("on_user_turn_resumed", (c, params) =>
+      this._onUserTurnResumed(c, params),
     );
     this._userTurnController.addEventHandler("on_user_turn_stop_timeout", (c) =>
       this._onUserTurnStopTimeout(c),
@@ -215,7 +228,7 @@ export class UserTurnProcessor extends FrameProcessor {
   }
 
   protected async _onUserTurnSpeculationCancelled(_controller: UserTurnController): Promise<void> {
-    await this.broadcastFrame(EagerEndOfTurnCancelFrame);
+    await this.broadcastFrame(UserTurnResponseCancelFrame);
   }
 
   protected async _onUserTurnStarted(
@@ -252,6 +265,13 @@ export class UserTurnProcessor extends FrameProcessor {
     await this._userIdleController.processFrame(new UserStoppedSpeakingFrame());
 
     await this._callEventHandler("on_user_turn_stopped", strategy);
+  }
+
+  protected async _onUserTurnResumed(
+    _controller: UserTurnController,
+    params: UserTurnResumedParams,
+  ): Promise<void> {
+    await this._callEventHandler("on_user_turn_resumed", params);
   }
 
   protected async _onUserTurnStopTimeout(_controller: UserTurnController): Promise<void> {

@@ -23,6 +23,7 @@
 
 import { createTask, rethrowIfCancelled, type Task, time } from "@pipedog/asyncio";
 import { AudioVolumeTracker } from "../../../audio/volume.ts";
+import type { PerceptionSignal } from "../../../expressive/perception.ts";
 import {
   AggregatedTextFrame,
   AggregatedTextProgressFrame,
@@ -47,6 +48,7 @@ import {
   LLMMarkerResponseFrame,
   LLMTextFrame,
   MetricsFrame,
+  PerceptionMetadataFrame,
   TextType,
   TranscriptionFrame,
   TTSAudioRawFrame,
@@ -205,7 +207,9 @@ export interface RTVIObserverParamsOptions {
  *   dynamically via `addIgnoredSource()` and `removeIgnoredSource()`.
  * - `skipTextTypes`: List of text types to skip sending as tts/output
  *   messages. Text of type `backchannel` is only sent to clients of protocol
- *   2.2.0 or later; add `"backchannel"` here to keep it from every client.
+ *   2.2.0 or later, and expression sounds and pauses (`expression_sound`,
+ *   `expression_pause`) to clients of 2.3.0 or later; add a type here to keep
+ *   it from every client.
  *   Note: if using this to avoid sending secure information, be sure to also
  *   disable botLlmEnabled, and leave llmRawTextEnabled off, to avoid leaking
  *   through LLM messages.
@@ -360,6 +364,11 @@ export class RTVIObserver extends BaseObserver {
   protected _skippedSegmentIds = new Set<number>();
   // Whether an interruption cut off the skipped segments still remembered
   protected _skippedSegmentsInterrupted = false;
+  // Processors that read how the user spoke, from their
+  // PerceptionMetadataFrame, and the transcriptions pushed to one that
+  // haven't been read yet (see _handleTranscriptionPush)
+  protected _perceivers = new Set<FrameProcessor>();
+  protected _unreadTranscriptionIds = new Set<number>();
 
   // Removes the system logs sink (loguru's `logger.remove(id)`).
   protected _systemLoggerRemove: (() => void) | null = null;
@@ -412,6 +421,11 @@ export class RTVIObserver extends BaseObserver {
   /** Whether the connected client supports the backchannel text type (2.2.0+). */
   protected get _clientSupportsBackchannels(): boolean {
     return this._clientIsAtLeast([2, 2, 0]);
+  }
+
+  /** Whether the connected client supports expression sounds and pauses (2.3.0+). */
+  protected get _clientSupportsExpression(): boolean {
+    return this._clientIsAtLeast([2, 3, 0]);
   }
 
   /** Whether the connected client supports the raw text messages (2.2.0+). */
@@ -690,6 +704,8 @@ export class RTVIObserver extends BaseObserver {
     }
     return (
       data.firstPush ||
+      frame instanceof TranscriptionFrame ||
+      frame instanceof InterimTranscriptionFrame ||
       frame instanceof AggregatedTextFrame ||
       frame instanceof AggregatedTextProgressFrame
     );
@@ -720,9 +736,16 @@ export class RTVIObserver extends BaseObserver {
       return;
     }
 
+    if (frame instanceof PerceptionMetadataFrame && data.firstPush) {
+      this._perceivers.add(src);
+    } else if (frame instanceof TranscriptionFrame || frame instanceof InterimTranscriptionFrame) {
+      await this._handleTranscriptionPush(frame, data);
+      return;
+    }
+
     // A frame is handled the first time it is pushed, except aggregated
     // text, which is handled once it has gone through the output
-    // transport and has the right timing.
+    // transport and has the right timing, and transcriptions (above).
     if (
       !data.firstPush &&
       !(frame instanceof AggregatedTextFrame || frame instanceof AggregatedTextProgressFrame)
@@ -753,8 +776,6 @@ export class RTVIObserver extends BaseObserver {
       await this._handleBotSpeaking(frame);
     } else if (frame instanceof InterruptionFrame) {
       await this._handleBotInterrupted();
-    } else if (frame instanceof TranscriptionFrame || frame instanceof InterimTranscriptionFrame) {
-      await this._handleUserTranscriptions(frame);
     } else if (frame instanceof UserBackchannelFrame && this._params.userInputEnabled) {
       await this._sendUserInput(frame.text, "backchannel", {
         timestamp: frame.timestamp,
@@ -1006,13 +1027,14 @@ export class RTVIObserver extends BaseObserver {
         data: new RTVI.BotOutputMessageData({
           text,
           willBeSpoken: true,
-          textType,
+          outputType: textType,
           segmentId: frame.segmentId,
           spokenStatus,
           spokenProgress: new RTVI.SpokenProgressData({
             accumulatedText: accumulated,
             remainingText: remaining,
           }),
+          delivery: frame.delivery,
         }),
       });
       await this.sendRtviMessage(message);
@@ -1034,6 +1056,14 @@ export class RTVIObserver extends BaseObserver {
     // A client that doesn't support backchannels would show one as part of the
     // bot's response.
     if (textType === TextType.BACKCHANNEL && !this._clientSupportsBackchannels) {
+      return true;
+    }
+    // Expression sounds and pauses are part of protocol 2.3.0; an earlier client
+    // would take one for part of the bot's response.
+    if (
+      (textType === TextType.EXPRESSION_SOUND || textType === TextType.EXPRESSION_PAUSE) &&
+      !this._clientSupportsExpression
+    ) {
       return true;
     }
     const skipTypes = this._params.skipTextTypes;
@@ -1060,6 +1090,10 @@ export class RTVIObserver extends BaseObserver {
   /** Send aggregated LLM text messages. */
   protected async _sendAggregatedLlmText(frame: AggregatedTextFrame): Promise<void> {
     if (this._isSkipped(frame)) {
+      return;
+    }
+    // A unit that is only tags reaches the context, with no words to show.
+    if (!frame.text.trim()) {
       return;
     }
 
@@ -1114,22 +1148,28 @@ export class RTVIObserver extends BaseObserver {
         text,
         spoken: isTTS,
         willBeSpoken,
-        textType,
+        outputType: textType,
         segmentId,
         spokenStatus,
         spokenProgress: progress,
+        delivery: frame instanceof TTSTextFrame ? frame.delivery : null,
       });
       const message = new RTVI.BotOutputMessage({ data });
       await this.sendRtviMessage(message);
     }
 
-    if (isTTS && this._params.ttsRawTextEnabled && this._clientSupportsRawText) {
+    // A sound or pause isn't a word the bot spoke: bot-output alone carries
+    // it, with its text type.
+    const spokenWords =
+      isTTS && textType !== TextType.EXPRESSION_SOUND && textType !== TextType.EXPRESSION_PAUSE;
+
+    if (spokenWords && this._params.ttsRawTextEnabled && this._clientSupportsRawText) {
       await this.sendRtviMessage(
         new RTVI.TTSRawTextMessage({ data: new RTVI.TextMessageData({ text }) }),
       );
     }
 
-    if (isTTS && this._params.botTtsEnabled) {
+    if (spokenWords && this._params.botTtsEnabled) {
       const ttsMessage = new RTVI.BotTTSTextMessage({ data: new RTVI.TextMessageData({ text }) });
       await this.sendRtviMessage(ttsMessage);
     }
@@ -1165,6 +1205,33 @@ export class RTVIObserver extends BaseObserver {
     }
   }
 
+  /**
+   * Handle a transcription once every perceiver it's pushed to has read it.
+   *
+   * A processor after the STT, such as `PipecatToneReader`, sets the
+   * reading on the transcription it passes along. Handled on the STT's
+   * push, the user-input message would go out before the reader had read
+   * it, without its perception. So a transcription pushed to a perceiver
+   * waits until it's pushed on to a processor that isn't one.
+   */
+  protected async _handleTranscriptionPush(
+    frame: TranscriptionFrame | InterimTranscriptionFrame,
+    data: FramePushed,
+  ): Promise<void> {
+    if (this._perceivers.has(data.destination)) {
+      if (data.firstPush) {
+        this._unreadTranscriptionIds.add(frame.id);
+      }
+      return;
+    }
+    if (this._unreadTranscriptionIds.has(frame.id)) {
+      this._unreadTranscriptionIds.delete(frame.id);
+    } else if (!data.firstPush) {
+      return;
+    }
+    await this._handleUserTranscriptions(frame);
+  }
+
   /** Handle user transcription frames. */
   protected async _handleUserTranscriptions(
     frame: TranscriptionFrame | InterimTranscriptionFrame,
@@ -1175,6 +1242,7 @@ export class RTVIObserver extends BaseObserver {
         timestamp: frame.timestamp,
         final,
         userId: frame.userId,
+        perception: frame.perception,
       });
     }
     if (this._params.sttRawTextEnabled && this._clientSupportsRawText) {
@@ -1211,8 +1279,22 @@ export class RTVIObserver extends BaseObserver {
       final: boolean;
       userId?: string | null;
       msgId?: string | null;
+      perception?: PerceptionSignal[] | null;
     },
   ): Promise<void> {
+    let signals: RTVI.UserPerceptionSignal[] | null = null;
+    const perception = options.perception;
+    if (perception && perception.length > 0) {
+      signals = [];
+      for (const signal of perception) {
+        const labels = signal.labels.map(
+          ([label, confidence]) => new RTVI.UserPerceptionLabel({ label, confidence }),
+        );
+        signals.push(
+          new RTVI.UserPerceptionSignal({ name: signal.name, labels, value: signal.value }),
+        );
+      }
+    }
     const message = new RTVI.UserInputMessage({
       data: new RTVI.UserInputMessageData({
         text,
@@ -1221,6 +1303,7 @@ export class RTVIObserver extends BaseObserver {
         final: options.final,
         userId: options.userId ?? null,
         msgId: options.msgId ?? null,
+        perception: signals,
       }),
     });
     await this.sendRtviMessage(message);

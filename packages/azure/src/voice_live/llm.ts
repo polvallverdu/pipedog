@@ -20,8 +20,8 @@
  */
 
 import { rethrowIfCancelled, type Task, time } from "@pipedog/asyncio";
-import type { BaseLLMAdapter } from "@pipedog/core/adapters/base_llm_adapter";
-import type { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import type { BaseLLMAdapter } from "@pipedog/core/adapters/llm/base_llm_adapter";
+import type { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   BotStoppedSpeakingFrame,
   type CancelFrame,
@@ -1127,6 +1127,8 @@ export class AzureVoiceLiveLLMService extends LLMService<VoiceLiveAdapter> {
     }
 
     for await (const message of this._websocket) {
+      // Dispatch below is by the `type` string, as upstream (pydantic models, not a
+      // discriminated union), so the parsed event is genuinely dynamic here.
       let evt: any;
       try {
         evt = events.parseServerEvent(message as string | Uint8Array);

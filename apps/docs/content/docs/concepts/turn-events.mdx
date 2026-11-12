@@ -15,10 +15,10 @@ the user aggregator (`aggregators.user()`), assistant events from the assistant 
 | Event | Arguments after the aggregator | Fires when |
 | --- | --- | --- |
 | `on_user_turn_started` | `strategy` | a start strategy starts a user turn |
-| `on_user_turn_inference_triggered` | `strategy` | a stop strategy has enough to run the LLM. Usually together with `on_user_turn_stopped`; before it, possibly more than once, when something else finalizes the turn (a [deferred](/docs/concepts/turn-strategies#deferring-the-end-of-a-turn) detector, or a speculative inference with [`EagerUserTurnStrategies`](/docs/concepts/turn-strategies#eageruserturnstrategies)) |
-| `on_user_turn_stopped` | `strategy`, `message: UserTurnStoppedMessage` | a stop strategy ends the turn. `message.content` is the transcript, `null` in realtime mode |
+| `on_user_turn_inference_triggered` | `strategy` | the turn's inference runs. Usually together with `on_user_turn_stopped`; before it, possibly more than once, when the turn end waits for a decision on the inference (a [strategy that waits for it](/docs/concepts/turn-strategies#strategies-that-wait-for-the-inference)), or for a speculative inference with [`EagerUserTurnStrategies`](/docs/concepts/turn-strategies#eageruserturnstrategies) to be confirmed |
+| `on_user_turn_stopped` | `strategy`, `message: UserTurnStoppedMessage` | the stop strategies end the turn. `message.content` is the transcript, `null` in realtime mode |
 | `on_user_turn_message_added` | `message: UserTurnMessageAddedMessage` | the user's text is written to the context. In realtime mode that happens when the assistant starts answering, so use this event there for the user's text |
-| `on_user_turn_stop_timeout` | | the turn ends because nothing happened for `userTurnStopTimeout` seconds; `on_user_turn_stopped` follows |
+| `on_user_turn_stop_timeout` | | the stop timeout ends a turn its stop strategies didn't end, after `userTurnStopTimeout` seconds without activity; `on_user_turn_stopped` follows |
 | `on_user_turn_idle` | | the user stays silent for `userIdleTimeout` seconds after the bot finishes ([below](#idle-users)) |
 | `on_user_mute_started` | | the user becomes [muted](/docs/concepts/user-muting) |
 | `on_user_mute_stopped` | | the user is unmuted |

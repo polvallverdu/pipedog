@@ -33,10 +33,10 @@
  */
 
 import { CancelledError, rethrowIfCancelled, sleep, type Task, time } from "@pipedog/asyncio";
-import type { BaseLLMAdapter } from "@pipedog/core/adapters/base_llm_adapter";
-import type { DirectFunction } from "@pipedog/core/adapters/schemas/direct_function";
-import type { FunctionSchema } from "@pipedog/core/adapters/schemas/function_schema";
-import { ToolsSchema } from "@pipedog/core/adapters/schemas/tools_schema";
+import type { BaseLLMAdapter } from "@pipedog/core/adapters/llm/base_llm_adapter";
+import type { DirectFunction } from "@pipedog/core/adapters/llm/schemas/direct_function";
+import type { FunctionSchema } from "@pipedog/core/adapters/llm/schemas/function_schema";
+import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
 import {
   AggregatedTextFrame,
   type CancelFrame,

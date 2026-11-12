@@ -48,7 +48,7 @@
       "workerd"
     ],
     "upstream": [
-      "src/pipecat/adapters/services/deepseek_adapter.py",
+      "src/pipecat/adapters/llm/services/deepseek_adapter.py",
       "src/pipecat/services/deepseek"
     ]
   }

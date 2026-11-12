@@ -9,7 +9,7 @@
 import { expect, mock, test } from "bun:test";
 
 import { ApiError, FinishReason, GenerateContentResponse, GoogleGenAI } from "@google/genai";
-import { LLMContextConversionError } from "@pipedog/core/adapters/base_llm_adapter";
+import { LLMContextConversionError } from "@pipedog/core/adapters/llm/base_llm_adapter";
 import {
   type ErrorFrame,
   LLMFullResponseEndFrame,

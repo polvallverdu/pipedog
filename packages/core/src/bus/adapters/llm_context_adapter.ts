@@ -6,7 +6,7 @@
 
 /** Type adapter for LLMContext serialization. */
 
-import type { ToolsSchema } from "../../adapters/schemas/tools_schema.ts";
+import type { ToolsSchema } from "../../adapters/llm/schemas/tools_schema.ts";
 import {
   LLMContext,
   type LLMContextMessage,

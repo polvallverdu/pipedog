@@ -35,9 +35,10 @@
  * `vad_user_stopped_speaking`, `user_transcription`, `bot_started_speaking`,
  * `bot_stopped_speaking`, `llm_started`, `response`, `llm_response`,
  * `llm_marker`, `tts_response`, `function_call`, `function_call_stopped`,
- * `image`, `bot_backchannel`, `user_backchannel`. The `vad_*` events are the raw
- * VAD signal, useful as a timing anchor when a turn-detection strategy gates or defers the
- * turn-level `user_stopped_speaking` (e.g. filtering incomplete turns).
+ * `image`, `bot_backchannel`, `user_backchannel`, `expression`. The `vad_*`
+ * events are the raw VAD signal, useful as a timing anchor when a turn-detection strategy
+ * gates or defers the turn-level `user_stopped_speaking` (e.g. filtering incomplete
+ * turns).
  *
  * `image` is an image the bot output, such as a generated one; the bot reports
  * images only to a scenario that expects one:
@@ -120,6 +121,9 @@
  *   ignoring whitespace differences
  * - `text_excludes: <str>`: the reverse: the event's text content must not hold
  *   this substring
+ * - `text_matches: <regex> | [<regex>, ...]`: regular expressions (Python
+ *   `re.search`) the event's text content must each match, such as a format the
+ *   reply must open with. The failure names the first pattern that did not match
  * - `marker: <str>`: for `llm_marker` — the marker's meaning: `complete`,
  *   `short`, `long`, or `incomplete` for either of the last two
  * - `marker_first: <bool>`, `markers: <int>`, `text_after: <bool>`: for
@@ -333,6 +337,7 @@
 import { rethrowIfCancelled } from "@pipedog/asyncio";
 import { KeypadEntry } from "@pipedog/core/audio/dtmf/types";
 import { logger } from "@pipedog/core/utils/logger";
+import { pyRegExp } from "./_pyutil.ts";
 import {
   _DEFAULT_JUDGE,
   _get,
@@ -350,16 +355,18 @@ import type { ServiceConfig } from "./services.ts";
 
 /**
  * Events whose payloads carry bot-generated text the judge can sensibly
- * evaluate. Asserting `eval:` on anything else but a function call (user
- * transcripts, interruption signals) produces a parser warning — the test
- * controls user input deterministically, so judging it adds cost without
- * signal. `response` is the modality-agnostic alias, resolved to one of the
- * others after parsing (see `_resolveResponseEvents`).
+ * evaluate, including the expression the bot's TTS performed. Asserting
+ * `eval:` on anything else but a function call (user transcripts,
+ * interruption signals) produces a parser warning — the test controls user
+ * input deterministically, so judging it adds cost without signal.
+ * `response` is the modality-agnostic alias, resolved to one of the others
+ * after parsing (see `_resolveResponseEvents`).
  */
 export const JUDGEABLE_EVENTS: ReadonlySet<string> = new Set([
   "response",
   "llm_response",
   "tts_response",
+  "expression",
 ]);
 
 /**
@@ -425,6 +432,7 @@ export interface EvalExpectationOptions {
   withinMs?: number | null;
   textContains?: string | null;
   textExcludes?: string | null;
+  textMatches?: string[] | null;
   calls?: EvalFunctionCall[] | null;
   eval?: string | null;
   marker?: string | null;
@@ -460,6 +468,11 @@ export class EvalExpectation {
    */
   textExcludes: string | null;
   /**
+   * Optional regular expressions (`re.search`) the event's text content must
+   * each match, checked on the same text as `textExcludes`.
+   */
+  textMatches: string[] | null;
+  /**
    * For a `function_call` event, the set of calls expected in the turn. They
    * are matched by name in any order and the expectation passes only when all
    * of them are found. Built from `calls:` in the YAML, or from the single
@@ -469,9 +482,9 @@ export class EvalExpectation {
   /**
    * Optional natural-language criterion the event's text content must
    * satisfy. Evaluated by a judge LLM. Meaningful on the bot-generated text
-   * events (`response`, `llm_response`, and `tts_response`) and on the
-   * function-call events, where it is about each matched call's name and
-   * arguments rather than text.
+   * events (`response`, `llm_response`, `tts_response`, and the `expression`
+   * its TTS performed) and on the function-call events, where it is about each
+   * matched call's name and arguments rather than text.
    */
   eval: string | null;
   /**
@@ -495,7 +508,8 @@ export class EvalExpectation {
    * When true, the expectation is inverted: it passes only when NO event of
    * this type arrives before the `withinMs` budget expires, and fails as soon
    * as one does. Matches on event type only; `textContains`, `textExcludes`,
-   * `eval`, `calls` and the marker checks are not allowed alongside it.
+   * `textMatches`, `eval`, `calls` and the marker checks are not allowed
+   * alongside it.
    */
   absent: boolean;
 
@@ -504,6 +518,7 @@ export class EvalExpectation {
     this.withinMs = options.withinMs ?? null;
     this.textContains = options.textContains ?? null;
     this.textExcludes = options.textExcludes ?? null;
+    this.textMatches = options.textMatches ?? null;
     this.calls = options.calls ?? null;
     this.eval = options.eval ?? null;
     this.marker = options.marker ?? null;
@@ -517,14 +532,16 @@ export class EvalExpectation {
   /**
    * Whether the check accumulates text across events rather than matching one.
    *
-   * A reply with a content check accumulates the bot's segments; a
+   * A reply with a content check accumulates the bot's segments, and an
+   * `expression` check the expression performed in the turn; a
    * `user_transcription` with `textContains` accumulates an STT's pieces.
    */
   get aggregates(): boolean {
     if (
       this.event === "response" ||
       this.event === "llm_response" ||
-      this.event === "tts_response"
+      this.event === "tts_response" ||
+      this.event === "expression"
     ) {
       return this.textContains !== null || this.eval !== null;
     }
@@ -1104,6 +1121,7 @@ function _parseSendAfter(s: unknown, path: string, turnIdx: number): EvalSendAft
 const ABSENT_CONFLICTS = [
   "text_contains",
   "text_excludes",
+  "text_matches",
   "eval",
   "calls",
   "name",
@@ -1211,11 +1229,33 @@ function _parseExpectation(
     if (!ok) throw new Error(`${where} '${key}:' must be a ${kind}`);
   }
 
+  let textMatches = _get(e, "text_matches");
+  if (typeof textMatches === "string") {
+    textMatches = [textMatches];
+  }
+  if (textMatches !== null) {
+    if (!Array.isArray(textMatches) || !textMatches.every((p) => typeof p === "string")) {
+      throw new Error(`${where} 'text_matches:' must be a pattern or a list of patterns`);
+    }
+    for (const pattern of textMatches as string[]) {
+      try {
+        pyRegExp(pattern);
+      } catch (ex) {
+        rethrowIfCancelled(ex);
+        throw new Error(
+          `${where} 'text_matches:' pattern ${_pyRepr(pattern)}: ${(ex as Error).message}`,
+          { cause: ex },
+        );
+      }
+    }
+  }
+
   return new EvalExpectation({
     event,
     withinMs: _get(e, "within_ms") as number | null,
     textContains: _get(e, "text_contains") as string | null,
     textExcludes: _get(e, "text_excludes") as string | null,
+    textMatches: textMatches as string[] | null,
     calls,
     eval: criterion as string | null,
     marker: marker as string | null,

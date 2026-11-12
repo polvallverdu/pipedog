@@ -12,8 +12,8 @@ AWS services for pipedog:
 Most of them call AWS with `fetch` and `WebSocket`, signing requests with SigV4 on WebCrypto, so
 no AWS SDK is needed.
 
-A port of Pipecat's `pipecat.services.aws`, `pipecat.adapters.services.bedrock_adapter` and
-`pipecat.adapters.services.aws_nova_sonic_adapter`. Subpaths mirror upstream:
+A port of Pipecat's `pipecat.services.aws`, `pipecat.adapters.llm.services.bedrock_adapter` and
+`pipecat.adapters.llm.services.aws_nova_sonic_adapter`. Subpaths mirror upstream:
 `@pipedog/aws/llm`, `/stt`, `/tts`, `/agent_core`, `/nova_sonic/llm`,
 `/sagemaker/bidi_client`, `/bedrock_adapter`, `/aws_nova_sonic_adapter` and `/utils`.
 

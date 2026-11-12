@@ -17,7 +17,7 @@ import { expect, test } from "bun:test";
 
 import { Event, gather, sleep, waitFor } from "@pipedog/asyncio";
 
-import { toolOptions } from "../src/adapters/schemas/direct_function.ts";
+import { toolOptions } from "../src/adapters/llm/schemas/direct_function.ts";
 import type { BusJobRequestMessage } from "../src/bus/messages.ts";
 import {
   type Frame,

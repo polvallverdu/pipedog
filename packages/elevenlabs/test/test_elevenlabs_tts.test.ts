@@ -7,10 +7,16 @@
 /** Tests for ElevenLabs TTS alignment handling. */
 
 import { describe, expect, test } from "bun:test";
+import { BaseExpressionAdapter } from "@pipedog/core/adapters/tts/base_expression_adapter";
+import { ExpressionFormatter } from "@pipedog/core/expressive/formatter";
+import { TTSMetadataFrame, TTSUpdateSettingsFrame } from "@pipedog/core/frames/frames";
+import { PipelineParams } from "@pipedog/core/pipeline/worker";
 import { ConnectionClosedOK, State } from "@pipedog/core/services/websocket_service";
+import { runTest } from "@pipedog/core/tests/utils";
 import { Language } from "@pipedog/core/transcriptions/language";
-import { pyJsonLoads } from "@pipedog/core/utils/py_json";
+import { pyJsonDumps, pyJsonLoads } from "@pipedog/core/utils/py_json";
 import { concatenateAggregatedText, TextPartForConcatenation } from "@pipedog/core/utils/string";
+import { ElevenLabsAudioTagExpressionAdapter } from "../src/elevenlabs_adapter.ts";
 import { calculateWordTimes, ElevenLabsHttpTTSService, ElevenLabsTTSService } from "../src/tts.ts";
 // Upstream imports these helpers through `tts`, which imports them from `tts_base`.
 import {
@@ -471,5 +477,162 @@ describe("test_elevenlabs_tts", () => {
         expect(elevenlabsLanguageCode("eleven_v4_turbo", code)).toBe(code);
       }
     }
+  });
+
+  /** Yields the given server messages, then ends. */
+  class _MessagesWebSocket {
+    state: State = State.OPEN;
+    #messages: string[];
+
+    constructor(messages: Record<string, unknown>[]) {
+      this.#messages = messages.map((m) => pyJsonDumps(m));
+    }
+
+    async *[Symbol.asyncIterator](): AsyncGenerator<string, void, unknown> {
+      for (const message of this.#messages) {
+        yield message;
+      }
+    }
+  }
+
+  test("test_wordless_alignment_still_advances_the_clock", async () => {
+    // Trailing punctuation can arrive on its own; its span must not be dropped.
+    const service = _makeService();
+    const reported: [string, number][] = [];
+
+    service.addWordTimestamps = async (wordTimes: [string, number][], ..._args: unknown[]) => {
+      reported.push(...wordTimes);
+    };
+    service._websocket = new _MessagesWebSocket(
+      ["Hi there", "!", " Bye "].map((text) => ({ contextId: "ctx-1", alignment: _chunk(text) })),
+    );
+
+    await service._receiveMessages();
+
+    expect(reported.map(([word]) => word)).toEqual(["Hi", "there!", "Bye"]);
+    // "Bye" starts after the 8 characters of the first chunk, the "!", and its space.
+    expect(reported.at(-1)![1]).toBeCloseTo(0.8 + 0.1 + 0.1, 6);
+  });
+
+  for (const [model, adapter] of [
+    ["eleven_flash_v2_5", BaseExpressionAdapter],
+    ["eleven_multilingual_v2", BaseExpressionAdapter],
+    ["eleven_v3", ElevenLabsAudioTagExpressionAdapter],
+    ["eleven_v4_turbo", ElevenLabsAudioTagExpressionAdapter],
+  ] as const) {
+    test(`test_http_expression_adapter_follows_the_model[${model}-${adapter.name}]`, () => {
+      const service = new ElevenLabsHttpTTSService({
+        apiKey: "test-key",
+        fetch: _fakeHttpSession().fetch,
+        settings: new ElevenLabsHttpTTSService.Settings({ voice: "test-voice", model }),
+      });
+      // Python `type(x) is C`: the exact class, not a subclass.
+      expect(Object.getPrototypeOf(service.getExpressionAdapter()).constructor).toBe(adapter);
+    });
+  }
+
+  test("test_http_model_change_to_one_without_audio_tags_is_broadcast", async () => {
+    const service = new ElevenLabsHttpTTSService({
+      apiKey: "test-key",
+      fetch: _fakeHttpSession().fetch,
+      settings: new ElevenLabsHttpTTSService.Settings({ voice: "test-voice", model: "eleven_v3" }),
+    });
+
+    const [, up] = await runTest(service, {
+      framesToSend: [
+        new TTSUpdateSettingsFrame({
+          delta: new ElevenLabsHttpTTSService.Settings({ model: "eleven_flash_v2_5" }),
+        }),
+      ],
+      pipelineParams: new PipelineParams({ enableExpressiveConversation: true }),
+    });
+
+    const metadata = up.filter((f) => f instanceof TTSMetadataFrame) as TTSMetadataFrame[];
+    expect(metadata[0]!.expression).not.toBeNull();
+    expect(metadata.at(-1)!.expression).toBeNull();
+  });
+
+  /** A `fetch` whose 200 response streams the given JSON lines. */
+  function _streamingHttpFetch(lines: Record<string, unknown>[]): typeof fetch {
+    return (async () =>
+      new Response(lines.map((line) => `${pyJsonDumps(line)}\n`).join(""), {
+        status: 200,
+      })) as unknown as typeof fetch;
+  }
+
+  function _httpChunk(text: string): Record<string, unknown> {
+    const chars = Array.from(text);
+    return {
+      alignment: {
+        characters: chars,
+        character_start_times_seconds: chars.map((_, i) => i * 0.1),
+        character_end_times_seconds: chars.map((_, i) => (i + 1) * 0.1),
+      },
+    };
+  }
+
+  test("test_http_word_timestamps_report_audio_tags_as_words", async () => {
+    const chunks = ["It's ", "[excited]", " back [sh", "ort pause] up."];
+    const service: Any = new ElevenLabsHttpTTSService({
+      apiKey: "test-key",
+      fetch: _streamingHttpFetch(chunks.map((c) => _httpChunk(c))),
+      settings: new ElevenLabsHttpTTSService.Settings({ voice: "test-voice", model: "eleven_v3" }),
+    });
+    const reported: string[] = [];
+
+    service.addWordTimestamps = async (wordTimes: [string, number][], ..._args: unknown[]) => {
+      reported.push(...wordTimes.map(([word]) => word));
+    };
+    service._expressionFormatter = new ExpressionFormatter(() => service.getExpressionAdapter(), {
+      owner: service,
+    });
+
+    for await (const _ of service.runTts("It's [excited] back [short pause] up.", "ctx-1")) {
+      // drain
+    }
+
+    expect(reported.slice(0, 4)).toEqual(["It's", "[excited]", "back", "[short pause]"]);
+  });
+
+  test("test_http_audio_tag_ending_the_reply_is_reported_whole", async () => {
+    const chunks = ["Thanks. [inhales ", "deeply]"];
+    const service: Any = new ElevenLabsHttpTTSService({
+      apiKey: "test-key",
+      fetch: _streamingHttpFetch(chunks.map((c) => _httpChunk(c))),
+      settings: new ElevenLabsHttpTTSService.Settings({ voice: "test-voice", model: "eleven_v3" }),
+    });
+    const reported: string[] = [];
+
+    service.addWordTimestamps = async (wordTimes: [string, number][], ..._args: unknown[]) => {
+      reported.push(...wordTimes.map(([word]) => word));
+    };
+    service._expressionFormatter = new ExpressionFormatter(() => service.getExpressionAdapter(), {
+      owner: service,
+    });
+
+    for await (const _ of service.runTts("Thanks. [inhales deeply]", "ctx-1")) {
+      // drain
+    }
+
+    expect(reported).toEqual(["Thanks.", "[inhales deeply]"]);
+  });
+
+  test("test_http_alignment_is_left_as_is_without_expressive_conversation", async () => {
+    const service: Any = new ElevenLabsHttpTTSService({
+      apiKey: "test-key",
+      fetch: _streamingHttpFetch([_httpChunk("Press [ to open the menu now.")]),
+      settings: new ElevenLabsHttpTTSService.Settings({ voice: "test-voice", model: "eleven_v3" }),
+    });
+    const reported: string[] = [];
+
+    service.addWordTimestamps = async (wordTimes: [string, number][], ..._args: unknown[]) => {
+      reported.push(...wordTimes.map(([word]) => word));
+    };
+
+    for await (const _ of service.runTts("Press [ to open the menu now.", "ctx-1")) {
+      // drain
+    }
+
+    expect(reported).toEqual(["Press", "[", "to", "open", "the", "menu", "now."]);
   });
 });

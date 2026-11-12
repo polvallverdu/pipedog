@@ -103,7 +103,7 @@ describe("TestServiceLoader", () => {
     expect(config).toContain("DEEPGRAM_API_KEY");
   });
 
-  // NVIDIA and its SageMaker services aren't ported.
+  // NVIDIA's SageMaker services aren't ported.
   test.skip("test_nvidia_sagemaker_configs_use_aws_region", () => {});
 
   test("test_get_service_import", () => {

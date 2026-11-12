@@ -15,7 +15,10 @@
  *   binds each one to the worker when it registers it on the LLM.
  */
 
-import { type ToolOptionsMetadata, toolOptions } from "../../adapters/schemas/direct_function.ts";
+import {
+  type ToolOptionsMetadata,
+  toolOptions,
+} from "../../adapters/llm/schemas/direct_function.ts";
 
 type AnyFn = (...args: any[]) => any;
 

@@ -106,8 +106,18 @@ export interface TwilioFrameSerializerOptions extends FrameSerializerOptions {
   callSid?: string | null;
   /** Twilio account SID (required for auto hang-up). */
   accountSid?: string | null;
-  /** Twilio auth token (required for auto hang-up). */
+  /**
+   * Twilio Auth Token for auto hang-up. Mutually exclusive with
+   * apiKeySid/apiKeySecret.
+   */
   authToken?: string | null;
+  /**
+   * Twilio API key SID (starts with "SK"). Alternative to authToken for auto
+   * hang-up. Must be provided with apiKeySecret.
+   */
+  apiKeySid?: string | null;
+  /** Twilio API key secret. Must be provided with apiKeySid. */
+  apiKeySecret?: string | null;
   /** Twilio region (e.g., "au1", "ie1"). Must be specified with edge. */
   region?: string | null;
   /** Twilio edge location (e.g., "sydney", "dublin"). Must be specified with region. */
@@ -168,7 +178,9 @@ const KEYPAD_VALUES: readonly string[] = Object.values(KeypadEntry);
  *
  * When `autoHangUp` is enabled (default), the serializer will automatically
  * terminate the Twilio call when an EndFrame or CancelFrame is processed, but
- * requires Twilio credentials to be provided.
+ * requires Twilio credentials: either `authToken` or an API key (`apiKeySid` +
+ * `apiKeySecret`). Credentials must belong to the configured region: each
+ * Twilio region has its own Auth Token and API keys.
  */
 export class TwilioFrameSerializer extends FrameSerializer {
   /** Upstream's nested `TwilioFrameSerializer.InputParams`. */
@@ -180,6 +192,8 @@ export class TwilioFrameSerializer extends FrameSerializer {
   protected _callSid: string | null;
   protected _accountSid: string | null;
   protected _authToken: string | null;
+  protected _apiKeySid: string | null;
+  protected _apiKeySecret: string | null;
   protected _region: string | null;
   protected _edge: string | null;
   protected _baseUrl: string | null;
@@ -195,13 +209,18 @@ export class TwilioFrameSerializer extends FrameSerializer {
    * @param options.streamSid The Twilio Media Stream SID.
    * @param options.callSid The associated Twilio Call SID (optional, but required for auto hang-up).
    * @param options.accountSid Twilio account SID (required for auto hang-up).
-   * @param options.authToken Twilio auth token (required for auto hang-up).
+   * @param options.authToken Twilio Auth Token for auto hang-up. Mutually
+   *   exclusive with apiKeySid/apiKeySecret.
+   * @param options.apiKeySid Twilio API key SID (starts with "SK"). Alternative
+   *   to authToken for auto hang-up. Must be provided with apiKeySecret.
+   * @param options.apiKeySecret Twilio API key secret. Must be provided with apiKeySid.
    * @param options.region Twilio region (e.g., "au1", "ie1"). Must be specified with edge.
    * @param options.edge Twilio edge location (e.g., "sydney", "dublin"). Must be specified with region.
    * @param options.baseUrl Optional REST API base URL used for auto hang-up.
    * @param options.params Configuration parameters.
-   * @throws Error If auto hang-up is on and credentials are missing, or only one
-   *   of region and edge is set without `baseUrl`.
+   * @throws Error If auto hang-up is on and credentials are missing, both an
+   *   auth token and an API key are given, the API key pair is incomplete, or
+   *   only one of region and edge is set without `baseUrl`.
    */
   constructor(options: TwilioFrameSerializerOptions) {
     const params = options.params || new TwilioFrameSerializerInputParams();
@@ -218,13 +237,32 @@ export class TwilioFrameSerializer extends FrameSerializer {
       if (!options.accountSid) {
         missingCredentials.push("account_sid");
       }
-      if (!options.authToken) {
-        missingCredentials.push("auth_token");
+      if (!options.authToken && !options.apiKeySid && !options.apiKeySecret) {
+        missingCredentials.push("auth_token or api_key_sid + api_key_secret");
       }
 
       if (missingCredentials.length > 0) {
         throw new Error(
           `auto_hang_up is enabled but missing required parameters: ${missingCredentials.join(", ")}`,
+        );
+      }
+
+      // Reject an auth_token alongside any part of an API key. Accepting both
+      // would let a leftover auth_token stay deployed without anyone noticing.
+      if (options.authToken && (options.apiKeySid || options.apiKeySecret)) {
+        throw new Error("Provide either auth_token or api_key_sid + api_key_secret, not both.");
+      }
+
+      // Validate the API key pair is complete. auth_token is ruled out above,
+      // so this only sees a lone api_key_sid or api_key_secret.
+      if (
+        (options.apiKeySid && !options.apiKeySecret) ||
+        (options.apiKeySecret && !options.apiKeySid)
+      ) {
+        const missing = options.apiKeySid ? "api_key_secret" : "api_key_sid";
+        throw new Error(
+          "Both api_key_sid and api_key_secret parameters are required if one is set. " +
+            `Missing: ${missing}`,
         );
       }
 
@@ -245,6 +283,8 @@ export class TwilioFrameSerializer extends FrameSerializer {
     this._callSid = options.callSid ?? null;
     this._accountSid = options.accountSid ?? null;
     this._authToken = options.authToken ?? null;
+    this._apiKeySid = options.apiKeySid ?? null;
+    this._apiKeySecret = options.apiKeySecret ?? null;
     this._region = options.region ?? null;
     this._edge = options.edge ?? null;
     this._baseUrl = options.baseUrl ?? null;
@@ -332,10 +372,10 @@ export class TwilioFrameSerializer extends FrameSerializer {
   /** Hang up the Twilio call using Twilio's REST API. */
   protected async _hangUpCall(): Promise<void> {
     try {
-      // The constructor guarantees these are non-null whenever autoHangUp is
-      // true, which is the only path that reaches this method.
+      // The constructor guarantees accountSid, callSid and exactly one
+      // credential type (authToken or the API key pair) are set whenever
+      // autoHangUp is true, which is the only path that reaches this method.
       const accountSid = this._accountSid as string;
-      const authToken = this._authToken as string;
       const callSid = this._callSid as string;
       // REST endpoint for updating the call. Derived from base_url when set
       // (Twilio-API-compatible / self-hosted), else Twilio's region/edge FQDN.
@@ -345,10 +385,21 @@ export class TwilioFrameSerializer extends FrameSerializer {
         edge: this._edge,
       });
 
-      // Basic auth from account_sid and auth_token, and the parameters to set
-      // the call status to "completed" (hang up), form-encoded as aiohttp does.
+      // Basic Auth pair: account_sid + auth_token, or api_key_sid + api_key_secret.
+      let login: string;
+      let password: string;
+      if (this._authToken) {
+        login = accountSid;
+        password = this._authToken;
+      } else {
+        login = this._apiKeySid as string;
+        password = this._apiKeySecret as string;
+      }
+
+      // Parameters to set the call status to "completed" (hang up),
+      // form-encoded as aiohttp does.
       const headers = {
-        Authorization: basicAuth(accountSid, authToken),
+        Authorization: basicAuth(login, password),
         "Content-Type": "application/x-www-form-urlencoded",
       };
       const body = new URLSearchParams({ Status: "completed" }).toString();
