@@ -70,7 +70,12 @@ function alignedSnr(ref: Int16Array, ours: Int16Array, maxLag = 400): number {
 async function makeSerializer(rate: number): Promise<PlivoFrameSerializer> {
   const serializer = new PlivoFrameSerializer({
     streamId: "stream-1",
-    params: new PlivoFrameSerializer.InputParams({ autoHangUp: false }),
+    // Never reset the resampler on a pause: on a busy machine the gaps between calls
+    // can pass its 0.2 s, which would restart it mid-stream and fail the SNR check.
+    params: new PlivoFrameSerializer.InputParams({
+      autoHangUp: false,
+      resamplerClearAfterSecs: null,
+    }),
   });
   await serializer.setup(
     new FrameProcessorSetup({

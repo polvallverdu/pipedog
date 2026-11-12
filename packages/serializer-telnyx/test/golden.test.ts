@@ -87,7 +87,12 @@ async function makeSerializer(encoding: string, rate: number): Promise<TelnyxFra
     streamId: "s",
     outboundEncoding: encoding,
     inboundEncoding: encoding,
-    params: new TelnyxFrameSerializer.InputParams({ autoHangUp: false }),
+    // Never reset the resampler on a pause: on a busy machine the gaps between calls
+    // can pass its 0.2 s, which would restart it mid-stream and fail the SNR check.
+    params: new TelnyxFrameSerializer.InputParams({
+      autoHangUp: false,
+      resamplerClearAfterSecs: null,
+    }),
   });
   await serializer.setup(setupFor(rate));
   return serializer;
