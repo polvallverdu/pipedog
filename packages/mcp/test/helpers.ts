@@ -3,9 +3,11 @@
 //
 // A snapshot of the real docs for the tests, generated like the release one (from the docs
 // build and the packages' .d.ts) into node_modules/.cache. Builds whatever input is missing:
-// the docs build takes a minute on a fresh checkout.
+// the docs build takes a minute on a fresh checkout. Test files can run in parallel processes
+// (`bun test --parallel`), so the builds happen under a lock and the snapshot is replaced
+// atomically.
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -20,7 +22,8 @@ import { Docs } from "../src/docs.ts";
 import { readSnapshot } from "../src/snapshot.ts";
 
 export const PACKAGE_DIR = join(import.meta.dir, "..");
-export const TEST_SNAPSHOT = join(ROOT, "node_modules/.cache/pipedog-mcp-test/docs.json");
+const CACHE_DIR = join(ROOT, "node_modules/.cache/pipedog-mcp-test");
+export const TEST_SNAPSHOT = join(CACHE_DIR, "docs.json");
 /** For beforeAll: the docs build, on a fresh checkout. */
 export const SETUP_TIMEOUT_MS = 10 * 60_000;
 
@@ -31,19 +34,51 @@ function run(cmd: string[]): void {
   }
 }
 
+/** Run `fn` holding a lock shared by every test process (a directory only one can create). */
+function withBuildLock<T>(fn: () => T): T {
+  const lock = join(CACHE_DIR, "build.lock");
+  mkdirSync(CACHE_DIR, { recursive: true });
+  const deadline = Date.now() + SETUP_TIMEOUT_MS;
+  while (true) {
+    try {
+      mkdirSync(lock);
+      break;
+    } catch (e) {
+      if ((e as { code?: string }).code !== "EEXIST") throw e;
+      // A lock older than the longest build was left by a process that died.
+      const since = statSync(lock, { throwIfNoEntry: false })?.mtimeMs;
+      if (since !== undefined && Date.now() - since > SETUP_TIMEOUT_MS) {
+        rmSync(lock, { force: true, recursive: true });
+      }
+      if (Date.now() > deadline) throw new Error(`timed out waiting for ${lock}`);
+      Bun.sleepSync(200);
+    }
+  }
+  try {
+    return fn();
+  } finally {
+    rmSync(lock, { force: true, recursive: true });
+  }
+}
+
 let ready: string | null = null;
 
-/** The path of a snapshot of the current docs, made once per test run. */
+/** The path of a snapshot of the current docs, made once per test process. */
 export function testSnapshotPath(): string {
   if (ready) return ready;
-  if (!existsSync(join(DOCS_OUT, "llms.txt"))) run(["bun", "run", "docs:build"]);
-  const packages = readdirSync(PACKAGES_DIR).filter((d) =>
-    existsSync(join(PACKAGES_DIR, d, "tsconfig.json")),
-  );
-  if (packages.some((d) => !existsSync(join(PACKAGES_DIR, d, "dist")))) {
-    run(["bunx", "tsc", "-b", ...packages.map((d) => join("packages", d, "tsconfig.json"))]);
-  }
-  writeSnapshot(generateSnapshot({ expectedSiteUrl: null }), TEST_SNAPSHOT);
+  withBuildLock(() => {
+    if (!existsSync(join(DOCS_OUT, "llms.txt"))) run(["bun", "run", "docs:build"]);
+    const packages = readdirSync(PACKAGES_DIR).filter((d) =>
+      existsSync(join(PACKAGES_DIR, d, "tsconfig.json")),
+    );
+    if (packages.some((d) => !existsSync(join(PACKAGES_DIR, d, "dist")))) {
+      run(["bunx", "tsc", "-b", ...packages.map((d) => join("packages", d, "tsconfig.json"))]);
+    }
+  });
+  // Write it whole, then move it into place: another process may be reading it.
+  const partial = `${TEST_SNAPSHOT}.${process.pid}`;
+  writeSnapshot(generateSnapshot({ expectedSiteUrl: null }), partial);
+  renameSync(partial, TEST_SNAPSHOT);
   ready = TEST_SNAPSHOT;
   return ready;
 }

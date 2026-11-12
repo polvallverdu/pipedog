@@ -28,48 +28,34 @@ jobs:
         if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'changeset-release/')
         run: bunx changeset status --since=origin/main || echo "::warning::No changeset in this PR. Add one with 'bun changeset' if it changes a published package."
 
-  plan:
-    runs-on: ubuntu-latest
-    outputs:
-      packages: ${{ steps.list.outputs.packages }}
-    steps:
-      - uses: actions/checkout@v7
-      - id: list
-        name: Packages with tests
-        run: |
-          dirs=()
-          for dir in packages/*/ examples/*/; do
-            if find "${dir}test" -name '*.test.ts' 2>/dev/null | grep -q .; then
-              dirs+=("${dir%/}")
-            fi
-          done
-          printf 'packages=%s\n' "$(printf '%s\n' "${dirs[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
-
-  packages:
-    needs: plan
+  # Every test file in a few shards, balanced by .github/test-timings.json. Each shard runs its
+  # files in parallel worker processes, each file isolated (fresh globals and modules), so files
+  # can't leak into each other. Refresh the timings with `bun run test:timings`.
+  tests:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        package: ${{ fromJSON(needs.plan.outputs.packages) }}
-    name: test (${{ matrix.package }})
+        shard: [1, 2, 3, 4]
+    name: test (shard ${{ matrix.shard }}/4)
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Chromium for the browser tests
-        if: matrix.package == 'examples/smallwebrtc-voice-bot' || matrix.package == 'examples/websocket-voice-bot' || matrix.package == 'examples/landing-demo' || matrix.package == 'packages/runner'
-        working-directory: ${{ matrix.package }}
         run: bunx playwright-core install --with-deps chromium
       # The local-model packages run one real inference each (e2e_*.test.ts), downloading a small
-      # model on first use. Cache the downloads per package so later runs don't fetch them again.
-      # Set the PIPEDOG_E2E repository variable to 0 to skip those tests.
+      # model on first use. Cache the downloads so later runs don't fetch them again; a shard
+      # whose files changed starts from another shard's cache. Set the PIPEDOG_E2E repository
+      # variable to 0 to skip those tests.
       - name: Model cache for the local-model e2e tests
-        if: contains(fromJSON('["packages/kokoro","packages/piper","packages/pocket-tts","packages/moonshine","packages/funasr","packages/whisper"]'), matrix.package)
         uses: actions/cache@v4
         with:
           path: ~/.cache/pipedog
-          key: pipedog-models-${{ matrix.package }}-v1
-      - run: bun test ${{ matrix.package }}
+          key: pipedog-models-shard${{ matrix.shard }}-${{ hashFiles('.github/test-timings.json') }}
+          restore-keys: |
+            pipedog-models-shard${{ matrix.shard }}-
+            pipedog-models-
+      - run: bun test --parallel --shard=${{ matrix.shard }}/4 --timings=.github/test-timings.json
         env:
           PIPEDOG_E2E: ${{ vars.PIPEDOG_E2E || '1' }}
 
@@ -97,18 +83,17 @@ jobs:
       - run: bun run docs:build
 
   # The "Protect main" ruleset requires a check named `test`. This job stands in
-  # for the per-package matrix and every other job: it passes only if all of them did.
+  # for the test shards and every other job: it passes only if all of them did.
   test:
-    needs: [plan, checks, packages, compat, release-verify, docs]
+    needs: [checks, tests, compat, release-verify, docs]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Every job passed
         run: |
           for result in \
-            "${{ needs.plan.result }}" \
             "${{ needs.checks.result }}" \
-            "${{ needs.packages.result }}" \
+            "${{ needs.tests.result }}" \
             "${{ needs.compat.result }}" \
             "${{ needs.release-verify.result }}" \
             "${{ needs.docs.result }}"; do

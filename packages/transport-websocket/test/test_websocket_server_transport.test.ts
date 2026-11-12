@@ -197,7 +197,7 @@ describe("TestGoodbyeFlushedBeforeClose", () => {
       startsWith(audioReceived, GOODBYE_AUDIO),
       `goodbye not delivered in full before close (received ${audioReceived.length} bytes)`,
     ).toBe(true);
-  });
+  }, 20_000); // its own waits allow 10 s for the session and 5 s for the reader
 });
 
 /** The server is drained once the session ends (it must not leak). */

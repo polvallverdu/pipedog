@@ -134,11 +134,18 @@ describe("TestWorkerObserverMemory", () => {
     await push(kept);
     await joinProxies(workerObserver);
     // A weak reference read in a job stays alive until that job ends, so
-    // collect from a fresh one.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    Bun.gc(true);
+    // collect from a fresh one. JavaScriptCore scans the stack conservatively,
+    // so a stray stack or register value can keep one frame alive for a while
+    // (more often under load, with many test workers): collect a few times,
+    // and allow one straggler. A leak would keep all ten.
+    for (let i = 0; i < 10 && internals(workerObserver)._framesPushed.size > 1; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      Bun.gc(true);
+    }
 
-    expect([...internals(workerObserver)._framesPushed.values()]).toEqual([kept]);
+    const remembered = [...internals(workerObserver)._framesPushed.values()];
+    expect(remembered).toContain(kept);
+    expect(remembered.length).toBeLessThanOrEqual(2);
     expect(observer.pushes.length).toEqual(11);
 
     await workerObserver.cleanup();

@@ -11,7 +11,8 @@
   "scripts": {
     "upstream": "bun tools/upstream.ts",
     "typecheck": "tsc -b packages/*/tsconfig.json examples/*/tsconfig.json",
-    "test": "bun test",
+    "test": "bun test --parallel",
+    "test:timings": "bun test --parallel --timings=.github/test-timings.json --update-timings",
     "lint": "biome check . && bun tools/port/check-headers.ts",
     "format": "biome format --write .",
     "port:plan": "python3 -I tools/port/graph.py",
