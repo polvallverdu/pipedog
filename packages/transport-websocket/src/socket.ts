@@ -22,7 +22,15 @@
  * `sendBytes()`, `sendText()`, `headers`).
  */
 
-import { CancelledError, Future, Queue, TimeoutError, wait, waitFor } from "@pipedog/asyncio";
+import {
+  CancelledError,
+  Future,
+  Queue,
+  rethrowIfCancelled,
+  TimeoutError,
+  wait,
+  waitFor,
+} from "@pipedog/asyncio";
 
 /** A WebSocket message: text or binary. */
 export type WebsocketData = string | Uint8Array;
@@ -402,15 +410,27 @@ export type WebsocketConnectFn = (
 ) => Promise<WebsocketConnection>;
 
 /**
+ * Whether `fetch()` refused an `Upgrade: websocket` request because it is
+ * undici's, as on runtimes that emulate Workers on Node (OpenOrange): workerd
+ * never throws undici's errors. Those runtimes' `WebSocket` constructor takes
+ * headers, so the connection can be opened with it instead.
+ */
+function isUndiciUpgradeRejection(e: unknown): boolean {
+  const cause = (e as { cause?: { code?: unknown } } | null)?.cause;
+  return e instanceof TypeError && cause?.code === "UND_ERR_INVALID_ARG";
+}
+
+/**
  * Open a client connection on Cloudflare Workers. Workers' `WebSocket`
  * constructor can't send headers, which services need for authentication, so
  * the connection is opened with `fetch()` and an `Upgrade: websocket` header,
  * the Workers way to send them. The returned socket is open once accepted.
+ * Returns null where `fetch()` can't upgrade (see `isUndiciUpgradeRejection`).
  */
 async function workersConnect(
   uri: string,
   options: WebsocketConnectOptions,
-): Promise<WebsocketConnection> {
+): Promise<WebsocketConnection | null> {
   const url = uri.replace(/^ws(s?):/i, "http$1:");
   let response: Response;
   try {
@@ -419,7 +439,9 @@ async function workersConnect(
       options.openTimeout ?? 10,
     );
   } catch (e) {
+    rethrowIfCancelled(e);
     if (e instanceof TimeoutError) throw new TimeoutError(`timed out while opening ${uri}`);
+    if (isUndiciUpgradeRejection(e)) return null;
     throw e;
   }
   const ws = (response as Response & { webSocket?: WebSocketLike & { accept(): void } }).webSocket;
@@ -442,7 +464,8 @@ export async function websocketConnect(
   options: WebsocketConnectOptions = {},
 ): Promise<WebsocketConnection> {
   if (typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair === "function") {
-    return workersConnect(uri, options);
+    const connection = await workersConnect(uri, options);
+    if (connection) return connection;
   }
   const WebSocketCtor = (globalThis as { WebSocket?: new (...args: unknown[]) => WebSocketLike })
     .WebSocket;

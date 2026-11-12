@@ -67,3 +67,51 @@ test("a response without a socket fails the connect", async () => {
   g.fetch = async () => ({ status: 401 });
   await expect(websocketConnect("ws://localhost/x")).rejects.toThrow("HTTP 401");
 });
+
+/** undici's rejection of an Upgrade header, as fetch throws it on OpenOrange. */
+function undiciUpgradeRejection(): TypeError {
+  const cause = Object.assign(new Error("invalid upgrade header"), {
+    name: "InvalidArgumentError",
+    code: "UND_ERR_INVALID_ARG",
+  });
+  return new TypeError("fetch failed", { cause });
+}
+
+test("falls back to the WebSocket constructor where fetch can't upgrade", async () => {
+  g.fetch = async () => {
+    throw undiciUpgradeRejection();
+  };
+  const constructed: { url: string; init: unknown }[] = [];
+  const savedWebSocket = g.WebSocket;
+  class ConstructedSocket extends FakeSocket {
+    static OPEN = 1;
+    constructor(url: string, init: unknown) {
+      super();
+      constructed.push({ url, init });
+      this.readyState = 0;
+      setTimeout(() => {
+        this.readyState = 1;
+        this.dispatchEvent(new Event("open"));
+      }, 0);
+    }
+  }
+  g.WebSocket = ConstructedSocket;
+  try {
+    const connection = await websocketConnect("wss://api.example.com/ws", {
+      additionalHeaders: { Authorization: "Bearer key" },
+    });
+    expect(constructed).toHaveLength(1);
+    expect(constructed[0]!.url).toBe("wss://api.example.com/ws");
+    expect(constructed[0]!.init).toMatchObject({ headers: { Authorization: "Bearer key" } });
+    await connection.send("hello");
+  } finally {
+    g.WebSocket = savedWebSocket;
+  }
+});
+
+test("any other fetch error fails the connect", async () => {
+  g.fetch = async () => {
+    throw new TypeError("fetch failed", { cause: new Error("ECONNREFUSED") });
+  };
+  await expect(websocketConnect("wss://example.com/ws")).rejects.toThrow("fetch failed");
+});

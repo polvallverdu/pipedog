@@ -18,6 +18,7 @@ whole call. That shapes where it can run. The transport decides most of it:
 |---|---|---|---|---|
 | VM, container, bare metal | Bun, Node, Deno | Yes | Yes | [Servers](/docs/deployment/servers), [Bundling](/docs/deployment/bundling) |
 | Cloudflare Workers + Durable Objects | workerd | No (no UDP); WebRTC users through [Cloudflare Realtime](/docs/transports/cloudflare-realtime) | Yes | [Cloudflare Workers](/docs/deployment/cloudflare-workers) |
+| OpenOrange (AWS, Google Cloud, Azure, self-hosted) | Node.js, Workers APIs | No (no UDP documented) | Yes | [OpenOrange](/docs/deployment/openorange) |
 | Vercel Functions | Bun runtime | No (no UDP) | Yes | [Vercel](/docs/deployment/vercel) |
 | Serverless functions without WebSockets | any | No | No | Signalling only |
 
@@ -53,6 +54,9 @@ session, and a cap on concurrent sessions.
   </Card>
   <Card title="Fully on Cloudflare" href="/docs/deployment/cloudflare-workers-ai">
     Flux, a Workers AI LLM and Aura, with the agent in a Durable Object.
+  </Card>
+  <Card title="OpenOrange" href="/docs/deployment/openorange">
+    The same Durable Objects agent, off Cloudflare, on Rivet.
   </Card>
   <Card title="Vercel" href="/docs/deployment/vercel">
     WebSocket sessions on Vercel Functions with the Bun runtime.

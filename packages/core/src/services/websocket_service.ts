@@ -417,22 +417,41 @@ export class WebsocketClientConnection {
 }
 
 /**
+ * Whether `fetch()` refused an `Upgrade: websocket` request because it is
+ * undici's, as on runtimes that emulate Workers on Node (OpenOrange): workerd
+ * never throws undici's errors. Those runtimes' `WebSocket` constructor takes
+ * headers, so the connection can be opened with it instead.
+ */
+function isUndiciUpgradeRejection(e: unknown): boolean {
+  const cause = (e as { cause?: { code?: unknown } } | null)?.cause;
+  return e instanceof TypeError && cause?.code === "UND_ERR_INVALID_ARG";
+}
+
+/**
  * Open a websocket on Cloudflare Workers. Workers' WebSocket constructor can't
  * send headers, which most services authenticate with, so the connection is
  * made with `fetch()` and an `Upgrade: websocket` header, the Workers way to
- * send them. The returned socket is open once accepted.
+ * send them. The returned socket is open once accepted. Returns null where
+ * `fetch()` can't upgrade (see `isUndiciUpgradeRejection`).
  */
 async function connectWorkersWebSocket(
   uri: string,
   init: { headers?: Record<string, string>; protocols?: string[] },
   openTimeout: number | null,
-): Promise<WebSocket> {
+): Promise<WebSocket | null> {
   const headers: Record<string, string> = { ...(init.headers ?? {}), Upgrade: "websocket" };
   if (init.protocols?.length) headers["Sec-WebSocket-Protocol"] = init.protocols.join(", ");
-  const response = await fetch(uri.replace(/^ws(s?):/i, "http$1:"), {
-    headers,
-    signal: openTimeout === null ? undefined : AbortSignal.timeout(openTimeout * 1000),
-  });
+  let response: Response;
+  try {
+    response = await fetch(uri.replace(/^ws(s?):/i, "http$1:"), {
+      headers,
+      signal: openTimeout === null ? undefined : AbortSignal.timeout(openTimeout * 1000),
+    });
+  } catch (e) {
+    rethrowIfCancelled(e);
+    if (isUndiciUpgradeRejection(e)) return null;
+    throw e;
+  }
   const ws = (response as Response & { webSocket?: WebSocket & { accept(): void } }).webSocket;
   if (!ws) {
     throw new Error(`websocket connection to ${uri} failed: HTTP ${response.status}`);
@@ -459,20 +478,21 @@ export async function websocketConnect(
 
   const openTimeout = options.openTimeout === undefined ? WS_OPEN_TIMEOUT : options.openTimeout;
 
-  let ws: WebSocket;
+  let ws: WebSocket | null = null;
   if (options.webSocketFactory) {
     ws = await options.webSocketFactory(uri, init);
   } else if (typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair === "function") {
-    // Cloudflare Workers.
+    // Cloudflare Workers (null: a Workers emulation whose fetch can't upgrade).
     ws = await connectWorkersWebSocket(uri, init, openTimeout);
-  } else if (init.headers) {
+  }
+  if (!ws && init.headers) {
     // Bun, Node (undici) and Deno accept an init object with headers.
     const WebSocketWithInit = WebSocket as unknown as new (
       url: string,
       init: { headers?: Record<string, string>; protocols?: string[] },
     ) => WebSocket;
     ws = new WebSocketWithInit(uri, init);
-  } else {
+  } else if (!ws) {
     ws = new WebSocket(uri, init.protocols);
   }
 

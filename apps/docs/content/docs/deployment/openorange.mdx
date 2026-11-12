@@ -1,0 +1,107 @@
+---
+title: Workers code off Cloudflare (OpenOrange)
+description: Run the Durable Objects voice agent unchanged on AWS, Google Cloud, Azure or your own servers with Rivet's OpenOrange.
+---
+
+[OpenOrange](https://openorange.dev/) (by [Rivet](https://rivet.dev/)) runs an existing Cloudflare
+Workers project outside Cloudflare. It reads the Wrangler configuration, runs the Worker on Node.js
+and runs each Durable Object as a Rivet Actor with its own SQLite storage. You deploy it to Rivet
+Cloud, to your own AWS, Google Cloud or Azure account, or self-host it.
+
+So the voice agent from [Voice agents on Workers and Durable Objects](/docs/deployment/cloudflare-workers)
+runs there without changes: one Durable Object per session, over the WebSocket transport.
+
+```text
+client ──WebSocket──► Worker ──getByName(id)──► VoiceSession (Rivet Actor)
+                       (Node.js, OpenOrange)       │ FastAPIWebsocketTransport
+                                                   │ OpenAI realtime transcription (turns)
+                                                   │ chat, speech synthesis
+```
+
+## What is verified
+
+The example's end-to-end test runs against `orange dev` (OpenOrange 1.0.1) as well as
+`wrangler dev`, with the same checks:
+
+- two sessions run in parallel, each on its own Durable Object, and each hears its answer;
+- a pipeline error reaches the error webhook, and spans are flushed when a session ends;
+- a request that isn't a WebSocket upgrade is refused;
+- a client that reconnects continues its conversation, through Durable Object storage and alarms.
+
+Deploying with `orange deploy`, to Rivet Cloud or your own cluster, is not tested here.
+
+<Callout type="info">
+Needs pipedog newer than 0.10.0. On Workers,
+pipedog opens outbound WebSockets (to speech providers) with `fetch()` and an `Upgrade` header,
+which OpenOrange's `fetch` rejects. pipedog now falls back to the `WebSocket` constructor, which
+sends the same headers there.
+</Callout>
+
+## Run it
+
+Install the CLI, then run the example as you would with Wrangler:
+
+```sh
+npm install -g open-orange
+cd examples/workers-durable-voice-agent
+echo "OPENAI_API_KEY=sk-..." > .dev.vars
+orange doctor   # checks the project and lists how each binding runs
+orange dev      # instead of wrangler dev
+```
+
+Stream a recording to a session from a second terminal, as on Workers:
+
+```sh
+bun run client ws://127.0.0.1:8787/api/session/alice ../test-mocks/assets/capital_question.wav
+```
+
+Run the end-to-end test against OpenOrange (no API key needed; it uses the mock OpenAI server):
+
+```sh
+WORKER_RUNTIME=openorange bun test test/e2e.test.ts
+# ORANGE_BIN=/path/to/orange if it isn't on your PATH
+```
+
+To deploy, see OpenOrange's [deploy guide](https://openorange.dev/docs/deploy/): `orange deploy`
+for Rivet Cloud, or `orange deploy --dry-run` to build a container image to run yourself.
+
+## What changes from Cloudflare
+
+| | Cloudflare Workers | OpenOrange |
+| --- | --- | --- |
+| Runtime | workerd | Node.js, with the Workers APIs on top |
+| Memory per session object | 128 MB | the machine's (Node's default heap is about 4 GB) |
+| Worker size | 10 MB compressed (paid plan) | no limit |
+| CPU time | plan limits | no limit |
+| Workers AI (`env.AI`) | Cloudflare's models | mapped to an OpenAI-compatible provider you configure |
+| WebSocket hibernation | yes | emulated: the object stays awake while a socket is open |
+| A deploy | keeps running sessions | closes open sockets |
+
+What that means for a voice agent:
+
+- **Local turn detection fits.** Silero VAD and Smart Turn are too big for a Worker (see
+  [the size table](/docs/deployment/cloudflare-workers#turn-detection)). Without the size and memory
+  limits they can run in the Durable Object, as on a server. This isn't covered by the example's
+  tests yet.
+- **Workers AI services.** `@pipedog/cloudflare`'s streaming services (Flux, Nova-3, Aura) use the
+  `AI` binding's WebSockets, which OpenOrange doesn't map. Use their REST path instead, with an
+  account ID and an API token: it reaches Cloudflare from anywhere.
+- **Deploys end calls.** A deploy closes open sockets. Clients that reconnect within ten minutes
+  continue their conversation (see [Reconnection](/docs/deployment/cloudflare-workers#reconnection)).
+- **Transport.** It is still the WebSocket transport. OpenOrange doesn't document inbound UDP, so
+  don't plan on SmallWebRTC there; for WebRTC users, keep
+  [Cloudflare Realtime](/docs/transports/cloudflare-realtime) in front.
+
+## Moving sessions from Cloudflare
+
+`orange migrate` copies Durable Objects from Cloudflare while the app serves. It can't copy a
+KV-backed class (one declared under `new_classes`, as in the example), and `orange doctor` warns
+about it. Voice sessions only keep a conversation for ten minutes after a call, so you can simply
+switch over. For a new project you plan to move, declare the class under `new_sqlite_classes`.
+
+## Links
+
+- [OpenOrange](https://openorange.dev/) and its
+  [compatibility notes](https://openorange.dev/docs/compatibility/)
+- [Source](https://github.com/rivet-dev/open-orange) (Apache 2.0)
+- [`examples/workers-durable-voice-agent`](https://github.com/polvallverdu/pipedog/tree/main/examples/workers-durable-voice-agent)

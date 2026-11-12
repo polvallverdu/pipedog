@@ -69,7 +69,11 @@ function alignedSnr(ref: Int16Array, ours: Int16Array, maxLag = 400): number {
 }
 
 async function makeSerializer(rate: number): Promise<VonageFrameSerializer> {
-  const serializer = new VonageFrameSerializer();
+  const serializer = new VonageFrameSerializer({
+    // Never reset the resampler on a pause: on a busy machine the gaps between calls
+    // can pass its 0.2 s, which would restart it mid-stream and fail the SNR check.
+    params: new VonageFrameSerializer.InputParams({ resamplerClearAfterSecs: null }),
+  });
   await serializer.setup(
     new FrameProcessorSetup({
       clock: new SystemClock(),

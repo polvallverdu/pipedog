@@ -571,6 +571,13 @@ async function withTimeout<T>(seconds: number | null | undefined, fn: TaskFn<T>)
  * timeout). `timeout` null waits forever.
  */
 export async function waitFor<T>(aw: Awaitable<T>, timeout: number | null | undefined): Promise<T> {
+  // A foreign promise is already running, and with no current task it is
+  // awaited from a task that starts later: if it rejects first, the runtime
+  // would report the rejection as unhandled (Node exits on that), though it
+  // still reaches the caller. Mark it handled now.
+  if (!(aw instanceof Future) && typeof aw !== "function") {
+    (aw as PromiseLike<T>).then(undefined, () => {});
+  }
   if (timeout !== null && timeout !== undefined && timeout <= 0) {
     const future = ensureFuture(aw, "wait_for");
     if (future.done()) return future.result();

@@ -123,10 +123,10 @@ describe("TestWorkerObserverMemory", () => {
       );
     }
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 100; i++) {
       await push(new TextFrame({ text: "hello" }));
     }
-    expect(internals(workerObserver)._framesPushed.size).toEqual(10);
+    expect(internals(workerObserver)._framesPushed.size).toEqual(100);
 
     // The proxy holds on to the last push it handled, so end with a frame
     // the test keeps and wait for it to be handed over.
@@ -134,12 +134,19 @@ describe("TestWorkerObserverMemory", () => {
     await push(kept);
     await joinProxies(workerObserver);
     // A weak reference read in a job stays alive until that job ends, so
-    // collect from a fresh one.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    Bun.gc(true);
+    // collect from a fresh one. JavaScriptCore scans the stack conservatively,
+    // so stray stack or register values can keep a few frames alive for a
+    // while (more often under load, with many test workers): collect a few
+    // times, and allow a few stragglers. A leak would keep all hundred.
+    for (let i = 0; i < 10 && internals(workerObserver)._framesPushed.size > 1; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      Bun.gc(true);
+    }
 
-    expect([...internals(workerObserver)._framesPushed.values()]).toEqual([kept]);
-    expect(observer.pushes.length).toEqual(11);
+    const remembered = [...internals(workerObserver)._framesPushed.values()];
+    expect(remembered).toContain(kept);
+    expect(remembered.length).toBeLessThanOrEqual(6);
+    expect(observer.pushes.length).toEqual(101);
 
     await workerObserver.cleanup();
   });

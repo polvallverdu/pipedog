@@ -79,7 +79,8 @@ describe("parity with native sentencex@1.0.32", () => {
         }
       }
     }
-  });
+    // Thousands of segmentations: ~1 s alone on a laptop, over 5 s next to other workers on CI.
+  }, 30_000);
 
   test("more than 10 KB (sentencex's paragraph chunking path)", () => {
     const para = "Filler sentence number one here 👋. Dr. Who? Yes… ".repeat(120);

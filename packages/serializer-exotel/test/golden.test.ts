@@ -69,7 +69,13 @@ function alignedSnr(ref: Int16Array, ours: Int16Array, maxLag = 400): number {
 }
 
 async function makeSerializer(rate: number): Promise<ExotelFrameSerializer> {
-  const serializer = new ExotelFrameSerializer({ streamSid: "stream123", callSid: "call123" });
+  const serializer = new ExotelFrameSerializer({
+    streamSid: "stream123",
+    callSid: "call123",
+    // Never reset the resampler on a pause: on a busy machine the gaps between calls
+    // can pass its 0.2 s, which would restart it mid-stream and fail the SNR check.
+    params: new ExotelFrameSerializer.InputParams({ resamplerClearAfterSecs: null }),
+  });
   await serializer.setup(
     new FrameProcessorSetup({
       clock: new SystemClock(),

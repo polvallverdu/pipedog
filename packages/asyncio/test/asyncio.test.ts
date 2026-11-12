@@ -307,6 +307,25 @@ describe("primitives", () => {
     expect(await waitFor(async () => 5, 1)).toBe(5);
   });
 
+  test("waitFor on a promise that rejects before its task starts leaves nothing unhandled", async () => {
+    let unhandled = 0;
+    const onUnhandled = () => {
+      unhandled++;
+    };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const rejected = (async () => {
+        throw new TypeError("boom");
+      })();
+      // No current task here, so waitFor runs the wait in a task of its own.
+      await expect(waitFor(rejected, 10)).rejects.toThrow("boom");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(unhandled).toBe(0);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
   test("gather returns results in order and cancels children when cancelled", async () => {
     expect(
       await gather(
