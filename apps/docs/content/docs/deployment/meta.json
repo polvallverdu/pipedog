@@ -1,4 +1,12 @@
 {
   "title": "Deployment",
-  "pages": ["index", "servers", "bundling", "cloudflare-workers", "cloudflare-workers-ai", "vercel"]
+  "pages": [
+    "index",
+    "servers",
+    "bundling",
+    "cloudflare-workers",
+    "cloudflare-workers-ai",
+    "openorange",
+    "vercel"
+  ]
 }

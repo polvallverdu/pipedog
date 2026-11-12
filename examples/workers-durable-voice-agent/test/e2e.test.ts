@@ -5,9 +5,13 @@
 // Worker locally (workerd), two scripted users stream the same question to two
 // sessions at once, and each session must answer on its own. The OpenAI API is
 // the mock from the SmallWebRTC example, so no API key is needed.
+//
+// With WORKER_RUNTIME=openorange, OpenOrange's `orange dev` runs the same Worker
+// instead, on Node with each Durable Object as a Rivet Actor. ORANGE_BIN names
+// the `orange` binary (default: `orange` on the PATH).
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   type MockObservability,
@@ -28,6 +32,8 @@ const QUESTION_WAV = join(
   "capital_question.wav",
 );
 const WRANGLER = join(EXAMPLE, "node_modules", ".bin", "wrangler");
+const RUNTIME = process.env.WORKER_RUNTIME === "openorange" ? "openorange" : "wrangler";
+const ORANGE = process.env.ORANGE_BIN ?? "orange";
 const STARTUP_TIMEOUT_MS = 180_000;
 const LOG_DIR = join(EXAMPLE, "node_modules", ".cache", "workers-e2e");
 
@@ -48,30 +54,32 @@ async function startWorker(
   const freePort = probe.port;
   probe.stop(true);
 
-  const proc = Bun.spawn(
-    [
-      WRANGLER,
-      "dev",
-      "--port",
-      String(freePort),
-      "--ip",
-      "127.0.0.1",
-      "--var",
-      "OPENAI_API_KEY:test-key",
-      "--var",
-      `OPENAI_BASE_URL:${apiBase}`,
-      "--var",
-      `OPENAI_REALTIME_URL:${realtimeUrl}`,
-      "--var",
-      `OTEL_EXPORTER_OTLP_ENDPOINT:${obs.tracesUrl}`,
-      "--var",
-      `ERROR_WEBHOOK_URL:${obs.webhookUrl}`,
-      // Fresh Durable Object storage each run: sessions keep their conversation.
-      "--persist-to",
-      mkdtempSync(join(LOG_DIR, "state-")),
-    ],
-    { cwd: EXAMPLE, stdout: "pipe", stderr: "pipe" },
-  );
+  const vars: Record<string, string> = {
+    OPENAI_API_KEY: "test-key",
+    OPENAI_BASE_URL: apiBase,
+    OPENAI_REALTIME_URL: realtimeUrl,
+    OTEL_EXPORTER_OTLP_ENDPOINT: obs.tracesUrl,
+    ERROR_WEBHOOK_URL: obs.webhookUrl,
+  };
+  // Fresh Durable Object storage each run: sessions keep their conversation.
+  const state = mkdtempSync(join(LOG_DIR, "state-"));
+  const proc =
+    RUNTIME === "openorange"
+      ? spawnOrange(state, freePort, vars)
+      : Bun.spawn(
+          [
+            WRANGLER,
+            "dev",
+            "--port",
+            String(freePort),
+            "--ip",
+            "127.0.0.1",
+            ...Object.entries(vars).flatMap(([name, value]) => ["--var", `${name}:${value}`]),
+            "--persist-to",
+            state,
+          ],
+          { cwd: EXAMPLE, stdout: "pipe", stderr: "pipe" },
+        );
 
   // A writer doesn't truncate the file: remove the last run's log first.
   rmSync(join(LOG_DIR, "wrangler.log"), { force: true });
@@ -81,12 +89,13 @@ async function startWorker(
       const decoder = new TextDecoder();
       for await (const chunk of stream) {
         log.write(chunk);
-        if (decoder.decode(chunk).includes("Ready on")) resolve();
+        const text = decoder.decode(chunk);
+        if (text.includes("Ready on") || text.includes('"type":"ready"')) resolve();
       }
     };
     scan(proc.stdout as ReadableStream<Uint8Array>).catch(reject);
     scan(proc.stderr as ReadableStream<Uint8Array>).catch(reject);
-    proc.exited.then((code) => reject(new Error(`wrangler exited with code ${code}`)));
+    proc.exited.then((code) => reject(new Error(`${RUNTIME} exited with code ${code}`)));
   });
   await Promise.race([
     ready,
@@ -95,6 +104,29 @@ async function startWorker(
     ),
   ]);
   return { proc, port: freePort };
+}
+
+/**
+ * Start `orange dev` on a copy of the Wrangler config in `dir`, whose
+ * `.dev.vars` carries the variables: OpenOrange reads them from there, and the
+ * copy keeps the example's own `.dev.vars` (and Orange's local state) apart.
+ */
+function spawnOrange(dir: string, port: number, vars: Record<string, string>) {
+  const config = readFileSync(join(EXAMPLE, "wrangler.jsonc"), "utf8").replace(
+    '"main": "src/worker.ts"',
+    `"main": ${JSON.stringify(join(EXAMPLE, "src", "worker.ts"))}`,
+  );
+  writeFileSync(join(dir, "wrangler.jsonc"), config);
+  writeFileSync(
+    join(dir, ".dev.vars"),
+    Object.entries(vars)
+      .map(([name, value]) => `${name}=${value}`)
+      .join("\n"),
+  );
+  return Bun.spawn(
+    [ORANGE, "dev", "--port", String(port), "--ip", "127.0.0.1", "--json", "--cwd", dir],
+    { cwd: dir, stdout: "pipe", stderr: "pipe" },
+  );
 }
 
 beforeAll(async () => {

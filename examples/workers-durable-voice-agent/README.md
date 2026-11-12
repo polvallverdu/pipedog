@@ -62,6 +62,10 @@ bun test examples/workers-durable-voice-agent
 The test runs `wrangler dev` (workerd) with the OpenAI mock from `examples/test-mocks`. It streams
 the recorded question into two sessions at once and checks that each session gets its own answer.
 
+To run the same test on [OpenOrange](https://openorange.dev/) (the Worker on Node.js, each Durable
+Object a Rivet Actor), set `WORKER_RUNTIME=openorange`, and `ORANGE_BIN` if `orange` isn't on your
+PATH. See [OpenOrange](https://polvallverdu.github.io/pipedog/docs/deployment/openorange/).
+
 ## Files
 
 - `src/worker.ts`: the Worker. Routes each session to its Durable Object.
