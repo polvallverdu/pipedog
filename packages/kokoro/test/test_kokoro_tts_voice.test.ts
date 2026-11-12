@@ -11,8 +11,9 @@
  * downloaded.
  *
  * Porting notes:
- * - `patch("...Kokoro")` → `mock.module()` on `kokoro_onnx.ts`, with a fake
- *   whose `load()` returns an object holding just `voices`.
+ * - `patch("...Kokoro")` → `spyOn(Kokoro, "load")`, returning an object holding
+ *   just `voices`. Not `mock.module()`: `mock.restore()` doesn't undo it, so the
+ *   fake would leak into the other test files in the same process.
  * - `patch("..._ensure_model_files")` → the model and voices paths point at
  *   existing stand-in files, so `_ensureModelFiles()` downloads nothing.
  * - DIVERGENCE: the model loads asynchronously after construction, so the
@@ -21,21 +22,16 @@
  *   construction.
  */
 
-import { afterAll, describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, mock, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Kokoro } from "../src/kokoro_onnx.ts";
+import { KokoroTTSService } from "../src/tts.ts";
 
-const engine = new URL("../src/kokoro_onnx.ts", import.meta.url).pathname;
-const real = await import(engine);
-mock.module(engine, () => ({
-  ...real,
-  Kokoro: {
-    load: async () => ({ voices: new Map([["af_heart", {}]]) }),
-  },
-}));
-
-const { KokoroTTSService } = await import("../src/tts.ts");
+spyOn(Kokoro, "load").mockImplementation(
+  async () => ({ voices: new Map([["af_heart", {}]]) }) as unknown as Kokoro,
+);
 
 const dir = mkdtempSync(join(tmpdir(), "kokoro-test-"));
 const modelPath = join(dir, "kokoro-v1.0.onnx");

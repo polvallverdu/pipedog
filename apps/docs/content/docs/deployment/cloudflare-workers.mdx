@@ -11,8 +11,7 @@ the objects across its network, which lets many sessions run in parallel.
 The complete example is
 [`examples/workers-durable-voice-agent`](https://github.com/polvallverdu/pipedog/tree/main/examples/workers-durable-voice-agent).
 This page explains the pattern. To run the models on Cloudflare too, see
-[Voice agent fully on Cloudflare](/docs/deployment/cloudflare-workers-ai). To run the same Worker
-off Cloudflare, on your own cloud or servers, see [OpenOrange](/docs/deployment/openorange).
+[Voice agent fully on Cloudflare](/docs/deployment/cloudflare-workers-ai).
 
 ## The shape
 
@@ -152,6 +151,9 @@ Then deploy:
 bunx wrangler secret put OPENAI_API_KEY
 bun run deploy
 ```
+
+To run the same Worker off Cloudflare, on your own cloud or servers, see
+[OpenOrange](/docs/deployment/openorange).
 
 ## Limits to plan for
 
