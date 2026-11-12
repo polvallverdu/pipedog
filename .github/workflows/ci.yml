@@ -30,7 +30,8 @@ jobs:
 
   # Every test file in a few shards, balanced by .github/test-timings.json. Each shard runs its
   # files in parallel worker processes, each file isolated (fresh globals and modules), so files
-  # can't leak into each other. Refresh the timings from a CI run with `bun tools/ci/timings.ts`.
+  # can't leak into each other. Files share the runner, so tests get 15 s instead of Bun's 5 s.
+  # Refresh the timings from a CI run with `bun tools/ci/timings.ts`.
   tests:
     runs-on: ubuntu-latest
     strategy:
@@ -59,7 +60,7 @@ jobs:
       # uploaded so `bun tools/ci/timings.ts <run id>` can refresh the committed file from CI.
       - run: |
           cp .github/test-timings.json "$RUNNER_TEMP/timings.json"
-          bun test --parallel --shard=${{ matrix.shard }}/4 --timings="$RUNNER_TEMP/timings.json" --update-timings
+          bun test --parallel --timeout=15000 --shard=${{ matrix.shard }}/4 --timings="$RUNNER_TEMP/timings.json" --update-timings
         env:
           PIPEDOG_E2E: ${{ vars.PIPEDOG_E2E || '1' }}
       - uses: actions/upload-artifact@v4
