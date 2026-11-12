@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/cli",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "The pipedog command line, the port of Pipecat's CLI: `pipedog init` scaffolds a TypeScript voice bot (runner, services, client, agent guides, docs MCP), and `pipedog eval` runs @pipedog/evals.",
   "keywords": [
     "pipecat",

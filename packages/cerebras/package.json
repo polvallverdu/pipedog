@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/cerebras",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Cerebras LLM service (CerebrasLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

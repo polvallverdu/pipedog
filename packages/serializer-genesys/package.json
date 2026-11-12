@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/serializer-genesys",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Genesys Cloud AudioHook WebSocket frame serializer (GenesysAudioHookSerializer) for pipedog.",
   "keywords": [
     "pipecat",

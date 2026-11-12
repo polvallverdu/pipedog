@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/evals",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Pipecat's evals (pipecat.evals) for pipedog: test a bot end to end with scripted or LLM-simulated users, TTS for the user's audio, matchers and an LLM judge, results, suites, and the pipedog-eval CLI.",
   "keywords": [
     "pipecat",
