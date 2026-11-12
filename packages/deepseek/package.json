@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/deepseek",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "DeepSeek LLM service (DeepSeekLLMService, OpenAI-compatible) for pipedog.",
   "keywords": [
     "pipecat",

@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/transport-whatsapp",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "WhatsApp Business calling for pipedog: a port of Pipecat's WhatsAppClient and WhatsAppApi (Meta Cloud API calling webhooks, HMAC signature checks, SDP accept/reject/terminate) on the SmallWebRTC transport.",
   "keywords": [
     "pipecat",

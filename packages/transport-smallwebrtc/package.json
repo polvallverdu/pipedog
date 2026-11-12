@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/transport-smallwebrtc",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "SmallWebRTC transport for pipedog: a peer-to-peer WebRTC transport (werift, Opus via WASM) that works with the Pipecat browser SDK's SmallWebRTCTransport.",
   "keywords": [
     "pipecat",

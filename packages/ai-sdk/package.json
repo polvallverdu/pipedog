@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/ai-sdk",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Vercel AI SDK LLM service for pipedog: run any AI SDK language model (OpenAI, Google, Anthropic, Ollama, ...) in a pipeline.",
   "keywords": [
     "pipecat",

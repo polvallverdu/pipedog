@@ -1,5 +1,20 @@
 # @pipedog/asyncio
 
+## 0.11.0
+
+### Patch Changes
+
+- [#97](https://github.com/polvallverdu/pipedog/pull/97) [`c23ef57`](https://github.com/polvallverdu/pipedog/commit/c23ef572ea1dd9c8a1ac81a83bf6337df7e1c191) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Calling `task.then(cb)` on a `Task` from inside another task no longer makes the caller wait on it.
+  Before, the caller could become impossible to cancel, and a processor that did this hung the
+  pipeline's `cleanup()` ([#96](https://github.com/polvallverdu/pipedog/issues/96)). `await task`, `Promise.all` and `Promise.resolve(task)` still suspend
+  the caller, so cancelling it cancels the awaited task, as in asyncio.
+
+- [#108](https://github.com/polvallverdu/pipedog/pull/108) [`5ef8dd8`](https://github.com/polvallverdu/pipedog/commit/5ef8dd8e7d72903e690f43b3ed9dcee09e78c937) Thanks [@polvallverdu](https://github.com/polvallverdu)! - Voice agents built for Cloudflare Workers now run on OpenOrange, which runs Workers projects on
+  Node.js. Outbound WebSockets on Workers are opened with `fetch()` and an `Upgrade` header, which
+  OpenOrange's `fetch` rejects; pipedog now falls back to the `WebSocket` constructor there, which
+  sends the same headers. `waitFor` on an already-running promise that rejects before its task
+  starts no longer reports the rejection as unhandled (Node exits on that by default).
+
 ## 0.10.0
 
 No changes in this release.

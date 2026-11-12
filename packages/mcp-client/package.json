@@ -1,6 +1,6 @@
 {
   "name": "@pipedog/mcp-client",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "MCP client for pipedog: a port of Pipecat's MCPClient. Connects to MCP servers (stdio, SSE or streamable HTTP) and gives their tools to an LLM service as function-call tools.",
   "keywords": [
     "pipecat",
