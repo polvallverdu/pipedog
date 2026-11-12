@@ -10,7 +10,8 @@ Unofficial TypeScript port of Pipecat (Python, BSD-2-Clause, by Daily). Bun mono
   (`.claude/workflows/port.js`), e.g. args `{ "select": "--package @pipedog/deepgram" }`.
 - Checks: `bun run test` (every file in parallel worker processes, each file isolated), `bun run
   typecheck`, `bun run lint` (biome + license headers). One package: `bun test packages/<name>`.
-  CI runs 4 shards balanced by `.github/test-timings.json`; refresh it with `bun run test:timings`.
+  CI runs 4 shards balanced by `.github/test-timings.json`; refresh it from CI with
+  `bun tools/ci/timings.ts` (after a run), or locally with `bun run test:timings`.
 - Core must stay runtime-agnostic (Bun, Node, Deno, Cloudflare Workers): no `node:*` imports, no
   `Buffer`, no Bun APIs in `packages/core` or `packages/asyncio`.
 - Cancellation: every broad `catch` in ported code begins with `rethrowIfCancelled(e)`.
