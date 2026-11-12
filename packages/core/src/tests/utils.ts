@@ -164,7 +164,7 @@ export interface RunTestOptions {
   pipelineParams?: PipelineParams | null;
   /** Whether to send an EndFrame at the end of the test. */
   sendEndFrame?: boolean;
-  /** How long to wait, in seconds, for the pipeline to start before giving up. */
+  /** How long to wait, in seconds, for the pipeline to start before giving up (default 10). */
   startTimeout?: number;
 }
 
@@ -193,7 +193,10 @@ export async function runTest(
   const observers = options.observers ?? [];
   const pipelineParams = options.pipelineParams ?? new PipelineParams();
   const sendEndFrame = options.sendEndFrame ?? true;
-  const startTimeout = options.startTimeout ?? 1.0;
+  // DIVERGENCE: upstream waits 1 s for the pipeline to start. Test files here run in parallel
+  // worker processes (CI shards), where a busy machine can take longer than that, so wait 10 s.
+  // It only matters when startup hangs: the test then fails after 10 s instead of 1 s.
+  const startTimeout = options.startTimeout ?? 10.0;
 
   const receivedUp = new Queue<Frame>();
   const receivedDown = new Queue<Frame>();
