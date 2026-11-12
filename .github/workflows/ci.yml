@@ -60,15 +60,30 @@ jobs:
       # uploaded so `bun tools/ci/timings.ts <run id>` can refresh the committed file from CI.
       - run: |
           cp .github/test-timings.json "$RUNNER_TEMP/timings.json"
-          bun test --parallel --timeout=15000 --shard=${{ matrix.shard }}/4 --timings="$RUNNER_TEMP/timings.json" --update-timings
+          bun test --parallel --timeout=15000 --shard=${{ matrix.shard }}/4 --timings="$RUNNER_TEMP/timings.json" --update-timings \
+            --path-ignore-patterns="$WORKERD_E2E"
         env:
           PIPEDOG_E2E: ${{ vars.PIPEDOG_E2E || '1' }}
+          WORKERD_E2E: examples/{landing-demo,workers-durable-voice-agent,workers-realtime-voice-agent}/**
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-timings-${{ matrix.shard }}
           path: ${{ runner.temp }}/timings.json
           retention-days: 7
+
+  # The examples that run a Worker under `wrangler dev` (a whole workerd runtime per test file).
+  # workerd drops connections when it's starved of CPU, so these run one file at a time, here
+  # rather than among the shards' parallel workers.
+  workerd-e2e:
+    runs-on: ubuntu-latest
+    name: test (workerd e2e)
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Chromium for the browser tests
+        run: bunx playwright-core install --with-deps chromium
+      - run: bun test --isolate examples/landing-demo examples/workers-durable-voice-agent examples/workers-realtime-voice-agent
 
   compat:
     runs-on: ubuntu-latest
@@ -96,7 +111,7 @@ jobs:
   # The "Protect main" ruleset requires a check named `test`. This job stands in
   # for the test shards and every other job: it passes only if all of them did.
   test:
-    needs: [checks, tests, compat, release-verify, docs]
+    needs: [checks, tests, workerd-e2e, compat, release-verify, docs]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -105,6 +120,7 @@ jobs:
           for result in \
             "${{ needs.checks.result }}" \
             "${{ needs.tests.result }}" \
+            "${{ needs.workerd-e2e.result }}" \
             "${{ needs.compat.result }}" \
             "${{ needs.release-verify.result }}" \
             "${{ needs.docs.result }}"; do
