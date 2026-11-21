@@ -38,7 +38,7 @@ Bun, Node.js 22+, Deno and Cloudflare Workers: the WebSocket goes through the co
 
 ## Links
 
-- Docs: [services](https://polvallverdu.github.io/pipedog/docs/services/)
+- Docs: [services](https://pipedog.polv.dev/docs/services/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

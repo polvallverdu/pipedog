@@ -49,4 +49,4 @@ const heygen = new HeyGenVideoService({
 // new Pipeline([transport.input(), stt, userAggregator, llm, tts, heygen, transport.output(), ...])
 ```
 
-Docs: https://polvallverdu.github.io/pipedog/docs/services/video/heygen
+Docs: https://pipedog.polv.dev/docs/services/video/heygen

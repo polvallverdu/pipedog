@@ -10,7 +10,7 @@ import { join, relative } from "node:path";
 
 const out = join(import.meta.dir, "../out");
 const basePath = process.env.DOCS_BASE_PATH ?? "";
-const siteOrigin = process.env.DOCS_SITE_ORIGIN ?? "https://polvallverdu.github.io";
+const siteOrigin = process.env.DOCS_SITE_ORIGIN ?? "https://pipedog.polv.dev";
 const siteUrl = `${siteOrigin}${basePath}`;
 
 async function* files(dir: string): AsyncGenerator<string> {

@@ -36,4 +36,4 @@ transport.eventHandler("on_client_connected", async (_transport, participant) =>
 // new Pipeline([transport.input(), stt, userAggregator, llm, tts, transport.output(), assistantAggregator])
 ```
 
-Docs: https://polvallverdu.github.io/pipedog/docs/services/video/heygen
+Docs: https://pipedog.polv.dev/docs/services/video/heygen

@@ -4,7 +4,7 @@
 > This is **not** about contributing to pipedog itself — for that, see the repository's own CLAUDE.md and docs/CONVENTIONS.md.
 >
 > Audience: any coding agent (Claude Code, Cursor, Codex, …).
-> Docs index for LLMs: https://polvallverdu.github.io/pipedog/llms.txt
+> Docs index for LLMs: https://pipedog.polv.dev/llms.txt
 
 ---
 
@@ -75,7 +75,7 @@ Transport and services are scaffold inputs (the `--transport` / `--stt` / `--llm
 **Transport — by where the bot runs:**
 - **Web / mobile voice** — `smallwebrtc` (peer-to-peer WebRTC, no account; Bun, Node and Deno, not Cloudflare Workers), `websocket` (Pipecat's WebSocket client transport; also runs on Workers), or `livekit`.
 - **Telephony** — `twilio`, `telnyx`, `plivo` or `exotel`: a WebSocket media stream, with the provider's serializer chosen by the runner from the handshake.
-- Not available: Daily (and so Daily PSTN and Twilio + Daily SIP), which isn't ported. **Cloudflare Workers** is not a scaffold option: see https://polvallverdu.github.io/pipedog/docs/deployment/cloudflare-workers and the repository's `examples/workers-durable-voice-agent`.
+- Not available: Daily (and so Daily PSTN and Twilio + Daily SIP), which isn't ported. **Cloudflare Workers** is not a scaffold option: see https://pipedog.polv.dev/docs/deployment/cloudflare-workers and the repository's `examples/workers-durable-voice-agent`.
 
 **Scaffold every transport you need at once** — repeat `--transport` (e.g. `--transport twilio --transport smallwebrtc`); the scaffold wires each one's params and dependencies. They coexist in `transportParams`; `-t <name>` (`bun bot.ts -t twilio`) picks one per run. A **telephony** bot can include `smallwebrtc` for local testing: the runner serves a browser client at `http://localhost:7860` so you can talk to the bot with no phone. Also useful: **the `eval` transport (§6)** — drive the bot headless with scripted scenarios to confirm behavior, tune prompts and catch regressions.
 
@@ -96,7 +96,7 @@ You have live sources for current truth — never substitute your memory. Use th
    - `get_api(symbol)` — an exported class, function or type of the `@pipedog/*` packages: its **import path**, constructor and options interface, its declaration, and the pages that document it. **Run it on any symbol you're about to type from memory.**
 
    MCP servers are read only at session start. If the tools aren't in your list, tell the user to restart the session (the scaffold already wrote the config), and use rungs 2–3 meanwhile. To register it by hand: `claude mcp add pipedog -- npx -y @pipedog/mcp` (Claude Code), or `pipedog init --mcp` to write the project's config files for Claude Code, Cursor and VS Code. Pin it to the project's pipedog version with `npx -y @pipedog/mcp@<version>`.
-2. **llms.txt** — the machine-readable docs index at https://polvallverdu.github.io/pipedog/llms.txt (every page by section, with a link to its Markdown); the whole docs in one file at `/llms-full.txt`; any page as Markdown by adding `.md` to its URL.
+2. **llms.txt** — the machine-readable docs index at https://pipedog.polv.dev/llms.txt (every page by section, with a link to its Markdown); the whole docs in one file at `/llms-full.txt`; any page as Markdown by adding `.md` to its URL.
 3. **The installed packages** — the pinned version is on disk and cannot be stale. Read the type declarations when the docs are ambiguous: `node_modules/@pipedog/<package>/dist/**/*.d.ts` (the sources are in `src/` when installed from a checkout).
 4. **Pipecat's docs** (https://docs.pipecat.ai) explain the concepts, because pipedog is a port: class names, event names and wire formats are the same. Take **signatures and import paths from pipedog, not from Pipecat**: members are camelCase, constructors take one options object, and modules are `@pipedog/<package>/<upstream module path>`.
 
@@ -187,7 +187,7 @@ and a **modality**: *text* (the default: the user's turns are sent as text and t
 
 **The judge.** Only `eval:` criteria, `success:` and judged `metrics:` need it; deterministic checks don't. The default is a local Ollama (`gemma4:12b`), or point `judge.eval` at another LLM through a `factory:` (`<module>.<export>`: a function that takes the block and returns an OpenAI-compatible service). If neither is available, ask the user.
 
-> **Deep reference:** https://polvallverdu.github.io/pipedog/docs/evals — look it up via `read_page("evals")` (§3).
+> **Deep reference:** https://pipedog.polv.dev/docs/evals — look it up via `read_page("evals")` (§3).
 
 **Make your bot eval-able.** Scaffold with `--eval` whenever you intend to test the bot. The generated bot has the `eval` entry in `transportParams` and a **runnable starter scenario in `server/evals/starter_text.yaml`** (cascade). It passes against the fresh scaffold, so run it *first* to prove the loop, then edit it to match the bot you're building and copy it to grow the suite. For an **existing** bot, add the transport entry by hand (RTVI is on by default for `PipelineWorker`, so this is the only edit):
 ```ts
@@ -211,8 +211,8 @@ Exit code is non-zero if any scenario fails. `pipedog eval suite` runs many at o
 ## 7. Deploying
 
 The dev runner is a **development** server. For production, host the bot behind your own HTTPS:
-- **A server or container** — the scaffold's `--dockerfile` writes a Dockerfile (Bun or Node) that runs the bot with `--host 0.0.0.0`. See https://polvallverdu.github.io/pipedog/docs/deployment/servers.
-- **Vercel** and **Cloudflare Workers** (WebSocket transports only; no WebRTC, and provider-side turn detection instead of local models) have their own guides under https://polvallverdu.github.io/pipedog/docs/deployment.
+- **A server or container** — the scaffold's `--dockerfile` writes a Dockerfile (Bun or Node) that runs the bot with `--host 0.0.0.0`. See https://pipedog.polv.dev/docs/deployment/servers.
+- **Vercel** and **Cloudflare Workers** (WebSocket transports only; no WebRTC, and provider-side turn detection instead of local models) have their own guides under https://pipedog.polv.dev/docs/deployment.
 - pipedog has no counterpart of Pipecat Cloud (`pipecat cloud`): don't generate its deploy config or reach for that plugin.
 
 **Before deploying, confirm the target with the user** — you can't create their accounts or set their secrets for them. Set the same environment variables as `.env` in the host's secret store.

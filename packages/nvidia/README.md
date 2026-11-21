@@ -52,7 +52,7 @@ The deprecated `model` constructor option is not ported; use `settings`.
 
 ## Links
 
-- Docs: [NVIDIA](https://polvallverdu.github.io/pipedog/docs/services/llm/nvidia/)
+- Docs: [NVIDIA](https://pipedog.polv.dev/docs/services/llm/nvidia/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

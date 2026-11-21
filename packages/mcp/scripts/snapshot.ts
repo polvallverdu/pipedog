@@ -7,7 +7,7 @@
 //   - the packages' generated .d.ts (packages/*/dist): every exported declaration, for get_api.
 //
 // `bun run release` runs it with --build, after the package build, so every release bundles the
-// docs of that release. --build rebuilds the docs for the production URL (DOCS_BASE_PATH=/pipedog)
+// docs of that release. --build rebuilds the docs for the production URL (DEFAULT_SITE_URL)
 // and the packages' .d.ts first; without it, the existing build outputs are used.
 //
 //   bun packages/mcp/scripts/snapshot.ts [--build] [--out <file>] [--docs <dir>] [--any-site]
@@ -227,7 +227,7 @@ export function generateSnapshot(options: GenerateOptions = {}): Snapshot {
     options.expectedSiteUrl === undefined ? DEFAULT_SITE_URL : options.expectedSiteUrl;
   if (expected && siteUrl !== expected) {
     throw new Error(
-      `the docs in ${docsOut} were built for ${siteUrl}, not ${expected}: rebuild them with DOCS_BASE_PATH=/pipedog (or pass --build)`,
+      `the docs in ${docsOut} were built for ${siteUrl}, not ${expected}: rebuild them for that URL (or pass --build)`,
     );
   }
   const packagesDir = options.packagesDir === undefined ? PACKAGES_DIR : options.packagesDir;
@@ -267,7 +267,9 @@ export function buildInputs(): void {
     .map((d) => join("packages", d, "tsconfig.json"))
     .filter((f) => existsSync(join(ROOT, f)));
   run(["bunx", "tsc", "-b", ...tsconfigs]);
-  run(["bun", "run", "docs:build"], { DOCS_BASE_PATH: new URL(DEFAULT_SITE_URL).pathname });
+  run(["bun", "run", "docs:build"], {
+    DOCS_BASE_PATH: new URL(DEFAULT_SITE_URL).pathname.replace(/\/$/, ""),
+  });
 }
 
 if (import.meta.main) {

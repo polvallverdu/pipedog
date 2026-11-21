@@ -115,7 +115,7 @@ const micDisabled = $derived(
 <main class:embed>
   {#if !embed}
     <header class="intro">
-      <a class="brand" href="https://polvallverdu.github.io/pipedog/">
+      <a class="brand" href="https://pipedog.polv.dev/">
         <img src="/favicon.svg" alt="" width="28" height="28" />
         <span>pipedog</span>
       </a>

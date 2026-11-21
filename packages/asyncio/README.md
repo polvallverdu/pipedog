@@ -54,7 +54,7 @@ scheduled it (still in FIFO order), so concurrent Durable Objects never do each 
 
 ## Links
 
-- Docs: [asyncio API](https://polvallverdu.github.io/pipedog/docs/api/asyncio/),
-  [interruptions and cancellation](https://polvallverdu.github.io/pipedog/docs/concepts/interruptions-and-cancellation/)
+- Docs: [asyncio API](https://pipedog.polv.dev/docs/api/asyncio/),
+  [interruptions and cancellation](https://pipedog.polv.dev/docs/concepts/interruptions-and-cancellation/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause. See [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

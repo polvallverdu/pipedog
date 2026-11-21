@@ -754,7 +754,7 @@ describe("test_project_generation: the client and the other files", () => {
     const bun = read(await generate(config(), tmpDir()), "README.md");
     expect(bun).toContain("bun install");
     expect(bun).toContain("bun bot.ts");
-    expect(bun).toContain("https://polvallverdu.github.io/pipedog/llms.txt");
+    expect(bun).toContain("https://pipedog.polv.dev/llms.txt");
     expect(bun).toContain("npx -y @pipedog/mcp");
     const node = read(await generate(config({ runtime: "node" }), tmpDir()), "README.md");
     expect(node).toContain("npm install");

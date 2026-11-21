@@ -56,9 +56,9 @@ against the real API when `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` are
 
 ## Links
 
-- Docs: [STT](https://polvallverdu.github.io/pipedog/docs/services/stt/cloudflare/),
-  [TTS](https://polvallverdu.github.io/pipedog/docs/services/tts/cloudflare/),
-  [LLM](https://polvallverdu.github.io/pipedog/docs/services/llm/cloudflare/),
-  [voice agent fully on Cloudflare](https://polvallverdu.github.io/pipedog/docs/deployment/cloudflare-workers-ai/)
+- Docs: [STT](https://pipedog.polv.dev/docs/services/stt/cloudflare/),
+  [TTS](https://pipedog.polv.dev/docs/services/tts/cloudflare/),
+  [LLM](https://pipedog.polv.dev/docs/services/llm/cloudflare/),
+  [voice agent fully on Cloudflare](https://pipedog.polv.dev/docs/deployment/cloudflare-workers-ai/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause. See [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

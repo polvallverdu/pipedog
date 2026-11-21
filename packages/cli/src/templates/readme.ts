@@ -18,7 +18,7 @@ import type { ProjectConfig } from "../questions.ts";
 import { ServiceRegistry } from "../service_metadata.ts";
 import { requiredEnv } from "./server_bot.ts";
 
-export const DOCS_URL = "https://polvallverdu.github.io/pipedog";
+export const DOCS_URL = "https://pipedog.polv.dev";
 
 function label(value: string | null, list: readonly { value: string; label: string }[]): string {
   return value ? (list.find((s) => s.value === value)?.label ?? value) : "";

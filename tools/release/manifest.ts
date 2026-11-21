@@ -162,7 +162,7 @@ export function checkPackageFiles(dir: string, m: Manifest): string[] {
       const s = JSON.parse(readFileSync(path, "utf8"));
       if (s.version !== m.version)
         problems.push(`the docs snapshot is for ${s.version}, not ${m.version}`);
-      if (s.siteUrl !== "https://polvallverdu.github.io/pipedog")
+      if (s.siteUrl !== "https://pipedog.polv.dev")
         problems.push(`the docs snapshot links to ${s.siteUrl}, not the docs site`);
       if (!(s.pages?.length > 0) || !(s.api?.length > 0))
         problems.push("the docs snapshot has no pages or no API");

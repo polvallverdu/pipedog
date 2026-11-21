@@ -62,6 +62,6 @@ to that package; the official ones use `fetch`.
 
 ## Links
 
-- Docs: [Vercel AI SDK](https://polvallverdu.github.io/pipedog/docs/services/llm/ai-sdk/)
+- Docs: [Vercel AI SDK](https://pipedog.polv.dev/docs/services/llm/ai-sdk/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause. See [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

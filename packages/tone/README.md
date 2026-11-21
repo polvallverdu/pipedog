@@ -57,7 +57,7 @@ async here (`load()` / `download()`), and `tag()` returns a promise.
 
 ## Links
 
-- Docs: [Pipecat Tone](https://polvallverdu.github.io/pipedog/docs/concepts/tone/)
+- Docs: [Pipecat Tone](https://pipedog.polv.dev/docs/concepts/tone/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE). The models are

@@ -55,7 +55,7 @@ const result = await session.run();
 console.log(result.passed);
 ```
 
-The guide: https://polvallverdu.github.io/pipedog/docs/evals/
+The guide: https://pipedog.polv.dev/docs/evals/
 
 ## Runtimes
 

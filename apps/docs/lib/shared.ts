@@ -8,14 +8,14 @@ export const repoUrl: string =
 /** Where the docs content lives in the repository, for "Open in GitHub" links. */
 export const contentDir = "apps/docs/content/docs";
 
-/** The Next.js basePath: "/pipedog" on GitHub Pages, empty locally. Same as next.config.mjs. */
+/** The Next.js basePath: empty at https://pipedog.polv.dev and locally. Same as next.config.mjs. */
 export const basePath = process.env.DOCS_BASE_PATH ?? "";
 
 /**
  * The site's absolute URL, used in llms.txt and the page actions, which hand links to tools that
- * run elsewhere. DOCS_SITE_ORIGIN overrides the GitHub Pages origin.
+ * run elsewhere. DOCS_SITE_ORIGIN overrides the site origin.
  */
-export const siteUrl = `${process.env.DOCS_SITE_ORIGIN ?? "https://polvallverdu.github.io"}${basePath}`;
+export const siteUrl = `${process.env.DOCS_SITE_ORIGIN ?? "https://pipedog.polv.dev"}${basePath}`;
 
 export const upstreamUrl = "https://github.com/pipecat-ai/pipecat";
 export const upstreamDocsUrl = "https://github.com/pipecat-ai/docs";

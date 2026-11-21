@@ -11,17 +11,17 @@
 
 <p align="center">
   <a href="https://github.com/polvallverdu/pipedog/actions/workflows/ci.yml"><img src="https://github.com/polvallverdu/pipedog/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://polvallverdu.github.io/pipedog/"><img src="https://github.com/polvallverdu/pipedog/actions/workflows/docs.yml/badge.svg" alt="Docs"></a>
+  <a href="https://pipedog.polv.dev/"><img src="https://github.com/polvallverdu/pipedog/actions/workflows/docs.yml/badge.svg" alt="Docs"></a>
   <a href="https://www.npmjs.com/package/@pipedog/core"><img src="https://img.shields.io/npm/v/@pipedog/core?label=%40pipedog%2Fcore" alt="npm"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--2--Clause-blue.svg" alt="License: BSD-2-Clause"></a>
 </p>
 
 <p align="center">
-  <a href="https://polvallverdu.github.io/pipedog/"><strong>Docs</strong></a> ·
-  <a href="https://polvallverdu.github.io/pipedog/docs/quickstart/">Quickstart</a> ·
-  <a href="https://polvallverdu.github.io/pipedog/docs/services/">Services</a> ·
-  <a href="https://polvallverdu.github.io/pipedog/docs/performance/">Performance</a> ·
-  <a href="https://polvallverdu.github.io/pipedog/docs/guides/coming-from-pipecat/">Coming from Pipecat</a>
+  <a href="https://pipedog.polv.dev/"><strong>Docs</strong></a> ·
+  <a href="https://pipedog.polv.dev/docs/quickstart/">Quickstart</a> ·
+  <a href="https://pipedog.polv.dev/docs/services/">Services</a> ·
+  <a href="https://pipedog.polv.dev/docs/performance/">Performance</a> ·
+  <a href="https://pipedog.polv.dev/docs/guides/coming-from-pipecat/">Coming from Pipecat</a>
 </p>
 
 > [!IMPORTANT]
@@ -105,7 +105,7 @@ over SmallWebRTC.
 
 The quickest way to a project like this is the CLI, which writes the bot, its `package.json`, a
 README and a guide for your coding agent for the services you pick
-([docs](https://polvallverdu.github.io/pipedog/docs/cli/)):
+([docs](https://pipedog.polv.dev/docs/cli/)):
 
 ```sh
 bunx @pipedog/cli init       # or: npx @pipedog/cli init
@@ -231,8 +231,8 @@ Open <http://localhost:7860>, click **Connect**, allow the microphone, and talk.
 
 To run the same bot from a checkout, with a Google Gemini option, tracing and a headless-browser
 test, see [`examples/smallwebrtc-voice-bot`](examples/smallwebrtc-voice-bot) and the
-[voice bot guide](https://polvallverdu.github.io/pipedog/docs/voice-bot/). For a pipeline with no
-API keys at all, see the [docs quickstart](https://polvallverdu.github.io/pipedog/docs/quickstart/).
+[voice bot guide](https://pipedog.polv.dev/docs/voice-bot/). For a pipeline with no
+API keys at all, see the [docs quickstart](https://pipedog.polv.dev/docs/quickstart/).
 
 ## Runtimes
 
@@ -245,7 +245,7 @@ from real runs by the compat harness (`bun run compat`), not by hand.
 | Bun | Yes | The development runtime. Runs the TypeScript directly. |
 | Node.js | Yes, 22 or later | |
 | Deno | Yes | |
-| Cloudflare Workers | Yes, with `nodejs_compat` | No WebRTC in the Worker itself (no UDP): use the WebSocket transport, or take WebRTC users through Cloudflare Realtime with `@pipedog/transport-cloudflare-realtime`. Models are loaded from R2, KV or `fetch`, not bundled. See [Workers](https://polvallverdu.github.io/pipedog/docs/workers/). |
+| Cloudflare Workers | Yes, with `nodejs_compat` | No WebRTC in the Worker itself (no UDP): use the WebSocket transport, or take WebRTC users through Cloudflare Realtime with `@pipedog/transport-cloudflare-realtime`. Models are loaded from R2, KV or `fetch`, not bundled. See [Workers](https://pipedog.polv.dev/docs/workers/). |
 
 Every package below is verified on all four, except:
 
@@ -268,7 +268,7 @@ A few entry points inside verified packages don't run on Workers: `@pipedog/aws`
 `SageMakerBidiClient` (HTTP/2), Google's gRPC Cloud Speech and Text-to-Speech services, and the
 servers that listen on a port (the runner's `main()` and `serve()`, `serveFetch`). Each package's
 README has its own runtime table.
-Details: [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/).
+Details: [Runtimes & compatibility](https://pipedog.polv.dev/docs/runtimes/).
 
 ## Performance
 
@@ -286,7 +286,7 @@ The same pipeline, 10 pass-through processors in a `PipelineWorker`, in pipedog 
 Measured on an Apple M4 Pro with `bun run bench:perf`. With a real service (Gemini LLM and TTS),
 both frameworks add little over calling the SDK directly; the network dominates. Peak memory, the
 Gemini numbers and how each is measured:
-[Performance](https://polvallverdu.github.io/pipedog/docs/performance/).
+[Performance](https://pipedog.polv.dev/docs/performance/).
 
 ## Packages
 
@@ -385,27 +385,27 @@ and `@pipedog/openai`. Modules are imported by their upstream path:
 
 ## Documentation
 
-- [Getting started](https://polvallverdu.github.io/pipedog/docs/) and
-  [installation](https://polvallverdu.github.io/pipedog/docs/installation/)
-- [Voice bot over SmallWebRTC](https://polvallverdu.github.io/pipedog/docs/voice-bot/)
-- [Development runner](https://polvallverdu.github.io/pipedog/docs/runner/): `main()`, the
+- [Getting started](https://pipedog.polv.dev/docs/) and
+  [installation](https://pipedog.polv.dev/docs/installation/)
+- [Voice bot over SmallWebRTC](https://pipedog.polv.dev/docs/voice-bot/)
+- [Development runner](https://pipedog.polv.dev/docs/runner/): `main()`, the
   prebuilt client and phone calls, as in Pipecat's runner
-- [CLI](https://polvallverdu.github.io/pipedog/docs/cli/): `bunx @pipedog/cli init` scaffolds a bot
+- [CLI](https://pipedog.polv.dev/docs/cli/): `bunx @pipedog/cli init` scaffolds a bot
   project and sets up your coding agent
-- [Evals](https://polvallverdu.github.io/pipedog/docs/evals/): test a bot end to end with scripted
+- [Evals](https://pipedog.polv.dev/docs/evals/): test a bot end to end with scripted
   or simulated users and an LLM judge (`pipedog-eval`)
-- [Telephony](https://polvallverdu.github.io/pipedog/docs/telephony/): Twilio, Telnyx, Plivo,
+- [Telephony](https://pipedog.polv.dev/docs/telephony/): Twilio, Telnyx, Plivo,
   Exotel, Vonage and Genesys
-- [Examples](https://polvallverdu.github.io/pipedog/docs/examples/): every runnable example and its run command
-- [Turn detection](https://polvallverdu.github.io/pipedog/docs/turn-detection/): local models, VAD
+- [Examples](https://pipedog.polv.dev/docs/examples/): every runnable example and its run command
+- [Turn detection](https://pipedog.polv.dev/docs/turn-detection/): local models, VAD
   only, or on the provider's side
-- [Voice agents on Workers and Durable Objects](https://polvallverdu.github.io/pipedog/docs/workers/)
-- [Frameworks](https://polvallverdu.github.io/pipedog/docs/frameworks/): Express, Hono, Next.js and more
-- [Coming from Pipecat (Python)](https://polvallverdu.github.io/pipedog/docs/coming-from-pipecat/)
-- [Runtimes & compatibility](https://polvallverdu.github.io/pipedog/docs/runtimes/)
-- [Performance](https://polvallverdu.github.io/pipedog/docs/performance/): pipedog on Bun, Node, Deno
+- [Voice agents on Workers and Durable Objects](https://pipedog.polv.dev/docs/workers/)
+- [Frameworks](https://pipedog.polv.dev/docs/frameworks/): Express, Hono, Next.js and more
+- [Coming from Pipecat (Python)](https://pipedog.polv.dev/docs/coming-from-pipecat/)
+- [Runtimes & compatibility](https://pipedog.polv.dev/docs/runtimes/)
+- [Performance](https://pipedog.polv.dev/docs/performance/): pipedog on Bun, Node, Deno
   and Workers against Pipecat on CPython
-- [Docs for AI tools](https://polvallverdu.github.io/pipedog/docs/guides/llms/): llms.txt, Markdown pages
+- [Docs for AI tools](https://pipedog.polv.dev/docs/guides/llms/): llms.txt, Markdown pages
   and the [`@pipedog/mcp`](packages/mcp) server for coding agents
 
 ## Status
@@ -428,7 +428,7 @@ files.
   Connector), the Krisp, Koala and AIC filters and models, the Redis and pgmq buses, the SageMaker
   variants of Deepgram and NVIDIA, and a few providers (NVIDIA, Simli, Tavus, fal, Mem0, Moondream,
   Keenable, OpenClaw). See the
-  [roadmap](https://polvallverdu.github.io/pipedog/docs/roadmap/).
+  [roadmap](https://pipedog.polv.dev/docs/roadmap/).
 - **Testing: mocks and recordings, not live providers yet.** Every provider is tested against mock
   servers and recorded protocol vectors, and the examples run end to end against mock APIs.
   Tests that need real API keys are skipped by default, as upstream does, so live providers are
@@ -436,7 +436,7 @@ files.
   real use are very welcome.
 
 Per-package progress, test counts and verified runtimes: [`porting/STATUS.md`](porting/STATUS.md)
-(also [on the docs site](https://polvallverdu.github.io/pipedog/docs/contributing/status/)).
+(also [on the docs site](https://pipedog.polv.dev/docs/contributing/status/)).
 
 ## Relation to upstream
 

@@ -353,7 +353,7 @@ describe("TestBundledGuide", () => {
   test("NEW: the guides point at pipedog's docs and MCP server, not Pipecat's tools", () => {
     for (const name of ["AGENTS.md", "GETTING_STARTED.md"]) {
       const text = template(name);
-      expect(text).toContain("https://polvallverdu.github.io/pipedog/llms.txt");
+      expect(text).toContain("https://pipedog.polv.dev/llms.txt");
       expect(text).toContain("@pipedog/mcp");
       expect(text).not.toContain("context-hub");
       expect(text).not.toContain("Context Hub");

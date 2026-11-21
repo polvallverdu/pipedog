@@ -35,7 +35,7 @@ await runner.addWorkers(worker);
 await runner.run();
 ```
 
-The [quickstart](https://polvallverdu.github.io/pipedog/docs/quickstart/) builds a complete
+The [quickstart](https://pipedog.polv.dev/docs/quickstart/) builds a complete
 pipeline with custom frame processors and no API keys.
 
 ## Runtimes
@@ -45,9 +45,9 @@ module, uses no `Buffer` and no runtime-specific APIs.
 
 ## Links
 
-- Docs: [frames](https://polvallverdu.github.io/pipedog/docs/concepts/frames/),
-  [pipelines and workers](https://polvallverdu.github.io/pipedog/docs/concepts/pipelines-and-workers/),
-  [coming from Pipecat](https://polvallverdu.github.io/pipedog/docs/coming-from-pipecat/)
+- Docs: [frames](https://pipedog.polv.dev/docs/concepts/frames/),
+  [pipelines and workers](https://pipedog.polv.dev/docs/concepts/pipelines-and-workers/),
+  [coming from Pipecat](https://pipedog.polv.dev/docs/coming-from-pipecat/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

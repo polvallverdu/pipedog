@@ -160,7 +160,7 @@ sessions through `@pipedog/onnx`. whisper.cpp addons are native, Node-only and u
 
 ## Links
 
-- Docs: [voice bot guide](https://polvallverdu.github.io/pipedog/docs/voice-bot/),
-  [coming from Pipecat](https://polvallverdu.github.io/pipedog/docs/coming-from-pipecat/)
+- Docs: [voice bot guide](https://pipedog.polv.dev/docs/voice-bot/),
+  [coming from Pipecat](https://pipedog.polv.dev/docs/coming-from-pipecat/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause. See [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).
