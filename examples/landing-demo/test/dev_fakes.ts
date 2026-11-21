@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // The demo locally with no accounts at all: the fakes (test/fakes.ts) and `wrangler dev` with
-// them, on http://127.0.0.1:8787. Open it, press the mic, and a scripted user asks a few
-// questions (whatever the microphone hears). For working on the page, and for screenshots.
+// them, on http://127.0.0.1:8787. Open it, press the mic and say anything: each thing you say is
+// transcribed as the next scripted question (Silero VAD runs for real, on your microphone). For working on the page, and for screenshots.
 //
 //   bun run --cwd examples/landing-demo dev:fakes
 
@@ -18,7 +18,6 @@ const fakes = startFakes({
     "And where is this call running?",
     "How does turn detection work in pipedog docs?",
   ],
-  turnEvery: Number(process.env.TURN_EVERY ?? 160),
   toneMs: 1400,
 });
 // A fake SFU, so the WebRTC option shows as available (it can't carry real WebRTC).

@@ -3,18 +3,22 @@
 //
 // The demo page (SvelteKit, served by the Worker) in a real Chromium, against the fakes: press
 // the mic, and the conversation, the tool card and the metrics appear, through Pipecat's own
-// browser client over the WebSocket. Chromium's fake microphone supplies the audio (the fake Flux
-// only counts it). The WebRTC switch is checked disabled here (no Realtime credentials); WebRTC
+// browser client over the WebSocket. Chromium's fake microphone plays a recorded question, then
+// silence, in a loop: Silero VAD in the Worker hears it, and the fake Nova-3 transcribes it as the
+// scripted turn. The WebRTC switch is checked disabled here (no Realtime credentials); WebRTC
 // itself is covered by e2e.test.ts against a fake SFU, since a fake SFU can't do real WebRTC.
 //
 // Needs a Chromium for playwright-core (`bunx playwright-core install chromium`, or set
 // PIPEDOG_E2E_CHROMIUM); skipped without one, or with PIPEDOG_E2E=0.
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Browser } from "playwright-core";
 import { type Fakes, fakeVars, startFakes } from "./fakes.ts";
 import {
+  EXAMPLE,
   printProblems,
   STARTUP_TIMEOUT,
   startWranglerDev,
@@ -39,13 +43,54 @@ if (!chromiumPath) {
   console.log("landing demo browser test: skipping, no Chromium for playwright-core");
 }
 
+/** A 16-bit mono WAV with `secs` of silence appended, for Chromium's looping fake microphone. */
+function withSilence(wav: Uint8Array, secs: number): Uint8Array {
+  const view = new DataView(wav.buffer, wav.byteOffset, wav.byteLength);
+  // Find the "fmt " and "data" chunks.
+  let rate = 0;
+  let offset = 12;
+  let data: Uint8Array | null = null;
+  while (offset + 8 <= wav.length) {
+    const id = String.fromCharCode(...wav.subarray(offset, offset + 4));
+    const size = view.getUint32(offset + 4, true);
+    if (id === "fmt ") rate = view.getUint32(offset + 12, true);
+    if (id === "data") data = wav.subarray(offset + 8, offset + 8 + size);
+    offset += 8 + size + (size % 2);
+  }
+  if (!data || !rate) throw new Error("not a 16-bit mono WAV");
+  const pcm = new Uint8Array(data.length + Math.round(rate * secs) * 2);
+  pcm.set(data);
+  const out = new Uint8Array(44 + pcm.length);
+  const o = new DataView(out.buffer);
+  out.set(new TextEncoder().encode("RIFF"), 0);
+  o.setUint32(4, 36 + pcm.length, true);
+  out.set(new TextEncoder().encode("WAVEfmt "), 8);
+  o.setUint32(16, 16, true);
+  o.setUint16(20, 1, true); // PCM
+  o.setUint16(22, 1, true); // mono
+  o.setUint32(24, rate, true);
+  o.setUint32(28, rate * 2, true);
+  o.setUint16(32, 2, true);
+  o.setUint16(34, 16, true);
+  out.set(new TextEncoder().encode("data"), 36);
+  o.setUint32(40, pcm.length, true);
+  out.set(pcm, 44);
+  return out;
+}
+
 let fakes: Fakes;
 let worker: WranglerDev | null = null;
 let browser: Browser | null = null;
 
 beforeAll(async () => {
   if (!chromiumPath) return;
-  fakes = startFakes({ turns: ["What's the weather in Barcelona?"], turnEvery: 90 });
+  fakes = startFakes({ turns: ["What's the weather in Barcelona?"] });
+  // The question, then long enough a silence that the answer is over before it comes round again.
+  const question = readFileSync(
+    join(EXAMPLE, "..", "test-mocks", "assets", "capital_question.wav"),
+  );
+  const micFile = join(mkdtempSync(join(tmpdir(), "landing-demo-mic-")), "mic.wav");
+  writeFileSync(micFile, withSilence(question, 20));
   worker = await startWranglerDev({
     vars: [
       "ANTHROPIC_API_KEY:test-anthropic-key",
@@ -61,6 +106,7 @@ beforeAll(async () => {
     args: [
       "--use-fake-device-for-media-stream",
       "--use-fake-ui-for-media-stream",
+      `--use-file-for-fake-audio-capture=${micFile}`,
       "--autoplay-policy=no-user-gesture-required",
     ],
   });

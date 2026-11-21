@@ -35,6 +35,8 @@ export interface ScriptedBrowser {
   request(type: string, data?: unknown, timeoutMs?: number): Promise<RtviMessage>;
   /** Resolves when a message matching `match` has arrived. */
   waitFor(match: (m: RtviMessage) => boolean, timeoutMs?: number): Promise<RtviMessage>;
+  /** Say `pcm16k` into the microphone now, then silence again; resolves when it has been sent. */
+  speak(pcm16k: Uint8Array): Promise<void>;
   close(): Promise<void>;
   closed: Promise<void>;
 }
@@ -88,12 +90,17 @@ export async function connectBrowser(
   // The microphone, in real time: the speech, if any, then silence.
   const chunkBytes = ((SAMPLE_RATE * FRAME_MS) / 1000) * 2;
   const silence = new Uint8Array(chunkBytes);
-  const speech = options.pcm16k ?? new Uint8Array(0);
+  let speech = options.pcm16k ?? new Uint8Array(0);
   let at = 0;
+  let spoken: (() => void) | null = null;
   const mic = (async () => {
     while (open) {
       const audio = at < speech.length ? speech.slice(at, at + chunkBytes) : silence;
       at += chunkBytes;
+      if (at >= speech.length && spoken) {
+        spoken();
+        spoken = null;
+      }
       const data = await serializer.serialize(
         new OutputAudioRawFrame({ audio, sampleRate: SAMPLE_RATE, numChannels: 1 }),
       );
@@ -129,6 +136,13 @@ export async function connectBrowser(
       return await waitFor((m) => m.type === "server-response" && m.id === id, timeoutMs);
     },
     waitFor,
+    speak(pcm16k) {
+      speech = pcm16k;
+      at = 0;
+      return new Promise<void>((resolve) => {
+        spoken = resolve;
+      });
+    },
     async close() {
       open = false;
       await connection.close();

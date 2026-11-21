@@ -401,7 +401,7 @@ export class Demo {
             ? "llm"
             : /aura|tts/i.test(p)
               ? "tts"
-              : /flux|stt/i.test(p)
+              : /nova|stt/i.test(p)
                 ? "stt"
                 : null;
           if (key && t.value > 0) this.ttfb = { ...this.ttfb, [key]: t.value * 1000 };
