@@ -1,5 +1,19 @@
 # @pipedog/cloudflare
 
+## 0.11.1
+
+### Patch Changes
+
+- [#113](https://github.com/polvallverdu/pipedog/pull/113) [`fea4bae`](https://github.com/polvallverdu/pipedog/commit/fea4bae065f75d16ef0798d53d1a1b9feecad64a) Thanks [@polvallverdu](https://github.com/polvallverdu)! - `WorkersAIAuraTTSService` keeps its session open. Workers AI closes an idle Aura WebSocket after
+  about 3.5 s (code 1011) and has no `KeepAlive`, so the session dropped between replies and during
+  tool calls, and text sent while it reconnected could be lost. The service now sends an empty `Speak`
+  after 2 s without a message.
+- Updated dependencies [[`ca1bcf4`](https://github.com/polvallverdu/pipedog/commit/ca1bcf4e0fea10bfb5b3a0637c50612a47130006)]:
+  - @pipedog/core@0.11.1
+  - @pipedog/deepgram@0.11.1
+  - @pipedog/openai@0.11.1
+  - @pipedog/asyncio@0.11.1
+
 ## 0.11.0
 
 ### Patch Changes

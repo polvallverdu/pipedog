@@ -1,5 +1,12 @@
 # @pipedog/mcp
 
+## 0.11.1
+
+### Patch Changes
+
+- [#110](https://github.com/polvallverdu/pipedog/pull/110) [`ca1bcf4`](https://github.com/polvallverdu/pipedog/commit/ca1bcf4e0fea10bfb5b3a0637c50612a47130006) Thanks [@polvallverdu](https://github.com/polvallverdu)! - The docs moved to https://pipedog.polv.dev. Package READMEs, the CLI's templates, the runner's
+  messages and the MCP server's docs snapshot link there.
+
 ## 0.11.0
 
 No changes in this release.
