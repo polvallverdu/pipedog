@@ -1,6 +1,6 @@
 import { rehypeCodeDefaultOptions } from "fumadocs-core/mdx-plugins";
 import { metaSchema, pageSchema } from "fumadocs-core/source/schema";
-import { defineConfig, defineDocs } from "fumadocs-mdx/config";
+import { defineCollections, defineConfig, defineDocs } from "fumadocs-mdx/config";
 import { transformerTwoslash } from "fumadocs-twoslash";
 import { createFileSystemTypesCache } from "fumadocs-twoslash/cache-fs";
 import {
@@ -8,6 +8,7 @@ import {
   createGenerator,
   remarkAutoTypeTable,
 } from "fumadocs-typescript";
+import { z } from "zod";
 import { remarkRuntimeMatrix } from "./lib/remark-runtime-matrix";
 import { remarkStripLicense } from "./lib/remark-strip-license";
 
@@ -28,6 +29,22 @@ export const docs = defineDocs({
   meta: {
     schema: metaSchema,
   },
+});
+
+/**
+ * Blog posts: content/blog/<slug>.mdx, served at /blog/<slug>. Not part of the docs tree, llms.txt
+ * or the Markdown copies: posts are dated announcements, the docs are the reference.
+ */
+export const blogPosts = defineCollections({
+  type: "doc",
+  dir: "content/blog",
+  schema: pageSchema.extend({
+    author: z.string(),
+    date: z.iso.date(),
+    lang: z.enum(["en", "es"]).default("en"),
+    /** The slug of the same post in the other language. */
+    translation: z.string().optional(),
+  }),
 });
 
 export default defineConfig({

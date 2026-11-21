@@ -1,0 +1,185 @@
+---
+title: "pipedog: los agentes de voz de Pipecat, en TypeScript"
+description: Un port no oficial de Pipecat a TypeScript que funciona en Bun, Node, Deno y Cloudflare Workers, es compatible con los SDK de cliente de Pipecat y ya está en producción.
+author: Pol Vallverdú
+date: "2026-12-01"
+lang: es
+translation: introducing-pipedog
+---
+
+[Pipecat](https://github.com/pipecat-ai/pipecat) tiene el modelo mental correcto para construir
+agentes de voz con IA: frames que fluyen por un pipeline de processors, con los turnos, las
+interrupciones y los servicios como piezas intercambiables. Está más que probado en producción, en
+Python. pipedog es su port a TypeScript: los mismos pipelines, los mismos frames y los mismos
+protocolos, funcionando en Bun, Node, Deno y Cloudflare Workers. Y el modelo se traslada: funciona
+igual de bien en otro lenguaje.
+
+Es un port no oficial, hecho por la comunidad. No tiene relación con Daily, la empresa que hay
+detrás de Pipecat, y todo lo bueno de su diseño viene de ellos.
+
+Puedes [hablar con él en la portada](/): es un agente de voz que corre dentro de un Durable Object
+de Cloudflare.
+
+## Por qué portarlo
+
+En Nexi Health, nuestro agente (sus herramientas, su lógica de negocio) vive en un servicio de
+TypeScript, dentro de un monorepo de TypeScript. La voz iba con Pipecat, así que desplegábamos un
+servicio de Python entero solo para el pipeline, que hablaba con el de TypeScript por una API
+privada para llegar al agente. Funcionaba, pero era un dolor de cabeza: un servicio más que
+desplegar y mantener vivo, una API interna que mantener entre los dos, y un proyecto de Python
+metido en un monorepo de TypeScript, con dos toolchains, dos sistemas de dependencias, dos CI y
+unos tipos que se quedan en la frontera entre servicios. pipedog existe para quitar esa división.
+Por tres motivos, por este orden:
+
+- **Un solo lenguaje en todo el stack.** El bot, el backend y el cliente web comparten tipos y
+  toolchain. No hay un servicio más que mantener.
+- **Menos overhead.** Los runtimes de JavaScript mueven frames por un pipeline más rápido que
+  CPython, y arrancan antes. Y eso importa cuando cada trozo de audio de 20 ms y cada token del LLM
+  pasan por el pipeline.
+- **Funciona en más sitios.** Un bot se empaqueta en un único fichero y corre en plataformas
+  serverless y en el edge, incluido Cloudflare Workers, donde Pipecat no puede funcionar.
+
+## Qué se mantiene
+
+pipedog es un port, no una reescritura. Cada módulo se traduce desde un commit fijado de upstream,
+y los tests del propio Pipecat se portan uno a uno y se ejecutan contra él. Los nombres pasan a
+camelCase y el asyncio de Python se emula con un paquete pequeño, `@pipedog/asyncio`, para que la
+cancelación y las tareas se comporten como Pipecat espera. Lo demás te sonará: `Pipeline`,
+`PipelineWorker`, los frame processors, el contexto del LLM y sus agregadores, las estrategias de
+turno, RTVI.
+
+Como los protocolos son los mismos, los SDK de cliente de Pipecat (`@pipecat-ai/client-js`, el
+voice UI kit de React, las interfaces prefabricadas) hablan con un bot de pipedog sin cambiar nada.
+Si vienes de Pipecat, hay una [guía para dar el salto](/docs/guides/coming-from-pipecat) y una
+página con [todas las diferencias con upstream](/docs/guides/differences-from-upstream).
+
+Hoy hay 643 de los 730 módulos de Pipecat portados (otros 42 no aplican a TypeScript y se han
+descartado a propósito), repartidos en 96 paquetes: todo el runtime,
+los servicios de LLM, speech-to-text y text-to-speech, y los serializadores y transportes de
+telefonía. La [página de estado del port](/docs/contributing/status) se genera desde el repositorio
+en cada build de la documentación y muestra lo que falta, paquete a paquete, y en qué runtimes
+funciona cada uno.
+
+## Cómo se ha portado: con agentes de IA
+
+pipedog es un port hecho con IA, y prefiero decirlo claramente. La traducción la han hecho agentes
+de Claude Code; mi trabajo ha sido montar el sistema que los mantiene fieles al original, revisar,
+y probar el resultado en llamadas reales.
+
+Ese sistema está en el repositorio. Un manifiesto recoge cada módulo y cada test de upstream, con
+sus dependencias y su estado, y una herramienta `next` elige el siguiente lote por orden de
+dependencias. Un workflow porta cada lote por fases: un agente traduce una unidad siguiendo [las
+convenciones](https://github.com/polvallverdu/pipedog/blob/main/docs/CONVENTIONS.md), otro la
+revisa contra el código Python para comprobar que se comporta igual, el paquete entero pasa el
+typecheck y el lint, y después los tests del propio upstream se portan uno a uno y tienen que pasar.
+Además, cada paquete se ejecuta en Bun, Node, Deno y workerd en la CI. Lo que los agentes hacían
+mal lo han cazado esos tests, las pruebas entre runtimes, o yo mismo en una línea de teléfono, y la
+[documentación para contribuir](/docs/contributing) explica el proceso completo.
+
+## Rendimiento
+
+La [página de rendimiento](/docs/performance) mide pipedog en cada runtime frente a Pipecat sobre
+CPython 3.13, en la misma máquina, con cada escenario escrito una vez para cada framework. En
+resumen:
+
+- **Procesado de frames** (10 processors, sin I/O): entre 4,8 y 5,7 veces el throughput de Pipecat,
+  y una latencia mediana por frame de 41 a 59 µs en Node, Bun y Deno, frente a los 572 µs de
+  Pipecat.
+- **Arranque en frío** (del inicio del proceso a un pipeline que ya ha corrido, con los servicios de
+  Google cargados): de 44 a 66 ms frente a 396 ms.
+- **Contra un servicio real** (Gemini) manda la red, y lo que aporta el framework queda dentro del
+  ruido en los dos casos.
+
+Esto último es lo que hay que decir con honestidad: en un bot de voz, casi toda la latencia que
+oyes viene de los proveedores de voz y del LLM. Lo que cambia pipedog es el suelo sobre el que van,
+y la CPU que gasta un servidor por llamada.
+
+También medí lo que decide cómo suena una llamada telefónica. El codificador μ-law coincide bit a bit con
+el de Pipecat en los 65.536 valores. El resampler (sinc con ventana, compilado a WebAssembly) deja
+entre -85 y -88 dB de ruido y aliasing, frente a los -82 a -83 dB de libsoxr; las dos cifras quedan
+muy por debajo de lo audible. Y en el ritmo de envío, pipedog manda un mensaje pequeño cada 40 ms,
+más o menos, mientras que Pipecat manda uno más grande cada 120 a 160 ms. Ninguno de los dos corta
+el audio con los buffers que usan los proveedores de telefonía.
+
+## Agentes de voz en Cloudflare
+
+Que funcionara en Workers fue el motivo para empezar. Un Durable Object encaja muy bien con una
+llamada: un objeto por sesión, cerca del usuario, que se factura mientras está conectado y que trae
+WebSockets de serie. pipedog ejecuta su pipeline dentro de uno.
+
+`@pipedog/cloudflare` añade los modelos de Workers AI como servicios del pipeline: Deepgram Flux y
+Nova-3 para speech-to-text, Aura para text-to-speech, Smart Turn v2 para detectar el final del
+turno, Whisper y los LLM. Un Worker no puede recibir WebRTC directamente (no hay UDP), así que
+`@pipedog/transport-cloudflare-realtime` lleva a los usuarios de WebRTC a través de Cloudflare
+Realtime y le pasa el audio al bot por WebSockets.
+
+La [demo en directo](/) lo usa todo: un Durable Object por visitante, voz con Workers AI y Claude
+Haiku 5.5 con algunas herramientas (el tiempo, la hora, dónde se está ejecutando la llamada, una
+búsqueda en esta documentación), por WebSocket o por WebRTC. Una llamada de dos minutos cuesta unos
+0,06 $, casi todo en voz. Hay dos interruptores en la página que enseñan cuánto de un pipeline se
+puede cambiar:
+
+- **Flux o Nova-3.** Flux solo entiende inglés y detecta él mismo cuándo has terminado de hablar,
+  así que es el que antes contesta. Nova-3 es multilingüe y va con Smart Turn. Los dos llevan
+  Silero VAD, y el bot solo se deja interrumpir por al menos tres palabras con tu voz detrás, así
+  que una tele de fondo no le corta.
+- **WebSocket o WebRTC.** WebRTC pasa por Realtime, lo que añade un salto que se nota. Un WebSocket
+  hasta un Durable Object cerca de ti es difícil de superar.
+
+Encima de la conversación, una barra ilumina cada etapa mientras trabaja (VAD, speech-to-text, la
+decisión de turno, Claude, text-to-speech) con su último tiempo, y avisa cuando ha ignorado algo
+como ruido de fondo o como un «ajá».
+
+Montándola apareció un bug de verdad. Workers AI cierra un WebSocket de Aura inactivo a los 3,5
+segundos, más o menos, y no acepta el `KeepAlive` de Deepgram. La sesión se caía entre respuesta y
+respuesta y durante las llamadas a herramientas, y una respuesta que empezaba mientras se
+reconectaba podía cortarse. Un `Speak` vacío cada dos segundos la mantiene abierta, y eso ya está
+en el servicio. Las guías de [Workers](/docs/deployment/cloudflare-workers) y de [Workers
+AI](/docs/deployment/cloudflare-workers-ai) cuentan el resto, límites incluidos.
+
+## Lo que aporta TypeScript
+
+Hay cosas que solo tienen sentido en TypeScript, así que pipedog trae algunos paquetes propios:
+
+- **[Herramientas tipadas](/docs/concepts/typed-tools).** `defineTool` recibe un esquema de
+  Standard Schema (Zod, Valibot, ArkType) y te da el JSON Schema para el LLM, un handler con los
+  argumentos tipados y la validación de lo que manda el LLM antes de que se ejecute tu código.
+- **[El AI SDK de Vercel](/docs/services/llm/ai-sdk).** `AISDKLLMService` usa cualquier modelo del
+  AI SDK como LLM del pipeline, así que funciona con todos los proveedores que soporta.
+- **[Effect](/docs/guides/effect).** `@pipedog/effect` ejecuta un pipeline como un recurso con
+  scope, convierte sus frames en un stream y permite escribir processors como Effects.
+
+## En producción
+
+[Nexi Health](https://nexi-health.com), una startup de dispositivos médicos con IA y el principal
+patrocinador de pipedog, lo usa en producción y gestiona con él más de 100 llamadas al día. Para
+ser transparente: es mi empresa, y es el motivo por el que pipedog tenía que funcionar en líneas
+de teléfono reales y no solo en una demo.
+
+## Al día con Pipecat
+
+Un port solo sirve si se mantiene al día. pipedog fija un commit de upstream, y un manifiesto
+registra cada módulo y cada test de upstream: dónde va, de qué depende y en qué estado está. Pasar
+a un commit nuevo (`bun run upstream bump`) lista todos los módulos y tests portados cuyo código ha
+cambiado en upstream y los vuelve a poner en cola; cada uno se porta de nuevo, se revisa contra
+upstream para comprobar que se comporta igual y se prueba con los tests de upstream. La última
+actualización se hizo en siete pull requests. En [Contribuir](/docs/contributing) se explica el
+proceso.
+
+El mérito es de quien es: Pipecat es obra de Daily y tiene licencia BSD-2-Clause, igual que
+pipedog. Si quieres Python, usa Pipecat. Si quieres lo mismo en TypeScript, pipedog pretende
+seguirlo tan de cerca como el lenguaje permita.
+
+## Pruébalo
+
+```bash
+bunx @pipedog/cli init
+```
+
+Esto te genera un proyecto de bot con un runner, los servicios y un cliente web. El
+[quickstart](/docs/quickstart) ejecuta un pipeline sin ninguna API key, y la [página del
+CLI](/docs/cli) explica qué prepara `init`.
+
+El código está en [github.com/polvallverdu/pipedog](https://github.com/polvallverdu/pipedog). Las
+issues, los ports de los módulos que faltan y los avisos de cualquier cosa que se comporte distinto
+que en Pipecat son bienvenidos.
