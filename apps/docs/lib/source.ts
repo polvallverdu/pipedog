@@ -1,6 +1,7 @@
 import { llms, loader } from "fumadocs-core/source";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
-import { docs } from "@/.source/server";
+import { toFumadocsSource } from "fumadocs-mdx/runtime/server";
+import { blogPosts, docs } from "@/.source/server";
 import { docsRoute, markdownPath, siteUrl } from "./shared";
 
 export const source = loader({
@@ -10,6 +11,23 @@ export const source = loader({
 });
 
 export type DocsPage = NonNullable<ReturnType<typeof source.getPage>>;
+
+/** The blog: content/blog, at /blog/<slug>. */
+export const blog = loader({
+  baseUrl: "/blog",
+  source: toFumadocsSource(blogPosts, []),
+});
+
+export type BlogPost = ReturnType<typeof blog.getPages>[number];
+
+/** Posts, newest first; on the same day, English before its translation. */
+export function blogPostsByDate(): BlogPost[] {
+  const langOrder = { en: 0, es: 1 } as const;
+  return [...blog.getPages()].sort(
+    (a, b) =>
+      b.data.date.localeCompare(a.data.date) || langOrder[a.data.lang] - langOrder[b.data.lang],
+  );
+}
 
 /** Absolute URLs for a page: the HTML page and its Markdown. */
 export function pageUrls(page: { url: string }) {

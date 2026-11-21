@@ -13,6 +13,7 @@ export function baseOptions(): BaseLayoutProps {
       { text: "Services", url: "/docs/services" },
       { text: "Performance", url: "/docs/performance" },
       { text: "Roadmap", url: "/docs/roadmap" },
+      { text: "Blog", url: "/blog", active: "nested-url" },
     ],
   };
 }
