@@ -102,7 +102,7 @@ free 10,000 neurons a day, Durable Objects with SQLite storage, and the Rate Lim
    ```
 
 5. **Check the vars** in `wrangler.jsonc`: `FRAME_ANCESTORS` (the docs origin,
-   `https://polvallverdu.github.io`), the budget and session limits.
+   `https://pipedog.polv.dev`), the budget and session limits.
 6. **Deploy:** `bun run deploy` (wrangler builds the page first, then uploads the Worker and the
    page together). The demo is at `https://pipedog-landing-demo.<your-subdomain>.workers.dev`.
    For a custom domain: Workers > the Worker > Settings > Domains & Routes > Add custom domain,

@@ -26,17 +26,21 @@
       "simple": { "limit": 3, "period": 60 }
     }
   ],
+  // Served at <name>.<subdomain>.workers.dev. No per-version preview URLs: the Turnstile widget
+  // allows this one hostname.
+  "workers_dev": true,
+  "preview_urls": false,
   "observability": { "enabled": true },
   "vars": {
     // The kill switch: anything but "true" refuses every session.
     "DEMO_ENABLED": "true",
     // Turnstile's site key (public; the widget's hostname must be this Worker's). Empty: no
     // sessions, except in dev mode.
-    "TURNSTILE_SITE_KEY": "",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAGMLl5OKAdFQoXJK",
     // The API answers the demo's own origin; these too (comma-separated): Vite's dev server.
     "ALLOWED_ORIGINS": "http://localhost:5173",
     // Who may embed the page in an iframe, besides itself (CSP frame-ancestors, comma-separated).
-    "FRAME_ANCESTORS": "https://polvallverdu.github.io,http://localhost:3000",
+    "FRAME_ANCESTORS": "https://pipedog.polv.dev,https://polvallverdu.github.io,http://localhost:3000",
     // The global budget, kept by the DemoBudget Durable Object (UTC days).
     // Sessions at once from one IP, and across everyone (0: no global cap; the daily limits
     // still bound the cost).
