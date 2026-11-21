@@ -1,5 +1,24 @@
 # @pipedog/runner
 
+## 0.11.1
+
+### Patch Changes
+
+- [#110](https://github.com/polvallverdu/pipedog/pull/110) [`ca1bcf4`](https://github.com/polvallverdu/pipedog/commit/ca1bcf4e0fea10bfb5b3a0637c50612a47130006) Thanks [@polvallverdu](https://github.com/polvallverdu)! - The docs moved to https://pipedog.polv.dev. Package READMEs, the CLI's templates, the runner's
+  messages and the MCP server's docs snapshot link there.
+- Updated dependencies [[`ca1bcf4`](https://github.com/polvallverdu/pipedog/commit/ca1bcf4e0fea10bfb5b3a0637c50612a47130006)]:
+  - @pipedog/core@0.11.1
+  - @pipedog/evals@0.11.1
+  - @pipedog/serializer-exotel@0.11.1
+  - @pipedog/serializer-plivo@0.11.1
+  - @pipedog/serializer-telnyx@0.11.1
+  - @pipedog/serializer-twilio@0.11.1
+  - @pipedog/transport-livekit@0.11.1
+  - @pipedog/transport-smallwebrtc@0.11.1
+  - @pipedog/transport-websocket@0.11.1
+  - @pipedog/transport-whatsapp@0.11.1
+  - @pipedog/asyncio@0.11.1
+
 ## 0.11.0
 
 ### Minor Changes

@@ -1,5 +1,14 @@
 # @pipedog/transport-heygen
 
+## 0.11.1
+
+### Patch Changes
+
+- Updated dependencies [[`ca1bcf4`](https://github.com/polvallverdu/pipedog/commit/ca1bcf4e0fea10bfb5b3a0637c50612a47130006)]:
+  - @pipedog/core@0.11.1
+  - @pipedog/heygen@0.11.1
+  - @pipedog/asyncio@0.11.1
+
 ## 0.11.0
 
 ### Patch Changes
