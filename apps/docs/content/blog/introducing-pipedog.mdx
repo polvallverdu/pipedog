@@ -7,10 +7,11 @@ lang: en
 translation: introducing-pipedog-es
 ---
 
-[Pipecat](https://github.com/pipecat-ai/pipecat) is the best open source framework I know for
-real-time voice agents. It's written in Python. pipedog is a port of it to TypeScript: the same
-pipelines, the same frames and the same wire protocols, running on Bun, Node, Deno and Cloudflare
-Workers.
+[Pipecat](https://github.com/pipecat-ai/pipecat) has the right mental model for building voice AI
+agents: frames flowing through a pipeline of processors, with turns, interruptions and services as
+parts you swap. It has proven itself in production, in Python. pipedog is a port of it to
+TypeScript: the same pipelines, the same frames and the same wire protocols, running on Bun, Node,
+Deno and Cloudflare Workers. And the model translates: it works just as well in another language.
 
 It's an unofficial, community port. It isn't affiliated with Daily, the company behind Pipecat, and
 everything good in its design comes from them.
@@ -19,7 +20,7 @@ You can [talk to it on the landing page](/): a voice agent running in a Cloudfla
 
 ## Why port it
 
-I build voice agents for a living, and every project ended up with the same shape: a web app and a
+Every voice agent project I worked on ended up with the same shape: a web app and a
 backend in TypeScript, and a separate Python service for the voice pipeline. Two languages, two
 toolchains, two deploys, and types that stop at the service boundary. pipedog exists to remove
 that split. Three reasons, in order:
@@ -45,7 +46,8 @@ voice UI kit, the prebuilt UIs) talk to a pipedog bot unchanged. If you know Pip
 [guide for coming from Pipecat](/docs/guides/coming-from-pipecat) and a page that lists
 [every difference from upstream](/docs/guides/differences-from-upstream).
 
-Today 643 of Pipecat's 730 upstream modules are ported, across 96 packages: the whole core runtime,
+Today 643 of Pipecat's 730 upstream modules are ported (42 more don't apply to TypeScript and are
+skipped on purpose), across 96 packages: the whole core runtime,
 the LLM, speech-to-text and text-to-speech services, telephony serializers and transports. The
 [porting status page](/docs/contributing/status) is generated from the repository on every docs
 build and shows what's left, package by package, with the runtimes each one runs on.
@@ -67,13 +69,11 @@ That last point is the honest one: in a voice bot, most of the latency you hear 
 speech and LLM providers. What pipedog changes is the floor under them, and how much CPU a server
 spends per call.
 
-I also measured the parts that decide how a phone call sounds, because one of my own Telnyx calls
-sounded worse on pipedog than a similar call on Pipecat. The μ-law encoder matches Pipecat's bit for bit, on
+I also measured the parts that decide how a phone call sounds. The μ-law encoder matches Pipecat's bit for bit, on
 all 65,536 values. The resampler (windowed sinc, compiled to WebAssembly) leaves -85 to -88 dB of
 noise and aliasing against libsoxr's -82 to -83 dB, both far below what you can hear. Pacing sends a
 small message about every 40 ms, against Pipecat's larger one every 120 to 160 ms. Neither drops
-audio with the buffers telephony providers use. So that call came down to configuration, not the
-framework. That's useful to know too.
+audio with the buffers telephony providers use.
 
 ## Voice agents on Cloudflare
 
