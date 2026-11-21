@@ -9,7 +9,8 @@
   // dev and deploy), served by this Worker so it can set the framing headers.
   "build": { "command": "bun run build:web", "watch_dir": "web/src" },
   "assets": { "directory": "./web/build", "binding": "ASSETS", "run_worker_first": true },
-  // Workers AI: Deepgram Flux (speech-to-text and turns) and Aura (speech), through the binding.
+  // Workers AI: Deepgram Nova-3 (speech-to-text), Smart Turn v2 (end of turn) and Aura (speech),
+  // through the binding. Silero VAD runs in the Durable Object; its model is in the assets.
   "ai": { "binding": "AI" },
   "durable_objects": {
     "bindings": [
@@ -47,7 +48,8 @@
     "MAX_CONCURRENT_SESSIONS_PER_IP": "1",
     "MAX_CONCURRENT_SESSIONS": "0",
     // The cost ceiling: estimated spend per UTC month (session minutes × COST_PER_MINUTE_USD).
-    // $0.04/min is above the ~$0.03 Flux + Aura-2 + Haiku 5.5 cost, so the cap trips early.
+    // $0.04/min is above the ~$0.03 Nova-3 + Smart Turn + Aura-2 + Haiku 5.5 cost, so the cap
+    // trips early.
     "MAX_SPEND_USD_PER_MONTH": "500",
     "COST_PER_MINUTE_USD": "0.04",
     // Optional daily caps (0: none).
@@ -57,7 +59,16 @@
     // Each session: hard maximum length, silence before it ends, and user turns.
     "SESSION_MAX_SECS": "120",
     "SESSION_IDLE_SECS": "30",
-    "SESSION_MAX_TURNS": "12"
+    "SESSION_MAX_TURNS": "12",
+    // Turn detection, against background speech (a TV, people nearby): Silero VAD's speech
+    // probability, seconds of speech before the user counts as speaking and of silence before
+    // Smart Turn decides, and the loudness below which nothing is speech (LUFS). Over the bot, a
+    // turn takes this many words that VAD heard.
+    "VAD_CONFIDENCE": "0.75",
+    "VAD_START_SECS": "0.25",
+    "VAD_STOP_SECS": "0.2",
+    "VAD_MIN_VOLUME_DB": "-42",
+    "INTERRUPT_MIN_WORDS": "3"
     // Secrets, set with `wrangler secret put` (or in .dev.vars for local runs):
     // ANTHROPIC_API_KEY, TURNSTILE_SECRET_KEY, SESSION_SIGNING_KEY, and for WebRTC
     // CLOUDFLARE_REALTIME_APP_ID and CLOUDFLARE_REALTIME_APP_SECRET.

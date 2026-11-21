@@ -45,6 +45,12 @@ export interface Env {
   SESSION_MAX_SECS?: string;
   SESSION_IDLE_SECS?: string;
   SESSION_MAX_TURNS?: string;
+  /** Turn detection tuning (see TurnsConfig). */
+  VAD_CONFIDENCE?: string;
+  VAD_START_SECS?: string;
+  VAD_STOP_SECS?: string;
+  VAD_MIN_VOLUME_DB?: string;
+  INTERRUPT_MIN_WORDS?: string;
 
   /** "true" skips Turnstile and honors the test overrides below. Never set it in production. */
   DEMO_DEV_MODE?: string;
@@ -84,6 +90,7 @@ export interface DemoConfig {
   turnstileSiteKey: string | null;
   budget: BudgetLimits;
   session: SessionLimitsConfig;
+  turns: TurnsConfig;
   urls: { [K in keyof typeof DEFAULT_URLS]: string };
 }
 
@@ -98,12 +105,30 @@ export interface BudgetLimits {
   maxMinutesPerDay: number;
   /** Estimated spend per UTC month, in USD; 0 for no cap. */
   maxSpendUsdPerMonth: number;
-  /** What a minute of session costs, for the estimate: Workers AI (Flux, Aura) plus the LLM. */
+  /** What a minute of session costs, for the estimate: Workers AI (Nova-3, Aura) plus the LLM. */
   costPerMinuteUsd: number;
   /** Sessions per IP in IP_WINDOW_SECS. */
   maxSessionsPerIp: number;
   /** The longest a session runs, which a reservation assumes it will. */
   sessionMaxSecs: number;
+}
+
+/**
+ * How the bot tells the user's speech from background sound (a TV, other people), and when the
+ * user may interrupt it. Silero VAD gates on these; while the bot speaks, a turn also needs
+ * `interruptMinWords` transcribed words that VAD heard.
+ */
+export interface TurnsConfig {
+  /** Silero's speech probability needed for a frame to count as speech (core default 0.7). */
+  vadConfidence: number;
+  /** Seconds of speech before the user counts as speaking (core default 0.2). */
+  vadStartSecs: number;
+  /** Seconds of silence before VAD reports the user stopped; Smart Turn then decides. */
+  vadStopSecs: number;
+  /** Loudness below which nothing is speech, in LUFS (core default about -50). */
+  vadMinVolumeDb: number;
+  /** Words the user must say over the bot to interrupt it. */
+  interruptMinWords: number;
 }
 
 export interface SessionLimitsConfig {
@@ -130,6 +155,11 @@ function nonNegativeNumber(value: string | undefined, fallback: number): number 
 function nonNegativeInt(value: string | undefined, fallback: number): number {
   const n = Number.parseInt(value ?? "", 10);
   return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+function number(value: string | undefined, fallback: number): number {
+  const n = Number.parseFloat(value ?? "");
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function list(value: string | undefined): string[] {
@@ -168,6 +198,13 @@ export function readConfig(env: Env): DemoConfig {
       maxSecs: sessionMaxSecs,
       idleSecs: positiveInt(env.SESSION_IDLE_SECS, 30),
       maxTurns: positiveInt(env.SESSION_MAX_TURNS, 12),
+    },
+    turns: {
+      vadConfidence: positiveNumber(env.VAD_CONFIDENCE, 0.75),
+      vadStartSecs: positiveNumber(env.VAD_START_SECS, 0.25),
+      vadStopSecs: positiveNumber(env.VAD_STOP_SECS, 0.2),
+      vadMinVolumeDb: number(env.VAD_MIN_VOLUME_DB, -42),
+      interruptMinWords: positiveInt(env.INTERRUPT_MIN_WORDS, 3),
     },
     urls: {
       turnstileVerify: override(env.TURNSTILE_VERIFY_URL, DEFAULT_URLS.turnstileVerify),

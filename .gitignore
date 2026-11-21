@@ -27,3 +27,6 @@ __pycache__/
 # SvelteKit (examples/landing-demo/web)
 .svelte-kit/
 examples/landing-demo/web/build/
+
+# The Silero model, copied in by examples/landing-demo/scripts/copy-models.ts
+examples/landing-demo/web/static/models/

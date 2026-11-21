@@ -13,7 +13,8 @@ browser ──GET /─┤ the page: web/ (SvelteKit, static assets)    │
    │                    ▼                       ▼
    │             DemoBudget (DO, "global")   DemoSession (DO, one per session)
    │                                            │ transport: WebSocket or Cloudflare Realtime
-   ├── WebSocket (Pipecat protobuf + RTVI) ─────┤ Deepgram Flux on Workers AI (STT + turns)
+   ├── WebSocket (Pipecat protobuf + RTVI) ─────┤ Silero VAD (in the DO), Smart Turn v2 (turns)
+   │                                            │ Deepgram Nova-3 multilingual on Workers AI (STT)
    └── WebRTC ─► Realtime SFU ─► adapters ──────┤ Claude Haiku 5.5 (streamed, tools)
        + RTVI "messages" WebSocket ─────────────┤ Deepgram Aura 2 on Workers AI (speech)
                                                 └ RTVI events: transcripts, tool calls, metrics
@@ -25,8 +26,20 @@ browser ──GET /─┤ the page: web/ (SvelteKit, static assets)    │
   (`@pipedog/transport-cloudflare-realtime`): the SFU's WebSocket adapters carry the audio to the
   Durable Object, and RTVI goes over a separate messages socket. The pipeline is the same on both
   (`startDemoAgent` in `src/bot.ts`); only the transport differs.
-- **Turns.** Deepgram Flux decides when the user's turn ends: no Silero VAD, no Smart Turn, no
-  ONNX in the bundle (about 1 MB gzipped).
+- **Speech to text.** Deepgram Nova-3 on Workers AI with `language: "multi"`: English and Spanish,
+  mixed in one sentence, so an accent or a switch of language doesn't throw it. The bot always
+  answers in English (Aura's voice is English).
+- **Turns.** Silero VAD runs in the Durable Object (onnxruntime-web, about 4.7 MB gzipped for the
+  whole Worker; the model, 2.3 MB, is served from the static assets and read through the `ASSETS`
+  binding, not bundled). Smart Turn v2 on Workers AI decides whether each pause ends the turn.
+  Background speech (a TV, people nearby) shouldn't count as the user:
+  - VAD is stricter than the defaults (`VAD_CONFIDENCE` 0.75, `VAD_START_SECS` 0.25,
+    `VAD_MIN_VOLUME_DB` -42 LUFS, against 0.7, 0.2 and about -50), so quieter or shorter speech
+    isn't the user. `VAD_STOP_SECS` stays at 0.2, short, as Smart Turn wants.
+  - With the bot quiet, VAD starts the turn. Over the bot, it takes `INTERRUPT_MIN_WORDS` (3)
+    transcribed words that VAD heard in the last 1.5 s, and never a backchannel ("okay", "mm-hm",
+    "vale"): a TV's words, with no speech VAD accepted behind them, can't interrupt it.
+  - All five are vars, so they can be tuned without a code change.
 - **LLM.** `claude-haiku-5-5` through `@pipedog/anthropic`, streamed, `max_tokens` 400,
   `output_config.effort: "low"` for latency (Haiku 5.5 thinks adaptively at medium effort by
   default), no `temperature`/`top_p`/`top_k` (the API refuses them since 2026-10-21; the service
@@ -61,8 +74,8 @@ browser ──GET /─┤ the page: web/ (SvelteKit, static assets)    │
   (hashed); the budget object allows `MAX_CONCURRENT_SESSIONS_PER_IP` sessions at once (1) and
   `MAX_SESSIONS_PER_IP` per 10 minutes. The **global budget** is a cost ceiling:
   `MAX_SPEND_USD_PER_MONTH` ($500 by default) of estimated spend per UTC month, at
-  `COST_PER_MINUTE_USD` per session minute ($0.04, above the ~$0.03 that Flux, Aura-2 and Haiku
-  5.5 cost), counting running sessions at their full length so it can't be overrun. Optional:
+  `COST_PER_MINUTE_USD` per session minute ($0.04, above the ~$0.03 that Nova-3, Smart Turn,
+  Aura-2 and Haiku 5.5 cost), counting running sessions at their full length so it can't be overrun. Optional:
   sessions and minutes per UTC day (`MAX_SESSIONS_PER_DAY`, `MAX_MINUTES_PER_DAY`) and sessions
   at once across everyone (`MAX_CONCURRENT_SESSIONS`); all 0 (no cap) by default. The estimate
   is not your bill: also set a spending alert in the Cloudflare and Anthropic dashboards. Refusals come
@@ -79,8 +92,9 @@ browser ──GET /─┤ the page: web/ (SvelteKit, static assets)    │
 
 ## Deploy it
 
-You need a Cloudflare account on **Workers Paid** ($5/month): Flux and Aura beyond Workers AI's
-free 10,000 neurons a day, Durable Objects with SQLite storage, and the Rate Limiting binding.
+You need a Cloudflare account on **Workers Paid** ($5/month): Nova-3, Smart Turn and Aura beyond
+Workers AI's free 10,000 neurons a day, a Worker over the free plan's 3 MB (onnxruntime-web),
+Durable Objects with SQLite storage, and the Rate Limiting binding.
 
 1. **Log in:** `bunx wrangler login` (from `examples/landing-demo`).
 2. **Turnstile:** Dashboard > Turnstile > Add widget. Hostname: the demo's domain (the
@@ -126,7 +140,8 @@ A full two-minute call, at current list prices:
 
 | | Usage | Cost |
 | --- | --- | --- |
-| Flux (STT) | 2 audio minutes × $0.0077 | $0.015 |
+| Nova-3 (STT, WebSocket) | 2 audio minutes × $0.0092 | $0.018 |
+| Smart Turn v2 | a few seconds of audio per turn × $0.000338 / min | < $0.001 |
 | Aura 2 (TTS) | ~1,400 characters spoken × $0.030 / 1k | $0.042 |
 | Claude Haiku 5.5 | ~10 requests: ~15k input tokens, mostly cache reads, ~700 output | < $0.002 |
 | Durable Object | 128 MB × 120 s, plus requests | < $0.001 |
@@ -145,7 +160,8 @@ bun install
 bun run --cwd examples/landing-demo dev:fakes   # http://127.0.0.1:8787
 ```
 
-Press the mic: a scripted user asks about the weather, the data centre and the docs. For hot
+Press the mic and say anything: each thing you say is transcribed as the next scripted question
+(about the weather, the data centre and the docs). Silero VAD runs for real on your microphone. For hot
 reload on the page, also run `bun run --cwd examples/landing-demo dev:web` and open
 http://localhost:5173 (it proxies `/api` to 8787).
 
@@ -164,20 +180,24 @@ bun run --cwd examples/landing-demo/web check   # svelte-check
   Turnstile, the config, the budget (concurrency, daily sessions and minutes, per-IP window,
   stale sessions), the session limits, every tool (Open-Meteo and `llms.txt` faked), the colo
   lookup.
-- `test/e2e.test.ts`: `wrangler dev` with the fakes (`test/fakes.ts`: Workers AI's Flux and Aura
-  through a stand-in binding, the Anthropic API, Open-Meteo, `llms.txt`, `/cdn-cgi/trace`,
-  siteverify), a scripted client speaking what Pipecat's client puts on the wire. It checks the
+- `test/turns.test.ts`: the turn detection settings, and that a TV (words with no VAD speech
+  behind them), a backchannel or two words over the bot don't interrupt it, while three do.
+- `test/e2e.test.ts`: `wrangler dev` with the fakes (`test/fakes.ts`: Workers AI's Nova-3, Smart
+  Turn and Aura through a stand-in binding, the Anthropic API, Open-Meteo, `llms.txt`, `/cdn-cgi/trace`,
+  siteverify), a scripted client speaking what Pipecat's client puts on the wire, with a recorded
+  question as the microphone, so Silero VAD really runs. It checks the
   transcript, the tool call and its result, the reply, the metrics and latency, the data centres,
   a refusal, `end_call`, and what was sent to Claude; the same session over WebRTC against a fake
   SFU (`examples/workers-realtime-voice-agent/test/fake_sfu.ts`), with its tokens and its
   cleanup; tickets (missing, forged, foreign, reused), origins, the rate limit, WebRTC without
   credentials, the kill switch.
-- `test/browser.test.ts`: the real page in Chromium against the fakes (WebSocket).
+- `test/browser.test.ts`: the real page in Chromium against the fakes (WebSocket), with the
+  recorded question as Chromium's fake microphone.
 - `test/live.test.ts`: real Workers AI and Claude; runs only with `ANTHROPIC_API_KEY`,
   `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` set.
 
-Not verified against the real services (no credentials were available): Flux and Aura through
-the real AI binding, `/cdn-cgi/trace` from a Durable Object (if it fails, the bot's colo shows as
+Not verified against the real services: Nova-3 multilingual and Smart Turn through the real AI
+binding, `/cdn-cgi/trace` from a Durable Object (if it fails, the bot's colo shows as
 unknown), Turnstile live, and the WebRTC path against the real Realtime SFU.
 
 ## Files
@@ -186,9 +206,10 @@ unknown), Turnstile live, and the WebRTC path against the real Realtime SFU.
 - `src/session.ts`: `DemoSession`, the Durable Object per session (both transports, Realtime
   signaling, tokens, cleanup).
 - `src/budget.ts`, `src/ledger.ts`: `DemoBudget` and its bookkeeping.
-- `src/bot.ts`: the pipeline; `src/tools.ts`: the tools; `src/limits.ts`: session caps;
-  `src/latency.ts`: voice-to-voice latency without a VAD; `src/security.ts`: tickets, origins,
-  Turnstile; `src/colo.ts`: the Durable Object's data centre; `src/config.ts`: the environment.
+- `src/bot.ts`: the pipeline and its turn detection; `src/tools.ts`: the tools; `src/limits.ts`:
+  session caps; `src/security.ts`: tickets, origins, Turnstile; `src/colo.ts`: the Durable
+  Object's data centre; `src/config.ts`: the environment.
+- `scripts/copy-models.ts`: copies Silero's model into the page's static assets before the build.
 - `web/`: the page (SvelteKit, Svelte 5), with `src/lib/demo.svelte.ts` (state, both
   transports) and `src/lib/rtc.ts` (the WebRTC client).
 - `test/`: tests, fakes, and `dev_fakes.ts`.

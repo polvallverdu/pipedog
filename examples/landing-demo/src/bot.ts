@@ -5,7 +5,9 @@
 //
 //   browser (Pipecat client) ──protobuf──► FastAPIWebsocketTransport
 //   browser ──WebRTC──► Cloudflare Realtime ──adapters──► CloudflareRealtimeTransport
-//     → Deepgram Flux on Workers AI (transcripts and turn detection; no VAD, no Smart Turn)
+//     → Silero VAD in the Durable Object (who is speaking, and when they stop)
+//     → Deepgram Nova-3 on Workers AI, multilingual (transcripts; English and Spanish, mixed)
+//     → Smart Turn v2 on Workers AI (whether a pause ends the user's turn)
 //     → Claude Haiku 5.5 (streamed, with tools)
 //     → Deepgram Aura on Workers AI (speech)
 //     → back to the browser, with RTVI events: transcripts, the bot's text, tool calls, metrics
@@ -16,15 +18,25 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { AnthropicLLMService, AnthropicLLMSettings } from "@pipedog/anthropic/llm";
 import { createTask, monotonic, sleep } from "@pipedog/asyncio";
-import { WorkersAIFluxSTTService } from "@pipedog/cloudflare/flux_stt";
+import { SileroVADAnalyzer } from "@pipedog/audio-silero";
+import type { WorkersAIBinding } from "@pipedog/cloudflare/client";
+import { WorkersAISmartTurnAnalyzer } from "@pipedog/cloudflare/smart_turn";
+import { WorkersAINova3STTService, WorkersAINova3STTSettings } from "@pipedog/cloudflare/stt";
 import { WorkersAIAuraTTSService } from "@pipedog/cloudflare/tts";
 import { ToolsSchema } from "@pipedog/core/adapters/llm/schemas/tools_schema";
+import { VADParams } from "@pipedog/core/audio/vad/vad_analyzer";
 import { EndFrame, TTSSpeakFrame } from "@pipedog/core/frames/frames";
-import type { LatencyBreakdown } from "@pipedog/core/observers/user_bot_latency_observer";
+import {
+  type LatencyBreakdown,
+  UserBotLatencyObserver,
+} from "@pipedog/core/observers/user_bot_latency_observer";
 import { Pipeline } from "@pipedog/core/pipeline/pipeline";
 import { PipelineParams, PipelineWorker } from "@pipedog/core/pipeline/worker";
 import { LLMContext } from "@pipedog/core/processors/aggregators/llm_context";
-import { LLMContextAggregatorPair } from "@pipedog/core/processors/aggregators/llm_response_universal";
+import {
+  LLMContextAggregatorPair,
+  LLMUserAggregatorParams,
+} from "@pipedog/core/processors/aggregators/llm_response_universal";
 import type { ClientMessage } from "@pipedog/core/processors/frameworks/rtvi/models";
 import {
   RTVIFunctionCallReportLevel,
@@ -32,6 +44,10 @@ import {
 } from "@pipedog/core/processors/frameworks/rtvi/observer";
 import type { RTVIProcessor } from "@pipedog/core/processors/frameworks/rtvi/processor";
 import type { BaseTransport } from "@pipedog/core/transports/base_transport";
+import { createBackchannelMatcher } from "@pipedog/core/turns/user_start/backchannel";
+import { MinWordsUserTurnStartStrategy } from "@pipedog/core/turns/user_start/index";
+import { TurnAnalyzerUserTurnStopStrategy } from "@pipedog/core/turns/user_stop/index";
+import { UserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
 import { logger } from "@pipedog/core/utils/logger";
 import { WorkerRunner } from "@pipedog/core/workers/runner";
 import { ProtobufFrameSerializer } from "@pipedog/serializer-protobuf/protobuf";
@@ -42,15 +58,87 @@ import {
 } from "@pipedog/transport-websocket/fastapi";
 import type { WebsocketConnection } from "@pipedog/transport-websocket/socket";
 import { durableObjectColo } from "./colo.ts";
-import { type DemoConfig, type Env, LLM_MAX_TOKENS, LLM_MODEL } from "./config.ts";
+import {
+  type DemoConfig,
+  type Env,
+  LLM_MAX_TOKENS,
+  LLM_MODEL,
+  type TurnsConfig,
+} from "./config.ts";
 import { fakeAiBinding } from "./dev_ai.ts";
-import { TurnEndLatencyObserver } from "./latency.ts";
 import { type EndReason, GOODBYES, SessionLimits, SessionLimitsObserver } from "./limits.ts";
 import { buildTools, type VisitorInfo } from "./tools.ts";
 
 /** The browser sends 16 kHz audio; Aura speaks at 24 kHz. */
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
+
+/** Where the Worker serves Silero's model from its static assets (scripts/copy-models.ts). */
+export const SILERO_MODEL_PATH = "/models/silero_vad.onnx";
+
+/**
+ * While the bot speaks, a transcript counts toward an interruption only if VAD heard the user this
+ * recently. Nova-3's words arrive a few hundred milliseconds after the speech; a TV's words, with
+ * no speech VAD accepted behind them, never qualify.
+ */
+const INTERRUPT_VAD_WINDOW_SECS = 1.5;
+
+let sileroModel: Promise<Uint8Array> | null = null;
+
+/** Silero's model, read once per isolate from the Worker's static assets. */
+function loadSileroModel(assets: Fetcher): Promise<Uint8Array> {
+  if (!sileroModel) {
+    sileroModel = (async () => {
+      const response = await assets.fetch(`https://assets.invalid${SILERO_MODEL_PATH}`);
+      if (!response.ok) throw new Error(`Silero model: HTTP ${response.status}`);
+      return new Uint8Array(await response.arrayBuffer());
+    })();
+    sileroModel.catch(() => {
+      sileroModel = null;
+    });
+  }
+  return sileroModel;
+}
+
+/**
+ * How the user's turns start and end. Silero VAD (gated on confidence, length and loudness, so
+ * quieter background speech isn't the user) starts a turn when the bot is quiet. Over the bot, it
+ * takes `interruptMinWords` transcribed words that VAD heard, and never just "mm-hm" or "okay".
+ * Smart Turn v2 decides whether each pause ends the turn.
+ */
+export function userTurnParams(
+  ai: WorkersAIBinding,
+  model: Uint8Array,
+  turns: TurnsConfig,
+): LLMUserAggregatorParams {
+  return new LLMUserAggregatorParams({
+    vadAnalyzer: new SileroVADAnalyzer({
+      model,
+      params: new VADParams({
+        confidence: turns.vadConfidence,
+        startSecs: turns.vadStartSecs,
+        stopSecs: turns.vadStopSecs,
+        minVolumeDb: turns.vadMinVolumeDb,
+      }),
+    }),
+    userTurnStrategies: new UserTurnStrategies({
+      start: [
+        new MinWordsUserTurnStartStrategy({
+          minWords: turns.interruptMinWords,
+          useInterim: true,
+          startOnVadWhenBotQuiet: true,
+          isBackchannel: createBackchannelMatcher(),
+          requireVadWithinSeconds: INTERRUPT_VAD_WINDOW_SECS,
+        }),
+      ],
+      stop: [
+        new TurnAnalyzerUserTurnStopStrategy({
+          turnAnalyzer: new WorkersAISmartTurnAnalyzer({ ai }),
+        }),
+      ],
+    }),
+  });
+}
 
 /** Seconds after the hard limit at which the session is cut off, goodbye or not. */
 const HARD_STOP_GRACE_SECS = 15;
@@ -64,7 +152,7 @@ export const GREETING =
  */
 export const SYSTEM_PROMPT = `You are the voice of a live demo on the pipedog documentation site. pipedog is an open-source TypeScript port of Pipecat, the framework for real-time voice and multimodal AI agents; it runs on Bun, Node, Deno and Cloudflare Workers, and Pipecat's client SDKs work with it unchanged.
 
-Right now you are pipedog running inside a Cloudflare Durable Object: Deepgram Flux on Workers AI turns the user's speech into text and detects when they finish, you are Claude Haiku, and Deepgram Aura on Workers AI speaks your replies. The user talks to you from the browser, and the page shows your tool calls and live latency numbers next to the conversation.
+Right now you are pipedog running inside a Cloudflare Durable Object: Silero VAD hears when the user speaks, Deepgram Nova-3 on Workers AI turns their speech into text (English and Spanish, even mixed), Smart Turn on Workers AI decides when they have finished, you are Claude Haiku, and Deepgram Aura on Workers AI speaks your replies in English. The user talks to you from the browser, and the page shows your tool calls and live latency numbers next to the conversation.
 
 You already greeted the user with: "${GREETING}"
 
@@ -72,6 +160,7 @@ How to talk:
 - Everything you write is spoken aloud. Answer in one to three short sentences, in plain conversational language. No lists, markdown, emojis, code, or URLs read out character by character; say "it's in the docs under Concepts, Turn detection" instead.
 - Use metric units. Say numbers the way people speak them.
 - If you didn't catch something, ask briefly.
+- Always answer in English, even when the user speaks Spanish or mixes both: you understand them, but your voice only speaks English.
 
 What you can do:
 - Use your tools when they help: get_weather, get_time, where_am_i (which Cloudflare data centres this call goes through), and search_docs for questions about pipedog. Base answers about pipedog on search_docs results, and say when the docs don't cover something.
@@ -163,8 +252,16 @@ async function runDemoAgent(
   // Look it up while the pipeline starts.
   void botColo();
 
-  // Flux owns turn detection: with no VAD analyzer, the user aggregator follows its turn events.
-  const stt = new WorkersAIFluxSTTService({ ai });
+  // Nova-3 transcribes; "multi" is Deepgram's multilingual mode (English and Spanish code-switching).
+  // `language` isn't a Deepgram field, so it stays in `extra`, which overrides the default "en".
+  const stt = new WorkersAINova3STTService({
+    ai,
+    settings: new WorkersAINova3STTSettings({
+      smartFormat: true,
+      punctuate: true,
+      extra: { language: "multi" },
+    }),
+  });
 
   let endSession: (reason: EndReason) => Promise<void> = async () => {};
 
@@ -176,7 +273,9 @@ async function runDemoAgent(
     endCall: () => endSession("goodbye"),
   });
   const context = new LLMContext({ tools: new ToolsSchema({ standardTools: tools }) });
-  const aggregators = new LLMContextAggregatorPair(context);
+  const aggregators = new LLMContextAggregatorPair(context, {
+    userParams: userTurnParams(ai, await loadSileroModel(env.ASSETS), config.turns),
+  });
 
   const llm = new DemoAnthropicLLMService({
     apiKey: env.ANTHROPIC_API_KEY,
@@ -213,7 +312,9 @@ async function runDemoAgent(
   ]);
 
   const limits = new SessionLimits(config.session, monotonic());
-  const latency = new TurnEndLatencyObserver();
+  // Voice-to-voice latency: from when the user stopped speaking (VAD, minus its stop delay) to
+  // the bot's first audio. Smart Turn's decision is inside it.
+  const latency = new UserBotLatencyObserver();
   const limitsObserver = new SessionLimitsObserver(limits, monotonic, (reason) =>
     endSession(reason),
   );
@@ -262,7 +363,8 @@ async function runDemoAgent(
         max_turns: config.session.maxTurns,
       },
       services: {
-        stt: "Deepgram Flux (Workers AI)",
+        stt: "Deepgram Nova-3 multilingual (Workers AI)",
+        turns: "Silero VAD + Smart Turn v2 (Workers AI)",
         llm: LLM_MODEL,
         tts: "Deepgram Aura 2 (Workers AI)",
       },

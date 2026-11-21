@@ -108,7 +108,7 @@ const micDisabled = $derived(
   <title>Talk to pipedog · live voice demo</title>
   <meta
     name="description"
-    content="A voice agent built with pipedog, running entirely on Cloudflare: Workers, Durable Objects, Workers AI (Deepgram Flux and Aura) and Claude Haiku."
+    content="A voice agent built with pipedog, running entirely on Cloudflare: Workers, Durable Objects, Workers AI (Deepgram Nova-3, Smart Turn and Aura) and Claude Haiku."
   />
 </svelte:head>
 
@@ -122,7 +122,8 @@ const micDisabled = $derived(
       <h1>Talk to a voice agent <span class="grad">running on Cloudflare.</span></h1>
       <p>
         A <a href="https://github.com/polvallverdu/pipedog">pipedog</a> bot in a Durable Object: Deepgram
-        Flux and Aura on Workers AI, Claude Haiku 5.5 with tools, and Pipecat's own browser client.
+        Nova-3, Smart Turn and Aura on Workers AI, Silero VAD, Claude Haiku 5.5 with tools, and
+        Pipecat's own browser client.
       </p>
     </header>
   {/if}
@@ -197,7 +198,8 @@ const micDisabled = $derived(
         {/if}
 
         <ul class="stack">
-          <li><span>STT</span> Deepgram Flux</li>
+          <li><span>STT</span> Deepgram Nova-3, multilingual</li>
+          <li><span>Turns</span> Silero VAD + Smart Turn v2</li>
           <li><span>LLM</span> Claude Haiku 5.5</li>
           <li><span>TTS</span> Deepgram Aura 2</li>
           <li><span>Run</span> Durable Object</li>

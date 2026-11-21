@@ -154,9 +154,9 @@ export default function HomePage() {
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <SectionHeading eyebrow="Live demo" title="Talk to a pipedog agent." />
           <p className="max-w-md text-sm text-fd-muted-foreground">
-            Running entirely on Cloudflare: a Durable Object per call, Deepgram Flux and Aura on
-            Workers AI, Claude Haiku 5.5 with tools. Over a WebSocket with Pipecat's own client, or
-            WebRTC through Cloudflare Realtime.
+            Running entirely on Cloudflare: a Durable Object per call with Silero VAD, Deepgram
+            Nova-3, Smart Turn and Aura on Workers AI, Claude Haiku 5.5 with tools. Over a WebSocket
+            with Pipecat's own client, or WebRTC through Cloudflare Realtime.
           </p>
         </div>
         <LiveDemo />

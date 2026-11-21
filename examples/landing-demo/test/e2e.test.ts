@@ -14,11 +14,19 @@
 // (test/browser.test.ts drives the real page in Chromium.)
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { websocketConnect } from "@pipedog/transport-websocket/socket";
-import { type FakeSfu, startFakeSfu } from "../../workers-realtime-voice-agent/test/fake_sfu.ts";
-import { type Fakes, fakeVars, startFakes } from "./fakes.ts";
-import { connectBrowser, type RtviMessage } from "./rtvi_client.ts";
+import { wavToPcm16k } from "../../workers-durable-voice-agent/client/wav.ts";
 import {
+  type FakeSfu,
+  startFakeSfu,
+  wavTo48kStereo,
+} from "../../workers-realtime-voice-agent/test/fake_sfu.ts";
+import { type Fakes, fakeVars, startFakes } from "./fakes.ts";
+import { connectBrowser, type RtviMessage, type ScriptedBrowser } from "./rtvi_client.ts";
+import {
+  EXAMPLE,
   printProblems,
   STARTUP_TIMEOUT,
   startWranglerDev,
@@ -26,6 +34,13 @@ import {
 } from "./wrangler_dev.ts";
 
 const ORIGIN = "http://localhost:3000";
+
+// Real speech, so Silero VAD in the Worker hears the user (the fake Nova-3 transcribes each stretch
+// of it as the next scripted turn). About two seconds, then silence.
+const QUESTION_WAV = readFileSync(
+  join(EXAMPLE, "..", "test-mocks", "assets", "capital_question.wav"),
+);
+const SPEECH_16K = wavToPcm16k(QUESTION_WAV);
 
 let fakes: Fakes;
 let sfu: FakeSfu;
@@ -53,6 +68,20 @@ async function until(check: () => boolean, ms: number, what: string): Promise<vo
   }
 }
 
+/** Whether the bot is quiet: its last speaking event, if any, was `bot-stopped-speaking`. */
+function botQuiet(browser: ScriptedBrowser): boolean {
+  const events = browser.messages.filter(
+    (m) => m.type === "bot-started-speaking" || m.type === "bot-stopped-speaking",
+  );
+  return events.at(-1)?.type === "bot-stopped-speaking";
+}
+
+/** Once `ready()` holds and the bot is quiet, say the next turn. */
+async function speakWhenQuiet(browser: ScriptedBrowser, ready: () => boolean, what: string) {
+  await until(() => ready() && botQuiet(browser), 30_000, what);
+  await browser.speak(SPEECH_16K);
+}
+
 /** Try to open a session socket; resolve with the HTTP status of a refused upgrade, or 101. */
 async function upgradeStatus(url: string, origin = ORIGIN): Promise<number> {
   const response = await fetch(url.replace(/^ws/, "http"), {
@@ -71,7 +100,6 @@ async function upgradeStatus(url: string, origin = ORIGIN): Promise<number> {
 beforeAll(async () => {
   fakes = startFakes({
     turns: ["What's the weather in Paris?", "Tell me something dangerous.", "Thanks, bye!"],
-    turnEvery: 120,
   });
   sfu = startFakeSfu();
   worker = await startWranglerDev({
@@ -166,7 +194,12 @@ test("a session: transcript, tool call, reply, metrics, latency and data centres
     const pong = await browser.request("ping", { t: 1 });
     expect(pong.data.d.pong).toBe(true);
 
-    // The user's turn, interim then final.
+    // The user asks, once the greeting is over; their turn, interim then final.
+    await speakWhenQuiet(
+      browser,
+      () => fakes.spoken.some((t) => t.includes("voice agent")),
+      "the greeting",
+    );
     const final = await browser.waitFor(
       (m) => m.type === "user-transcription" && m.data?.final === true,
       45_000,
@@ -205,14 +238,28 @@ test("a session: transcript, tool call, reply, metrics, latency and data centres
     expect(latency.data.seconds).toBeGreaterThan(0);
     expect(latency.data.seconds).toBeLessThan(20);
 
+    // Silero heard the user, and Smart Turn decided their turn was over.
+    expect(fakes.smartTurnRequests).toBeGreaterThan(0);
+    expect(ttfb.some((p) => p.includes("Nova3"))).toBe(true);
+
     // Claude declines the second request (stop_reason "refusal"): the bot says so, and the page
     // is told what it said.
+    await speakWhenQuiet(
+      browser,
+      () => fakes.spoken.join(" ").includes("18 degrees"),
+      "the answer",
+    );
     const refusal = await browser.waitFor(
       (m) => isServer("bot-speech")(m) && m.data.kind === "refusal",
       30_000,
     );
     expect(refusal.data.text).toContain("can't help with that");
 
+    await speakWhenQuiet(
+      browser,
+      () => fakes.spoken.join(" ").includes("can't help with that"),
+      "the refusal",
+    );
     // "Thanks, bye!": Claude calls end_call, the bot says goodbye and the session ends.
     const ending = await browser.waitFor(isServer("session-ending"), 30_000);
     expect(ending.data.reason).toBe("goodbye");
@@ -322,8 +369,8 @@ test("the same session over WebRTC, through a fake Cloudflare Realtime SFU", asy
   );
   await until(() => messages.some((m) => m.type === "bot-ready"), 15_000, "bot-ready");
   await until(() => sfu.botSpeechBytes() > 0, 20_000, "the greeting on the bot's track");
-  // The microphone: silence, which the fake Flux turns into the scripted turns.
-  const speaking = sfu.speak(new Uint8Array(48000 * 4 * 8));
+  // The microphone: the question, which Silero hears and the fake Nova-3 transcribes.
+  const speaking = sfu.speak(wavTo48kStereo(QUESTION_WAV));
   await until(
     () => messages.some((m) => m.type === "llm-function-call-stopped"),
     30_000,

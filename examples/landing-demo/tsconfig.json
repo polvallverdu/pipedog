@@ -9,8 +9,10 @@
   "references": [
     { "path": "../../packages/anthropic" },
     { "path": "../../packages/asyncio" },
+    { "path": "../../packages/audio-silero" },
     { "path": "../../packages/cloudflare" },
     { "path": "../../packages/core" },
+    { "path": "../../packages/onnx" },
     { "path": "../../packages/serializer-protobuf" },
     { "path": "../../packages/transport-cloudflare-realtime" },
     { "path": "../../packages/transport-websocket" }
