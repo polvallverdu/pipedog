@@ -20,10 +20,13 @@ You can [talk to it on the landing page](/): a voice agent running in a Cloudfla
 
 ## Why port it
 
-Every voice agent project I worked on ended up with the same shape: a web app and a
-backend in TypeScript, and a separate Python service for the voice pipeline. Two languages, two
-toolchains, two deploys, and types that stop at the service boundary. pipedog exists to remove
-that split. Three reasons, in order:
+At Nexi Health, our agent (its tools, its business logic) lives in a TypeScript service, in a
+TypeScript monorepo. Voice ran on Pipecat, so we deployed a whole separate Python service just for
+the pipeline, and it talked to the TypeScript service over a private API to reach the agent. It
+worked, and it was a pain: an extra service to deploy and keep alive, an internal API to maintain
+between the two, and a Python project inside a TypeScript monorepo, with two toolchains, two
+dependency systems, two CI setups, and types that stop at the service boundary. pipedog exists to
+remove that split. Three reasons, in order:
 
 - **One language across the stack.** The bot, the backend and the web client share types and a
   toolchain. There's no extra service to run.

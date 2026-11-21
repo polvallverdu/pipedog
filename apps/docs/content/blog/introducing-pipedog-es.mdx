@@ -22,10 +22,14 @@ de Cloudflare.
 
 ## Por qué portarlo
 
-Todos los proyectos de agentes de voz en los que he trabajado acababan igual: una web y un backend en
-TypeScript, y aparte un servicio en Python para el pipeline de voz. Dos lenguajes, dos toolchains,
-dos despliegues, y unos tipos que se quedan en la frontera entre servicios. pipedog existe para
-quitar esa división. Por tres motivos, por este orden:
+En Nexi Health, nuestro agente (sus herramientas, su lógica de negocio) vive en un servicio de
+TypeScript, dentro de un monorepo de TypeScript. La voz iba con Pipecat, así que desplegábamos un
+servicio de Python entero solo para el pipeline, que hablaba con el de TypeScript por una API
+privada para llegar al agente. Funcionaba, pero era un dolor de cabeza: un servicio más que
+desplegar y mantener vivo, una API interna que mantener entre los dos, y un proyecto de Python
+metido en un monorepo de TypeScript, con dos toolchains, dos sistemas de dependencias, dos CI y
+unos tipos que se quedan en la frontera entre servicios. pipedog existe para quitar esa división.
+Por tres motivos, por este orden:
 
 - **Un solo lenguaje en todo el stack.** El bot, el backend y el cliente web comparten tipos y
   toolchain. No hay un servicio más que mantener.
