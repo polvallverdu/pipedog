@@ -3,6 +3,7 @@ import { RootProvider } from "fumadocs-ui/provider/next";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
+import { Analytics } from "@/components/analytics";
 import "./global.css";
 
 // Self-hosted by next/font at build time: no request to Google from the browser.
@@ -35,6 +36,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </Banner>
           {children}
         </RootProvider>
+        <Analytics />
       </body>
     </html>
   );
