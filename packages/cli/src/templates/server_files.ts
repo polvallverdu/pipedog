@@ -219,7 +219,7 @@ export function renderEvalScenario(config: ProjectConfig): string {
 #
 # \`eval:\` criteria are scored by a judge LLM, by default a local Ollama
 # (\`ollama pull gemma4:12b\`). To judge with another model, point \`factory:\` at a module of yours
-# that returns the LLM service (see https://polvallverdu.github.io/pipedog/docs/evals):
+# that returns the LLM service (see https://pipedog.polv.dev/docs/evals):
 #
 #   judge:
 #     eval:

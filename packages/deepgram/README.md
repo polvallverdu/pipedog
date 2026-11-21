@@ -37,12 +37,12 @@ analyzer and nothing runs locally.
 Bun, Node.js 22+, Deno and Cloudflare Workers.
 
 Not every upstream Deepgram module is ported yet (for example the SageMaker variants); see
-[porting status](https://polvallverdu.github.io/pipedog/docs/contributing/status/).
+[porting status](https://pipedog.polv.dev/docs/contributing/status/).
 
 ## Links
 
-- Docs: [turn detection](https://polvallverdu.github.io/pipedog/docs/turn-detection/),
-  [voice bot guide](https://polvallverdu.github.io/pipedog/docs/voice-bot/)
+- Docs: [turn detection](https://pipedog.polv.dev/docs/turn-detection/),
+  [voice bot guide](https://pipedog.polv.dev/docs/voice-bot/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

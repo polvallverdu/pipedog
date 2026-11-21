@@ -66,8 +66,8 @@ Deprecated upstream APIs are not ported (`AssemblyAIConnectionParams`, the `lang
 
 ## Links
 
-- Docs: [AssemblyAI STT](https://polvallverdu.github.io/pipedog/docs/services/stt/assemblyai/),
-  [AssemblyAI TTS](https://polvallverdu.github.io/pipedog/docs/services/tts/assemblyai/)
+- Docs: [AssemblyAI STT](https://pipedog.polv.dev/docs/services/stt/assemblyai/),
+  [AssemblyAI TTS](https://pipedog.polv.dev/docs/services/tts/assemblyai/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

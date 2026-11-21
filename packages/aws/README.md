@@ -83,12 +83,12 @@ every runtime, checks SigV4 against an AWS test vector, and constructs the other
 
 ## Links
 
-- Docs: [Bedrock](https://polvallverdu.github.io/pipedog/docs/services/llm/aws/),
-  [AgentCore](https://polvallverdu.github.io/pipedog/docs/services/llm/aws-agentcore/),
-  [Transcribe](https://polvallverdu.github.io/pipedog/docs/services/stt/aws/),
-  [Polly](https://polvallverdu.github.io/pipedog/docs/services/tts/aws/),
-  [Nova Sonic](https://polvallverdu.github.io/pipedog/docs/services/s2s/aws/),
-  [SageMaker](https://polvallverdu.github.io/pipedog/docs/services/stt/aws-sagemaker/)
+- Docs: [Bedrock](https://pipedog.polv.dev/docs/services/llm/aws/),
+  [AgentCore](https://pipedog.polv.dev/docs/services/llm/aws-agentcore/),
+  [Transcribe](https://pipedog.polv.dev/docs/services/stt/aws/),
+  [Polly](https://pipedog.polv.dev/docs/services/tts/aws/),
+  [Nova Sonic](https://pipedog.polv.dev/docs/services/s2s/aws/),
+  [SageMaker](https://pipedog.polv.dev/docs/services/stt/aws-sagemaker/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

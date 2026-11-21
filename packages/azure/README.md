@@ -48,12 +48,12 @@ The WebSocket services send their key in a header, so they are meant for servers
 
 ## Links
 
-- Docs: [Azure OpenAI](https://polvallverdu.github.io/pipedog/docs/services/llm/azure/),
-  [Azure Speech STT](https://polvallverdu.github.io/pipedog/docs/services/stt/azure/),
-  [Azure Speech TTS](https://polvallverdu.github.io/pipedog/docs/services/tts/azure/),
-  [Azure OpenAI Realtime](https://polvallverdu.github.io/pipedog/docs/services/s2s/azure-realtime/),
-  [Azure Voice Live](https://polvallverdu.github.io/pipedog/docs/services/s2s/azure-voice-live/),
-  [image generation](https://polvallverdu.github.io/pipedog/docs/services/image/azure/)
+- Docs: [Azure OpenAI](https://pipedog.polv.dev/docs/services/llm/azure/),
+  [Azure Speech STT](https://pipedog.polv.dev/docs/services/stt/azure/),
+  [Azure Speech TTS](https://pipedog.polv.dev/docs/services/tts/azure/),
+  [Azure OpenAI Realtime](https://pipedog.polv.dev/docs/services/s2s/azure-realtime/),
+  [Azure Voice Live](https://pipedog.polv.dev/docs/services/s2s/azure-voice-live/),
+  [image generation](https://pipedog.polv.dev/docs/services/image/azure/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

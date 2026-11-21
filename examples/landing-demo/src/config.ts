@@ -67,7 +67,7 @@ export const DEFAULT_URLS = {
   turnstileVerify: "https://challenges.cloudflare.com/turnstile/v0/siteverify",
   geocoding: "https://geocoding-api.open-meteo.com/v1/search",
   forecast: "https://api.open-meteo.com/v1/forecast",
-  docsIndex: "https://polvallverdu.github.io/pipedog/llms.txt",
+  docsIndex: "https://pipedog.polv.dev/llms.txt",
   trace: "https://www.cloudflare.com/cdn-cgi/trace",
 } as const;
 

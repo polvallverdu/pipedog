@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 
 /** The docs site the snapshot and live mode read from. */
-export const DEFAULT_SITE_URL = "https://polvallverdu.github.io/pipedog";
+export const DEFAULT_SITE_URL = "https://pipedog.polv.dev";
 
 /** The snapshot bundled with the package (`snapshot/docs.json`, next to `src/` and `dist/`). */
 export const BUNDLED_SNAPSHOT_URL = new URL("../snapshot/docs.json", import.meta.url);

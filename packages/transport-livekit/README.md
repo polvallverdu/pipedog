@@ -47,7 +47,7 @@ const transport = new LiveKitTransport({
 With the development runner, `bun bot.ts -t livekit` mints the tokens for each `/start` and
 `createTransport()` builds the transport.
 
-Docs: [LiveKit](https://polvallverdu.github.io/pipedog/docs/transports/livekit/).
+Docs: [LiveKit](https://pipedog.polv.dev/docs/transports/livekit/).
 
 ## Differences from upstream
 

@@ -19,7 +19,7 @@ import {
 export const DEFAULT_LIVE_TIMEOUT_MS = 10_000;
 
 export interface LiveOptions {
-  /** The docs site, e.g. `https://polvallverdu.github.io/pipedog`. */
+  /** The docs site, e.g. `https://pipedog.polv.dev`. */
   siteUrl?: string;
   /** For both requests together. */
   timeoutMs?: number;

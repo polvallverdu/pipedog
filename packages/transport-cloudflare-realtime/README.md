@@ -64,7 +64,7 @@ return transport.acceptSocket("input", request); // or "output", or "messages" f
 
 See [`examples/workers-realtime-voice-agent`](../../examples/workers-realtime-voice-agent) for a
 complete Worker, Durable Object and browser page, and the
-[docs page](https://polvallverdu.github.io/pipedog/docs/transports/cloudflare-realtime/).
+[docs page](https://pipedog.polv.dev/docs/transports/cloudflare-realtime/).
 
 ## Events
 

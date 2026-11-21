@@ -10,7 +10,7 @@
  *
  * Options (or environment variables):
  *   --live                PIPEDOG_MCP_LIVE=1        fetch the docs from the site
- *   --docs-url <url>      PIPEDOG_DOCS_URL          the site (default https://polvallverdu.github.io/pipedog)
+ *   --docs-url <url>      PIPEDOG_DOCS_URL          the site (default https://pipedog.polv.dev)
  *   --timeout <ms>        PIPEDOG_MCP_TIMEOUT_MS    live mode's timeout (default 10000)
  *   --snapshot <file>     PIPEDOG_MCP_SNAPSHOT      a docs snapshot other than the bundled one
  */

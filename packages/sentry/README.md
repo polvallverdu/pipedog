@@ -32,7 +32,7 @@ Verified with `@sentry/core` (which every Sentry JS SDK re-exports) and a record
 Workers, `@sentry/cloudflare` needs the Worker wrapped with `withSentry` or its Vite plugin; create
 `SentryMetrics` inside the request. Not run against Sentry's servers or the platform SDKs.
 
-See [Sentry metrics](https://polvallverdu.github.io/pipedog/docs/concepts/sentry-metrics/) for
+See [Sentry metrics](https://pipedog.polv.dev/docs/concepts/sentry-metrics/) for
 the Workers details and the differences from upstream (`traceLifecycle: "static"`, the SDK passed in).
 
 ## License

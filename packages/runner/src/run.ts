@@ -855,7 +855,7 @@ export function _formatDevRunnerBanner(): string {
     "PIPEDOG DEVELOPMENT RUNNER",
     "",
     "Learn about running bots locally and in production:",
-    "https://polvallverdu.github.io/pipedog/docs/runner",
+    "https://pipedog.polv.dev/docs/runner",
   ];
   const width = Math.max(...lines.map(_displayWidth));
   const out = ["", _styleBannerLine(`╭${"─".repeat(width + 2)}╮`)];

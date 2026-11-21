@@ -31,11 +31,11 @@ servers the first time.) For another agent, or to add it for every project:
 claude mcp add pipedog -- npx -y @pipedog/mcp        # Claude Code, for you
 ```
 
-and see https://polvallverdu.github.io/pipedog/docs/guides/llms for Windsurf and others.
+and see https://pipedog.polv.dev/docs/guides/llms for Windsurf and others.
 The server needs Node.js 20 or later (`npx`). Pin it to your pipedog version
 (`npx -y @pipedog/mcp@<version>`) so its docs match the packages you install.
 
-Without MCP, point your agent at https://polvallverdu.github.io/pipedog/llms.txt:
+Without MCP, point your agent at https://pipedog.polv.dev/llms.txt:
 the docs index, with a Markdown version of every page.
 
 ## Your first prompt: write a spec, not a wish
@@ -111,4 +111,4 @@ after any change "run the evals" is a fair ask.
 
 ## Learn more
 
-Docs, quickstart, and the full API reference: https://polvallverdu.github.io/pipedog
+Docs, quickstart, and the full API reference: https://pipedog.polv.dev

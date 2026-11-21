@@ -486,7 +486,7 @@ export class TransportNotPortedError extends Error {
     super(
       `The ${transport} transport (${upstreamModule}) is not ported to pipedog yet. ` +
         "Use webrtc, websocket or a telephony transport (twilio, telnyx, plivo, exotel). " +
-        "See https://polvallverdu.github.io/pipedog/docs/roadmap.",
+        "See https://pipedog.polv.dev/docs/roadmap.",
     );
     this.transport = transport;
   }

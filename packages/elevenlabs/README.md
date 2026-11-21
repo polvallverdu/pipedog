@@ -35,8 +35,8 @@ Bun, Node.js 22+, Deno and Cloudflare Workers.
 
 ## Links
 
-- Docs: [voice bot guide](https://polvallverdu.github.io/pipedog/docs/voice-bot/) (swap the TTS),
-  [coming from Pipecat](https://polvallverdu.github.io/pipedog/docs/coming-from-pipecat/)
+- Docs: [voice bot guide](https://pipedog.polv.dev/docs/voice-bot/) (swap the TTS),
+  [coming from Pipecat](https://pipedog.polv.dev/docs/coming-from-pipecat/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

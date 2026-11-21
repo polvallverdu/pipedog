@@ -35,7 +35,7 @@ Bun, Node.js 22+, Deno and Cloudflare Workers: the client talks through `fetch`.
 
 ## Links
 
-- Docs: [Qwen](https://polvallverdu.github.io/pipedog/docs/services/llm/qwen/)
+- Docs: [Qwen](https://pipedog.polv.dev/docs/services/llm/qwen/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

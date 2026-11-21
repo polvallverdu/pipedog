@@ -64,7 +64,7 @@ the recorded question into two sessions at once and checks that each session get
 
 To run the same test on [OpenOrange](https://openorange.dev/) (the Worker on Node.js, each Durable
 Object a Rivet Actor), set `WORKER_RUNTIME=openorange`, and `ORANGE_BIN` if `orange` isn't on your
-PATH. See [OpenOrange](https://polvallverdu.github.io/pipedog/docs/deployment/openorange/).
+PATH. See [OpenOrange](https://pipedog.polv.dev/docs/deployment/openorange/).
 
 ## Files
 

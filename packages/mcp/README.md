@@ -57,7 +57,7 @@ package is released at one version, so `@pipedog/mcp@<version>` describes pipedo
 | Option | Environment variable | |
 |---|---|---|
 | `--live` | `PIPEDOG_MCP_LIVE=1` | Read the current docs from the site; falls back to the bundled ones. |
-| `--docs-url <url>` | `PIPEDOG_DOCS_URL` | The site for `--live` (default `https://polvallverdu.github.io/pipedog`). |
+| `--docs-url <url>` | `PIPEDOG_DOCS_URL` | The site for `--live` (default `https://pipedog.polv.dev`). |
 | `--timeout <ms>` | `PIPEDOG_MCP_TIMEOUT_MS` | How long `--live` waits (default 10000). |
 | `--snapshot <file>` | `PIPEDOG_MCP_SNAPSHOT` | A docs snapshot other than the bundled one. |
 
@@ -74,7 +74,7 @@ The tests make their own snapshot, building the docs first if needed.
 
 ## Links
 
-- Docs: [docs for AI tools](https://polvallverdu.github.io/pipedog/docs/guides/llms/)
+- Docs: [docs for AI tools](https://pipedog.polv.dev/docs/guides/llms/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, part of pipedog, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE). The bundled docs are

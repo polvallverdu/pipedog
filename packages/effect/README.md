@@ -56,7 +56,7 @@ cancel, or an `InterruptionFrame`).
 Verified with Effect 4.0.2: a pipeline with an Effect processor run end to end, an interrupted run
 that must leave no tasks behind, and a cancelled pipeline that must interrupt the processor's Effect.
 
-See [Effect](https://polvallverdu.github.io/pipedog/docs/guides/effect/) for the full guide.
+See [Effect](https://pipedog.polv.dev/docs/guides/effect/) for the full guide.
 
 ## License
 

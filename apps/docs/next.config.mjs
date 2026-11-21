@@ -5,7 +5,8 @@ const withMDX = createMDX();
 /** @type {import('next').NextConfig} */
 const config = {
   reactStrictMode: true,
-  // A static site, for GitHub Pages. DOCS_BASE_PATH is "/pipedog" for a project page.
+  // A static site, for GitHub Pages at https://pipedog.polv.dev. DOCS_BASE_PATH is for a site
+  // served under a path (a project page such as https://<user>.github.io/<repo>).
   output: "export",
   basePath: process.env.DOCS_BASE_PATH ?? "",
   trailingSlash: true,

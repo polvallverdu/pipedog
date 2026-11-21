@@ -61,7 +61,7 @@ if (import.meta.main) {
 }
 ```
 
-See the [Development runner](https://polvallverdu.github.io/pipedog/docs/runner) docs page for
+See the [Development runner](https://pipedog.polv.dev/docs/runner) docs page for
 the routes, mounting the app in a framework, and a Python-to-TypeScript mapping.
 
 ## Runtimes

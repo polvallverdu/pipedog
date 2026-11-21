@@ -19,7 +19,7 @@ bunx @pipedog/cli init --list-options   # the values of every flag, as JSON
 ```
 
 With flags (or `--config file.json`) `init` never prompts, so scripts and coding agents can run it;
-`--dry-run` prints the resolved config. The guide: https://polvallverdu.github.io/pipedog/docs/cli/
+`--dry-run` prints the resolved config. The guide: https://pipedog.polv.dev/docs/cli/
 
 ## What it generates
 

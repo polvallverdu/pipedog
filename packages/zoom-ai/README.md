@@ -48,7 +48,7 @@ custom `webSocketFactory` can provide it).
 
 ## Links
 
-- Docs: [Zoom AI](https://polvallverdu.github.io/pipedog/docs/services/stt/zoom-ai/)
+- Docs: [Zoom AI](https://pipedog.polv.dev/docs/services/stt/zoom-ai/)
 - [pipedog README](https://github.com/polvallverdu/pipedog#readme)
 - License: BSD 2-Clause, a port of Pipecat (Copyright (c) 2024–2026 Daily). See
   [LICENSE](https://github.com/polvallverdu/pipedog/blob/main/LICENSE).

@@ -82,7 +82,7 @@ test. In short:
 5. To move to a newer upstream commit: `bun run upstream bump [ref]`.
 
 The full process, including the batch `port` workflow for agents, is in the
-[porting workflow docs](https://polvallverdu.github.io/pipedog/docs/contributing/).
+[porting workflow docs](https://pipedog.polv.dev/docs/contributing/).
 
 ## Coding conventions
 
@@ -134,7 +134,7 @@ bun run docs:dev     # http://localhost:3000
 bun run docs:build   # what CI runs
 ```
 
-Merges to `main` deploy the site to <https://polvallverdu.github.io/pipedog/>.
+Merges to `main` deploy the site to <https://pipedog.polv.dev/>.
 
 ## Reporting bugs
 

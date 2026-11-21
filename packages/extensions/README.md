@@ -33,7 +33,7 @@ const voicemail = new VoicemailDetector({ classifier });
 // Pipeline([... stt, voicemail.detector(), aggregators.user(), llm, tts, voicemail.gate(), ...])
 ```
 
-The [Telephony extensions](https://polvallverdu.github.io/pipedog/docs/telephony/extensions/) page
+The [Telephony extensions](https://pipedog.polv.dev/docs/telephony/extensions/) page
 has complete pipelines.
 
 ## Differences from upstream
