@@ -56,6 +56,22 @@ telefonía. La [página de estado del port](/docs/contributing/status) se genera
 en cada build de la documentación y muestra lo que falta, paquete a paquete, y en qué runtimes
 funciona cada uno.
 
+## Cómo se ha portado: con agentes de IA
+
+pipedog es un port hecho con IA, y prefiero decirlo claramente. La traducción la han hecho agentes
+de Claude Code; mi trabajo ha sido montar el sistema que los mantiene fieles al original, revisar,
+y probar el resultado en llamadas reales.
+
+Ese sistema está en el repositorio. Un manifiesto recoge cada módulo y cada test de upstream, con
+sus dependencias y su estado, y una herramienta `next` elige el siguiente lote por orden de
+dependencias. Un workflow porta cada lote por fases: un agente traduce una unidad siguiendo [las
+convenciones](https://github.com/polvallverdu/pipedog/blob/main/docs/CONVENTIONS.md), otro la
+revisa contra el código Python para comprobar que se comporta igual, el paquete entero pasa el
+typecheck y el lint, y después los tests del propio upstream se portan uno a uno y tienen que pasar.
+Además, cada paquete se ejecuta en Bun, Node, Deno y workerd en la CI. Lo que los agentes hacían
+mal lo han cazado esos tests, las pruebas entre runtimes, o yo mismo en una línea de teléfono, y la
+[documentación para contribuir](/docs/contributing) explica el proceso completo.
+
 ## Rendimiento
 
 La [página de rendimiento](/docs/performance) mide pipedog en cada runtime frente a Pipecat sobre

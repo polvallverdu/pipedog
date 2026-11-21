@@ -52,6 +52,22 @@ the LLM, speech-to-text and text-to-speech services, telephony serializers and t
 [porting status page](/docs/contributing/status) is generated from the repository on every docs
 build and shows what's left, package by package, with the runtimes each one runs on.
 
+## How it was ported: with AI agents
+
+pipedog is an AI port, and I want to be upfront about it. Claude Code agents did the translation;
+my job was to build the setup that keeps them faithful, to review, and to run the result on real
+calls.
+
+The setup is in the repository. A manifest lists every upstream module and test, with its
+dependencies and status, and a `next` tool picks the next batch in dependency order. A workflow
+ports each batch in stages: one agent translates a unit following
+[the conventions](https://github.com/polvallverdu/pipedog/blob/main/docs/CONVENTIONS.md), another
+reviews it against the Python source for parity, the package is typechecked and linted as a whole,
+and then upstream's own tests are ported 1:1 and have to pass. On top of that, every package runs on
+Bun, Node, Deno and workerd in CI. What agents got wrong was caught by those tests, by the
+cross-runtime checks, or by me on a phone line, and the [contributing
+docs](/docs/contributing) describe the workflow in full.
+
 ## Performance
 
 The [performance page](/docs/performance) measures pipedog on each runtime against Pipecat on
