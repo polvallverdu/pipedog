@@ -12,12 +12,14 @@
  *   Deepgram's `/v1/speak` protocol (`Speak`, `Flush`, `Clear` and `Close`
  *   in, binary PCM and `Flushed` / `Cleared` out), so this is
  *   `DeepgramTTSService` (from `@pipedog/deepgram`) opening its socket
- *   through Workers AI.
+ *   through Workers AI. Workers AI closes an idle session after about 3.5 s
+ *   (code 1011), and has no `KeepAlive`, so the service sends an empty
+ *   `Speak` when the socket has been quiet for a while.
  * - `WorkersAIAuraHttpTTSService` makes one request per sentence and streams
  *   the PCM body back. Use it if the WebSocket is unavailable to you.
  */
 
-import { abortable, rethrowIfCancelled } from "@pipedog/asyncio";
+import { abortable, rethrowIfCancelled, time } from "@pipedog/asyncio";
 import { ErrorFrame, type Frame } from "@pipedog/core/frames/frames";
 import type { TTSSettings } from "@pipedog/core/services/settings";
 import { TTSService, type TTSServiceOptions } from "@pipedog/core/services/tts_service";
@@ -50,6 +52,12 @@ export const DEFAULT_AURA_SPEAKERS: Readonly<Record<string, string>> = {
   [WorkersAIAuraModel.AURA_2_ES]: "aquila",
   [WorkersAIAuraModel.AURA_1]: "angus",
 };
+
+/**
+ * Seconds without a message to the Aura session before the service sends a
+ * keepalive. Workers AI closes the session after about 3.5 s of silence.
+ */
+export const AURA_KEEPALIVE_SECS = 2;
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -108,6 +116,8 @@ export class WorkersAIAuraTTSService extends DeepgramTTSService {
   protected _workersAI: WorkersAIClient;
   /** The Workers AI model ID; `DeepgramTTSService` keeps `model` in sync with `voice`. */
   protected _workersModel: string;
+  /** When the service last sent the session a message (`time()` seconds). */
+  protected _lastSentAt = 0;
 
   constructor(options: WorkersAIAuraTTSServiceOptions) {
     const [client, rest] = splitConnectionOptions(options);
@@ -135,6 +145,45 @@ export class WorkersAIAuraTTSService extends DeepgramTTSService {
     return changed;
   }
 
+  override async _connect(): Promise<void> {
+    await super._connect();
+    this._createKeepaliveTask(0.5);
+  }
+
+  override async _disconnect(): Promise<void> {
+    await this._cancelKeepaliveTask();
+    await super._disconnect();
+  }
+
+  override async flushAudio(contextId: string | null = null): Promise<void> {
+    this._lastSentAt = time();
+    await super.flushAudio(contextId);
+  }
+
+  override async *runTts(text: string, contextId: string): AsyncGenerator<Frame | null, void> {
+    this._lastSentAt = time();
+    yield* super.runTts(text, contextId);
+  }
+
+  /** Due when the session has had no message for `AURA_KEEPALIVE_SECS`. */
+  protected override _isKeepaliveReady(): boolean {
+    return super._isKeepaliveReady() && time() - this._lastSentAt >= AURA_KEEPALIVE_SECS;
+  }
+
+  /**
+   * Keep the session open between replies, and while a reply waits on the
+   * LLM (a tool call, say). An empty `Speak` resets Workers AI's idle timer
+   * and, unlike `Flush`, gets no `Flushed` back, which would end the audio
+   * context. A whitespace-only `Speak` adds nothing to what is spoken.
+   *
+   * DIVERGENCE: pipedog-only (Workers AI; Deepgram's own endpoint keeps idle
+   * sessions open).
+   */
+  protected override async _sendKeepalive(): Promise<void> {
+    this._lastSentAt = time();
+    await this._getWebsocket().send(JSON.stringify({ type: "Speak", text: " " }));
+  }
+
   /** Open the Aura session through the binding or the REST WebSocket. */
   override async _connectWebsocket(): Promise<void> {
     try {
@@ -146,6 +195,7 @@ export class WorkersAIAuraTTSService extends DeepgramTTSService {
         encoding: this._encoding,
         sample_rate: String(this.sampleRate),
       });
+      this._lastSentAt = time();
       logger.debug(`${this}: Workers AI Aura session opened (${this._workersAI.mode})`);
       await this._callEventHandler("on_connected");
     } catch (e) {

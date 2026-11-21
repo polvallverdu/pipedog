@@ -15,6 +15,7 @@ import {
   TranscriptionFrame,
   TTSAudioRawFrame,
   TTSSpeakFrame,
+  TTSStoppedFrame,
   VADUserStartedSpeakingFrame,
   VADUserStoppedSpeakingFrame,
 } from "@pipedog/core/frames/frames";
@@ -26,7 +27,11 @@ import { WorkersAIFluxSTTService } from "../src/flux_stt.ts";
 import { WorkersAIMeloTTSService } from "../src/melotts.ts";
 import { WorkersAISmartTurnAnalyzer } from "../src/smart_turn.ts";
 import { WorkersAINova3STTService } from "../src/stt.ts";
-import { WorkersAIAuraHttpTTSService, WorkersAIAuraTTSService } from "../src/tts.ts";
+import {
+  AURA_KEEPALIVE_SECS,
+  WorkersAIAuraHttpTTSService,
+  WorkersAIAuraTTSService,
+} from "../src/tts.ts";
 import { WorkersAIWhisperModel, WorkersAIWhisperSTTService } from "../src/whisper.ts";
 import {
   ACCOUNT_ID,
@@ -259,6 +264,29 @@ for (const via of ["rest", "binding"] as const) {
       expect((tts as unknown as { _settings: { model: string } })._settings.model).toBe(
         "@cf/deepgram/aura-2-en",
       );
+    });
+
+    test("Aura (WebSocket): a keepalive Speak while idle, and the reply intact", async () => {
+      const sessionsBefore = fake.sessions.length;
+      const tts = new WorkersAIAuraTTSService({ client: fake.client(via), sampleRate: 24000 });
+      const [down] = await runTest(tts, {
+        framesToSend: [
+          new TTSSpeakFrame({ text: "Hello from Workers AI." }),
+          // Longer than AURA_KEEPALIVE_SECS: Workers AI would close the session by now.
+          new SleepFrame({ sleep: AURA_KEEPALIVE_SECS + 0.8 }),
+        ],
+      });
+
+      expect(joinAudio(down)).toEqual(AURA_PCM);
+      expect(down.filter((f) => f instanceof TTSStoppedFrame)).toHaveLength(1);
+      const messages = fake.sessions[sessionsBefore]!.textMessages.map(
+        (m) => JSON.parse(m) as { type: string; text?: string },
+      );
+      expect(messages.slice(0, 2).map((m) => m.type)).toEqual(["Speak", "Flush"]);
+      const keepalives = messages.slice(2).filter((m) => m.type === "Speak");
+      expect(keepalives.length).toBeGreaterThanOrEqual(1);
+      expect(keepalives.every((m) => m.text === " ")).toBe(true);
+      expect(messages.slice(2).some((m) => m.type === "Flush")).toBe(false);
     });
 
     test("Aura (HTTP): raw PCM at the service rate", async () => {
