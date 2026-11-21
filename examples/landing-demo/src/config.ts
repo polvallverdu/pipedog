@@ -65,6 +65,27 @@ export interface Env {
   CLOUDFLARE_REALTIME_API_URL?: string;
 }
 
+/**
+ * The speech-to-text the visitor picks on the page:
+ *
+ * - `flux`: Deepgram Flux, English only, which also decides when the user's turn ends (the fastest).
+ * - `nova3`: Deepgram Nova-3 in multilingual mode (English and Spanish, mixed), with Smart Turn v2
+ *   deciding when the turn ends.
+ *
+ * Both run with Silero VAD, which gates interruptions.
+ */
+export type SttMode = "flux" | "nova3";
+
+export const STT_MODES: readonly SttMode[] = ["flux", "nova3"];
+
+/** A mode from the page or a ticket; anything unknown is Flux, the default. */
+export function parseSttMode(value: unknown): SttMode {
+  return value === "nova3" ? "nova3" : "flux";
+}
+
+/** Workers AI list prices per audio minute, for the README's cost table and the estimate. */
+export const STT_PRICE_PER_MINUTE_USD: Record<SttMode, number> = { flux: 0.0077, nova3: 0.0092 };
+
 /** The model the demo talks to, and how much it may say per reply. */
 export const LLM_MODEL = "claude-haiku-5-5";
 export const LLM_MAX_TOKENS = 400;
@@ -105,7 +126,10 @@ export interface BudgetLimits {
   maxMinutesPerDay: number;
   /** Estimated spend per UTC month, in USD; 0 for no cap. */
   maxSpendUsdPerMonth: number;
-  /** What a minute of session costs, for the estimate: Workers AI (Nova-3, Aura) plus the LLM. */
+  /**
+   * What a minute of session costs, for the estimate: Workers AI (Flux or Nova-3, Aura) plus the
+   * LLM. One figure for both modes, above the dearer one (Nova-3 with Smart Turn).
+   */
   costPerMinuteUsd: number;
   /** Sessions per IP in IP_WINDOW_SECS. */
   maxSessionsPerIp: number;

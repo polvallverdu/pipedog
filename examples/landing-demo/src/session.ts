@@ -41,12 +41,14 @@ import {
   startDemoAgent,
   websocketTransport,
 } from "./bot.ts";
-import { type Env, readConfig } from "./config.ts";
+import { type Env, parseSttMode, readConfig, type SttMode } from "./config.ts";
 import type { VisitorInfo } from "./tools.ts";
 
 /** Headers the Worker sets on the requests it forwards. */
 export const SESSION_HEADER = "x-demo-session";
 export const VISITOR_HEADER = "x-demo-visitor";
+/** The speech-to-text from the session's ticket (`SttMode`). */
+export const STT_HEADER = "x-demo-stt";
 /** The WebRTC call token, from the browser (the Worker passes it through). */
 export const CALL_TOKEN_HEADER = "x-demo-call-token";
 
@@ -101,6 +103,7 @@ export class DemoSession extends DurableObject<Env> {
   #claimed = false;
   #sessionId: string | null = null;
   #visitor: VisitorInfo = { colo: null, country: null, city: null };
+  #stt: SttMode = parseSttMode(undefined);
   #agent: DemoAgent | null = null;
   #ended = false;
   // WebRTC
@@ -189,6 +192,7 @@ export class DemoSession extends DurableObject<Env> {
 
     this.#sessionId = sessionId;
     this.#visitor = parseVisitor(request.headers.get(VISITOR_HEADER));
+    this.#stt = parseSttMode(request.headers.get(STT_HEADER));
     const { session } = readConfig(this.env);
     await this.ctx.storage.setAlarm(Date.now() + session.maxSecs * 1000 + BACKSTOP_GRACE_MS);
     return null;
@@ -213,6 +217,7 @@ export class DemoSession extends DurableObject<Env> {
       sessionId: this.#sessionId ?? "",
       visitor: this.#visitor,
       transport: kind,
+      stt: this.#stt,
     });
     this.#agent = agent;
     try {

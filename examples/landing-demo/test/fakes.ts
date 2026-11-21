@@ -10,6 +10,9 @@
 //     the final one when the service sends `Finalize` (VAD heard the user stop) or after a second
 //     of silence. Silence transcribes as nothing, so it's real speech that drives the turns, as
 //     Silero VAD in the Worker needs.
+//   - Deepgram Flux (Workers AI's Flux messages, which carry no `type`): the same stretches of
+//     sound and scripted turns, as `StartOfTurn`, `Update`s a word at a time, and `EndOfTurn`
+//     after 600 ms of silence (Flux decides the end of the turn itself).
 //   - Smart Turn v2 (`run`): every turn is complete.
 //   - Aura, which answers each Flush with a short tone.
 // - The Anthropic Messages API (`/v1/messages`), streaming: a user turn gets a sentence and a
@@ -34,6 +37,8 @@ export interface Fakes {
   spoken: string[];
   /** Smart Turn requests. */
   smartTurnRequests: number;
+  /** The speech-to-text models sessions opened, in order. */
+  sttModels: string[];
   stop(): void;
 }
 
@@ -242,6 +247,14 @@ function anthropicReply(body: Record<string, any>): Response {
   );
 }
 
+/** Whether 16-bit PCM is louder than silence or line noise. */
+function isLoud(audio: Uint8Array): boolean {
+  const pcm = new Int16Array(audio.buffer, audio.byteOffset, Math.floor(audio.byteLength / 2));
+  let sum = 0;
+  for (const v of pcm) sum += v * v;
+  return pcm.length > 0 && Math.sqrt(sum / pcm.length) > 500;
+}
+
 /** A 440 Hz tone, 16-bit PCM at 24 kHz, fading in and out. */
 function tone(ms: number): Uint8Array {
   const samples = Math.round((24000 * ms) / 1000);
@@ -264,7 +277,12 @@ interface SocketData {
   /** Nova-3: words sent as interim results so far, and the transcript of this stretch (null: none). */
   interimWords: number;
   utterance: string | null;
+  /** Flux: the turn's index. */
+  fluxTurn: number;
 }
+
+/** Flux ends a turn after this much silence. */
+const FLUX_END_OF_TURN_MS = 600;
 
 export function startFakes(options: FakesOptions = {}): Fakes {
   const turns = options.turns ?? ["What's the weather in Paris?"];
@@ -275,6 +293,7 @@ export function startFakes(options: FakesOptions = {}): Fakes {
   const spoken: string[] = [];
 
   let smartTurnRequests = 0;
+  const sttModels: string[] = [];
 
   const results = (
     ws: ServerWebSocket<SocketData>,
@@ -319,12 +338,8 @@ export function startFakes(options: FakesOptions = {}): Fakes {
 
   const nova3Audio = (ws: ServerWebSocket<SocketData>, audio: Uint8Array) => {
     const data = ws.data;
-    const pcm = new Int16Array(audio.buffer, audio.byteOffset, Math.floor(audio.byteLength / 2));
-    let sum = 0;
-    for (const v of pcm) sum += v * v;
-    const loud = pcm.length > 0 && Math.sqrt(sum / pcm.length) > 500;
-    const ms = (pcm.length / 16000) * 1000;
-    if (loud) {
+    const ms = (audio.byteLength / 2 / 16000) * 1000;
+    if (isLoud(audio)) {
       data.silenceMs = 0;
       if (!data.speaking) {
         // A new stretch of speech: the next scripted turn, if any is left.
@@ -349,6 +364,56 @@ export function startFakes(options: FakesOptions = {}): Fakes {
     if (!data.speaking) data.interimWords = 0;
   };
 
+  /** A Flux TurnInfo message. */
+  const turnInfo = (ws: ServerWebSocket<SocketData>, event: string, transcript: string) =>
+    ws.send(
+      JSON.stringify({
+        request_id: "req",
+        sequence_id: 0,
+        event,
+        turn_index: ws.data.fluxTurn,
+        audio_window_start: 0,
+        audio_window_end: 1,
+        transcript,
+        words: transcript ? transcript.split(" ").map((word) => ({ word, confidence: 0.98 })) : [],
+        end_of_turn_confidence: event === "EndOfTurn" ? 0.92 : 0.1,
+      }),
+    );
+
+  const fluxAudio = (ws: ServerWebSocket<SocketData>, audio: Uint8Array) => {
+    const data = ws.data;
+    const ms = (audio.byteLength / 2 / 16000) * 1000;
+    if (isLoud(audio)) {
+      data.silenceMs = 0;
+      if (!data.speaking) {
+        data.speaking = true;
+        data.speechMs = 0;
+        data.interimWords = 0;
+        data.utterance = data.turn < turns.length ? turns[data.turn++]! : null;
+        if (data.utterance !== null) turnInfo(ws, "StartOfTurn", "");
+      }
+      data.speechMs += ms;
+      if (data.utterance !== null) {
+        const words = data.utterance.split(" ");
+        const n = Math.min(words.length, Math.floor(data.speechMs / 150));
+        if (n > data.interimWords) {
+          data.interimWords = n;
+          turnInfo(ws, "Update", words.slice(0, n).join(" "));
+        }
+      }
+    } else if (data.speaking) {
+      data.silenceMs += ms;
+      if (data.silenceMs >= FLUX_END_OF_TURN_MS) {
+        if (data.utterance !== null) {
+          turnInfo(ws, "EndOfTurn", data.utterance);
+          data.fluxTurn += 1;
+        }
+        data.speaking = false;
+        data.utterance = null;
+      }
+    }
+  };
+
   const server: Server<SocketData> = Bun.serve<SocketData>({
     hostname: "127.0.0.1",
     port: 0,
@@ -367,7 +432,11 @@ export function startFakes(options: FakesOptions = {}): Fakes {
             silenceMs: 0,
             interimWords: 0,
             utterance: null,
+            fluxTurn: 0,
           };
+          if (model === "@cf/deepgram/flux" || model === "@cf/deepgram/nova-3") {
+            sttModels.push(model);
+          }
           if (srv.upgrade(request, { data })) return undefined;
           return new Response("upgrade failed", { status: 400 });
         }
@@ -446,6 +515,7 @@ export function startFakes(options: FakesOptions = {}): Fakes {
           return;
         }
         if (model === "@cf/deepgram/nova-3") nova3Audio(ws, new Uint8Array(message));
+        else if (model === "@cf/deepgram/flux") fluxAudio(ws, new Uint8Array(message));
       },
     },
   });
@@ -459,6 +529,7 @@ export function startFakes(options: FakesOptions = {}): Fakes {
     get smartTurnRequests() {
       return smartTurnRequests;
     },
+    sttModels,
     stop: () => server.stop(true),
   };
 }

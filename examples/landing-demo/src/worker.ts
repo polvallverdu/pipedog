@@ -4,7 +4,8 @@
 // The Worker: the demo page and its API, on one origin.
 //
 //   GET  /api/status                        is the demo on, which transports, Turnstile's site key
-//   POST /api/session                       Turnstile token in, session ticket out (60 s, single use)
+//   POST /api/session                       Turnstile token and the chosen STT in, session ticket out
+//                                           (60 s, single use; the ticket carries the STT choice)
 //   GET  /api/session/<id>/ws?ticket=       WebSocket session, to the session's Durable Object
 //   POST /api/session/<id>/rtc/offer?ticket=  WebRTC session (Cloudflare Realtime): publish the mic
 //   POST /api/session/<id>/rtc/connect|answer|hangup, GET .../rtc/messages   (call token)
@@ -15,7 +16,7 @@
 // SFU's adapter sockets are checked by token instead. The page may be framed only by itself and
 // FRAME_ANCESTORS (the docs site). See security.ts for the tickets, ledger.ts for the budget.
 
-import { type DemoConfig, type Env, readConfig } from "./config.ts";
+import { type DemoConfig, type Env, parseSttMode, readConfig } from "./config.ts";
 import type { Refusal } from "./ledger.ts";
 import {
   corsHeaders,
@@ -27,7 +28,7 @@ import {
   verifyTicket,
   verifyTurnstile,
 } from "./security.ts";
-import { CALL_TOKEN_HEADER, SESSION_HEADER, VISITOR_HEADER } from "./session.ts";
+import { CALL_TOKEN_HEADER, SESSION_HEADER, STT_HEADER, VISITOR_HEADER } from "./session.ts";
 
 export { DemoBudget } from "./budget.ts";
 export type { Env } from "./config.ts";
@@ -105,10 +106,16 @@ async function createSession(
 ): Promise<Response> {
   let token = "";
   let transport = "websocket";
+  let stt = parseSttMode(undefined);
   try {
-    const body = (await request.json()) as { turnstileToken?: unknown; transport?: unknown };
+    const body = (await request.json()) as {
+      turnstileToken?: unknown;
+      transport?: unknown;
+      stt?: unknown;
+    };
     token = typeof body.turnstileToken === "string" ? body.turnstileToken : "";
     if (body.transport === "webrtc") transport = "webrtc";
+    stt = parseSttMode(body.stt);
   } catch {
     return json({ error: "bad_request", message: "Expected a JSON body." }, 400, cors);
   }
@@ -142,7 +149,7 @@ async function createSession(
   }
 
   const ticket = await signTicket(
-    { sid: sessionId, ip: ipHash, exp: Math.floor(Date.now() / 1000) + TICKET_TTL_SECS },
+    { sid: sessionId, ip: ipHash, exp: Math.floor(Date.now() / 1000) + TICKET_TTL_SECS, stt },
     env.SESSION_SIGNING_KEY,
   );
   const url = new URL(request.url);
@@ -154,6 +161,7 @@ async function createSession(
     {
       sessionId,
       transport,
+      stt,
       ticket,
       // WebSocket: the socket to open. WebRTC: the base of the signaling routes.
       wsUrl: wsUrl.toString(),
@@ -244,6 +252,8 @@ async function sessionRoute(
       forwardHeaders(request, {
         [SESSION_HEADER]: sessionId,
         [VISITOR_HEADER]: JSON.stringify(visitorOf(request)),
+        // From the signed ticket, not the request: the page can't change it after the fact.
+        [STT_HEADER]: parseSttMode(check.payload.stt),
       }),
       cors,
     );

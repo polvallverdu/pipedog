@@ -5,21 +5,25 @@
 //
 //   browser (Pipecat client) ──protobuf──► FastAPIWebsocketTransport
 //   browser ──WebRTC──► Cloudflare Realtime ──adapters──► CloudflareRealtimeTransport
-//     → Silero VAD in the Durable Object (who is speaking, and when they stop)
-//     → Deepgram Nova-3 on Workers AI, multilingual (transcripts; English and Spanish, mixed)
-//     → Smart Turn v2 on Workers AI (whether a pause ends the user's turn)
+//     → Silero VAD in the Durable Object (who is speaking, and when they stop; gates interruptions)
+//     → speech to text on Workers AI, as the visitor chose (`SttMode`):
+//         flux   Deepgram Flux, English: transcripts, and it decides when the user's turn ends
+//         nova3  Deepgram Nova-3, multilingual (English and Spanish, mixed), with Smart Turn v2
+//                deciding whether a pause ends the user's turn
 //     → Claude Haiku 5.5 (streamed, with tools)
 //     → Deepgram Aura on Workers AI (speech)
 //     → back to the browser, with RTVI events: transcripts, the bot's text, tool calls, metrics
 //
 // Plus what the landing page shows next to the conversation: a ping the client times, the data
-// centres involved, and the voice-to-voice latency of each reply, as RTVI server messages.
+// centres involved, the voice-to-voice latency of each reply, and the pipeline strip's events
+// (turn_events.ts), as RTVI server messages.
 
 import Anthropic from "@anthropic-ai/sdk";
 import { AnthropicLLMService, AnthropicLLMSettings } from "@pipedog/anthropic/llm";
 import { createTask, monotonic, sleep } from "@pipedog/asyncio";
 import { SileroVADAnalyzer } from "@pipedog/audio-silero";
 import type { WorkersAIBinding } from "@pipedog/cloudflare/client";
+import { WorkersAIFluxSTTService } from "@pipedog/cloudflare/flux_stt";
 import { WorkersAISmartTurnAnalyzer } from "@pipedog/cloudflare/smart_turn";
 import { WorkersAINova3STTService, WorkersAINova3STTSettings } from "@pipedog/cloudflare/stt";
 import { WorkersAIAuraTTSService } from "@pipedog/cloudflare/tts";
@@ -45,8 +49,10 @@ import {
 import type { RTVIProcessor } from "@pipedog/core/processors/frameworks/rtvi/processor";
 import type { BaseTransport } from "@pipedog/core/transports/base_transport";
 import { createBackchannelMatcher } from "@pipedog/core/turns/user_start/backchannel";
-import { MinWordsUserTurnStartStrategy } from "@pipedog/core/turns/user_start/index";
-import { TurnAnalyzerUserTurnStopStrategy } from "@pipedog/core/turns/user_stop/index";
+import {
+  ExternalUserTurnStopStrategy,
+  TurnAnalyzerUserTurnStopStrategy,
+} from "@pipedog/core/turns/user_stop/index";
 import { UserTurnStrategies } from "@pipedog/core/turns/user_turn_strategies";
 import { logger } from "@pipedog/core/utils/logger";
 import { WorkerRunner } from "@pipedog/core/workers/runner";
@@ -63,11 +69,17 @@ import {
   type Env,
   LLM_MAX_TOKENS,
   LLM_MODEL,
+  type SttMode,
   type TurnsConfig,
 } from "./config.ts";
 import { fakeAiBinding } from "./dev_ai.ts";
 import { type EndReason, GOODBYES, SessionLimits, SessionLimitsObserver } from "./limits.ts";
 import { buildTools, type VisitorInfo } from "./tools.ts";
+import {
+  DemoMinWordsUserTurnStartStrategy,
+  type IgnoredSpeech,
+  PipelineEventsObserver,
+} from "./turn_events.ts";
 
 /** The browser sends 16 kHz audio; Aura speaks at 24 kHz. */
 const INPUT_SAMPLE_RATE = 16000;
@@ -104,12 +116,19 @@ function loadSileroModel(assets: Fetcher): Promise<Uint8Array> {
  * How the user's turns start and end. Silero VAD (gated on confidence, length and loudness, so
  * quieter background speech isn't the user) starts a turn when the bot is quiet. Over the bot, it
  * takes `interruptMinWords` transcribed words that VAD heard, and never just "mm-hm" or "okay".
- * Smart Turn v2 decides whether each pause ends the turn.
+ * The turn ends when Flux says so (its `EndOfTurn`, proposed as `ProposedUserStoppedSpeakingFrame`),
+ * or, with Nova-3, when Smart Turn v2 decides a pause ends it.
+ *
+ * With Flux, these strategies replace the ones Flux recommends (which let its `StartOfTurn` open
+ * the turn, and interrupt the bot, on any speech it hears, a TV included): no start strategy
+ * resolves Flux's proposed starts, so only VAD and the word count open a turn, as with Nova-3.
  */
 export function userTurnParams(
   ai: WorkersAIBinding,
   model: Uint8Array,
   turns: TurnsConfig,
+  stt: SttMode,
+  onIgnored?: (ignored: IgnoredSpeech) => Promise<void>,
 ): LLMUserAggregatorParams {
   return new LLMUserAggregatorParams({
     vadAnalyzer: new SileroVADAnalyzer({
@@ -123,18 +142,21 @@ export function userTurnParams(
     }),
     userTurnStrategies: new UserTurnStrategies({
       start: [
-        new MinWordsUserTurnStartStrategy({
+        new DemoMinWordsUserTurnStartStrategy({
           minWords: turns.interruptMinWords,
           useInterim: true,
           startOnVadWhenBotQuiet: true,
           isBackchannel: createBackchannelMatcher(),
           requireVadWithinSeconds: INTERRUPT_VAD_WINDOW_SECS,
+          onIgnored,
         }),
       ],
       stop: [
-        new TurnAnalyzerUserTurnStopStrategy({
-          turnAnalyzer: new WorkersAISmartTurnAnalyzer({ ai }),
-        }),
+        stt === "flux"
+          ? new ExternalUserTurnStopStrategy()
+          : new TurnAnalyzerUserTurnStopStrategy({
+              turnAnalyzer: new WorkersAISmartTurnAnalyzer({ ai }),
+            }),
       ],
     }),
   });
@@ -146,13 +168,34 @@ const HARD_STOP_GRACE_SECS = 15;
 export const GREETING =
   "Hi! I'm a voice agent built with pipedog, running on Cloudflare. Ask me about the weather, the time, where this call is running, or anything in the pipedog docs.";
 
-/**
- * The system prompt. It must not change between sessions (no dates, no ids): it and the tools are
- * the prompt-cache prefix every session shares.
- */
-export const SYSTEM_PROMPT = `You are the voice of a live demo on the pipedog documentation site. pipedog is an open-source TypeScript port of Pipecat, the framework for real-time voice and multimodal AI agents; it runs on Bun, Node, Deno and Cloudflare Workers, and Pipecat's client SDKs work with it unchanged.
+/** How the system prompt describes the speech side of the stack, per mode. */
+const STT_STACK: Record<SttMode, string> = {
+  flux: "Silero VAD hears when the user speaks, Deepgram Flux on Workers AI turns their English speech into text and decides when they have finished",
+  nova3:
+    "Silero VAD hears when the user speaks, Deepgram Nova-3 on Workers AI turns their speech into text (English and Spanish, even mixed), Smart Turn on Workers AI decides when they have finished",
+};
 
-Right now you are pipedog running inside a Cloudflare Durable Object: Silero VAD hears when the user speaks, Deepgram Nova-3 on Workers AI turns their speech into text (English and Spanish, even mixed), Smart Turn on Workers AI decides when they have finished, you are Claude Haiku, and Deepgram Aura on Workers AI speaks your replies in English. The user talks to you from the browser, and the page shows your tool calls and live latency numbers next to the conversation.
+/** What the user's speech is understood as, per mode, for the prompt's language rule. */
+const LANGUAGE_RULE: Record<SttMode, string> = {
+  flux: "Always answer in English: your speech recognition and your voice are English only.",
+  nova3:
+    "Always answer in English, even when the user speaks Spanish or mixes both: you understand them, but your voice only speaks English.",
+};
+
+/**
+ * The system prompt for a mode. It must not change between sessions of a mode (no dates, no ids):
+ * it and the tools are the prompt-cache prefix those sessions share.
+ */
+export function systemPrompt(stt: SttMode): string {
+  return SYSTEM_PROMPT_TEMPLATE.replace("{stack}", STT_STACK[stt]).replace(
+    "{language}",
+    LANGUAGE_RULE[stt],
+  );
+}
+
+const SYSTEM_PROMPT_TEMPLATE = `You are the voice of a live demo on the pipedog documentation site. pipedog is an open-source TypeScript port of Pipecat, the framework for real-time voice and multimodal AI agents; it runs on Bun, Node, Deno and Cloudflare Workers, and Pipecat's client SDKs work with it unchanged.
+
+Right now you are pipedog running inside a Cloudflare Durable Object: {stack}, you are Claude Haiku, and Deepgram Aura on Workers AI speaks your replies in English. The user talks to you from the browser, and the page shows your tool calls and live latency numbers next to the conversation.
 
 You already greeted the user with: "${GREETING}"
 
@@ -160,7 +203,7 @@ How to talk:
 - Everything you write is spoken aloud. Answer in one to three short sentences, in plain conversational language. No lists, markdown, emojis, code, or URLs read out character by character; say "it's in the docs under Concepts, Turn detection" instead.
 - Use metric units. Say numbers the way people speak them.
 - If you didn't catch something, ask briefly.
-- Always answer in English, even when the user speaks Spanish or mixes both: you understand them, but your voice only speaks English.
+- {language}
 
 What you can do:
 - Use your tools when they help: get_weather, get_time, where_am_i (which Cloudflare data centres this call goes through), and search_docs for questions about pipedog. Base answers about pipedog on search_docs results, and say when the docs don't cover something.
@@ -200,6 +243,7 @@ export interface SessionInfo {
   sessionId: string;
   visitor: VisitorInfo;
   transport: DemoTransportKind;
+  stt: SttMode;
 }
 
 /** The transport for a session over the WebSocket: Pipecat's protobuf frames. */
@@ -252,16 +296,22 @@ async function runDemoAgent(
   // Look it up while the pipeline starts.
   void botColo();
 
-  // Nova-3 transcribes; "multi" is Deepgram's multilingual mode (English and Spanish code-switching).
-  // `language` isn't a Deepgram field, so it stays in `extra`, which overrides the default "en".
-  const stt = new WorkersAINova3STTService({
-    ai,
-    settings: new WorkersAINova3STTSettings({
-      smartFormat: true,
-      punctuate: true,
-      extra: { language: "multi" },
-    }),
-  });
+  // Flux transcribes English and detects the end of each turn. Nova-3 transcribes in "multi",
+  // Deepgram's multilingual mode (English and Spanish code-switching); `language` isn't a Deepgram
+  // field, so it stays in `extra`, which overrides the default "en".
+  const stt =
+    info.stt === "flux"
+      ? new WorkersAIFluxSTTService({ ai })
+      : new WorkersAINova3STTService({
+          ai,
+          settings: new WorkersAINova3STTSettings({
+            smartFormat: true,
+            punctuate: true,
+            extra: { language: "multi" },
+          }),
+        });
+  // Set once the RTVI processor exists (the turn strategies are built before it).
+  let sendEvent: (message: Record<string, unknown>) => Promise<void> = async () => {};
 
   let endSession: (reason: EndReason) => Promise<void> = async () => {};
 
@@ -274,7 +324,13 @@ async function runDemoAgent(
   });
   const context = new LLMContext({ tools: new ToolsSchema({ standardTools: tools }) });
   const aggregators = new LLMContextAggregatorPair(context, {
-    userParams: userTurnParams(ai, await loadSileroModel(env.ASSETS), config.turns),
+    userParams: userTurnParams(
+      ai,
+      await loadSileroModel(env.ASSETS),
+      config.turns,
+      info.stt,
+      (ignored) => sendEvent({ type: "turn-ignored", ...ignored }),
+    ),
   });
 
   const llm = new DemoAnthropicLLMService({
@@ -288,7 +344,7 @@ async function runDemoAgent(
     settings: new AnthropicLLMSettings({
       model: LLM_MODEL,
       maxTokens: LLM_MAX_TOKENS,
-      systemInstruction: SYSTEM_PROMPT,
+      systemInstruction: systemPrompt(info.stt),
       // Low effort for voice latency. Haiku 5.5 thinks adaptively by default at medium effort.
       effort: "low",
       // The system prompt and tools are the same for every session: cache them for an hour, so
@@ -327,13 +383,20 @@ async function runDemoAgent(
       enableMetrics: true,
       enableUsageMetrics: true,
     }),
-    observers: [latency, limitsObserver],
+    observers: [
+      latency,
+      limitsObserver,
+      new PipelineEventsObserver(info.stt === "flux" ? "Flux" : "Smart Turn", (event) =>
+        sendEvent(event),
+      ),
+    ],
     // Tool calls are what the demo shows off: report them with their arguments and results.
     rtviObserverParams: new RTVIObserverParams({
       functionCallReportLevel: { "*": RTVIFunctionCallReportLevel.FULL },
     }),
   });
   const rtvi: RTVIProcessor = worker.rtvi;
+  sendEvent = (message) => rtvi.sendServerMessage(message);
   llm.onRefusal = (text) => rtvi.sendServerMessage({ type: "bot-speech", kind: "refusal", text });
 
   await runner.addWorkers(worker);
@@ -355,6 +418,7 @@ async function runDemoAgent(
     await rtvi.sendServerMessage({
       type: "session-info",
       transport: info.transport,
+      stt: info.stt,
       bot_colo: await botColo(),
       visitor: info.visitor,
       limits: {
@@ -363,8 +427,14 @@ async function runDemoAgent(
         max_turns: config.session.maxTurns,
       },
       services: {
-        stt: "Deepgram Nova-3 multilingual (Workers AI)",
-        turns: "Silero VAD + Smart Turn v2 (Workers AI)",
+        stt:
+          info.stt === "flux"
+            ? "Deepgram Flux (Workers AI)"
+            : "Deepgram Nova-3 multilingual (Workers AI)",
+        turns:
+          info.stt === "flux"
+            ? "Silero VAD + Flux end of turn"
+            : "Silero VAD + Smart Turn v2 (Workers AI)",
         llm: LLM_MODEL,
         tts: "Deepgram Aura 2 (Workers AI)",
       },

@@ -4,13 +4,53 @@
 // The page's state: one demo session at a time, over the WebSocket (Pipecat's own client,
 // `@pipecat-ai/client-js` with its WebSocket transport, unchanged) or over WebRTC (rtc.ts). Both
 // deliver the same RTVI messages, and `#rtvi()` turns them into the chat, the tool cards and the
-// metrics, so the page looks the same on either.
+// metrics, so the page looks the same on either. The same messages drive the pipeline strip
+// (`pipeline`, `flash`, `hearing`): which stage is working right now, and its latest timing.
 
 import type { PipecatClient } from "@pipecat-ai/client-js";
 import { levelMeter, RtcCall, type RtviMessage } from "./rtc.ts";
 import { turnstileToken } from "./turnstile.ts";
 
 export type Transport = "websocket" | "webrtc";
+
+/** The speech-to-text the session uses (the Worker's `SttMode`). */
+export type Stt = "flux" | "nova3";
+
+export const STAGES = ["mic", "vad", "stt", "turn", "llm", "tts", "speaker"] as const;
+export type Stage = (typeof STAGES)[number];
+
+export interface StageState {
+  active: boolean;
+  /** The stage's latest timing, in ms, or null. */
+  ms: number | null;
+  /** A short note while active ("tool: get_weather"), or null. */
+  note: string | null;
+}
+
+/** A moment the strip shows for a couple of seconds. */
+export interface Flash {
+  id: number;
+  kind: "ignored" | "interrupted";
+  label: string;
+  /** What was heard, for ignored speech. */
+  text: string | null;
+}
+
+const IGNORED_LABELS: Record<string, string> = {
+  background: "ignored: background speech",
+  backchannel: "ignored: backchannel",
+  too_few_words: "ignored: too few words",
+};
+
+const FLASH_MS = 2600;
+/** With VAD quiet and no transcript coming, the STT stage goes idle after this long. */
+const STT_IDLE_MS = 1500;
+
+function idleStages(): Record<Stage, StageState> {
+  return Object.fromEntries(
+    STAGES.map((s) => [s, { active: false, ms: null, note: null }]),
+  ) as unknown as Record<Stage, StageState>;
+}
 
 export type Status =
   | "loading"
@@ -55,6 +95,14 @@ export interface ServerStatus {
 const PING_EVERY_MS = 3000;
 const LEVEL_HISTORY = 36;
 
+/** Which stage a TTFB metric belongs to, from the processor's name. */
+function stageOf(processor: string): "stt" | "llm" | "tts" | null {
+  if (/anthropic|llm/i.test(processor)) return "llm";
+  if (/aura|tts/i.test(processor)) return "tts";
+  if (/flux|nova|stt/i.test(processor)) return "stt";
+  return null;
+}
+
 function median(values: number[]): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -67,6 +115,9 @@ export class Demo {
   server = $state<ServerStatus | null>(null);
   transport = $state<Transport>("websocket");
   active = $state<Transport | null>(null);
+  stt = $state<Stt>("flux");
+  /** The speech-to-text of the running (or last) session. */
+  activeStt = $state<Stt | null>(null);
   items = $state<ChatItem[]>([]);
 
   // Metrics
@@ -91,6 +142,15 @@ export class Demo {
   levels = $state<{ user: number; bot: number }[]>(
     Array.from({ length: LEVEL_HISTORY }, () => ({ user: 0, bot: 0 })),
   );
+
+  // The pipeline strip
+  pipeline = $state<Record<Stage, StageState>>(idleStages());
+  flash = $state<Flash | null>(null);
+  /** The user's words as the STT hears them, until the turn's final transcript. */
+  hearing = $state("");
+  #userTurn = false;
+  #flashTimer: ReturnType<typeof setTimeout> | null = null;
+  #sttTimer: ReturnType<typeof setTimeout> | null = null;
 
   #nextId = 0;
   #currentUser: number | null = null;
@@ -166,6 +226,10 @@ export class Demo {
     this.rtcStats = null;
     this.endsAt = null;
     this.turns = 0;
+    this.pipeline = idleStages();
+    this.flash = null;
+    this.hearing = "";
+    this.#userTurn = false;
     this.#currentUser = null;
     this.#currentBot = null;
     this.message = null;
@@ -186,7 +250,7 @@ export class Demo {
       const response = await fetch("/api/session", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ turnstileToken: token, transport }),
+        body: JSON.stringify({ turnstileToken: token, transport, stt: this.stt }),
       });
       const session = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -195,6 +259,8 @@ export class Demo {
         return;
       }
       this.active = transport;
+      this.activeStt = session.stt === "nova3" ? "nova3" : "flux";
+      this.#stage("mic", true);
       if (transport === "webrtc") {
         await this.#startRtc(session.rtcUrl, session.ticket);
       } else {
@@ -237,6 +303,8 @@ export class Demo {
         onBotLlmStarted: () => rtvi("bot-llm-started"),
         onBotLlmText: (d) => rtvi("bot-llm-text", d),
         onBotLlmStopped: () => rtvi("bot-llm-stopped"),
+        onBotTtsStarted: () => rtvi("bot-tts-started"),
+        onBotTtsStopped: () => rtvi("bot-tts-stopped"),
         onLLMFunctionCallInProgress: (d) => rtvi("llm-function-call-in-progress", d),
         onLLMFunctionCallStopped: (d) => rtvi("llm-function-call-stopped", d),
         onMetrics: (d) => rtvi("metrics", d),
@@ -304,8 +372,124 @@ export class Demo {
     );
   }
 
-  /** One RTVI message from the bot. */
+  #stage(stage: Stage, active: boolean, note: string | null = null): void {
+    const current = this.pipeline[stage];
+    if (current.active === active && current.note === note) return;
+    this.pipeline[stage] = { ...current, active, note: active ? note : null };
+  }
+
+  #timing(stage: Stage, ms: number): void {
+    this.pipeline[stage] = { ...this.pipeline[stage], ms };
+  }
+
+  #flash(kind: Flash["kind"], label: string, text: string | null = null): void {
+    this.flash = { id: this.#nextId++, kind, label, text };
+    if (this.#flashTimer) clearTimeout(this.#flashTimer);
+    this.#flashTimer = setTimeout(() => {
+      this.flash = null;
+    }, FLASH_MS);
+  }
+
+  /** The STT is working while the user speaks, and until their words come in or nothing will. */
+  #sttActive(active: boolean): void {
+    if (this.#sttTimer) clearTimeout(this.#sttTimer);
+    this.#sttTimer = null;
+    this.#stage("stt", active);
+  }
+
+  /** One RTVI message from the bot: the chat, the metrics and the strip. */
   #rtvi(message: RtviMessage): void {
+    this.#pipelineEvent(message);
+    this.#chat(message);
+  }
+
+  #pipelineEvent(message: RtviMessage): void {
+    const data = message.data ?? {};
+    switch (message.type) {
+      case "user-transcription":
+        if (data.final) {
+          this.hearing = "";
+          this.#sttActive(false);
+        } else {
+          this.hearing = String(data.text ?? "");
+          this.#sttActive(true);
+        }
+        break;
+      case "user-started-speaking":
+        this.#userTurn = true;
+        break;
+      case "user-stopped-speaking":
+        this.#userTurn = false;
+        this.#stage("turn", false);
+        break;
+      case "bot-llm-started":
+        this.#stage("llm", true, "thinking");
+        break;
+      case "bot-llm-stopped":
+        this.#stage("llm", false);
+        break;
+      case "llm-function-call-in-progress":
+        this.#stage("llm", true, `tool: ${String(data.function_name ?? "tool")}`);
+        break;
+      case "llm-function-call-stopped":
+        this.#stage("llm", true, "thinking");
+        break;
+      case "bot-tts-started":
+        this.#stage("tts", true);
+        break;
+      case "bot-tts-stopped":
+        this.#stage("tts", false);
+        break;
+      case "bot-started-speaking":
+        this.#stage("speaker", true);
+        break;
+      case "bot-stopped-speaking":
+        this.#stage("speaker", false);
+        break;
+      case "metrics":
+        for (const t of (data.ttfb ?? []) as { processor: string; value: number }[]) {
+          const stage = stageOf(t.processor ?? "");
+          if (stage && t.value > 0) this.#timing(stage, t.value * 1000);
+        }
+        break;
+      case "server-message":
+        switch (data?.type) {
+          case "vad":
+            this.#stage("vad", Boolean(data.speaking));
+            if (data.speaking) {
+              this.#sttActive(true);
+              this.#stage("turn", false);
+            } else {
+              // The turn analyzer (or Flux) is now deciding whether the user is done.
+              if (this.#userTurn) this.#stage("turn", true);
+              this.#sttTimer = setTimeout(() => {
+                if (!this.hearing) this.#stage("stt", false);
+              }, STT_IDLE_MS);
+            }
+            break;
+          case "turn-decided":
+            this.#timing("turn", Number(data.ms));
+            this.#stage("turn", false);
+            break;
+          case "voice-latency":
+            this.#timing("speaker", Number(data.seconds) * 1000);
+            break;
+          case "interrupted":
+            this.#flash("interrupted", "interrupted");
+            break;
+          case "turn-ignored":
+            this.#flash(
+              "ignored",
+              IGNORED_LABELS[String(data.reason)] ?? "ignored",
+              data.text ? String(data.text) : null,
+            );
+            break;
+        }
+        break;
+    }
+  }
+
+  #chat(message: RtviMessage): void {
     const data = message.data ?? {};
     switch (message.type) {
       case "bot-ready":
@@ -396,14 +580,7 @@ export class Demo {
       }
       case "metrics":
         for (const t of (data.ttfb ?? []) as { processor: string; value: number }[]) {
-          const p = t.processor ?? "";
-          const key = /anthropic|llm/i.test(p)
-            ? "llm"
-            : /aura|tts/i.test(p)
-              ? "tts"
-              : /nova|stt/i.test(p)
-                ? "stt"
-                : null;
+          const key = stageOf(t.processor ?? "");
           if (key && t.value > 0) this.ttfb = { ...this.ttfb, [key]: t.value * 1000 };
         }
         break;
@@ -473,6 +650,11 @@ export class Demo {
   async #teardown(): Promise<void> {
     for (const t of this.#timers) clearInterval(t);
     this.#timers = [];
+    if (this.#sttTimer) clearTimeout(this.#sttTimer);
+    this.#sttTimer = null;
+    // The timings stay for a look after the session; nothing is working any more.
+    for (const stage of STAGES) this.#stage(stage, false);
+    this.hearing = "";
     this.userSpeaking = false;
     this.botSpeaking = false;
     this.endsAt = null;
