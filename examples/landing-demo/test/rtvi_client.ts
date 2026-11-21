@@ -94,6 +94,16 @@ export async function connectBrowser(
   let at = 0;
   let spoken: (() => void) | null = null;
   const mic = (async () => {
+    try {
+      await micLoop();
+    } finally {
+      // The session ended (the bot hung up, or the socket closed) mid-sentence: what was being
+      // said is over too, so `speak()` doesn't wait forever.
+      spoken?.();
+      spoken = null;
+    }
+  })();
+  async function micLoop(): Promise<void> {
     while (open) {
       const audio = at < speech.length ? speech.slice(at, at + chunkBytes) : silence;
       at += chunkBytes;
@@ -113,7 +123,7 @@ export async function connectBrowser(
       }
       await new Promise((resolve) => setTimeout(resolve, FRAME_MS));
     }
-  })();
+  }
 
   const waitFor = async (match: (m: RtviMessage) => boolean, timeoutMs = 30_000) => {
     const deadline = Date.now() + timeoutMs;
@@ -137,6 +147,7 @@ export async function connectBrowser(
     },
     waitFor,
     speak(pcm16k) {
+      if (!open) return Promise.resolve();
       speech = pcm16k;
       at = 0;
       return new Promise<void>((resolve) => {
