@@ -12,8 +12,8 @@
     "providers:generate": "bun scripts/generate-providers.ts"
   },
   "dependencies": {
-    "@opentelemetry/api": "1.9.1",
     "@ai-sdk/google": "4.0.91",
+    "@opentelemetry/api": "1.9.1",
     "@pipedog/ai-sdk": "workspace:*",
     "@pipedog/anthropic": "workspace:*",
     "@pipedog/assemblyai": "workspace:*",
@@ -29,8 +29,8 @@
     "@pipedog/bland": "workspace:*",
     "@pipedog/camb": "workspace:*",
     "@pipedog/cartesia": "workspace:*",
-    "@pipedog/cloudflare": "workspace:*",
     "@pipedog/cerebras": "workspace:*",
+    "@pipedog/cloudflare": "workspace:*",
     "@pipedog/core": "workspace:*",
     "@pipedog/crusoe": "workspace:*",
     "@pipedog/deepgram": "workspace:*",
@@ -70,9 +70,9 @@
     "@pipedog/piper": "workspace:*",
     "@pipedog/pocket-tts": "workspace:*",
     "@pipedog/qwen": "workspace:*",
+    "@pipedog/resampler-wasm": "workspace:*",
     "@pipedog/resembleai": "workspace:*",
     "@pipedog/rime": "workspace:*",
-    "@pipedog/resampler-wasm": "workspace:*",
     "@pipedog/runner": "workspace:*",
     "@pipedog/sambanova": "workspace:*",
     "@pipedog/sarvam": "workspace:*",
@@ -112,6 +112,7 @@
     "fumadocs-ui": "16.16.2",
     "lucide-react": "1.51.0",
     "next": "16.3.8",
+    "posthog-js": "1.447.3",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
