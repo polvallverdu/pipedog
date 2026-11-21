@@ -2,7 +2,7 @@
   "name": "@pipedog/example-landing-demo",
   "version": "0.0.0",
   "private": true,
-  "description": "The talk-to-it demo on the docs landing page: a voice agent on Cloudflare Workers and Durable Objects (Workers AI Nova-3, Smart Turn and Aura, Silero VAD, Claude Haiku, typed tools, Turnstile, a session budget), over WebSocket or WebRTC, with a SvelteKit page served by the same Worker.",
+  "description": "The talk-to-it demo on the docs landing page: a voice agent on Cloudflare Workers and Durable Objects (Workers AI Flux or Nova-3 with Smart Turn, and Aura, Silero VAD, a live pipeline strip, Claude Haiku, typed tools, Turnstile, a session budget), over WebSocket or WebRTC, with a SvelteKit page served by the same Worker.",
   "license": "BSD-2-Clause",
   "type": "module",
   "scripts": {

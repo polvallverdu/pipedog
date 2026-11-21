@@ -43,7 +43,7 @@ const transportLabel = $derived(
   <div class="block">
     <h4>Time to first byte</h4>
     <dl class="rows">
-      <div><dt>STT <span class="svc">Nova-3</span></dt><dd class="mono" title="From when Silero VAD heard the user stop to Nova-3's final transcript.">{ms(demo.ttfb.stt)}</dd></div>
+      <div><dt>STT <span class="svc">{(demo.activeStt ?? demo.stt) === "flux" ? "Flux" : "Nova-3"}</span></dt><dd class="mono" title="From when Silero VAD heard the user stop to the final transcript.">{ms(demo.ttfb.stt)}</dd></div>
       <div><dt>LLM <span class="svc">Haiku 5.5</span></dt><dd class="mono">{ms(demo.ttfb.llm)}</dd></div>
       <div><dt>TTS <span class="svc">Aura 2</span></dt><dd class="mono">{ms(demo.ttfb.tts)}</dd></div>
     </dl>

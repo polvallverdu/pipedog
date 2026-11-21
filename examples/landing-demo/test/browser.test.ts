@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //
 // The demo page (SvelteKit, served by the Worker) in a real Chromium, against the fakes: press
-// the mic, and the conversation, the tool card and the metrics appear, through Pipecat's own
-// browser client over the WebSocket. Chromium's fake microphone plays a recorded question, then
-// silence, in a loop: Silero VAD in the Worker hears it, and the fake Nova-3 transcribes it as the
-// scripted turn. The WebRTC switch is checked disabled here (no Realtime credentials); WebRTC
+// the mic, and the conversation, the tool card, the metrics and the pipeline strip fill in, through
+// Pipecat's own browser client over the WebSocket. Chromium's fake microphone plays a recorded
+// question, then silence, in a loop: Silero VAD in the Worker hears it, and the fake Flux (the
+// default) or Nova-3 (chosen on the page) transcribes it as the scripted turn. The WebRTC switch is checked disabled here (no Realtime credentials); WebRTC
 // itself is covered by e2e.test.ts against a fake SFU, since a fake SFU can't do real WebRTC.
 //
 // Needs a Chromium for playwright-core (`bunx playwright-core install chromium`, or set
@@ -82,6 +82,24 @@ let fakes: Fakes;
 let worker: WranglerDev | null = null;
 let browser: Browser | null = null;
 
+/**
+ * Before the page loads: record every pipeline stage that lights up, since most are lit for a
+ * moment only (`window.__stagesLit`).
+ */
+const RECORD_STAGES = () => {
+  const lit = new Set<string>();
+  (window as unknown as { __stagesLit: Set<string> }).__stagesLit = lit;
+  new MutationObserver((records) => {
+    for (const r of records) {
+      const el = r.target as HTMLElement;
+      if (el.dataset?.active === "true" && el.dataset.stage) lit.add(el.dataset.stage);
+    }
+  }).observe(document, { subtree: true, attributes: true, attributeFilter: ["data-active"] });
+};
+
+const stagesLit = (page: import("playwright-core").Page) =>
+  page.evaluate(() => [...(window as unknown as { __stagesLit: Set<string> }).__stagesLit].sort());
+
 beforeAll(async () => {
   if (!chromiumPath) return;
   fakes = startFakes({ turns: ["What's the weather in Barcelona?"] });
@@ -120,22 +138,31 @@ afterAll(async () => {
 });
 
 test.skipIf(!chromiumPath)(
-  "the page: tap the mic, and the chat, the tool card and the metrics fill in",
+  "the page: tap the mic, and the chat, the tool card, the metrics and the strip fill in (Flux)",
   async () => {
     const context = await browser!.newContext({ permissions: ["microphone"] });
     const page = await context.newPage();
+    await page.addInitScript(RECORD_STAGES);
+    const sttBefore = fakes.sttModels.length;
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(String(e)));
     try {
       await page.goto(`${worker!.base}/`);
       await page.getByText("Ready", { exact: true }).waitFor({ timeout: 15_000 });
-      // No Realtime credentials: WebRTC can't be chosen.
+      // No Realtime credentials: WebRTC can't be chosen. Flux is the default speech to text.
       expect(await page.getByRole("radio", { name: "WebRTC" }).isDisabled()).toBe(true);
+      expect(await page.getByRole("radio", { name: /Flux/ }).getAttribute("aria-checked")).toBe(
+        "true",
+      );
+      expect(await page.locator(".stack").textContent()).toContain("Deepgram Flux");
 
       await page.getByRole("button", { name: "Start talking" }).click();
       // The greeting, then the user's turn, the tool card, and the answer.
       await page.getByText("I'm a voice agent built with pipedog").waitFor({ timeout: 20_000 });
-      await page.getByText("What's the weather in Barcelona?").waitFor({ timeout: 30_000 });
+      await page
+        .locator(".chat-col")
+        .getByText("What's the weather in Barcelona?")
+        .waitFor({ timeout: 30_000 });
       const card = page.locator(".tool", { hasText: "get_weather" });
       await card.getByText("done").waitFor({ timeout: 20_000 });
       expect(await card.textContent()).toContain("18 °C · partly cloudy · Barcelona");
@@ -153,8 +180,73 @@ test.skipIf(!chromiumPath)(
         { timeout: 20_000 },
       );
       expect(await metrics.textContent()).toContain("WebSocket · protobuf");
+      expect(fakes.sttModels.slice(sttBefore)).toEqual(["@cf/deepgram/flux"]);
+
+      // The strip: every working stage lit up at some point, and the timed ones show a time.
+      const strip = page.locator(".pipeline");
+      expect(await strip.locator('[data-stage="stt"] .svc').textContent()).toBe("Flux");
+      expect(await strip.locator('[data-stage="turn"] .svc').textContent()).toBe("Flux");
+      await page.waitForFunction(
+        () =>
+          ["turn", "llm", "tts", "speaker"].every((stage) =>
+            /\d/.test(
+              document.querySelector(`.pipeline [data-stage="${stage}"] .ms`)?.textContent ?? "",
+            ),
+          ),
+        undefined,
+        { timeout: 20_000 },
+      );
+      expect(await stagesLit(page)).toEqual(
+        ["llm", "mic", "speaker", "stt", "tts", "turn", "vad"].sort(),
+      );
 
       // Hang up.
+      await page.getByRole("button", { name: "End the session" }).click();
+      await page.getByText("Session ended", { exact: true }).waitFor({ timeout: 10_000 });
+      expect(errors).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  },
+  120_000,
+);
+
+test.skipIf(!chromiumPath)(
+  "Nova-3, chosen on the page: the ticket carries it, and Smart Turn decides",
+  async () => {
+    const context = await browser!.newContext({ permissions: ["microphone"] });
+    const page = await context.newPage();
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(String(e)));
+    const sttBefore = fakes.sttModels.length;
+    const smartTurnBefore = fakes.smartTurnRequests;
+    try {
+      await page.goto(`${worker!.base}/`);
+      await page.getByText("Ready", { exact: true }).waitFor({ timeout: 15_000 });
+      const nova3 = page.getByRole("radio", { name: /Nova-3/ });
+      await nova3.click();
+      expect(await nova3.getAttribute("aria-checked")).toBe("true");
+      expect(await page.locator(".stack").textContent()).toContain("Nova-3");
+
+      await page.getByRole("button", { name: "Start talking" }).click();
+      // The switch is locked while the session runs.
+      await page.getByRole("button", { name: "End the session" }).waitFor({ timeout: 15_000 });
+      expect(await page.getByRole("radio", { name: /Flux/ }).isDisabled()).toBe(true);
+      await page
+        .locator(".chat-col")
+        .getByText("What's the weather in Barcelona?")
+        .waitFor({ timeout: 45_000 });
+      expect(fakes.sttModels.slice(sttBefore)).toEqual(["@cf/deepgram/nova-3"]);
+      const strip = page.locator(".pipeline");
+      expect(await strip.locator('[data-stage="turn"] .svc').textContent()).toBe("Smart Turn");
+      await page.waitForFunction(
+        () =>
+          /\d/.test(document.querySelector('.pipeline [data-stage="turn"] .ms')?.textContent ?? ""),
+        undefined,
+        { timeout: 20_000 },
+      );
+      expect(fakes.smartTurnRequests).toBeGreaterThan(smartTurnBefore);
+
       await page.getByRole("button", { name: "End the session" }).click();
       await page.getByText("Session ended", { exact: true }).waitFor({ timeout: 10_000 });
       expect(errors).toEqual([]);

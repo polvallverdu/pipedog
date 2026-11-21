@@ -7,9 +7,10 @@
 // visitor toggles it).
 import { onMount } from "svelte";
 import Chat from "../lib/Chat.svelte";
-import { Demo, type Transport } from "../lib/demo.svelte.ts";
+import { Demo, type Stt, type Transport } from "../lib/demo.svelte.ts";
 import Icon from "../lib/Icon.svelte";
 import Metrics from "../lib/Metrics.svelte";
+import Pipeline from "../lib/Pipeline.svelte";
 
 const demo = new Demo();
 let turnstileBox: HTMLDivElement | undefined = $state();
@@ -64,6 +65,12 @@ function choose(t: Transport) {
   if (!demo.busy) demo.transport = t;
 }
 
+function chooseStt(s: Stt) {
+  if (!demo.busy) demo.stt = s;
+}
+
+const shownStt = $derived(demo.busy ? (demo.activeStt ?? demo.stt) : demo.stt);
+
 const stateLabel = $derived(
   {
     loading: "Checking…",
@@ -108,7 +115,7 @@ const micDisabled = $derived(
   <title>Talk to pipedog · live voice demo</title>
   <meta
     name="description"
-    content="A voice agent built with pipedog, running entirely on Cloudflare: Workers, Durable Objects, Workers AI (Deepgram Nova-3, Smart Turn and Aura) and Claude Haiku."
+    content="A voice agent built with pipedog, running entirely on Cloudflare: Workers, Durable Objects, Workers AI (Deepgram Flux or Nova-3 with Smart Turn, and Aura), Silero VAD and Claude Haiku."
   />
 </svelte:head>
 
@@ -122,8 +129,8 @@ const micDisabled = $derived(
       <h1>Talk to a voice agent <span class="grad">running on Cloudflare.</span></h1>
       <p>
         A <a href="https://github.com/polvallverdu/pipedog">pipedog</a> bot in a Durable Object: Deepgram
-        Nova-3, Smart Turn and Aura on Workers AI, Silero VAD, Claude Haiku 5.5 with tools, and
-        Pipecat's own browser client.
+        Flux (or Nova-3 with Smart Turn) and Aura on Workers AI, Silero VAD, Claude Haiku 5.5 with
+        tools, and Pipecat's own browser client.
       </p>
     </header>
   {/if}
@@ -131,6 +138,25 @@ const micDisabled = $derived(
   <section class="card" aria-label="Live voice demo">
     <div class="topbar">
       <span class="pill"><span class="dot {tone}"></span>{stateLabel}</span>
+      <div class="switches">
+      <div class="seg" role="radiogroup" aria-label="Speech to text">
+        <button
+          role="radio"
+          aria-checked={demo.stt === "flux"}
+          class:on={demo.stt === "flux"}
+          disabled={demo.busy}
+          title="Deepgram Flux: English only; it also decides when you've finished. The fastest."
+          onclick={() => chooseStt("flux")}>Flux <span class="tag">English · fastest</span></button
+        >
+        <button
+          role="radio"
+          aria-checked={demo.stt === "nova3"}
+          class:on={demo.stt === "nova3"}
+          disabled={demo.busy}
+          title="Deepgram Nova-3 in multilingual mode (English and Spanish, mixed), with Smart Turn deciding when you've finished."
+          onclick={() => chooseStt("nova3")}>Nova-3 <span class="tag">multilingual</span></button
+        >
+      </div>
       <div class="seg" role="radiogroup" aria-label="Transport">
         <button
           role="radio"
@@ -148,7 +174,10 @@ const micDisabled = $derived(
           onclick={() => choose("webrtc")}>WebRTC</button
         >
       </div>
+      </div>
     </div>
+
+    <Pipeline {demo} />
 
     <div class="grid">
       <div class="mic-col">
@@ -198,8 +227,13 @@ const micDisabled = $derived(
         {/if}
 
         <ul class="stack">
-          <li><span>STT</span> Deepgram Nova-3, multilingual</li>
-          <li><span>Turns</span> Silero VAD + Smart Turn v2</li>
+          {#if shownStt === "flux"}
+            <li><span>STT</span> Deepgram Flux, English</li>
+            <li><span>Turns</span> Silero VAD + Flux</li>
+          {:else}
+            <li><span>STT</span> Deepgram Nova-3, multilingual</li>
+            <li><span>Turns</span> Silero VAD + Smart Turn v2</li>
+          {/if}
           <li><span>LLM</span> Claude Haiku 5.5</li>
           <li><span>TTS</span> Deepgram Aura 2</li>
           <li><span>Run</span> Durable Object</li>
@@ -326,6 +360,11 @@ const micDisabled = $derived(
       opacity: 0.35;
     }
   }
+  .switches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
   .seg {
     display: inline-flex;
     padding: 0.2rem;
@@ -342,6 +381,11 @@ const micDisabled = $derived(
     font-weight: 500;
     color: var(--muted-fg);
     cursor: pointer;
+  }
+  .seg .tag {
+    font-weight: 400;
+    font-size: 0.7rem;
+    opacity: 0.7;
   }
   .seg button.on {
     background: var(--card);
@@ -542,6 +586,14 @@ const micDisabled = $derived(
   @media (max-width: 640px) {
     main {
       padding-top: 1.5rem;
+    }
+    .switches,
+    .seg {
+      width: 100%;
+    }
+    .seg button {
+      flex: 1;
+      padding: 0.3rem 0.4rem;
     }
     .grid {
       grid-template-columns: minmax(0, 1fr);

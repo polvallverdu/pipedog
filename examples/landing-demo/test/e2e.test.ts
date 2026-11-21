@@ -3,12 +3,15 @@
 //
 // The demo end to end: `wrangler dev` runs the Worker and both Durable Objects locally (workerd),
 // with Workers AI, Claude, Open-Meteo, the docs index and Turnstile faked on one local server
-// (test/fakes.ts). A scripted browser gets a ticket the way the page does, opens the session's
-// WebSocket, and the test checks the RTVI messages the page gets: the transcript, the tool call
-// and its result, the bot's text, the metrics, the latency and the data centres.
+// (test/fakes.ts). A scripted browser gets a ticket the way the page does, with Nova-3 chosen, opens
+// the session's WebSocket, and the test checks the RTVI messages the page gets: the transcript, the
+// tool call and its result, the bot's text, the metrics, the latency, the data centres and the
+// pipeline strip's events.
 //
-// The same session over WebRTC, against a fake Cloudflare Realtime SFU that dials the bot's media
-// endpoints like the real one (no real WebRTC: the SDP is opaque to it). Then the security checks:
+// A session over WebRTC, against a fake Cloudflare Realtime SFU that dials the bot's media
+// endpoints like the real one (no real WebRTC: the SDP is opaque to it), with an unknown speech
+// to text asked for, which gets Flux, the default. (Flux over the WebSocket, and choosing a mode on
+// the page, are in test/browser.test.ts.) Then the security checks:
 // tickets that are missing, forged, for another session or used twice, call and adapter tokens,
 // origins that aren't allowed, the per-IP rate limit, WebRTC switched off, and the kill switch.
 // (test/browser.test.ts drives the real page in Chromium.)
@@ -52,13 +55,17 @@ async function getTicket(
   origin = ORIGIN,
   transport = "websocket",
   at = base,
+  stt?: unknown,
 ): Promise<Response> {
   return await fetch(`${at}/api/session`, {
     method: "POST",
     headers: { "content-type": "application/json", origin },
-    body: JSON.stringify({ turnstileToken: token, transport }),
+    body: JSON.stringify({ turnstileToken: token, transport, stt }),
   });
 }
+
+const isServer = (type: string) => (m: RtviMessage) =>
+  m.type === "server-message" && m.data?.type === type;
 
 async function until(check: () => boolean, ms: number, what: string): Promise<void> {
   const deadline = Date.now() + ms;
@@ -168,24 +175,27 @@ test("a ticket needs an allowed origin and a Turnstile token that verifies", asy
   expect(fakes.siteverify.at(-1)?.secret).toBe("turnstile-secret");
 });
 
-test("a session: transcript, tool call, reply, metrics, latency and data centres reach the page", async () => {
-  const response = await getTicket();
+test("a Nova-3 session: transcript, tool call, reply, metrics, latency, data centres and the strip reach the page", async () => {
+  const sttBefore = fakes.sttModels.length;
+  const response = await getTicket("pass-token", ORIGIN, "websocket", base, "nova3");
   expect(response.status).toBe(200);
-  const { sessionId, wsUrl, expiresIn } = (await response.json()) as Record<string, any>;
+  const { sessionId, wsUrl, expiresIn, stt } = (await response.json()) as Record<string, any>;
   expect(expiresIn).toBe(60);
+  expect(stt).toBe("nova3");
   expect(wsUrl).toContain(`/api/session/${sessionId}/ws?ticket=`);
   sessionWsUrl = wsUrl;
 
   const browser = await connectBrowser(wsUrl, ORIGIN);
   try {
-    const isServer = (type: string) => (m: RtviMessage) =>
-      m.type === "server-message" && m.data?.type === type;
-
     // Ready, and told about the session: the Durable Object's colo (from the faked trace) and
     // where the visitor came in (miniflare's request.cf).
     await browser.waitFor((m) => m.type === "bot-ready");
     const info = await browser.waitFor(isServer("session-info"));
     expect(info.data.transport).toBe("websocket");
+    // The ticket's choice: Nova-3 transcribes, Smart Turn decides.
+    expect(info.data.stt).toBe("nova3");
+    expect(info.data.services.stt).toContain("Nova-3");
+    expect(fakes.sttModels.slice(sttBefore)).toEqual(["@cf/deepgram/nova-3"]);
     expect(info.data.bot_colo).toBe("MAD");
     expect(info.data.limits).toEqual({ max_secs: 120, idle_secs: 30, max_turns: 12 });
     expect(Object.keys(info.data.visitor).sort()).toEqual(["city", "colo", "country"]);
@@ -241,6 +251,18 @@ test("a session: transcript, tool call, reply, metrics, latency and data centres
     // Silero heard the user, and Smart Turn decided their turn was over.
     expect(fakes.smartTurnRequests).toBeGreaterThan(0);
     expect(ttfb.some((p) => p.includes("Nova3"))).toBe(true);
+
+    // The strip: VAD as it heard the user, the turn decision, and the stages RTVI reports.
+    expect(browser.messages.some((m) => isServer("vad")(m) && m.data.speaking === true)).toBe(true);
+    expect(browser.messages.some((m) => isServer("vad")(m) && m.data.speaking === false)).toBe(
+      true,
+    );
+    const decided = await browser.waitFor(isServer("turn-decided"), 10_000);
+    expect(decided.data.by).toBe("Smart Turn");
+    expect(decided.data.ms).toBeGreaterThanOrEqual(0);
+    for (const type of ["bot-llm-started", "bot-tts-started", "bot-started-speaking"]) {
+      expect(browser.messages.some((m) => m.type === type)).toBe(true);
+    }
 
     // Claude declines the second request (stop_reason "refusal"): the bot says so, and the page
     // is told what it said.
@@ -301,10 +323,14 @@ test("a session: transcript, tool call, reply, metrics, latency and data centres
   expect(fakes.anthropicHeaders[0]?.["x-api-key"]).toBe("test-anthropic-key");
 }, 120_000);
 
-test("the same session over WebRTC, through a fake Cloudflare Realtime SFU", async () => {
-  const response = await getTicket("pass-token", ORIGIN, "webrtc");
+test("a Flux session over WebRTC, through a fake Cloudflare Realtime SFU", async () => {
+  const sttBefore = fakes.sttModels.length;
+  const smartTurnBefore = fakes.smartTurnRequests;
+  // An unknown speech to text: the default, Flux.
+  const response = await getTicket("pass-token", ORIGIN, "webrtc", base, "whisper");
   expect(response.status).toBe(200);
-  const { sessionId, rtcUrl, ticket } = (await response.json()) as Record<string, string>;
+  const { sessionId, rtcUrl, ticket, stt } = (await response.json()) as Record<string, string>;
+  expect(stt).toBe("flux");
   expect(rtcUrl).toBe(`${base}/api/session/${sessionId}/rtc`);
   const post = (action: string, body: unknown, headers: Record<string, string> = {}, query = "") =>
     fetch(`${rtcUrl}/${action}${query}`, {
@@ -386,6 +412,14 @@ test("the same session over WebRTC, through a fake Cloudflare Realtime SFU", asy
   expect(info?.data.bot_colo).toBe("MAD");
   expect(messages.some((m) => m.type === "user-transcription" && m.data?.final)).toBe(true);
   expect(messages.some((m) => m.type === "metrics")).toBe(true);
+  // Flux transcribed, and decided the end of the turn: no Smart Turn.
+  expect(info?.data.stt).toBe("flux");
+  expect(info?.data.services.turns).toContain("Flux");
+  expect(fakes.sttModels.slice(sttBefore)).toEqual(["@cf/deepgram/flux"]);
+  expect(fakes.smartTurnRequests).toBe(smartTurnBefore);
+  const decided = messages.find((m) => isServer("turn-decided")(m));
+  expect(decided?.data.by).toBe("Flux");
+  expect(messages.some((m) => isServer("vad")(m) && m.data.speaking === true)).toBe(true);
 
   // 5. Hang up: the session's Realtime resources are released.
   ws.close();

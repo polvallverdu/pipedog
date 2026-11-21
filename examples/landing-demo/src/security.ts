@@ -72,6 +72,8 @@ export function newSessionId(): string {
 export interface TicketPayload {
   /** The session id. */
   sid: string;
+  /** The speech-to-text the visitor chose (`SttMode`); read with `parseSttMode`. */
+  stt?: string;
   /** The keyed hash of the IP the ticket was issued to. */
   ip: string;
   /** Expiry, in Unix seconds. */
